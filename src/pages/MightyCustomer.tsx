@@ -3,25 +3,25 @@ import { Users } from "lucide-react";
 
 export default function MightyCustomer() {
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-5xl font-display text-gradient-teal">
+        <h1 className="text-3xl font-bold tracking-tight text-gradient">
           MightyCustomer
         </h1>
-        <p className="text-muted-foreground mt-3 text-lg">
+        <p className="text-sm text-muted-foreground mt-1">
           Customer relationship and quote management
         </p>
       </div>
 
-      <Card className="p-16 bg-card border-border rounded-2xl text-center shadow-card">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <Card className="p-12 bg-card border-border text-center">
+        <div className="max-w-lg mx-auto space-y-5">
           <div className="flex justify-center">
-            <div className="p-6 bg-gradient-teal rounded-2xl shadow-glow-sm">
-              <Users className="w-14 h-14 text-white" />
+            <div className="p-3 bg-primary/10 rounded-lg">
+              <Users className="w-8 h-8 text-primary" strokeWidth={1.5} />
             </div>
           </div>
-          <h2 className="text-3xl font-display">Module Coming Soon</h2>
-          <p className="text-muted-foreground text-lg leading-relaxed">
+          <h2 className="text-xl font-semibold">Module Coming Soon</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Manage customer relationships, generate quotes, track
             opportunities, and close more wrap jobs with CRM tools.
           </p>

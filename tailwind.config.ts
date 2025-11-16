@@ -60,24 +60,17 @@ export default {
         },
       },
       backgroundImage: {
-        "gradient-purple": "linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-purple-end)))",
-        "gradient-teal": "linear-gradient(135deg, hsl(var(--gradient-teal-start)), hsl(var(--gradient-teal-end)))",
-        "gradient-orange": "linear-gradient(135deg, hsl(var(--gradient-orange-start)), hsl(var(--gradient-orange-end)))",
-        "gradient-neon": "linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-teal-start)), hsl(var(--gradient-purple-end)))",
+        "gradient-primary": "linear-gradient(90deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)))",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-        xl: "1.25rem",
-        "2xl": "1.5rem",
       },
       boxShadow: {
-        'glow-sm': '0 0 15px rgba(139, 92, 246, 0.3)',
-        'glow-md': '0 0 25px rgba(139, 92, 246, 0.4)',
-        'glow-lg': '0 0 35px rgba(139, 92, 246, 0.5)',
-        'card': '0 4px 20px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1)',
-        'card-hover': '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 2px rgba(139, 92, 246, 0.3)',
+        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px 0 rgba(0, 0, 0, 0.15)',
+        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
+        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
       },
       keyframes: {
         "accordion-down": {

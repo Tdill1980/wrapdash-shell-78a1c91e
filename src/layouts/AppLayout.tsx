@@ -17,7 +17,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       
       <div className="flex-1 flex flex-col w-full">
         <TopBar onMenuClick={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 p-8 lg:p-10 overflow-y-auto">
+        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
           {children}
         </main>
       </div>
