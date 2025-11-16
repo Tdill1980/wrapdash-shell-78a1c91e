@@ -8,44 +8,48 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Clean Modern Dark Palette */
-    --background: 240 10% 3.5%;
-    --foreground: 0 0% 98%;
-    --card: 240 8% 7%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 8% 7%;
-    --popover-foreground: 0 0% 98%;
+    /* Pure Black Theme - WrapCommand AI */
+    --background: 0 0% 0%;              /* #000000 Pure Black */
+    --foreground: 0 0% 100%;            /* #FFFFFF White */
+    --card: 240 8% 10%;                 /* #1A1A1F Charcoal */
+    --card-foreground: 0 0% 100%;
+    --popover: 240 8% 10%;
+    --popover-foreground: 0 0% 100%;
     
-    /* Primary Gradient */
-    --primary: 263 70% 60%;
+    /* Brand Colors */
+    --primary: 328 86% 65%;             /* #D946EF Pink/Magenta Primary */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 15%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 263 70% 60%;           /* #8B5CF6 Purple Secondary */
+    --secondary-foreground: 0 0% 100%;
+    --cyan-accent: 195 100% 50%;        /* #00D4FF Logo Cyan */
     
-    /* Subtle Neutrals */
-    --muted: 240 5% 10%;
-    --muted-foreground: 240 5% 50%;
-    --accent: 263 70% 60%;
+    /* Subtle Elements */
+    --muted: 240 5% 12%;
+    --muted-foreground: 240 5% 45%;
+    --accent: 328 86% 65%;
     --accent-foreground: 0 0% 100%;
     
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
     
-    /* Sharp Borders */
-    --border: 240 6% 8%;
-    --input: 240 6% 12%;
-    --ring: 263 70% 60%;
+    /* Borders & Inputs */
+    --border: 240 6% 12%;
+    --input: 240 6% 15%;
+    --ring: 328 86% 65%;
 
-    --radius: 0.5rem;
+    /* Border Radius - 12px */
+    --radius: 0.75rem;
 
-    /* Single Gradient */
-    --gradient-start: 263 70% 60%;
-    --gradient-end: 328 86% 65%;
+    /* Brand Gradients */
+    --gradient-primary: 328 86% 65%;     /* Pink start */
+    --gradient-secondary: 335 78% 68%;   /* Pink-Rose end */
+    --gradient-purple: 263 70% 60%;      /* Purple */
+    --gradient-cyan: 195 100% 50%;       /* Cyan */
 
-    /* Sidebar specific */
-    --sidebar-background: 240 10% 5%;
+    /* Sidebar */
+    --sidebar-background: 0 0% 4%;       /* Near black */
     --sidebar-foreground: 0 0% 70%;
-    --sidebar-border: 240 8% 7%;
+    --sidebar-border: 240 6% 8%;
   }
 }
 
@@ -69,13 +73,28 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Single Professional Gradient */
+  /* WrapCommand AI Brand Gradients */
   .bg-gradient-primary {
-    background: linear-gradient(90deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
+    background: linear-gradient(90deg, hsl(var(--gradient-primary)), hsl(var(--gradient-secondary)));
+  }
+
+  .bg-gradient-purple-pink {
+    background: linear-gradient(90deg, hsl(var(--gradient-purple)), hsl(var(--gradient-primary)));
+  }
+
+  .bg-gradient-cyan-pink {
+    background: linear-gradient(90deg, hsl(var(--gradient-cyan)), hsl(var(--gradient-primary)));
   }
 
   .text-gradient {
-    background: linear-gradient(90deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)));
+    background: linear-gradient(90deg, #FFFFFF 0%, hsl(var(--gradient-purple)) 50%, hsl(var(--gradient-primary)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-pink {
+    background: linear-gradient(90deg, hsl(var(--gradient-primary)), hsl(var(--gradient-secondary)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

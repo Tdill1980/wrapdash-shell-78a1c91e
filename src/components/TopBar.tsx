@@ -7,7 +7,7 @@ interface TopBarProps {
 
 export const TopBar = ({ onMenuClick }: TopBarProps) => {
   return (
-    <header className="h-14 border-b border-white/[0.05] bg-background/95 backdrop-blur-sm flex items-center justify-between px-5 sticky top-0 z-50">
+    <header className="h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-5 sticky top-0 z-50">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -19,7 +19,7 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
         </Button>
         
         <div className="hidden sm:block">
-          <p className="text-xs text-muted-foreground">Welcome back</p>
+          <p className="text-xs text-muted-foreground">Hi Trish</p>
         </div>
       </div>
 
@@ -27,15 +27,15 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-8 w-8"
+          className="relative h-8 w-8 hover:bg-card"
         >
           <Bell className="w-4 h-4" strokeWidth={1.5} />
-          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
+          <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full shadow-glow" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 hover:bg-card"
         >
           <Settings className="w-4 h-4" strokeWidth={1.5} />
         </Button>
