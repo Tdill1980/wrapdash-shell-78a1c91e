@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DesignVisualization } from "../hooks/useDesignVault";
-import { Eye, Save, Image } from "lucide-react";
+import { Eye, RotateCcw, Download, Info, Clock } from "lucide-react";
+import { useState } from "react";
 
 interface DesignCardProps {
   design: DesignVisualization;
@@ -12,97 +13,118 @@ interface DesignCardProps {
 export const DesignCard = ({ design, onClick }: DesignCardProps) => {
   const renderUrls = design.render_urls as { hero?: string } | null;
   const heroImage = renderUrls?.hero || "/placeholder.svg";
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Mock multiple images for carousel (in real app, would come from render_urls)
+  const images = [heroImage, heroImage];
 
   return (
     <Card
-      className="group cursor-pointer overflow-hidden bg-[#121218] border-white/5 rounded-lg hover:border-purple-500/30 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)] transition-all duration-300 flex flex-col h-[420px]"
+      className="group cursor-pointer overflow-hidden bg-black border-white/5 rounded-lg hover:border-purple-500/30 transition-all duration-300 flex flex-col"
       onClick={onClick}
     >
-      {/* Hero Render - Fixed height for consistency */}
-      <div className="relative w-full h-[270px] flex-shrink-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#E8E8E8] via-[#D4D4D4] to-[#C0C0C0]">
-          <img
-            src={heroImage}
-            alt={`${design.vehicle_make} ${design.vehicle_model}`}
-            className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-300"
-            style={{ filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.25))' }}
-          />
-        </div>
+      {/* Hero Render with Carousel */}
+      <div className="relative w-full aspect-[4/3] flex-shrink-0 overflow-hidden bg-[#3A3A3A]">
+        <img
+          src={images[currentImageIndex]}
+          alt={`${design.vehicle_make} ${design.vehicle_model}`}
+          className="w-full h-full object-contain"
+        />
         
-        {/* Status Chips - Top Right */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
-          {design.tags && design.tags.includes('premium') && (
-            <Badge className="bg-purple-500/90 text-white border-0 text-[10px] px-2 py-0.5 backdrop-blur-sm">
-              Premium
-            </Badge>
-          )}
-          {design.tags && design.tags.includes('new') && (
-            <Badge className="bg-blue-500/90 text-white border-0 text-[10px] px-2 py-0.5 backdrop-blur-sm">
-              New
-            </Badge>
-          )}
-          {design.tags && design.tags.includes('exclusive') && (
-            <Badge className="bg-pink-500/90 text-white border-0 text-[10px] px-2 py-0.5 backdrop-blur-sm">
-              Exclusive
-            </Badge>
-          )}
-        </div>
-
-        {/* Label Badge - Lower Left */}
-        <div className="absolute bottom-3 left-3">
-          <div className="bg-black/80 backdrop-blur-sm px-2.5 py-1 rounded text-[10px] text-white/90 font-semibold uppercase tracking-wide">
-            {design.vehicle_type}
+        {/* Panel Type Badge - Top Left */}
+        <div className="absolute top-3 left-3 flex items-center gap-2">
+          <div className="bg-white/10 backdrop-blur-sm px-2.5 py-1 rounded text-[10px] text-white font-semibold uppercase tracking-wide flex items-center gap-1">
+            {design.vehicle_type === 'truck' ? '2-SIDES PANEL' : 'FULL PANEL'}
+            <Info className="w-3 h-3" />
           </div>
         </div>
+
+        {/* Exclusive Badge - Top Right */}
+        {design.tags && design.tags.includes('exclusive') && (
+          <div className="absolute top-3 right-3">
+            <Badge className="bg-[#E91E8C] text-white border-0 text-[10px] px-2.5 py-1 rounded-full">
+              ✦ Exclusive
+            </Badge>
+          </div>
+        )}
+
+        {/* Carousel Dots */}
+        {images.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {images.map((_, index) => (
+              <button
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentImageIndex(index);
+                }}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  index === currentImageIndex ? 'bg-white w-6' : 'bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Title Block + Actions */}
-      <div className="p-3.5 flex flex-col flex-grow bg-[#0A0A0F]">
-        <div className="mb-3 flex-grow">
-          <h3 className="font-bold text-sm text-foreground line-clamp-1 tracking-tight">
-            {design.vehicle_year} {design.vehicle_make} {design.vehicle_model}
-          </h3>
-          <p className="text-[11px] text-muted-foreground capitalize line-clamp-1 mt-0.5">
-            {design.color_name || design.finish_type} {design.finish_type !== (design.color_name || '').toLowerCase() && `• ${design.finish_type}`}
-          </p>
+      {/* Content Section */}
+      <div className="p-4 flex flex-col bg-black">
+        {/* Title */}
+        <h3 className="font-bold text-base text-white mb-1">
+          Custom Design
+        </h3>
+        
+        {/* Subtitle */}
+        <p className="text-xs text-white/60 mb-3">
+          {design.vehicle_type === 'truck' ? '2-sides Panel Design' : 'full Panel Design'} • restyle
+        </p>
+
+        {/* Timer */}
+        <div className="flex items-center gap-1.5 text-[#E91E8C] mb-4">
+          <Clock className="w-3.5 h-3.5" />
+          <span className="text-sm font-medium">02:35:26</span>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center gap-1.5">
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="flex-1 bg-[#16161E] border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 text-[11px] h-8 transition-all font-medium"
+        {/* Icon Actions */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
             onClick={(e) => {
               e.stopPropagation();
               onClick();
             }}
+            className="flex-1 h-9 bg-[#1A1A1A] border border-white/10 rounded flex items-center justify-center hover:bg-white/5 transition-colors"
           >
-            <Eye className="w-3.5 h-3.5 mr-1.5" />
-            View
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="flex-1 bg-[#16161E] border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 text-[11px] h-8 transition-all font-medium"
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
+            <Eye className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 h-9 bg-[#1A1A1A] border border-white/10 rounded flex items-center justify-center hover:bg-white/5 transition-colors"
           >
-            <Image className="w-3.5 h-3.5 mr-1.5" />
-            Preview
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="bg-[#16161E] border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 text-[11px] h-8 px-3 transition-all font-medium"
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
+            <RotateCcw className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 h-9 bg-[#1A1A1A] border border-white/10 rounded flex items-center justify-center hover:bg-white/5 transition-colors"
           >
-            <Save className="w-3.5 h-3.5" />
-          </Button>
+            <Download className="w-4 h-4 text-white" />
+          </button>
         </div>
+
+        {/* CTA Button */}
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="w-full h-11 bg-[#E91E8C] hover:bg-[#D11A7E] text-white font-semibold rounded-lg transition-colors mb-3"
+        >
+          🎨 See on Your Vehicle (Free)
+        </Button>
+
+        {/* Footer Text */}
+        <p className="text-xs text-white/50 text-center">
+          Free mockup • Print-ready panel files $140
+        </p>
       </div>
     </Card>
   );
