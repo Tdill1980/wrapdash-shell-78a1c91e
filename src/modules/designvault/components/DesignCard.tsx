@@ -19,13 +19,13 @@ export const DesignCard = ({ design, onClick }: DesignCardProps) => {
       onClick={onClick}
     >
       {/* Hero Render - Fixed height for consistency */}
-      <div className="relative w-full h-[270px] flex-shrink-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-neutral-100 to-neutral-200">
+      <div className="relative w-full h-[270px] flex-shrink-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#E8E8E8] via-[#D4D4D4] to-[#C0C0C0]">
           <img
             src={heroImage}
             alt={`${design.vehicle_make} ${design.vehicle_model}`}
-            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-            style={{ filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.15))' }}
+            className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-300"
+            style={{ filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.25))' }}
           />
         </div>
         
@@ -49,58 +49,58 @@ export const DesignCard = ({ design, onClick }: DesignCardProps) => {
         </div>
 
         {/* Label Badge - Lower Left */}
-        <div className="absolute bottom-2 left-2">
-          <div className="bg-black/70 backdrop-blur-sm px-2 py-1 rounded text-[10px] text-white font-medium uppercase">
+        <div className="absolute bottom-3 left-3">
+          <div className="bg-black/80 backdrop-blur-sm px-2.5 py-1 rounded text-[10px] text-white/90 font-semibold uppercase tracking-wide">
             {design.vehicle_type}
           </div>
         </div>
       </div>
 
       {/* Title Block + Actions */}
-      <div className="p-3 flex flex-col flex-grow">
+      <div className="p-3.5 flex flex-col flex-grow bg-[#0A0A0F]">
         <div className="mb-3 flex-grow">
-          <h3 className="font-semibold text-sm text-foreground line-clamp-1">
+          <h3 className="font-bold text-sm text-foreground line-clamp-1 tracking-tight">
             {design.vehicle_year} {design.vehicle_make} {design.vehicle_model}
           </h3>
-          <p className="text-[11px] text-muted-foreground capitalize line-clamp-1">
+          <p className="text-[11px] text-muted-foreground capitalize line-clamp-1 mt-0.5">
             {design.color_name || design.finish_type} {design.finish_type !== (design.color_name || '').toLowerCase() && `• ${design.finish_type}`}
           </p>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Button 
             size="sm" 
             variant="outline"
-            className="flex-1 bg-[#0F0F14] border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 text-[10px] h-7 transition-all"
+            className="flex-1 bg-[#16161E] border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 text-[11px] h-8 transition-all font-medium"
             onClick={(e) => {
               e.stopPropagation();
               onClick();
             }}
           >
-            <Eye className="w-3 h-3 mr-1" />
+            <Eye className="w-3.5 h-3.5 mr-1.5" />
             View
           </Button>
           <Button 
             size="sm" 
             variant="outline"
-            className="flex-1 bg-[#0F0F14] border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 text-[10px] h-7 transition-all"
+            className="flex-1 bg-[#16161E] border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 text-[11px] h-8 transition-all font-medium"
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
-            <Image className="w-3 h-3 mr-1" />
+            <Image className="w-3.5 h-3.5 mr-1.5" />
             Preview
           </Button>
           <Button 
             size="sm" 
             variant="outline"
-            className="bg-[#0F0F14] border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 text-[10px] h-7 px-2 transition-all"
+            className="bg-[#16161E] border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 text-[11px] h-8 px-3 transition-all font-medium"
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
-            <Save className="w-3 h-3" />
+            <Save className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
