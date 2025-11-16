@@ -66,23 +66,23 @@ export default function ApproveFlow() {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <Card className="p-6 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 border-purple-500/30">
+      {/* Progress Bar - Thinner, Plum Gradient */}
+      <Card className="p-4 bg-gradient-to-r from-purple-900/30 via-pink-900/30 to-purple-900/30 border-purple-500/20">
         <div className="relative">
-          <div className="flex justify-between mb-3">
+          <div className="flex justify-between mb-2">
             {progressSteps.map((step, index) => (
               <div key={index} className="flex flex-col items-center flex-1">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1.5 ${
                   step.status === "complete" 
                     ? "bg-gradient-primary" 
                     : step.status === "current"
-                    ? "bg-pink-500"
-                    : "bg-card"
+                    ? "bg-gradient-plum-pink"
+                    : "bg-card border border-border"
                 }`}>
-                  {step.status === "complete" && <CheckCircle2 className="w-4 h-4 text-white" />}
-                  {step.status === "current" && <Clock className="w-4 h-4 text-white" />}
+                  {step.status === "complete" && <CheckCircle2 className="w-3 h-3 text-white" />}
+                  {step.status === "current" && <Clock className="w-3 h-3 text-white" />}
                 </div>
-                <span className={`text-xs text-center ${
+                <span className={`text-[10px] text-center ${
                   step.status === "pending" ? "text-muted-foreground" : "text-foreground"
                 }`}>
                   {step.label}
@@ -90,7 +90,7 @@ export default function ApproveFlow() {
               </div>
             ))}
           </div>
-          <div className="absolute top-4 left-0 right-0 h-0.5 bg-card -z-10">
+          <div className="absolute top-3 left-0 right-0 h-[1px] bg-border -z-10">
             <div className="h-full bg-gradient-primary w-2/5" />
           </div>
         </div>
@@ -118,11 +118,11 @@ export default function ApproveFlow() {
 
           {/* 2D Upload Section */}
           <Card className="bg-card border-border">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-semibold text-foreground">Upload 2D Design</h3>
+            <div className="p-3 border-b border-border">
+              <h3 className="text-sm font-semibold text-foreground">Upload 2D Design</h3>
             </div>
-            <div className="p-4">
-              <Button className="w-full bg-purple-500 hover:bg-purple-600">
+            <div className="p-3">
+              <Button className="w-full bg-gradient-primary hover:opacity-90 text-white">
                 <Upload className="w-4 h-4 mr-2" />
                 Upload 2D Proof
               </Button>
@@ -133,12 +133,12 @@ export default function ApproveFlow() {
           </Card>
 
           {/* 3D Generator Section */}
-          <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20">
-            <div className="p-4 border-b border-purple-500/20">
-              <h3 className="font-semibold text-white">Generate 3D View</h3>
+          <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-500/20">
+            <div className="p-3 border-b border-purple-500/20">
+              <h3 className="text-sm font-semibold text-foreground">Generate 3D View</h3>
             </div>
-            <div className="p-4 space-y-3">
-              <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90">
+            <div className="p-3 space-y-2">
+              <Button className="w-full bg-gradient-plum-pink hover:opacity-90 text-white">
                 <Box className="w-4 h-4 mr-2" />
                 Generate 3D Render
               </Button>
@@ -155,8 +155,8 @@ export default function ApproveFlow() {
           <Card className="bg-card border-border">
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-foreground">Design Proof v3</h2>
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
+                <h2 className="text-lg font-semibold text-foreground">Design Proof v3</h2>
+                <Badge variant="outline" className="bg-purple-900/30 text-purple-400 border-purple-500/20">
                   <Clock className="w-3 h-3 mr-1" />
                   Awaiting Approval
                 </Badge>
@@ -167,12 +167,12 @@ export default function ApproveFlow() {
             <div className="p-6">
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "2d" | "3d")} className="w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <TabsList className="bg-background">
-                    <TabsTrigger value="2d" className="data-[state=active]:bg-purple-500">
+                  <TabsList className="bg-background border border-border">
+                    <TabsTrigger value="2d" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
                       <ImageIcon className="w-4 h-4 mr-2" />
                       2D View
                     </TabsTrigger>
-                    <TabsTrigger value="3d" className="data-[state=active]:bg-purple-500">
+                    <TabsTrigger value="3d" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
                       <Box className="w-4 h-4 mr-2" />
                       3D View
                     </TabsTrigger>
@@ -225,19 +225,19 @@ export default function ApproveFlow() {
           </Card>
 
           {/* Customer Design Instructions */}
-          <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20">
+          <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-500/20">
             <div className="p-4 border-b border-purple-500/20">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-white">Customer Design Instructions</h3>
-                <Button size="sm" className="bg-purple-500 hover:bg-purple-600">
-                  <Upload className="w-4 h-4 mr-2" />
+                <h3 className="text-sm font-semibold text-foreground">Customer Design Instructions</h3>
+                <Button size="sm" className="bg-gradient-primary hover:opacity-90 text-white h-8">
+                  <Upload className="w-3 h-3 mr-2" />
                   Add File
                 </Button>
               </div>
             </div>
 
             <div className="p-4 space-y-4">
-              <Card className="bg-black/40 border-border/50 p-4">
+              <Card className="bg-card/50 border-border p-4">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
                   <Clock className="w-3 h-3" />
                   <span>Received Nov 2, 2025 at 2:28 PM</span>
@@ -245,7 +245,7 @@ export default function ApproveFlow() {
 
                 <div className="space-y-3">
                   <div>
-                    <h4 className="text-sm font-semibold text-purple-400 mb-2">Instructions</h4>
+                    <h4 className="text-xs font-semibold text-purple-400 mb-2">Instructions</h4>
                     <p className="text-sm text-foreground">
                       I want a full wrap for this van excluding the roof, it's a 1500 ford van, 
                       here's a picture of the design we chose
@@ -260,29 +260,29 @@ export default function ApproveFlow() {
 
               {/* Reference Files */}
               <div>
-                <h4 className="text-sm font-semibold text-foreground mb-3">Reference Files</h4>
+                <h4 className="text-xs font-semibold text-foreground mb-2">Reference Files</h4>
                 <div className="space-y-2">
-                  <Card className="bg-black/40 border-border/50 p-3 flex items-center gap-3">
-                    <Paperclip className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm text-foreground">IMG_3329.jpg</span>
+                  <Card className="bg-card/50 border-border p-2.5 flex items-center gap-2">
+                    <Paperclip className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-xs text-foreground">IMG_3329.jpg</span>
                   </Card>
-                  <Card className="bg-black/40 border-border/50 p-3 flex items-center gap-3">
-                    <Paperclip className="w-4 h-4 text-purple-400" />
-                    <span className="text-sm text-foreground">BFD72520-2082-1EDE-...</span>
+                  <Card className="bg-card/50 border-border p-2.5 flex items-center gap-2">
+                    <Paperclip className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-xs text-foreground">BFD72520-2082-1EDE-...</span>
                   </Card>
-                  <Button variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10">
-                    <Upload className="w-4 h-4 mr-2" />
+                  <Button variant="outline" className="w-full border-purple-500/20 hover:bg-purple-500/10 h-8 text-xs">
+                    <Upload className="w-3 h-3 mr-2" />
                     Add File
                   </Button>
                 </div>
               </div>
 
               {/* Design Revision Note */}
-              <Card className="bg-black/40 border-border/50 p-4">
-                <div className="font-semibold text-white mb-2">Design Revision 3:</div>
-                <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
-                  <div className="text-xs text-purple-400 mb-1">Customer requested</div>
-                  <p className="text-sm text-foreground">
+              <Card className="bg-card/50 border-border p-3">
+                <div className="text-sm font-semibold text-foreground mb-2">Design Revision 3:</div>
+                <div className="bg-purple-900/30 border border-purple-500/20 rounded-md p-2.5">
+                  <div className="text-[10px] text-purple-400 mb-1">Customer requested</div>
+                  <p className="text-xs text-foreground">
                     brighter colors and logo repositioning on the driver side panel
                   </p>
                 </div>
@@ -331,12 +331,12 @@ export default function ApproveFlow() {
                 </Button>
               </div>
 
-              <Button className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-90 h-9 text-sm">
+              <Button className="w-full bg-gradient-plum-pink hover:opacity-90 h-9 text-sm text-white">
                 <CheckCircle2 className="w-3 h-3 mr-2" />
                 Approve Design
               </Button>
 
-              <Button variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10 h-9 text-sm">
+              <Button variant="outline" className="w-full border-purple-500/20 hover:bg-purple-500/10 h-9 text-sm">
                 <AlertCircle className="w-3 h-3 mr-2" />
                 Request Revision
               </Button>

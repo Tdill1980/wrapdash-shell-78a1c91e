@@ -6,52 +6,59 @@
 All colors MUST be HSL.
 */
 
-@layer base {
-  :root {
-    /* Pure Black Theme - WrapCommand AI */
-    --background: 0 0% 0%;              /* #000000 Pure Black */
-    --foreground: 0 0% 100%;            /* #FFFFFF White */
-    --card: 240 8% 10%;                 /* #1A1A1F Charcoal */
-    --card-foreground: 0 0% 100%;
-    --popover: 240 8% 10%;
-    --popover-foreground: 0 0% 100%;
-    
-    /* Brand Colors */
-    --primary: 328 86% 65%;             /* #D946EF Pink/Magenta Primary */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 263 70% 60%;           /* #8B5CF6 Purple Secondary */
-    --secondary-foreground: 0 0% 100%;
-    --cyan-accent: 195 100% 50%;        /* #00D4FF Logo Cyan */
-    
-    /* Subtle Elements */
-    --muted: 240 5% 12%;
-    --muted-foreground: 240 5% 45%;
-    --accent: 328 86% 65%;
-    --accent-foreground: 0 0% 100%;
-    
-    --destructive: 0 70% 55%;
-    --destructive-foreground: 0 0% 100%;
-    
-    /* Borders & Inputs */
-    --border: 240 6% 12%;
-    --input: 240 6% 15%;
-    --ring: 328 86% 65%;
-
-    /* Border Radius - 12px */
-    --radius: 0.75rem;
-
-    /* Brand Gradients */
-    --gradient-primary: 328 86% 65%;     /* Pink start */
-    --gradient-secondary: 335 78% 68%;   /* Pink-Rose end */
-    --gradient-purple: 263 70% 60%;      /* Purple */
-    --gradient-cyan: 195 100% 50%;       /* Cyan */
-
-    /* Sidebar */
-    --sidebar-background: 0 0% 4%;       /* Near black */
-    --sidebar-foreground: 0 0% 70%;
-    --sidebar-border: 240 6% 8%;
+  @layer base {
+    :root {
+      /* Pure black & charcoal base - Plum + Black Theme */
+      --background: 240 40% 4%;           /* #0A0A0F Pure black */
+      --foreground: 240 10% 98%;          /* White text */
+      --card: 240 30% 7%;                 /* #111118 Charcoal */
+      --card-foreground: 240 10% 98%;
+      --popover: 240 40% 4%;
+      --popover-foreground: 240 10% 98%;
+      
+      /* Deep plum accents */
+      --primary: 278 55% 45%;             /* #8B5CF6 Purple primary */
+      --primary-foreground: 240 10% 98%;
+      --secondary: 275 45% 25%;           /* #221628 Deep plum */
+      --secondary-foreground: 240 10% 98%;
+      
+      /* Charcoal variants */
+      --muted: 240 20% 10%;               /* #1A1020 Midnight plum */
+      --muted-foreground: 240 8% 72%;     /* #B7B7C5 Soft gray */
+      --accent: 275 40% 20%;
+      --accent-foreground: 240 10% 98%;
+      
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 240 10% 98%;
+      
+      /* Borders - subtle */
+      --border: 240 10% 12%;
+      --input: 240 10% 12%;
+      --ring: 278 55% 45%;
+      --radius: 0.5rem;                   /* 6-8px radius */
+      
+      /* Dynamic gradient stops (NO neon bloom) */
+      --gradient-purple-start: 278 55% 63%;    /* #8B5CF6 */
+      --gradient-magenta: 328 75% 63%;         /* #D946EF */
+      --gradient-blue: 210 90% 55%;            /* #3B82F6 */
+      --gradient-plum: 275 45% 40%;            /* #5B2A86 */
+      --gradient-pink: 330 85% 65%;            /* #FF5ACD */
+      --gradient-teal: 180 95% 47%;            /* #0DDCEB */
+      --gradient-violet: 265 70% 55%;          /* #8A2BE2 */
+      
+      --cyan-accent: 190 100% 50%;
+      
+      /* Sidebar */
+      --sidebar-background: 240 30% 7%;
+      --sidebar-foreground: 240 10% 98%;
+      --sidebar-primary: 278 55% 45%;
+      --sidebar-primary-foreground: 240 10% 98%;
+      --sidebar-accent: 240 20% 10%;
+      --sidebar-accent-foreground: 240 10% 98%;
+      --sidebar-border: 240 10% 12%;
+      --sidebar-ring: 278 55% 45%;
+    }
   }
-}
 
 @layer base {
   * {
@@ -73,28 +80,36 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* WrapCommand AI Brand Gradients */
+  /* Dynamic gradients (NO neon bloom) - Plum + Black Theme */
   .bg-gradient-primary {
-    background: linear-gradient(90deg, hsl(var(--gradient-primary)), hsl(var(--gradient-secondary)));
+    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)));
   }
-
-  .bg-gradient-purple-pink {
-    background: linear-gradient(90deg, hsl(var(--gradient-purple)), hsl(var(--gradient-primary)));
+  
+  .bg-gradient-purple-magenta {
+    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)));
   }
-
-  .bg-gradient-cyan-pink {
-    background: linear-gradient(90deg, hsl(var(--gradient-cyan)), hsl(var(--gradient-primary)));
+  
+  .bg-gradient-magenta-blue {
+    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
   }
-
+  
+  .bg-gradient-plum-pink {
+    background: linear-gradient(135deg, hsl(var(--gradient-plum)), hsl(var(--gradient-pink)));
+  }
+  
+  .bg-gradient-teal-violet {
+    background: linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-violet)));
+  }
+  
   .text-gradient {
-    background: linear-gradient(90deg, #FFFFFF 0%, hsl(var(--gradient-purple)) 50%, hsl(var(--gradient-primary)) 100%);
+    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-
+  
   .text-gradient-pink {
-    background: linear-gradient(90deg, hsl(var(--gradient-primary)), hsl(var(--gradient-secondary)));
+    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-pink)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
