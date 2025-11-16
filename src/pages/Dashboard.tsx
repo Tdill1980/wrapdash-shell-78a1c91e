@@ -73,12 +73,12 @@ export default function Dashboard() {
             <button
               key={module.name}
               onClick={() => navigate(module.route)}
-              className={`${module.gradient} p-4 rounded-xl text-left hover:shadow-glow hover:scale-[1.02] transition-all duration-200 group`}
+              className={`${module.gradient} p-3 rounded-xl text-left hover:shadow-glow hover:scale-[1.02] transition-all duration-200 group`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <Icon className="w-5 h-5 text-white" strokeWidth={2} />
+              <div className="flex items-start justify-between mb-1">
+                <Icon className="w-4 h-4 text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-base font-bold text-white mb-1">
+              <h3 className="text-sm font-bold text-white mb-0.5">
                 {module.name}
               </h3>
               <p className="text-xs text-white/70">{module.subtitle}</p>
