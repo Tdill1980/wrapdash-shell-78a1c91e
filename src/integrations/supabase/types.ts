@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      color_visualizations: {
+        Row: {
+          color_hex: string | null
+          color_name: string | null
+          created_at: string
+          custom_design_url: string | null
+          custom_swatch_url: string | null
+          customer_email: string | null
+          design_file_name: string | null
+          finish_type: string
+          has_metallic_flakes: boolean | null
+          id: string
+          infusion_color_id: string | null
+          organization_id: string | null
+          render_urls: Json | null
+          subscription_tier: string | null
+          tags: string[] | null
+          updated_at: string
+          uses_custom_design: boolean | null
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_type: string
+          vehicle_year: number | null
+        }
+        Insert: {
+          color_hex?: string | null
+          color_name?: string | null
+          created_at?: string
+          custom_design_url?: string | null
+          custom_swatch_url?: string | null
+          customer_email?: string | null
+          design_file_name?: string | null
+          finish_type: string
+          has_metallic_flakes?: boolean | null
+          id?: string
+          infusion_color_id?: string | null
+          organization_id?: string | null
+          render_urls?: Json | null
+          subscription_tier?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          uses_custom_design?: boolean | null
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_type: string
+          vehicle_year?: number | null
+        }
+        Update: {
+          color_hex?: string | null
+          color_name?: string | null
+          created_at?: string
+          custom_design_url?: string | null
+          custom_swatch_url?: string | null
+          customer_email?: string | null
+          design_file_name?: string | null
+          finish_type?: string
+          has_metallic_flakes?: boolean | null
+          id?: string
+          infusion_color_id?: string | null
+          organization_id?: string | null
+          render_urls?: Json | null
+          subscription_tier?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          uses_custom_design?: boolean | null
+          vehicle_make?: string
+          vehicle_model?: string
+          vehicle_type?: string
+          vehicle_year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

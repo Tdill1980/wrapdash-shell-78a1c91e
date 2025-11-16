@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { AppLayout } from "@/layouts/AppLayout";
 import Dashboard from "./pages/Dashboard";
-import WrapCloser from "./pages/WrapCloser";
+import { Visualize as WrapCloser } from "./modules/designproai";
 import DesignVault from "./pages/DesignVault";
 import WrapBox from "./pages/WrapBox";
 import MonthlyDrops from "./pages/MonthlyDrops";
