@@ -2,25 +2,47 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { AppLayout } from "@/layouts/AppLayout";
+import Dashboard from "./pages/Dashboard";
+import WrapCloser from "./pages/WrapCloser";
+import DesignVault from "./pages/DesignVault";
+import WrapBox from "./pages/WrapBox";
+import MonthlyDrops from "./pages/MonthlyDrops";
+import DesignMarket from "./pages/DesignMarket";
+import ShopFlow from "./pages/ShopFlow";
+import MightyCustomer from "./pages/MightyCustomer";
+import ApproveFlow from "./pages/ApproveFlow";
+import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <OrganizationProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+            <Route path="/wrapcloser" element={<AppLayout><WrapCloser /></AppLayout>} />
+            <Route path="/designvault" element={<AppLayout><DesignVault /></AppLayout>} />
+            <Route path="/wrapbox" element={<AppLayout><WrapBox /></AppLayout>} />
+            <Route path="/monthly-drops" element={<AppLayout><MonthlyDrops /></AppLayout>} />
+            <Route path="/design-market" element={<AppLayout><DesignMarket /></AppLayout>} />
+            <Route path="/shopflow" element={<AppLayout><ShopFlow /></AppLayout>} />
+            <Route path="/mighty-customer" element={<AppLayout><MightyCustomer /></AppLayout>} />
+            <Route path="/approveflow" element={<AppLayout><ApproveFlow /></AppLayout>} />
+            <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </OrganizationProvider>
   </QueryClientProvider>
 );
 
