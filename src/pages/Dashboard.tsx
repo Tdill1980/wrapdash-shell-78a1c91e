@@ -109,7 +109,7 @@ export default function Dashboard() {
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Choose a Product</label>
               <select className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-foreground">
-                <option>Choose WPW Product...</option>
+                <option>Choose a Product</option>
               </select>
             </div>
 
