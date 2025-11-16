@@ -202,7 +202,7 @@ export default function MightyCustomer() {
                   onChange={(e) => setSelectedProduct(e.target.value)}
                   className="w-full bg-[#0F0F14] border border-border/40 rounded-md px-3 py-2 text-sm text-foreground focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
                 >
-                  <option value="">Select Product...</option>
+                  <option value="">Choose a Product</option>
                   {productsByService[selectedService as keyof typeof productsByService]?.map(
                     (product) => (
                       <option key={product} value={product}>
