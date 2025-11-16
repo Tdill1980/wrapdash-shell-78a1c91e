@@ -7,12 +7,12 @@ export default function WrapBox() {
   const { data: kits, isLoading } = useWrapBoxKits();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-4xl font-bold bg-gradient-purple bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold text-gradient">
           WrapBox
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-1">
           Print pack manager for production-ready wrap files
         </p>
       </div>
@@ -22,7 +22,7 @@ export default function WrapBox() {
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : kits && kits.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {kits.map((kit) => (
             <KitCard
               key={kit.id}
@@ -32,15 +32,15 @@ export default function WrapBox() {
           ))}
         </div>
       ) : (
-        <Card className="p-12 bg-card border-border rounded-2xl text-center">
+        <Card className="p-12 bg-card border-border rounded-xl text-center">
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="flex justify-center">
-              <div className="p-4 bg-gradient-purple rounded-2xl">
+              <div className="p-4 bg-gradient-primary rounded-xl">
                 <Package className="w-12 h-12 text-white" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold">No Print Kits Yet</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-2xl font-bold text-foreground">No Print Kits Yet</h2>
+            <p className="text-sm text-muted-foreground">
               Create print kits from your designs in DesignVault to manage
               production files, panels, and export-ready packages.
             </p>

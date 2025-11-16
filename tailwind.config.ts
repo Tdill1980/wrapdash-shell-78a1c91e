@@ -19,7 +19,6 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        surface: "hsl(var(--surface))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -58,6 +57,9 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        cyan: {
+          DEFAULT: "hsl(var(--cyan-accent))",
+        },
       },
       backgroundImage: {
         "gradient-primary": "linear-gradient(90deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)))",
@@ -68,9 +70,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        'card': '0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px 0 rgba(0, 0, 0, 0.15)',
-        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
-        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        card: "0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.24)",
+        "card-hover": "0 4px 8px 0 rgba(217, 70, 239, 0.15), 0 2px 4px 0 rgba(217, 70, 239, 0.1)",
+        glow: "0 0 20px rgba(217, 70, 239, 0.3)",
       },
       keyframes: {
         "accordion-down": {

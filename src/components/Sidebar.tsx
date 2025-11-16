@@ -27,12 +27,12 @@ const navigationItems = [
 
 export const Sidebar = () => {
   return (
-    <aside className="hidden lg:flex lg:flex-col w-60 bg-[#0D0D12] border-r border-white/[0.05] h-screen sticky top-0">
-      <div className="px-6 py-5 border-b border-white/[0.05]">
+    <aside className="hidden lg:flex lg:flex-col w-60 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
+      <div className="px-6 py-5 border-b border-sidebar-border">
         <h1 className="text-xl font-bold text-gradient">
           WrapCommand
         </h1>
-        <p className="text-[11px] text-muted-foreground mt-0.5">AI Platform</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">Command Your Wrap Brand</p>
       </div>
       
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
@@ -42,8 +42,8 @@ export const Sidebar = () => {
             <NavLink
               key={item.path}
               to={item.path}
-              className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-colors border-l-2 border-transparent"
-              activeClassName="text-foreground bg-white/[0.04] border-l-2 border-primary"
+              className="flex items-center gap-3 px-3 py-2.5 text-sm text-sidebar-foreground hover:text-foreground hover:bg-white/5 transition-all rounded-lg border-l-3 border-transparent"
+              activeClassName="text-foreground bg-white/5 border-l-primary"
             >
               <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} />
               <span className="font-medium">{item.name}</span>
@@ -52,12 +52,15 @@ export const Sidebar = () => {
         })}
       </nav>
 
-      <div className="p-3 border-t border-white/[0.05]">
-        <div className="px-3 py-2.5 rounded-md bg-white/[0.02] border border-white/[0.05]">
-          <p className="text-[11px] font-semibold text-foreground">Pro Plan</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Unlimited renders
-          </p>
+      <div className="p-3 border-t border-sidebar-border">
+        <div className="px-3 py-2.5 rounded-xl bg-white/[0.02] border border-border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground">Pro Plan</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Active</p>
+            </div>
+            <div className="w-2 h-2 rounded-full bg-primary shadow-glow"></div>
+          </div>
         </div>
       </div>
     </aside>
