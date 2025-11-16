@@ -7,7 +7,6 @@ import {
   Settings,
   FileText,
   Sparkles,
-  ChevronUp,
   Car,
   TrendingUp,
   CheckCircle,
@@ -93,229 +92,197 @@ const adminModules = [
 export default function Dashboard() {
   const navigate = useNavigate();
 
+  const productTypes = [
+    { name: "Full Wraps", gradient: "bg-gradient-purple-magenta" },
+    { name: "Partial Wraps", gradient: "bg-gradient-magenta-blue" },
+    { name: "Chrome Delete", gradient: "bg-gradient-plum-pink" },
+    { name: "PPF", gradient: "bg-gradient-teal-violet" },
+    { name: "Window Tint", gradient: "bg-gradient-primary" },
+  ];
+
   return (
-    <div className="space-y-5 max-w-7xl">
-      {/* Hero Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground relative inline-block">
-            Dashboard
-            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-purple-500 to-pink-500"></span>
-          </h1>
-          <p className="text-xs text-muted-foreground mt-2">
-            Your Shop's Daily Mission Control — Jobs, Quotes, Production, and Sales
-          </p>
+    <div className="space-y-4 max-w-[1600px]">
+      {/* VoiceCommand Bar - Sticky at top */}
+      <div className="sticky top-0 z-10 bg-card border-b border-border p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <span className="text-sm font-semibold text-foreground">VoiceCommand</span>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
+              ACTIVE
+            </Badge>
+          </div>
+          <Button size="sm" className="bg-gradient-primary hover:opacity-90 h-8 text-white">
+            Start Recording
+          </Button>
         </div>
-        <button className="p-2 hover:bg-[#121218] rounded-md transition-colors">
-          <Settings className="w-4 h-4 text-muted-foreground" />
-        </button>
       </div>
 
-      {/* Metric Cards */}
+      {/* Product Type Chips */}
+      <div className="flex flex-wrap gap-2">
+        {productTypes.map((product) => (
+          <button
+            key={product.name}
+            onClick={() => product.name === "Full Wraps" ? navigate("/visualize") : null}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg ${product.gradient} text-white hover:opacity-90 transition-opacity`}
+          >
+            {product.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Two-Column Hero Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* LEFT: MightyCustomer Card */}
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-gradient">MightyCustomer</CardTitle>
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Customer management & communication hub
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Active Customers</div>
+                  <div className="text-xs text-muted-foreground">This month</div>
+                </div>
+                <div className="text-2xl font-bold text-gradient">412</div>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Pending Approvals</div>
+                  <div className="text-xs text-muted-foreground">Awaiting response</div>
+                </div>
+                <div className="text-2xl font-bold text-gradient-pink">23</div>
+              </div>
+              <Button 
+                onClick={() => navigate("/mightycustomer")}
+                className="w-full bg-gradient-primary hover:opacity-90 text-white"
+              >
+                Open MightyCustomer
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* RIGHT: DesignVault Premium Card */}
+        <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-gradient">DesignVault Premium</CardTitle>
+              <Database className="w-5 h-5 text-primary" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              AI-powered design library & visualization
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-border">
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Total Renders</div>
+                  <div className="text-xs text-muted-foreground">All visualizations</div>
+                </div>
+                <div className="text-2xl font-bold text-gradient">1,284</div>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-border">
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Production Packs</div>
+                  <div className="text-xs text-muted-foreground">Ready to print</div>
+                </div>
+                <div className="text-2xl font-bold text-gradient-pink">847</div>
+              </div>
+              <Button 
+                onClick={() => navigate("/designvault")}
+                className="w-full bg-gradient-plum-pink hover:opacity-90 text-white"
+              >
+                Open DesignVault
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Metrics Cards Below */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-            <div
+            <Card
               key={metric.title}
-              className="bg-[#121218] border border-white/5 rounded-md p-3 hover:border-purple-500/30 transition-all group"
+              className="bg-card border-border p-3 hover:border-primary/30 transition-all"
             >
               <div className="flex items-start justify-between mb-2">
-                <Icon className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
-                <span className="text-[10px] text-green-400 font-medium">{metric.change}</span>
+                <Icon className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs text-green-400 font-medium">{metric.change}</span>
               </div>
               <div className="text-xs text-muted-foreground mb-1">{metric.title}</div>
-              <div className="text-lg font-bold text-foreground">{metric.value}</div>
-            </div>
+              <div className="text-xl font-bold text-foreground">{metric.value}</div>
+            </Card>
           );
         })}
       </div>
 
-      {/* Product Buttons */}
+      {/* Admin Modules */}
       <div>
-        <h2 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide flex items-center gap-2">
-          <span className="w-1 h-3 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></span>
-          Products
+        <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide flex items-center gap-2">
+          <span className="w-1 h-4 bg-gradient-primary rounded-full"></span>
+          Admin Modules
         </h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {adminModules.map((module) => {
             const Icon = module.icon;
             return (
-              <button
+              <Card
                 key={module.name}
                 onClick={() => navigate(module.route)}
-                className="bg-[#121218] border border-white/5 px-3 py-1.5 rounded-md text-left hover:border-purple-500/60 hover:shadow-[0_0_12px_rgba(168,85,247,0.15)] transition-all duration-200 group inline-flex items-center gap-2"
+                className="bg-card border-border p-4 hover:border-primary/30 transition-all cursor-pointer group"
               >
-                <Icon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-purple-400 transition-colors" strokeWidth={1.5} />
-                <span className="text-xs font-medium text-foreground">
-                  {module.name}
-                </span>
-              </button>
+                <Icon className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
+                <div className="text-sm font-semibold text-foreground mb-1">{module.name}</div>
+                <div className="text-xs text-muted-foreground">{module.subtitle}</div>
+              </Card>
             );
           })}
         </div>
       </div>
 
-      {/* Recent Activity & Quick Build */}
-      <div>
-        <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="w-1 h-4 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></span>
-          Recent Activity & Quick Build
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {/* MightyCustomer Card */}
-          <Card className="bg-[#121218] border-white/5">
-            <CardHeader className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-purple-500/10 rounded-md border border-purple-500/20">
-                    <FileText className="w-4 h-4 text-purple-400" strokeWidth={1.5} />
-                  </div>
-                  <div>
-                    <CardTitle className="text-sm">MightyCustomer</CardTitle>
-                    <p className="text-[10px] text-muted-foreground">Quote & Order Builder</p>
-                  </div>
-                </div>
-                <ChevronUp className="w-4 h-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2.5 pt-0 p-3">
-              <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Choose a Product</label>
-                <select className="w-full bg-[#0F0F14] border border-white/5 rounded-md px-3 py-2 text-xs text-foreground focus:border-purple-500/50 focus:outline-none transition-colors">
-                  <option>Choose a Product</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <Button size="sm" className="bg-purple-500/10 hover:bg-purple-500/20 text-foreground border-0 text-[10px] h-7">
-                <Car className="w-4 h-4 mr-2" />
-                Make/Model
-                </Button>
-                <Button size="sm" variant="outline" className="bg-[#0F0F14] border-white/5 text-[10px] h-7">
-                  Total Sq. Ft.
-                </Button>
-                <Button size="sm" variant="outline" className="bg-[#0F0F14] border-white/5 text-[10px] h-7">
-                  Dimensions
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <select className="w-full bg-[#0F0F14] border border-white/5 rounded-md px-3 py-2 text-xs text-foreground focus:border-purple-500/50 focus:outline-none transition-colors">
-                  <option>Select Make</option>
-                </select>
-                <select className="w-full bg-[#0F0F14] border border-white/5 rounded-md px-3 py-2 text-xs text-foreground focus:border-purple-500/50 focus:outline-none transition-colors">
-                  <option>Select Model</option>
-                </select>
-                <select className="w-full bg-[#0F0F14] border border-white/5 rounded-md px-3 py-2 text-xs text-foreground focus:border-purple-500/50 focus:outline-none transition-colors">
-                  <option>Select Year</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">Quantity</label>
-                  <input
-                    type="number"
-                    defaultValue="1"
-                    className="w-full bg-[#0F0F14] border border-white/5 rounded-md px-3 py-2 text-xs text-foreground focus:border-purple-500/50 focus:outline-none transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">Finish</label>
-                  <select className="w-full bg-[#0F0F14] border border-white/5 rounded-md px-3 py-2 text-xs text-foreground focus:border-purple-500/50 focus:outline-none transition-colors">
-                    <option>Gloss</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[10px] text-muted-foreground">Margin</label>
-                  <span className="text-xs font-semibold text-purple-400">40%</span>
-                </div>
-                <input
-                  type="range"
-                  defaultValue="40"
-                  className="w-full h-1.5 accent-purple-500"
-                />
-              </div>
-
-              <Button size="sm" className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-[0_0_12px_rgba(168,85,247,0.3)] text-white text-xs h-8">
-                + Add to Quote
-              </Button>
-
-              <div className="pt-3 border-t border-white/5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs font-medium">Customer Information</span>
-                  </div>
-                  <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-              </div>
-            </CardContent>
-        </Card>
-
-          {/* DesignVault Premium Card */}
-          <Card className="bg-[#121218] border-white/5">
-            <CardHeader className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-purple-500/10 rounded-md border border-purple-500/20">
-                    <Sparkles className="w-4 h-4 text-purple-400" strokeWidth={1.5} />
-                  </div>
-                  <div>
-                    <CardTitle className="text-sm">
-                      DesignVault™ <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Premium</span>
-                    </CardTitle>
-                    <p className="text-[10px] text-muted-foreground">This Month's Drops</p>
-                  </div>
-                </div>
-                <button className="text-[10px] text-purple-400 hover:underline">View All</button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2.5 pt-0 p-3">
-              <div className="relative bg-[#0A0A0F] rounded-md p-4 overflow-hidden border border-white/5">
-                <div className="absolute top-2 right-2">
-                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)] text-[9px] px-1.5 py-0.5">
-                    <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                    New
-                  </Badge>
-                </div>
-                <div className="text-center space-y-3">
-                  <div className="text-lg font-bold text-white">
-                    Panel is 174"x49"
-                  </div>
-                  <div className="w-full h-32 bg-gradient-to-br from-cyan-500 via-purple-500 to-pink-500 rounded-md flex items-center justify-center">
-                    <Car className="w-16 h-16 text-white/50" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-white mb-0.5">Rainbow Splatter</h3>
-                    <p className="text-[10px] text-muted-foreground">Panel 174"x49"</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-[0_0_12px_rgba(168,85,247,0.3)] text-white text-xs h-7">
-                      View Design
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1 bg-[#0F0F14] border-white/5 text-xs h-7">
-                      Preview
-                    </Button>
-                    <Button size="sm" variant="outline" className="flex-1 bg-[#0F0F14] border-white/5 text-xs h-7">
-                      Save
-                    </Button>
-                  </div>
-                  <div className="flex justify-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-muted"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-muted"></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Recent Activity */}
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <span className="w-1 h-4 bg-gradient-primary rounded-full"></span>
+            Recent Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-sm p-2 bg-background rounded-md">
+              <TrendingUp className="w-4 h-4 text-green-400" />
+              <span className="text-muted-foreground">New render added:</span>
+              <span className="text-foreground font-medium">2019 Tesla Model 3 - Satin Flip</span>
+              <span className="text-muted-foreground ml-auto text-xs">2m ago</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm p-2 bg-background rounded-md">
+              <CheckCircle className="w-4 h-4 text-blue-400" />
+              <span className="text-muted-foreground">Approval received:</span>
+              <span className="text-foreground font-medium">Order #32995</span>
+              <span className="text-muted-foreground ml-auto text-xs">1h ago</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm p-2 bg-background rounded-md">
+              <Package className="w-4 h-4 text-purple-400" />
+              <span className="text-muted-foreground">Production pack ready:</span>
+              <span className="text-foreground font-medium">Cybertruck Wrap Kit</span>
+              <span className="text-muted-foreground ml-auto text-xs">3h ago</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
