@@ -86,6 +86,50 @@ export type Database = {
         }
         Relationships: []
       }
+      wrapbox_kits: {
+        Row: {
+          created_at: string | null
+          design_vault_id: string | null
+          id: string
+          organization_id: string | null
+          panels: Json | null
+          status: string | null
+          tags: string[] | null
+          updated_at: string | null
+          vehicle_json: Json
+        }
+        Insert: {
+          created_at?: string | null
+          design_vault_id?: string | null
+          id?: string
+          organization_id?: string | null
+          panels?: Json | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          vehicle_json: Json
+        }
+        Update: {
+          created_at?: string | null
+          design_vault_id?: string | null
+          id?: string
+          organization_id?: string | null
+          panels?: Json | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          vehicle_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wrapbox_kits_design_vault_id_fkey"
+            columns: ["design_vault_id"]
+            isOneToOne: false
+            referencedRelation: "color_visualizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
