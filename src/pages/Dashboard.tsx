@@ -73,15 +73,15 @@ export default function Dashboard() {
             <button
               key={module.name}
               onClick={() => navigate(module.route)}
-              className={`${module.gradient} p-6 rounded-xl text-left hover:shadow-glow hover:scale-[1.02] transition-all duration-200 group`}
+              className={`${module.gradient} p-4 rounded-xl text-left hover:shadow-glow hover:scale-[1.02] transition-all duration-200 group`}
             >
-              <div className="flex items-start justify-between mb-4">
-                <Icon className="w-6 h-6 text-white" strokeWidth={2} />
+              <div className="flex items-start justify-between mb-2">
+                <Icon className="w-5 h-5 text-white" strokeWidth={2} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-1">
+              <h3 className="text-base font-bold text-white mb-1">
                 {module.name}
               </h3>
-              <p className="text-sm text-white/70">{module.subtitle}</p>
+              <p className="text-xs text-white/70">{module.subtitle}</p>
             </button>
           );
         })}
@@ -91,7 +91,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
         {/* MightyCustomer Card */}
         <Card className="bg-card border-border">
-          <CardHeader>
+          <CardHeader className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -105,7 +105,7 @@ export default function Dashboard() {
               <ChevronUp className="w-5 h-5 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 pt-0">
             <div className="grid grid-cols-3 gap-3">
               <Button className="bg-primary/20 hover:bg-primary/30 text-foreground border-0">
                 <Car className="w-4 h-4 mr-2" />
@@ -188,7 +188,7 @@ export default function Dashboard() {
 
         {/* DesignVault Premium Card */}
         <Card className="bg-card border-border">
-          <CardHeader>
+          <CardHeader className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -204,7 +204,7 @@ export default function Dashboard() {
               <button className="text-sm text-primary hover:underline">View All</button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 pt-0">
             <div className="relative bg-black/50 rounded-xl p-6 overflow-hidden">
               <div className="absolute top-4 right-4">
                 <Badge className="bg-primary text-white shadow-glow">
