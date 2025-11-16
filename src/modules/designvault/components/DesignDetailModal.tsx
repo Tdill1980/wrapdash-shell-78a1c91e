@@ -72,76 +72,104 @@ export const DesignDetailModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-[#0A0A0F] border-white/10">
         <DialogHeader>
-          <DialogTitle className="text-2xl">
+          <DialogTitle className="text-xl font-bold text-foreground">
             {design.vehicle_year} {design.vehicle_make} {design.vehicle_model}
           </DialogTitle>
+          <p className="text-xs text-muted-foreground">
+            {design.color_name} • {design.finish_type}
+          </p>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Render Views Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {views.map(({ key, url }) => (
-              <div key={key} className="space-y-2">
-                <p className="text-sm text-muted-foreground capitalize">
-                  {key.replace(/_/g, " ")}
-                </p>
-                <img
-                  src={url}
-                  alt={key}
-                  className="w-full rounded-lg border border-border"
-                />
-              </div>
-            ))}
+        <div className="space-y-5">
+          {/* Large Hero Render */}
+          <div className="relative w-full rounded-lg overflow-hidden bg-gradient-to-b from-neutral-100 to-neutral-200 p-8">
+            <img
+              src={renderUrls?.hero || "/placeholder.svg"}
+              alt="Hero View"
+              className="w-full h-auto object-contain"
+              style={{ filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.2))' }}
+            />
           </div>
 
-          {/* Details */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Color</p>
-              <div className="flex items-center gap-2 mt-1">
-                {design.color_hex && (
-                  <div
-                    className="w-8 h-8 rounded-full border-2 border-border"
-                    style={{ backgroundColor: design.color_hex }}
-                  />
-                )}
-                <span className="font-medium">
-                  {design.color_name || design.color_hex}
-                </span>
+          {/* Additional Views Grid */}
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Additional Views
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {views.filter(({ key }) => key !== 'hero').map(({ key, url }) => (
+                <div key={key} className="space-y-1.5">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                    {key.replace(/_/g, " ")}
+                  </p>
+                  <div className="rounded-md overflow-hidden bg-gradient-to-b from-neutral-100 to-neutral-200 p-3 border border-white/5">
+                    <img
+                      src={url}
+                      alt={key}
+                      className="w-full h-auto object-contain"
+                      style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.15))' }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+
+          {/* Details Grid */}
+          <div className="bg-[#121218] border border-white/5 rounded-lg p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Design Details
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Color</p>
+                <div className="flex items-center gap-2">
+                  {design.color_hex && (
+                    <div
+                      className="w-6 h-6 rounded-full border-2 border-white/10"
+                      style={{ backgroundColor: design.color_hex }}
+                    />
+                  )}
+                  <span className="text-xs font-medium text-foreground">
+                    {design.color_name || design.color_hex}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Finish Type</p>
-              <p className="font-medium capitalize mt-1">
-                {design.finish_type}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Vehicle Type</p>
-              <p className="font-medium capitalize mt-1">
-                {design.vehicle_type}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Created</p>
-              <p className="font-medium mt-1">
-                {new Date(design.created_at).toLocaleDateString()}
-              </p>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Finish Type</p>
+                <p className="text-xs font-medium text-foreground capitalize">
+                  {design.finish_type}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Vehicle Type</p>
+                <p className="text-xs font-medium text-foreground capitalize">
+                  {design.vehicle_type}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Created</p>
+                <p className="text-xs font-medium text-foreground">
+                  {new Date(design.created_at).toLocaleDateString()}
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Tags */}
           {design.tags && design.tags.length > 0 && (
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Tags</p>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Tags
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {design.tags.map((tag, idx) => (
                   <Badge
                     key={idx}
-                    variant="secondary"
-                    className="bg-gradient-purple text-white"
+                    className="bg-[#121218] border-purple-500/30 text-foreground text-xs"
                   >
                     {tag}
                   </Badge>
@@ -150,23 +178,29 @@ export const DesignDetailModal = ({
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-border">
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-white/5">
             <Button
               onClick={handleSendToWrapBox}
               disabled={isCreatingKit}
-              className="flex-1 bg-gradient-purple hover:opacity-90"
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 text-sm h-10"
             >
               <Package className="w-4 h-4 mr-2" />
-              Send to WrapBox
+              Generate Print Pack
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button 
+              variant="outline" 
+              className="flex-1 bg-[#121218] border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 text-sm h-10"
+            >
               <FileCheck className="w-4 h-4 mr-2" />
-              Send to ApproveFlow
+              View All Sides
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button 
+              variant="outline" 
+              className="flex-1 bg-[#121218] border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 text-sm h-10"
+            >
               <DollarSign className="w-4 h-4 mr-2" />
-              Add to Quote
+              Save to Vault
             </Button>
           </div>
         </div>

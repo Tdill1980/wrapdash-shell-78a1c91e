@@ -131,28 +131,25 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Quick Access Modules */}
+      {/* Product Buttons */}
       <div>
-        <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          <span className="w-1 h-4 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></span>
-          Quick Access
+        <h2 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide flex items-center gap-2">
+          <span className="w-1 h-3 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full"></span>
+          Products
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="flex flex-wrap gap-2">
           {adminModules.map((module) => {
             const Icon = module.icon;
             return (
               <button
                 key={module.name}
                 onClick={() => navigate(module.route)}
-                className="bg-[#121218] border border-white/5 p-3 rounded-md text-left hover:border-purple-500/60 hover:shadow-[0_0_12px_rgba(168,85,247,0.15)] transition-all duration-200 group"
+                className="bg-[#121218] border border-white/5 px-3 py-1.5 rounded-md text-left hover:border-purple-500/60 hover:shadow-[0_0_12px_rgba(168,85,247,0.15)] transition-all duration-200 group inline-flex items-center gap-2"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <Icon className="w-4 h-4 text-muted-foreground group-hover:text-purple-400 transition-colors" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-xs font-semibold text-foreground mb-0.5">
+                <Icon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-purple-400 transition-colors" strokeWidth={1.5} />
+                <span className="text-xs font-medium text-foreground">
                   {module.name}
-                </h3>
-                <p className="text-[10px] text-muted-foreground">{module.subtitle}</p>
+                </span>
               </button>
             );
           })}
