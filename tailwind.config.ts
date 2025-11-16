@@ -63,6 +63,13 @@ export default {
       },
       backgroundImage: {
         "gradient-primary": "linear-gradient(90deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)))",
+        "gradient-cyan-pink": "linear-gradient(135deg, #00D4FF, #D946EF)",
+        "gradient-vault": "linear-gradient(135deg, #8B5CF6, #D946EF)",
+        "gradient-mail": "linear-gradient(135deg, #06B6D4, #3B82F6)",
+        "gradient-customers": "linear-gradient(135deg, #10B981, #14B8A6)",
+        "gradient-approval": "linear-gradient(135deg, #7C3AED, #A78BFA)",
+        "gradient-orders": "linear-gradient(135deg, #F97316, #FB923C)",
+        "gradient-admin": "linear-gradient(135deg, #EF4444, #EC4899)",
       },
       borderRadius: {
         lg: "var(--radius)",
