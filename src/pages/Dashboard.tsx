@@ -106,6 +106,13 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Choose a Product</label>
+              <select className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-foreground">
+                <option>Choose WPW Product...</option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
               <Button className="bg-primary/20 hover:bg-primary/30 text-foreground border-0">
                 <Car className="w-4 h-4 mr-2" />
@@ -161,13 +168,6 @@ export default function Dashboard() {
                   accentColor: "hsl(var(--primary))",
                 }}
               />
-            </div>
-
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Select Product</label>
-              <select className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-foreground">
-                <option>Choose WPW Product...</option>
-              </select>
             </div>
 
             <Button className="w-full bg-primary hover:bg-primary/90 text-white">
