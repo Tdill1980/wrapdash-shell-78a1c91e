@@ -3,25 +3,25 @@ import { Store } from "lucide-react";
 
 export default function ShopFlow() {
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-5xl font-display text-gradient-purple">
+        <h1 className="text-3xl font-bold tracking-tight text-gradient">
           ShopFlow
         </h1>
-        <p className="text-muted-foreground mt-3 text-lg">
+        <p className="text-sm text-muted-foreground mt-1">
           Production workflow and shop management
         </p>
       </div>
 
-      <Card className="p-16 bg-card border-border rounded-2xl text-center shadow-card">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <Card className="p-12 bg-card border-border text-center">
+        <div className="max-w-lg mx-auto space-y-5">
           <div className="flex justify-center">
-            <div className="p-6 bg-gradient-purple rounded-2xl shadow-glow-sm">
-              <Store className="w-14 h-14 text-white" />
+            <div className="p-3 bg-primary/10 rounded-lg">
+              <Store className="w-8 h-8 text-primary" strokeWidth={1.5} />
             </div>
           </div>
-          <h2 className="text-3xl font-display">Module Coming Soon</h2>
-          <p className="text-muted-foreground text-lg leading-relaxed">
+          <h2 className="text-xl font-semibold">Module Coming Soon</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Streamline your wrap shop operations with job scheduling,
             production tracking, and team coordination tools.
           </p>
