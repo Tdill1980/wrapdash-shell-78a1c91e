@@ -62,14 +62,17 @@ export default {
         },
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(90deg, hsl(var(--gradient-start)), hsl(var(--gradient-end)))",
-        "gradient-cyan-pink": "linear-gradient(135deg, #00D4FF, #D946EF)",
-        "gradient-vault": "linear-gradient(135deg, #8B5CF6, #D946EF)",
-        "gradient-mail": "linear-gradient(135deg, #06B6D4, #3B82F6)",
-        "gradient-customers": "linear-gradient(135deg, #10B981, #14B8A6)",
-        "gradient-approval": "linear-gradient(135deg, #7C3AED, #A78BFA)",
-        "gradient-orders": "linear-gradient(135deg, #F97316, #FB923C)",
-        "gradient-admin": "linear-gradient(135deg, #EF4444, #EC4899)",
+        "gradient-primary": "linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)))",
+        "gradient-purple-magenta": "linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)))",
+        "gradient-magenta-blue": "linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)))",
+        "gradient-plum-pink": "linear-gradient(135deg, hsl(var(--gradient-plum)), hsl(var(--gradient-pink)))",
+        "gradient-teal-violet": "linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-violet)))",
+        "gradient-vault": "linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)))",
+        "gradient-mail": "linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-blue)))",
+        "gradient-customers": "linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-violet)))",
+        "gradient-approval": "linear-gradient(135deg, hsl(var(--gradient-plum)), hsl(var(--gradient-violet)))",
+        "gradient-orders": "linear-gradient(135deg, hsl(var(--gradient-pink)), hsl(var(--gradient-magenta)))",
+        "gradient-admin": "linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-pink)))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -78,8 +81,8 @@ export default {
       },
       boxShadow: {
         card: "0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.24)",
-        "card-hover": "0 4px 8px 0 rgba(217, 70, 239, 0.15), 0 2px 4px 0 rgba(217, 70, 239, 0.1)",
-        glow: "0 0 20px rgba(217, 70, 239, 0.3)",
+        "card-hover": "0 2px 4px 0 rgba(139, 92, 246, 0.15)",
+        glow: "0 0 12px rgba(139, 92, 246, 0.25)",
       },
       keyframes: {
         "accordion-down": {
