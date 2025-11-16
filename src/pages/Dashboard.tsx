@@ -1,150 +1,91 @@
-import { Card } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import {
-  Palette,
-  Package,
-  TrendingUp,
-  DollarSign,
+  Database,
+  Mail,
   Users,
   CheckCircle,
+  Package,
+  Settings,
 } from "lucide-react";
 
-const metrics = [
+const adminModules = [
   {
-    label: "Total Renders",
-    value: "156",
-    change: "+12%",
-    icon: Palette,
+    name: "Design Vault",
+    subtitle: "Manage uploads",
+    icon: Database,
+    gradient: "bg-gradient-vault",
+    route: "/designvault",
   },
   {
-    label: "Print Kits",
-    value: "43",
-    change: "+8%",
-    icon: Package,
+    name: "MightyMail",
+    subtitle: "Email campaigns",
+    icon: Mail,
+    gradient: "bg-gradient-mail",
+    route: "/email-campaigns",
   },
   {
-    label: "Active Jobs",
-    value: "24",
-    change: "+5%",
-    icon: TrendingUp,
-  },
-  {
-    label: "Revenue",
-    value: "$12.5K",
-    change: "+18%",
-    icon: DollarSign,
-  },
-  {
-    label: "Customers",
-    value: "89",
-    change: "+6%",
+    name: "Customers",
+    subtitle: "Manage customers",
     icon: Users,
+    gradient: "bg-gradient-customers",
+    route: "/mightycustomer",
   },
   {
-    label: "Approvals",
-    value: "67",
-    change: "+14%",
+    name: "ApprovalFlow V2",
+    subtitle: "Approval tasks",
     icon: CheckCircle,
+    gradient: "bg-gradient-approval",
+    route: "/approveflow",
+  },
+  {
+    name: "Orders",
+    subtitle: "View all orders",
+    icon: Package,
+    gradient: "bg-gradient-orders",
+    route: "/shopflow",
+  },
+  {
+    name: "Admin Panel",
+    subtitle: "Full admin access",
+    icon: Settings,
+    gradient: "bg-gradient-admin",
+    route: "/settings",
   },
 ];
 
 export default function Dashboard() {
-  const quickActions = [
-    { name: "New Wrap Job", icon: Package, color: "bg-gradient-primary" },
-    { name: "Create Quote", icon: CheckCircle, color: "bg-green-500" },
-    { name: "Open DesignVault™", icon: Palette, color: "bg-cyan-500" },
-    { name: "Customer Update", icon: Users, color: "bg-orange-500" },
-  ];
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-6 max-w-7xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gradient">
-          Shop Analytics
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          Admin Controls
         </h1>
+        <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {adminModules.map((module) => {
+          const Icon = module.icon;
           return (
-            <Card
-              key={metric.label}
-              className="p-4 bg-card border-border hover:shadow-card-hover transition-shadow"
+            <button
+              key={module.name}
+              onClick={() => navigate(module.route)}
+              className={`${module.gradient} p-6 rounded-xl text-left hover:shadow-glow hover:scale-[1.02] transition-all duration-200 group`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Icon className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {metric.label}
-                    </p>
-                  </div>
-                  <div className="flex items-baseline gap-2 mt-2">
-                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
-                    <span className="text-xs font-medium text-green-500">
-                      {metric.change}
-                    </span>
-                  </div>
-                </div>
+              <div className="flex items-start justify-between mb-4">
+                <Icon className="w-6 h-6 text-white" strokeWidth={2} />
               </div>
-            </Card>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {module.name}
+              </h3>
+              <p className="text-sm text-white/70">{module.subtitle}</p>
+            </button>
           );
         })}
-      </div>
-
-      <Card>
-        <div className="p-5">
-          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={action.name}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-muted transition-colors group"
-                >
-                  <div className={`w-12 h-12 rounded-xl ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-center text-foreground">{action.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-5 bg-card border-border hover:shadow-card-hover transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Palette className="w-4 h-4 text-primary" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-base font-semibold">Recent Activity</h3>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted transition-colors">
-              <div className="w-2 h-2 rounded-full bg-primary shadow-glow"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">New design created</p>
-                <p className="text-xs text-muted-foreground">2024 Tesla Model 3</p>
-              </div>
-              <span className="text-xs text-muted-foreground">5m ago</span>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-5 bg-card border-border hover:shadow-card-hover transition-shadow">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Package className="w-4 h-4 text-primary" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-base font-semibold">Production Queue</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Manage print kits and production files
-          </p>
-        </Card>
       </div>
     </div>
   );
