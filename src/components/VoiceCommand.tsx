@@ -118,30 +118,28 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
   };
 
   return (
-    <div className="sticky top-0 z-50 bg-gradient-to-r from-[#0A0A0F] via-[#121218] to-[#16161E] border-b border-border/50 backdrop-blur-sm">
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Mic className="w-5 h-5 text-primary" />
-            <span className="text-sm font-semibold text-foreground">
-              Speak to MightyCustomer™ — VoiceCommand AI
-            </span>
-          </div>
+    <div className="sticky top-0 z-50 bg-gradient-to-r from-[#0A0A0F] via-[#121218] to-[#16161E] border-b border-border/30 backdrop-blur-sm">
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Mic className="w-4 h-4 text-primary" />
+          <span className="text-xs font-bold text-foreground tracking-wide">
+            Speak to MightyCustomer™ — VoiceCommand AI
+          </span>
         </div>
         <button
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onTouchStart={handleMouseDown}
           onTouchEnd={handleMouseUp}
-          className={`w-full px-6 py-4 rounded-lg border-2 transition-all duration-200 ${
+          className={`w-full px-4 py-3 rounded-md border transition-all duration-200 ${
             isRecording
-              ? "bg-primary/20 border-primary shadow-glow"
-              : "bg-background/50 border-border/50 hover:border-primary/50"
+              ? "bg-primary/15 border-primary/60 shadow-[0_0_16px_rgba(168,85,247,0.2)]"
+              : "bg-[#0F0F14] border-border/40 hover:border-primary/40 hover:bg-[#141419]"
           }`}
         >
-          <div className="flex items-center justify-center gap-3">
-            <Mic className={`w-5 h-5 ${isRecording ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
-            <span className="text-sm text-foreground">
+          <div className="flex items-center justify-center gap-2">
+            <Mic className={`w-4 h-4 ${isRecording ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
+            <span className="text-xs text-foreground font-medium">
               {isRecording ? "Listening... (Release when done)" : "Hold to speak your full job request..."}
             </span>
           </div>
