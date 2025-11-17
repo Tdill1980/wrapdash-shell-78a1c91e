@@ -153,39 +153,81 @@ export default function Dashboard() {
 
       {/* Two-Column Hero Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* LEFT: MightyCustomer Card */}
+        {/* LEFT: Quote Builder Card */}
         <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold text-gradient">MightyCustomer</CardTitle>
+              <CardTitle className="text-lg font-bold text-gradient">Quote Builder</CardTitle>
               <Users className="w-5 h-5 text-primary" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Customer management & communication hub
+              Quick order & quote creation
             </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
-                <div>
-                  <div className="text-sm font-semibold text-foreground">Active Customers</div>
-                  <div className="text-xs text-muted-foreground">This month</div>
+              {/* Service Type */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Service Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button className="bg-gradient-purple-magenta text-white text-xs py-2 px-3 rounded-md hover:opacity-90 transition-opacity">
+                    Full Wrap
+                  </button>
+                  <button className="bg-background border border-border text-foreground text-xs py-2 px-3 rounded-md hover:bg-background/70 transition-colors">
+                    Partial
+                  </button>
+                  <button className="bg-background border border-border text-foreground text-xs py-2 px-3 rounded-md hover:bg-background/70 transition-colors">
+                    PPF
+                  </button>
                 </div>
-                <div className="text-2xl font-bold text-gradient">412</div>
               </div>
-              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
-                <div>
-                  <div className="text-sm font-semibold text-foreground">Pending Approvals</div>
-                  <div className="text-xs text-muted-foreground">Awaiting response</div>
-                </div>
-                <div className="text-2xl font-bold text-gradient-pink">23</div>
+
+              {/* Vehicle Info */}
+              <div className="grid grid-cols-3 gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Year"
+                  className="bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <input 
+                  type="text" 
+                  placeholder="Make"
+                  className="bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <input 
+                  type="text" 
+                  placeholder="Model"
+                  className="bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
               </div>
-              <Button 
-                onClick={() => navigate("/mightycustomer")}
-                className="w-full bg-gradient-primary hover:opacity-90 text-white"
-              >
-                Open MightyCustomer
-              </Button>
+
+              {/* Customer Name */}
+              <input 
+                type="text" 
+                placeholder="Customer Name"
+                className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+
+              {/* Estimated Price */}
+              <div className="bg-background rounded-lg p-3 border border-border flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Estimated Price</span>
+                <span className="text-xl font-bold text-gradient">$3,500</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  className="bg-gradient-magenta-blue hover:opacity-90 text-white text-xs font-semibold"
+                  onClick={() => navigate("/mighty-customer")}
+                >
+                  Full Builder
+                </Button>
+                <Button 
+                  className="bg-gradient-primary hover:opacity-90 text-white text-xs font-semibold"
+                >
+                  Send Quote
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
