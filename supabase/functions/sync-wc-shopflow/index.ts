@@ -16,7 +16,38 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const payload = await req.json();
+    // Get content type to handle different payload formats
+    const contentType = req.headers.get('content-type') || '';
+    console.log('Content-Type:', contentType);
+    
+    let payload;
+    
+    // Handle JSON payloads (standard WooCommerce webhook format)
+    if (contentType.includes('application/json')) {
+      payload = await req.json();
+    } 
+    // Handle form/URL-encoded test pings or alternate formats
+    else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const text = await req.text();
+      console.log('Received URL-encoded data:', text);
+      
+      // This is likely a test ping, return success
+      if (text.includes('webhook_id')) {
+        return new Response(
+          JSON.stringify({ message: 'Webhook test received successfully' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw new Error('URL-encoded payload not supported for order sync');
+    }
+    // Try to parse as JSON anyway
+    else {
+      const text = await req.text();
+      console.log('Received unknown content type, raw body:', text);
+      payload = JSON.parse(text);
+    }
+    
     console.log('WooCommerce webhook received:', payload);
 
     // Extract order data
