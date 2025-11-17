@@ -41,6 +41,8 @@ export default function Visualize() {
   // Rendering state
   const [isGenerating, setIsGenerating] = useState(false);
   const [heroImageUrl, setHeroImageUrl] = useState("");
+  const [visualizationId, setVisualizationId] = useState<string | null>(null);
+  const [allRenderUrls, setAllRenderUrls] = useState<Record<string, string>>({});
   const { jobs, addJob, startJob, clearJobs } = useRenderPolling();
 
   const handleSwatchAnalyzed = (data: {
@@ -136,7 +138,7 @@ export default function Visualize() {
       });
 
       // Save to database
-      const { error: dbError } = await supabase
+      const { data: visualizationData, error: dbError } = await supabase
         .from("color_visualizations")
         .insert({
           organization_id: organizationId,
@@ -156,12 +158,18 @@ export default function Visualize() {
           subscription_tier: subscriptionTier,
           render_urls: [{ angle: "hero", url: heroUrl }],
           tags,
-        });
+        })
+        .select()
+        .single();
 
       if (dbError) {
         console.error("Database error:", dbError);
         toast.error("Failed to save visualization");
+        return;
       }
+
+      setVisualizationId(visualizationData.id);
+      setAllRenderUrls({ hero: heroUrl });
 
       toast.success("Hero render complete!");
 
@@ -171,15 +179,52 @@ export default function Visualize() {
 
       // Generate background renders sequentially
       toast.info("Generating additional angles in background...");
+      const newRenderUrls: Record<string, string> = { hero: heroUrl };
+      
       for (const angle of backgroundAngles) {
         try {
-          await startJob(angle, renderParams);
+          const angleUrl = await startJob(angle, renderParams);
+          newRenderUrls[angle] = angleUrl;
         } catch (error) {
           console.error(`Failed to generate ${angle}:`, error);
         }
       }
 
+      setAllRenderUrls(newRenderUrls);
+
+      // Update database with all render URLs
+      if (visualizationData?.id) {
+        await supabase
+          .from("color_visualizations")
+          .update({
+            render_urls: Object.entries(newRenderUrls).map(([angle, url]) => ({ angle, url }))
+          })
+          .eq("id", visualizationData.id);
+      }
+
       toast.success("All renders complete!");
+
+      // Send Klaviyo event
+      try {
+        await supabase.functions.invoke("send-klaviyo-event", {
+          body: {
+            eventName: "designproai_render_generated",
+            customerEmail: "shop@weprintwraps.com", // Could be replaced with actual customer email if available
+            properties: {
+              visualization_id: visualizationData.id,
+              vehicle: `${vehicleYear} ${vehicleMake} ${vehicleModel}`,
+              mode,
+              color_name: colorName,
+              color_hex: colorHex,
+              finish_type: finishType,
+              tags,
+              render_urls: newRenderUrls,
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Failed to send Klaviyo event:", error);
+      }
     } catch (error) {
       console.error("Error generating render:", error);
       toast.error(error instanceof Error ? error.message : "Failed to generate render");
@@ -301,7 +346,14 @@ export default function Visualize() {
 
       {/* Right Panel - Results */}
       <div>
-        <RenderResults heroImageUrl={heroImageUrl} backgroundJobs={jobs} />
+        <RenderResults 
+          heroImageUrl={heroImageUrl} 
+          backgroundJobs={jobs}
+          visualizationId={visualizationId}
+          renderUrls={allRenderUrls}
+          vehicleInfo={{ make: vehicleMake, model: vehicleModel, year: vehicleYear, type: vehicleType }}
+          colorInfo={{ hex: customColorHex || getColorById(selectedColorId)?.hex || "", name: customColorName || getColorById(selectedColorId)?.name || "" }}
+        />
       </div>
     </div>
   );

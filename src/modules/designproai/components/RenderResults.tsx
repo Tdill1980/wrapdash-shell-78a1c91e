@@ -1,5 +1,9 @@
 import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, CheckCircle, FileText, Package } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RenderJob {
   angle: string;
@@ -11,6 +15,10 @@ interface RenderJob {
 interface RenderResultsProps {
   heroImageUrl?: string;
   backgroundJobs: RenderJob[];
+  visualizationId?: string | null;
+  renderUrls?: Record<string, string>;
+  vehicleInfo?: { make: string; model: string; year: number; type: string };
+  colorInfo?: { hex: string; name: string };
 }
 
 const ANGLE_LABELS: Record<string, string> = {
@@ -20,10 +28,76 @@ const ANGLE_LABELS: Record<string, string> = {
   detail: "Detail Shot",
 };
 
-export const RenderResults = ({ heroImageUrl, backgroundJobs }: RenderResultsProps) => {
+export const RenderResults = ({ 
+  heroImageUrl, 
+  backgroundJobs, 
+  visualizationId, 
+  renderUrls, 
+  vehicleInfo, 
+  colorInfo 
+}: RenderResultsProps) => {
+  const navigate = useNavigate();
+
   if (!heroImageUrl && backgroundJobs.length === 0) {
     return null;
   }
+
+  const allComplete = backgroundJobs.every(job => job.status === "complete");
+
+  const handleSendToApproveFlow = async () => {
+    if (!visualizationId || !vehicleInfo) return;
+
+    try {
+      // Create ApproveFlow project
+      const { data: project, error } = await supabase
+        .from("approveflow_projects")
+        .insert({
+          customer_name: "WrapCloser Generated",
+          order_number: `WC-${Date.now()}`,
+          product_type: `${vehicleInfo.type} Wrap`,
+          status: "design_requested",
+          design_instructions: `Generated from WrapCloser: ${vehicleInfo.year} ${vehicleInfo.make} ${vehicleInfo.model}`,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add 3D renders to ApproveFlow
+      if (renderUrls) {
+        await supabase.from("approveflow_3d").insert({
+          project_id: project.id,
+          render_urls: renderUrls,
+        });
+      }
+
+      toast.success("Sent to ApproveFlow!");
+      navigate(`/approveflow/${project.id}`);
+    } catch (error) {
+      console.error("Error sending to ApproveFlow:", error);
+      toast.error("Failed to send to ApproveFlow");
+    }
+  };
+
+  const handleAddToQuote = () => {
+    if (!vehicleInfo || !colorInfo) return;
+    
+    // Navigate to MightyCustomer with pre-filled data
+    const params = new URLSearchParams({
+      make: vehicleInfo.make,
+      model: vehicleInfo.model,
+      year: vehicleInfo.year.toString(),
+      color: colorInfo.name,
+    });
+    
+    navigate(`/mighty-customer?${params}`);
+    toast.success("Opening quote builder...");
+  };
+
+  const handleViewInDesignVault = () => {
+    navigate("/designvault");
+    toast.success("View your render in DesignVault");
+  };
 
   return (
     <div className="space-y-6">
@@ -35,8 +109,37 @@ export const RenderResults = ({ heroImageUrl, backgroundJobs }: RenderResultsPro
           <img
             src={heroImageUrl}
             alt="Hero render"
-            className="w-full rounded-xl"
+            className="w-full rounded-xl mb-4"
           />
+          
+          {allComplete && visualizationId && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+              <Button
+                onClick={handleSendToApproveFlow}
+                className="bg-primary hover:bg-primary/90"
+                size="sm"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Send to ApproveFlow
+              </Button>
+              <Button
+                onClick={handleAddToQuote}
+                variant="outline"
+                size="sm"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Add to Quote
+              </Button>
+              <Button
+                onClick={handleViewInDesignVault}
+                variant="outline"
+                size="sm"
+              >
+                <Package className="w-4 h-4 mr-2" />
+                View in Vault
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 
