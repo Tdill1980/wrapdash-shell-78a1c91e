@@ -14,6 +14,7 @@ import DesignMarket from "./pages/DesignMarket";
 import ShopFlow from "./pages/ShopFlow";
 import MightyCustomer from "./pages/MightyCustomer";
 import ApproveFlow from "./pages/ApproveFlow";
+import ApproveFlowList from "./pages/ApproveFlowList";
 import Portfolio from "./pages/Portfolio";
 import NotFound from "./pages/NotFound";
 
@@ -36,7 +37,8 @@ const App = () => (
             <Route path="/design-market" element={<AppLayout><DesignMarket /></AppLayout>} />
             <Route path="/shopflow" element={<AppLayout><ShopFlow /></AppLayout>} />
             <Route path="/mighty-customer" element={<AppLayout><MightyCustomer /></AppLayout>} />
-            <Route path="/approveflow" element={<AppLayout><ApproveFlow /></AppLayout>} />
+            <Route path="/approveflow" element={<AppLayout><ApproveFlowList /></AppLayout>} />
+            <Route path="/approveflow/:projectId" element={<AppLayout><ApproveFlow /></AppLayout>} />
             <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

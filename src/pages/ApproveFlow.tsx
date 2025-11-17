@@ -22,28 +22,28 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
 export default function ApproveFlow() {
-  const [projectId, setProjectId] = useState<string>();
+  const { projectId: urlProjectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const [activeRole, setActiveRole] = useState<"designer" | "customer">("designer");
   const [chatMessage, setChatMessage] = useState("");
   const [revisionNotes, setRevisionNotes] = useState("");
   const [uploadNotes, setUploadNotes] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<string>("latest");
   const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const [generating3D, setGenerating3D] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   const { toast } = useToast();
 
-  // Fetch first available project
   useEffect(() => {
-    const fetchProject = async () => {
-      const { data } = await supabase.from('approveflow_projects').select('id').limit(1).single();
-      if (data) setProjectId(data.id);
-    };
-    fetchProject();
-  }, []);
+    if (!urlProjectId) {
+      navigate('/approveflow');
+    }
+  }, [urlProjectId, navigate]);
   
   const {
     project,
@@ -54,7 +54,7 @@ export default function ApproveFlow() {
     sendMessage,
     approveDesign,
     requestRevision,
-  } = useApproveFlow(projectId);
+  } = useApproveFlow(urlProjectId);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,6 +92,55 @@ export default function ApproveFlow() {
     await requestRevision(revisionNotes);
     setRevisionNotes("");
     setShowRevisionForm(false);
+  };
+
+  const handleGenerate3D = async () => {
+    if (!latestVersion) {
+      toast({
+        title: "No design available",
+        description: "Please upload a 2D design first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGenerating3D(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-color-render', {
+        body: {
+          designUrl: latestVersion.file_url,
+          vehicleType: project?.product_type || 'sedan',
+          colorName: 'Custom Design',
+        }
+      });
+
+      if (error) throw error;
+
+      // Store 3D renders in approveflow_3d table
+      const { error: insertError } = await supabase
+        .from('approveflow_3d')
+        .insert({
+          project_id: urlProjectId,
+          version_id: latestVersion.id,
+          render_urls: data.renders || [],
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "3D renders generated",
+        description: "View them in the 3D View tab",
+      });
+    } catch (error) {
+      console.error('Error generating 3D:', error);
+      toast({
+        title: "Generation failed",
+        description: "Unable to generate 3D renders",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating3D(false);
+    }
   };
 
   const getProgressSteps = () => {
@@ -275,6 +324,27 @@ export default function ApproveFlow() {
                     </>
                   )}
                 </Button>
+                {latestVersion && (
+                  <Button
+                    onClick={handleGenerate3D}
+                    disabled={generating3D}
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    {generating3D ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Generating 3D...
+                      </>
+                    ) : (
+                      <>
+                        <Box className="w-3 h-3" />
+                        Generate 3D Render
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </Card>
           )}

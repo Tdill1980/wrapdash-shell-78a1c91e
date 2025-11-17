@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-color-render]
 verify_jwt = false
+
+[functions.sync-wc-approveflow]
+verify_jwt = false
