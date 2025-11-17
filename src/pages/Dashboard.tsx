@@ -672,7 +672,7 @@ export default function Dashboard() {
                             />
                             {/* Design Name Badge Overlay */}
                             <div className="absolute bottom-3 left-3 flex items-center gap-2">
-                              <Badge className="bg-background/95 backdrop-blur-sm border-border text-foreground text-sm px-3 py-1 shadow-lg">
+                              <Badge className="bg-background/95 backdrop-blur-sm border border-border text-foreground text-sm px-3 py-1.5 shadow-lg">
                                 {design.color_name || design.design_file_name || "Custom Design"}
                               </Badge>
                             </div>
