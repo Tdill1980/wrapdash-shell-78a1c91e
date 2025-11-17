@@ -1,0 +1,152 @@
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useShopFlow } from "@/hooks/useShopFlow";
+import { useNavigate } from "react-router-dom";
+import { ClipboardList, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+const statusConfig = {
+  design_requested: { label: "Design Requested", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+  awaiting_feedback: { label: "Awaiting Feedback", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+  revision_sent: { label: "Revision Sent", color: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
+  ready_for_print: { label: "Ready for Print", color: "bg-green-500/10 text-green-500 border-green-500/20" },
+  in_production: { label: "In Production", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+  completed: { label: "Completed", color: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
+};
+
+export default function ShopFlowList() {
+  const { orders, loading } = useShopFlow();
+  const navigate = useNavigate();
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'design_requested':
+        return <ClipboardList className="h-4 w-4" />;
+      case 'awaiting_feedback':
+        return <Clock className="h-4 w-4" />;
+      case 'ready_for_print':
+        return <CheckCircle2 className="h-4 w-4" />;
+      default:
+        return <AlertCircle className="h-4 w-4" />;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 max-w-7xl">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gradient">
+            ShopFlow
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Production workflow and shop management
+          </p>
+        </div>
+        <Card className="p-12 text-center">
+          <p className="text-muted-foreground">Loading orders...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-gradient">
+          ShopFlow
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Production workflow and shop management
+        </p>
+      </div>
+
+      {orders.length === 0 ? (
+        <Card className="p-12 text-center">
+          <div className="max-w-lg mx-auto space-y-5">
+            <div className="flex justify-center">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <ClipboardList className="w-8 h-8 text-primary" strokeWidth={1.5} />
+              </div>
+            </div>
+            <h2 className="text-xl font-semibold">No Orders Yet</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Orders from ApproveFlow will appear here for production tracking.
+            </p>
+          </div>
+        </Card>
+      ) : (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order #</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orders.map((order) => {
+                const statusInfo = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.design_requested;
+                return (
+                  <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/shopflow/${order.id}`)}>
+                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell>{order.customer_name}</TableCell>
+                    <TableCell className="text-muted-foreground">{order.product_type}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={statusInfo.color}>
+                        <span className="flex items-center gap-1.5">
+                          {getStatusIcon(order.status)}
+                          {statusInfo.label}
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {order.priority === 'high' && (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
+                          High
+                        </Badge>
+                      )}
+                      {order.priority === 'normal' && (
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                          Normal
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {format(new Date(order.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/shopflow/${order.id}`);
+                        }}
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+    </div>
+  );
+}

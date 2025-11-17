@@ -162,6 +162,9 @@ serve(async (req) => {
       },
     });
 
+    // Sync with ShopFlow if there's a matching order
+    await syncWithShopFlow(supabase, eventType, projectId);
+
     return new Response(
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -179,3 +182,59 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to sync with ShopFlow
+async function syncWithShopFlow(supabaseClient: any, eventType: string, projectId: string) {
+  try {
+    // Get the project
+    const { data: project } = await supabaseClient
+      .from('approveflow_projects')
+      .select('*')
+      .eq('id', projectId)
+      .maybeSingle();
+
+    if (!project) return;
+
+    // Check if there's a matching ShopFlow order
+    const { data: shopflowOrder } = await supabaseClient
+      .from('shopflow_orders')
+      .select('*')
+      .eq('approveflow_project_id', projectId)
+      .maybeSingle();
+
+    if (!shopflowOrder) return;
+
+    // Map ApproveFlow status to ShopFlow status
+    const statusMap: Record<string, string> = {
+      'design_requested': 'design_requested',
+      'proof_delivered': 'awaiting_feedback',
+      'awaiting_feedback': 'awaiting_feedback',
+      'revision_sent': 'revision_sent',
+      'approved': 'ready_for_print',
+    };
+
+    const newStatus = statusMap[project.status] || shopflowOrder.status;
+
+    // Update ShopFlow order status
+    await supabaseClient
+      .from('shopflow_orders')
+      .update({ 
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', shopflowOrder.id);
+
+    // Log the event
+    await supabaseClient
+      .from('shopflow_logs')
+      .insert({
+        order_id: shopflowOrder.id,
+        event_type: `approveflow_${eventType}`,
+        payload: { project_status: project.status },
+      });
+
+    console.log('ShopFlow synced:', { orderId: shopflowOrder.id, newStatus });
+  } catch (error) {
+    console.error('Error syncing with ShopFlow:', error);
+  }
+}

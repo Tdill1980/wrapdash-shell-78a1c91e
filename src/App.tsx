@@ -13,6 +13,7 @@ import { WrapBox } from "./modules/wrapbox";
 import MonthlyDrops from "./pages/MonthlyDrops";
 import DesignMarket from "./pages/DesignMarket";
 import ShopFlow from "./pages/ShopFlow";
+import ShopFlowJob from "./pages/ShopFlowJob";
 import MightyCustomer from "./pages/MightyCustomer";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/monthly-drops" element={<AppLayout><MonthlyDrops /></AppLayout>} />
             <Route path="/design-market" element={<AppLayout><DesignMarket /></AppLayout>} />
             <Route path="/shopflow" element={<AppLayout><ShopFlow /></AppLayout>} />
+            <Route path="/shopflow/:id" element={<AppLayout><ShopFlowJob /></AppLayout>} />
             <Route path="/mighty-customer" element={<AppLayout><MightyCustomer /></AppLayout>} />
             <Route path="/approveflow" element={<AppLayout><ApproveFlowList /></AppLayout>} />
             <Route path="/approveflow/:projectId" element={<AppLayout><ApproveFlow /></AppLayout>} />
