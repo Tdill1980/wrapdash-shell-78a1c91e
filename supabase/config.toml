@@ -18,6 +18,9 @@ verify_jwt = false
 [functions.sync-wc-shopflow]
 verify_jwt = false
 
+[functions.sync-woo-manual]
+verify_jwt = false
+
 [functions.transcribe-audio]
 verify_jwt = false
 

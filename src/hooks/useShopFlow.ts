@@ -256,6 +256,38 @@ export const useShopFlow = (orderId?: string) => {
     }
   }, [orderId]);
 
+  const syncFromWooCommerce = async (days: number = 7) => {
+    try {
+      setLoading(true);
+      toast({
+        title: 'Syncing Orders',
+        description: 'Fetching recent orders from WooCommerce...',
+      });
+
+      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+        body: { target: 'shopflow', days }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sync Complete',
+        description: `Synced ${data.syncedShopFlow} orders, skipped ${data.skipped} existing`,
+      });
+
+      // Refresh orders
+      await fetchOrders();
+    } catch (error: any) {
+      toast({
+        title: 'Sync Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     orders,
     order,
@@ -264,6 +296,7 @@ export const useShopFlow = (orderId?: string) => {
     updateOrderStatus,
     updateOrderDetails,
     addTracking,
+    syncFromWooCommerce,
     refetch: () => {
       if (orderId) {
         fetchOrder();

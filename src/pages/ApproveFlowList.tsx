@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Loader2, Eye } from "lucide-react";
+import { Loader2, Eye, RefreshCw } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type ApproveFlowProject = Tables<"approveflow_projects">;
@@ -13,24 +14,57 @@ type ApproveFlowProject = Tables<"approveflow_projects">;
 export default function ApproveFlowList() {
   const [projects, setProjects] = useState<ApproveFlowProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const fetchProjects = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('approveflow_projects')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (data && !error) {
+      setProjects(data);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('approveflow_projects')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (data && !error) {
-        setProjects(data);
-      }
-      setLoading(false);
-    };
-
     fetchProjects();
   }, []);
+
+  const syncFromWooCommerce = async () => {
+    try {
+      setSyncing(true);
+      toast({
+        title: 'Syncing Projects',
+        description: 'Fetching recent orders from WooCommerce...',
+      });
+
+      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+        body: { target: 'approveflow', days: 7 }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sync Complete',
+        description: `Synced ${data.syncedApproveFlow} projects, skipped ${data.skipped} existing`,
+      });
+
+      await fetchProjects();
+    } catch (error: any) {
+      toast({
+        title: 'Sync Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -65,6 +99,23 @@ export default function ApproveFlowList() {
           <h1 className="text-3xl font-bold text-gradient">ApproveFlow Projects</h1>
           <p className="text-muted-foreground mt-1">Manage all design approval workflows</p>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={syncFromWooCommerce} 
+          disabled={syncing || loading}
+        >
+          {syncing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync from WooCommerce
+            </>
+          )}
+        </Button>
       </div>
 
       <Card className="bg-card border-border">
