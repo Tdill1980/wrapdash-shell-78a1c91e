@@ -351,7 +351,10 @@ export type Database = {
           order_number: string
           priority: string | null
           product_type: string
+          shipped_at: string | null
           status: string
+          tracking_number: string | null
+          tracking_url: string | null
           updated_at: string
         }
         Insert: {
@@ -365,7 +368,10 @@ export type Database = {
           order_number: string
           priority?: string | null
           product_type: string
+          shipped_at?: string | null
           status?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -379,7 +385,10 @@ export type Database = {
           order_number?: string
           priority?: string | null
           product_type?: string
+          shipped_at?: string | null
           status?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
           updated_at?: string
         }
         Relationships: [

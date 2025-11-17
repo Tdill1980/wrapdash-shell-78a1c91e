@@ -15,7 +15,9 @@ import {
   Eye,
   Box,
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  Truck,
+  ExternalLink
 } from "lucide-react";
 import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +39,7 @@ export default function ApproveFlow() {
   const [generating3D, setGenerating3D] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [trackingInfo, setTrackingInfo] = useState<{tracking_number?: string; tracking_url?: string; shipped_at?: string} | null>(null);
 
   const { toast } = useToast();
 
@@ -56,6 +59,50 @@ export default function ApproveFlow() {
     approveDesign,
     requestRevision,
   } = useApproveFlow(urlProjectId);
+
+  // Fetch tracking info from shopflow_orders
+  useEffect(() => {
+    const fetchTrackingInfo = async () => {
+      if (!project?.order_number) return;
+      
+      const { data, error } = await supabase
+        .from('shopflow_orders')
+        .select('tracking_number, tracking_url, shipped_at')
+        .eq('order_number', project.order_number)
+        .maybeSingle();
+
+      if (!error && data) {
+        setTrackingInfo(data);
+      }
+    };
+
+    fetchTrackingInfo();
+
+    // Subscribe to changes
+    if (project?.order_number) {
+      const channel = supabase
+        .channel(`tracking-${project.order_number}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'shopflow_orders',
+          filter: `order_number=eq.${project.order_number}`
+        }, (payload) => {
+          if (payload.new && 'tracking_number' in payload.new) {
+            setTrackingInfo({
+              tracking_number: payload.new.tracking_number,
+              tracking_url: payload.new.tracking_url,
+              shipped_at: payload.new.shipped_at
+            });
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [project?.order_number]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -281,6 +328,33 @@ export default function ApproveFlow() {
                 <span className="text-muted-foreground">Status:</span>
                 <Badge className="ml-2 text-[10px]" variant="outline">{project.status}</Badge>
               </div>
+              {trackingInfo?.tracking_number && (
+                <div className="pt-2 mt-2 border-t border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Truck className="h-3 w-3 text-green-500" />
+                    <span className="text-muted-foreground">Tracking:</span>
+                  </div>
+                  <div className="pl-5 space-y-1">
+                    <p className="font-mono text-[10px]">{trackingInfo.tracking_number}</p>
+                    {trackingInfo.shipped_at && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Shipped {format(new Date(trackingInfo.shipped_at), 'MMM d, yyyy')}
+                      </p>
+                    )}
+                    {trackingInfo.tracking_url && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-[10px]"
+                        onClick={() => window.open(trackingInfo.tracking_url, '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Track Package
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
