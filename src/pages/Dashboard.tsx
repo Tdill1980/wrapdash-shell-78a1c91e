@@ -122,8 +122,11 @@ export default function Dashboard() {
     "Full Wrap": 3500,
     "Partial Wrap": 1800,
     "Chrome Delete": 800,
+    "Color Change Film": 2800,
+    "Printed Wrap Film": 3200,
     "PPF (Paint Protection Film)": 2500,
     "Window Tint": 600,
+    "Window Perf": 1200,
     "Full Window Perf": 1200,
     "Rear Window Perf": 500,
     "Side Window Perf": 800,
@@ -179,6 +182,9 @@ export default function Dashboard() {
     if (lowerTranscript.includes("full wrap")) setProduct("Full Wrap");
     else if (lowerTranscript.includes("partial wrap")) setProduct("Partial Wrap");
     else if (lowerTranscript.includes("chrome delete")) setProduct("Chrome Delete");
+    else if (lowerTranscript.includes("color change")) setProduct("Color Change Film");
+    else if (lowerTranscript.includes("printed wrap")) setProduct("Printed Wrap Film");
+    else if (lowerTranscript.includes("window perf")) setProduct("Window Perf");
     else if (lowerTranscript.includes("ppf") || lowerTranscript.includes("paint protection")) setProduct("PPF (Paint Protection Film)");
     else if (lowerTranscript.includes("window tint") || lowerTranscript.includes("tint")) setProduct("Window Tint");
     
@@ -241,18 +247,17 @@ export default function Dashboard() {
         <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold text-gradient">MightyCustomer</CardTitle>
-              <Users className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Quote & Order Builder
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {/* Voice Command Button */}
-              <div className="flex items-center justify-center">
+              <div>
+                <CardTitle className="text-lg font-bold text-gradient">MightyCustomer</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Quote & Order Builder
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                {/* Voice Command Button - Small in corner */}
                 <Button
+                  size="sm"
                   onMouseDown={handleVoiceButtonDown}
                   onMouseUp={handleVoiceButtonUp}
                   onTouchStart={handleVoiceButtonDown}
@@ -262,16 +267,80 @@ export default function Dashboard() {
                     isRecording 
                       ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
                       : 'bg-gradient-primary hover:opacity-90'
-                  } text-white text-sm font-semibold px-6 py-2`}
+                  } text-white w-8 h-8 p-0`}
+                  title={isRecording ? 'Recording...' : isProcessing ? 'Processing...' : 'Hold to Speak'}
                 >
-                  <Mic className="w-4 h-4 mr-2" />
-                  {isRecording ? 'Recording...' : isProcessing ? 'Processing...' : 'Hold to Speak'}
+                  <Mic className="w-4 h-4" />
                 </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {/* Product Quick Select Buttons */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Quick Select Product</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={product === 'Color Change Film' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Color Change Film')}
+                    className="text-xs py-1 h-auto"
+                  >
+                    Color Change Film
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={product === 'Printed Wrap Film' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Printed Wrap Film')}
+                    className="text-xs py-1 h-auto"
+                  >
+                    Printed Wrap
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={product === 'Window Perf' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Window Perf')}
+                    className="text-xs py-1 h-auto"
+                  >
+                    Window Perf
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={product === 'Window Tint' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Window Tint')}
+                    className="text-xs py-1 h-auto"
+                  >
+                    Tint
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={product === 'PPF (Paint Protection Film)' ? 'default' : 'outline'}
+                    onClick={() => setProduct('PPF (Paint Protection Film)')}
+                    className="text-xs py-1 h-auto"
+                  >
+                    PPF
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate('/mightycustomer')}
+                    className="text-xs py-1 h-auto bg-gradient-primary text-white border-0"
+                  >
+                    WePrintWraps.com
+                  </Button>
+                </div>
               </div>
 
               {/* Product Category Buttons */}
               <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Product Category</label>
+                <label className="text-xs text-muted-foreground mb-2 block">Or Browse by Category</label>
                 <div className="flex gap-2 mb-3">
                   <Button
                     type="button"
@@ -311,6 +380,8 @@ export default function Dashboard() {
                       <option value="Full Wrap">Full Wrap</option>
                       <option value="Partial Wrap">Partial Wrap</option>
                       <option value="Chrome Delete">Chrome Delete</option>
+                      <option value="Color Change Film">Color Change Film</option>
+                      <option value="Printed Wrap Film">Printed Wrap Film</option>
                       <option value="PPF (Paint Protection Film)">PPF (Paint Protection Film)</option>
                       <option value="Window Tint">Window Tint</option>
                     </>
@@ -320,6 +391,7 @@ export default function Dashboard() {
                       <option value="Rear Window Perf">Rear Window Perf</option>
                       <option value="Side Window Perf">Side Window Perf</option>
                       <option value="Custom Window Perf">Custom Window Perf</option>
+                      <option value="Window Perf">Window Perf</option>
                     </>
                   )}
                 </select>
