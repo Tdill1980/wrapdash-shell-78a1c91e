@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
-import { ArrowLeft, Clock, User, Package, Calendar } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Calendar, Truck, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import {
@@ -34,9 +35,11 @@ const priorityOptions = [
 export default function ShopFlowJob() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { order, logs, loading, updateOrderStatus, updateOrderDetails } = useShopFlow(id);
+  const { order, logs, loading, updateOrderStatus, updateOrderDetails, addTracking } = useShopFlow(id);
   const [notes, setNotes] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [addingTracking, setAddingTracking] = useState(false);
 
   if (loading || !order) {
     return (
@@ -55,6 +58,14 @@ export default function ShopFlowJob() {
   const handleSaveNotes = () => {
     updateOrderDetails({ notes });
     setEditingNotes(false);
+  };
+
+  const handleAddTracking = async () => {
+    if (!trackingNumber.trim()) return;
+    setAddingTracking(true);
+    await addTracking(trackingNumber.trim());
+    setTrackingNumber('');
+    setAddingTracking(false);
   };
 
   return (
@@ -163,6 +174,66 @@ export default function ShopFlowJob() {
           </div>
         </Card>
       </div>
+
+      <Card className="p-6 space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Truck className="h-5 w-5" />
+          Shipping & Tracking
+        </h2>
+        
+        {order.tracking_number ? (
+          <div className="space-y-3">
+            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Tracking Number</p>
+                  <p className="font-mono font-medium">{order.tracking_number}</p>
+                </div>
+                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                  Shipped
+                </Badge>
+              </div>
+              {order.shipped_at && (
+                <p className="text-xs text-muted-foreground">
+                  Shipped on {format(new Date(order.shipped_at), 'MMM d, yyyy h:mm a')}
+                </p>
+              )}
+            </div>
+            {order.tracking_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(order.tracking_url, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Track Package
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Add UPS tracking number when package is shipped
+            </p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="1Z999AA10123456784"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddTracking();
+                }}
+              />
+              <Button 
+                onClick={handleAddTracking}
+                disabled={!trackingNumber.trim() || addingTracking}
+              >
+                {addingTracking ? 'Adding...' : 'Add Tracking'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">

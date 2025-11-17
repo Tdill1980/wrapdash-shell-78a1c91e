@@ -13,6 +13,9 @@ export interface ShopFlowOrder {
   estimated_completion_date?: string;
   assigned_to?: string;
   notes?: string;
+  tracking_number?: string;
+  tracking_url?: string;
+  shipped_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -149,6 +152,76 @@ export const useShopFlow = (orderId?: string) => {
     }
   };
 
+  const addTracking = async (trackingNumber: string) => {
+    if (!orderId) return;
+
+    try {
+      const trackingUrl = `https://www.ups.com/track?loc=en_US&tracknum=${trackingNumber}`;
+      const shippedAt = new Date().toISOString();
+
+      const { error } = await supabase
+        .from('shopflow_orders')
+        .update({ 
+          tracking_number: trackingNumber,
+          tracking_url: trackingUrl,
+          shipped_at: shippedAt,
+          status: 'Shipped'
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      await supabase
+        .from('shopflow_logs')
+        .insert({
+          order_id: orderId,
+          event_type: 'tracking_added',
+          payload: { tracking_number: trackingNumber, tracking_url: trackingUrl },
+        });
+
+      // Trigger WooCommerce update and Klaviyo notification
+      if (order?.order_number) {
+        await supabase.functions.invoke('update-woo-order', {
+          body: {
+            orderNumber: order.order_number,
+            metaData: [
+              { key: '_tracking_number', value: trackingNumber },
+              { key: '_tracking_url', value: trackingUrl }
+            ],
+            orderNote: `Package shipped with tracking: ${trackingNumber}`
+          }
+        });
+
+        await supabase.functions.invoke('send-klaviyo-event', {
+          body: {
+            eventName: 'shopflow_tracking_added',
+            customerEmail: order.customer_name,
+            properties: {
+              order_number: order.order_number,
+              tracking_number: trackingNumber,
+              tracking_url: trackingUrl,
+              product_type: order.product_type
+            }
+          }
+        });
+      }
+
+      toast({
+        title: 'Tracking Added',
+        description: `Tracking number ${trackingNumber} added successfully`,
+      });
+
+      fetchOrder();
+      fetchLogs();
+    } catch (error: any) {
+      toast({
+        title: 'Error adding tracking',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     if (orderId) {
@@ -190,6 +263,7 @@ export const useShopFlow = (orderId?: string) => {
     loading,
     updateOrderStatus,
     updateOrderDetails,
+    addTracking,
     refetch: () => {
       if (orderId) {
         fetchOrder();
