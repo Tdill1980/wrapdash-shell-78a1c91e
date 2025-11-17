@@ -238,11 +238,16 @@ export default function Visualize() {
       {/* Left Panel - Configuration */}
       <div className="space-y-6">
         <Card className="p-6 bg-card border-border rounded-2xl">
-          <h2 className="text-2xl font-bold mb-6 font-poppins">
-            <span className="text-foreground">Wrap</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Closer</span>
-            <span className="text-muted-foreground text-sm align-super">™</span>
-          </h2>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold font-poppins">
+              <span className="text-foreground">Wrap</span>
+              <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Closer</span>
+              <span className="text-muted-foreground text-sm align-super">™</span>
+            </h2>
+            <p className="text-xs font-light text-muted-foreground mt-1">
+              Powered By DesignPro AI ™
+            </p>
+          </div>
 
           <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)} className="mb-6">
             <TabsList className="grid w-full grid-cols-3 bg-surface">
