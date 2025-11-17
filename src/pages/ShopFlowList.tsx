@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useNavigate } from "react-router-dom";
-import { ClipboardList, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { ClipboardList, Clock, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import {
   Table,
@@ -24,7 +24,7 @@ const statusConfig = {
 };
 
 export default function ShopFlowList() {
-  const { orders, loading } = useShopFlow();
+  const { orders, loading, syncFromWooCommerce } = useShopFlow();
   const navigate = useNavigate();
 
   const getStatusIcon = (status: string) => {
@@ -60,13 +60,32 @@ export default function ShopFlowList() {
 
   return (
     <div className="space-y-6 max-w-7xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gradient">
-          ShopFlow
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Production workflow and shop management
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gradient">
+            ShopFlow
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Production workflow and shop management
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => syncFromWooCommerce()} 
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync from WooCommerce
+            </>
+          )}
+        </Button>
       </div>
 
       {orders.length === 0 ? (
