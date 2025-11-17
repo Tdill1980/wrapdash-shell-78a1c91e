@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { wooToInternalStatus, internalToCustomerStatus, type InternalStatus } from '@/lib/status-mapping';
 
 export interface ShopFlowOrder {
   id: string;
@@ -92,7 +93,7 @@ export const useShopFlow = (orderId?: string) => {
   };
 
   const updateOrderStatus = async (newStatus: string) => {
-    if (!orderId) return;
+    if (!orderId || !order) return;
 
     try {
       const { error } = await supabase
@@ -102,13 +103,58 @@ export const useShopFlow = (orderId?: string) => {
 
       if (error) throw error;
 
+      // Log status change
       await supabase
         .from('shopflow_logs')
         .insert({
           order_id: orderId,
           event_type: 'status_changed',
-          payload: { new_status: newStatus },
+          payload: { 
+            old_status: order.status,
+            new_status: newStatus 
+          },
         });
+
+      // Update WooCommerce order meta
+      try {
+        const wooConsumerKey = import.meta.env.VITE_WOO_CONSUMER_KEY;
+        const wooConsumerSecret = import.meta.env.VITE_WOO_CONSUMER_SECRET;
+        
+        if (wooConsumerKey && wooConsumerSecret) {
+          await fetch(`https://weprintwraps.com/wp-json/wc/v3/orders/${order.order_number}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': 'Basic ' + btoa(`${wooConsumerKey}:${wooConsumerSecret}`),
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              meta_data: [
+                { key: '_shopflow_status', value: newStatus }
+              ]
+            })
+          });
+        }
+      } catch (wooError) {
+        console.error('Error updating WooCommerce:', wooError);
+      }
+
+      // Send Klaviyo event
+      try {
+        await supabase.functions.invoke('send-klaviyo-event', {
+          body: {
+            eventName: 'shopflow_status_changed',
+            properties: {
+              order_number: order.order_number,
+              internal_status: newStatus,
+              customer_name: order.customer_name,
+              product_type: order.product_type
+            },
+            customerEmail: '' // Would need to get from order data
+          }
+        });
+      } catch (klaviyoError) {
+        console.error('Error sending Klaviyo event:', klaviyoError);
+      }
 
       toast({
         title: 'Status Updated',

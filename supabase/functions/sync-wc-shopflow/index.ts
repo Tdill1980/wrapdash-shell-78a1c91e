@@ -1,6 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
+// Status mapping layer
+const wooToInternalStatus: Record<string, string> = {
+  "pending": "order_received",
+  "processing": "order_received",
+  "on-hold": "order_received",
+  "waiting-to-place-order": "order_received",
+  "waiting-on-email-response": "order_received",
+  "add-on": "order_received",
+  "dropbox-link-sent": "order_received",
+  "in-design": "in_design",
+  "file-error": "action_required",
+  "missing-file": "action_required",
+  "design-complete": "awaiting_approval",
+  "work-order-printed": "awaiting_approval",
+  "ready-for-print": "preparing_for_print",
+  "pre-press": "preparing_for_print",
+  "print-production": "in_production",
+  "lamination": "in_production",
+  "finishing": "in_production",
+  "ready-for-pickup": "ready_or_shipped",
+  "shipping-cost": "ready_or_shipped",
+  "shipped": "ready_or_shipped",
+  "completed": "completed"
+};
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -53,8 +78,10 @@ serve(async (req) => {
     // Extract order data
     const orderNumber = payload.id?.toString() || payload.number?.toString();
     const customerName = `${payload.billing?.first_name || ''} ${payload.billing?.last_name || ''}`.trim() || 'Guest';
+    const customerEmail = payload.billing?.email || '';
     const productType = extractProductType(payload.line_items);
-    const status = mapWooStatusToShopFlow(payload.status);
+    const wooStatus = payload.status;
+    const status = mapWooStatusToShopFlow(wooStatus);
 
     if (!orderNumber) {
       throw new Error('Order number is required');
@@ -78,6 +105,29 @@ serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
+
+      // Log status change
+      await supabase
+        .from('shopflow_logs')
+        .insert({
+          order_id: existingOrder.id,
+          event_type: 'status_changed',
+          payload: {
+            woo_status: wooStatus,
+            internal_status: status,
+            source: 'woocommerce'
+          }
+        });
+
+      // Send Klaviyo event
+      if (customerEmail) {
+        await sendKlaviyoEvent('shopflow_status_changed', {
+          order_number: orderNumber,
+          internal_status: status,
+          woo_status: wooStatus,
+          product_type: productType
+        }, customerEmail);
+      }
 
       return new Response(
         JSON.stringify({ message: 'ShopFlow order updated', orderId: existingOrder.id }),
@@ -113,12 +163,24 @@ serve(async (req) => {
       .from('shopflow_logs')
       .insert({
         order_id: newOrder.id,
-        event_type: 'order_created',
+        event_type: 'job_created',
         payload: {
           source: 'woocommerce',
-          woo_status: payload.status,
+          woo_status: wooStatus,
+          internal_status: status,
         },
       });
+
+    // Send Klaviyo event for new job
+    if (customerEmail) {
+      await sendKlaviyoEvent('shopflow_job_created', {
+        order_number: orderNumber,
+        customer_name: customerName,
+        internal_status: status,
+        woo_status: wooStatus,
+        product_type: productType
+      }, customerEmail);
+    }
 
     console.log('ShopFlow order created:', newOrder.id);
 
@@ -148,15 +210,43 @@ function extractProductType(lineItems: any[]): string {
 }
 
 function mapWooStatusToShopFlow(wooStatus: string): string {
-  const statusMap: Record<string, string> = {
-    'pending': 'design_requested',
-    'processing': 'design_requested',
-    'on-hold': 'awaiting_feedback',
-    'completed': 'completed',
-    'cancelled': 'completed',
-    'refunded': 'completed',
-    'failed': 'design_requested',
-  };
+  return wooToInternalStatus[wooStatus] || 'order_received';
+}
 
-  return statusMap[wooStatus] || 'design_requested';
+async function sendKlaviyoEvent(eventName: string, properties: any, customerEmail: string) {
+  try {
+    const klaviyoKey = Deno.env.get('KLAVIYO_API_KEY');
+    if (!klaviyoKey) {
+      console.log('Klaviyo API key not configured, skipping event');
+      return;
+    }
+
+    const response = await fetch('https://a.klaviyo.com/api/events/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Klaviyo-API-Key ${klaviyoKey}`,
+        'Content-Type': 'application/json',
+        'revision': '2024-10-15'
+      },
+      body: JSON.stringify({
+        data: {
+          type: 'event',
+          attributes: {
+            profile: { $email: customerEmail },
+            metric: { name: eventName },
+            properties,
+            time: new Date().toISOString()
+          }
+        }
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Klaviyo event failed:', await response.text());
+    } else {
+      console.log('Klaviyo event sent:', eventName);
+    }
+  } catch (error) {
+    console.error('Error sending Klaviyo event:', error);
+  }
 }
