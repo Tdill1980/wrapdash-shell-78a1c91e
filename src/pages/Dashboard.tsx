@@ -157,77 +157,116 @@ export default function Dashboard() {
         <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold text-gradient">Quote Builder</CardTitle>
+              <CardTitle className="text-lg font-bold text-gradient">MightyCustomer</CardTitle>
               <Users className="w-5 h-5 text-primary" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Quick order & quote creation
+              Quote & Order Builder
             </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* Service Type */}
+              {/* Choose a Product */}
               <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Service Type</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button className="bg-gradient-purple-magenta text-white text-xs py-2 px-3 rounded-md hover:opacity-90 transition-opacity">
-                    Full Wrap
-                  </button>
-                  <button className="bg-background border border-border text-foreground text-xs py-2 px-3 rounded-md hover:bg-background/70 transition-colors">
-                    Partial
-                  </button>
-                  <button className="bg-background border border-border text-foreground text-xs py-2 px-3 rounded-md hover:bg-background/70 transition-colors">
-                    PPF
-                  </button>
+                <label className="text-xs text-muted-foreground mb-2 block">Choose a Product</label>
+                <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                  <option>Choose a Product</option>
+                  <option>Full Wrap</option>
+                  <option>Partial Wrap</option>
+                  <option>Chrome Delete</option>
+                  <option>PPF (Paint Protection Film)</option>
+                  <option>Window Tint</option>
+                </select>
+              </div>
+
+              {/* Vehicle Info Table Header */}
+              <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Car className="w-3 h-3" />
+                  <span>Make/Model</span>
+                </div>
+                <div>Total Sq. Ft.</div>
+                <div>Dimensions</div>
+              </div>
+
+              {/* Vehicle Dropdowns */}
+              <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                <option>Select Make</option>
+              </select>
+              
+              <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                <option>Select Model</option>
+              </select>
+              
+              <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                <option>Select Year</option>
+              </select>
+
+              {/* Quantity and Finish */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Quantity</label>
+                  <input 
+                    type="number" 
+                    defaultValue="1"
+                    className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Finish</label>
+                  <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                    <option>Gloss</option>
+                    <option>Matte</option>
+                    <option>Satin</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Vehicle Info */}
-              <div className="grid grid-cols-3 gap-2">
+              {/* Margin Slider */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-muted-foreground">Margin</label>
+                  <span className="text-xs font-bold text-primary">40%</span>
+                </div>
                 <input 
-                  type="text" 
-                  placeholder="Year"
-                  className="bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <input 
-                  type="text" 
-                  placeholder="Make"
-                  className="bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <input 
-                  type="text" 
-                  placeholder="Model"
-                  className="bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  defaultValue="40"
+                  className="w-full h-1 bg-gradient-primary rounded-full appearance-none cursor-pointer"
                 />
               </div>
 
-              {/* Customer Name */}
-              <input 
-                type="text" 
-                placeholder="Customer Name"
-                className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-
-              {/* Estimated Price */}
-              <div className="bg-background rounded-lg p-3 border border-border flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Estimated Price</span>
-                <span className="text-xl font-bold text-gradient">$3,500</span>
+              {/* Customer Info Section */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <label className="text-xs text-muted-foreground block">Customer Information</label>
+                
+                <input 
+                  type="text" 
+                  placeholder="Customer Name"
+                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                
+                <input 
+                  type="email" 
+                  placeholder="Customer Email"
+                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                
+                <input 
+                  type="text" 
+                  placeholder="Order # from WePrintWraps.com (optional)"
+                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
               </div>
 
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  className="bg-gradient-magenta-blue hover:opacity-90 text-white text-xs font-semibold"
-                  onClick={() => navigate("/mighty-customer")}
-                >
-                  Full Builder
-                </Button>
-                <Button 
-                  className="bg-gradient-primary hover:opacity-90 text-white text-xs font-semibold"
-                >
-                  Send Quote
-                </Button>
-              </div>
+              {/* Action Button */}
+              <Button 
+                className="w-full bg-gradient-primary hover:opacity-90 text-white text-sm font-semibold"
+                onClick={() => navigate("/mighty-customer")}
+              >
+                + Add to Quote
+              </Button>
             </div>
           </CardContent>
         </Card>
