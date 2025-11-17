@@ -307,6 +307,91 @@ export type Database = {
         }
         Relationships: []
       }
+      shopflow_logs: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          order_id: string | null
+          payload: Json | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopflow_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopflow_orders: {
+        Row: {
+          approveflow_project_id: string | null
+          assigned_to: string | null
+          created_at: string
+          customer_name: string
+          estimated_completion_date: string | null
+          id: string
+          notes: string | null
+          order_number: string
+          priority: string | null
+          product_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approveflow_project_id?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          customer_name: string
+          estimated_completion_date?: string | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          priority?: string | null
+          product_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approveflow_project_id?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          customer_name?: string
+          estimated_completion_date?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          priority?: string | null
+          product_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopflow_orders_approveflow_project_id_fkey"
+            columns: ["approveflow_project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wrapbox_kits: {
         Row: {
           created_at: string | null
