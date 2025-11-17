@@ -636,7 +636,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-3">
               {/* Latest Designs Carousel */}
-              <div className="relative h-48 bg-background rounded-lg border border-border overflow-hidden mb-3 group">
+              <div className="relative h-56 sm:h-64 md:h-72 bg-background rounded-lg border border-border overflow-hidden mb-3 group">
                 {isLoading ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center space-y-2">
@@ -647,7 +647,7 @@ export default function Dashboard() {
                 ) : latestDesigns.length > 0 ? (
                   <>
                     {/* Carousel Image */}
-                    <div className="absolute inset-0">
+                    <div className="absolute inset-0 bg-muted/5 flex items-center justify-center">
                       {(() => {
                         const design = latestDesigns[carouselIndex];
                         const renderUrls = design?.render_urls;
@@ -656,20 +656,25 @@ export default function Dashboard() {
                         if (Array.isArray(renderUrls) && renderUrls.length > 0) {
                           // Handle array format
                           imageUrl = renderUrls[0];
-                        } else if (renderUrls && typeof renderUrls === 'object' && 'hero_angle' in renderUrls) {
-                          // Handle object format
-                          imageUrl = (renderUrls as any).hero_angle;
+                        } else if (renderUrls && typeof renderUrls === 'object') {
+                          // Handle object format - check multiple possible keys
+                          imageUrl = (renderUrls as any).hero_angle || (renderUrls as any).hero || (renderUrls as any).front;
                         }
 
                         return imageUrl ? (
                           <img
                             src={imageUrl}
                             alt={`${design.vehicle_make} ${design.vehicle_model}`}
-                            className="w-full h-full object-cover"
+                            className="max-w-full max-h-full object-contain"
+                            onError={(e) => {
+                              console.error('Image failed to load:', imageUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-full">
+                          <div className="flex flex-col items-center justify-center h-full gap-2">
                             <Car className="w-12 h-12 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">No preview available</p>
                           </div>
                         );
                       })()}
