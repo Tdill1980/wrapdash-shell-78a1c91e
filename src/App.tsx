@@ -17,6 +17,8 @@ import ShopFlowJob from "./pages/ShopFlowJob";
 import MightyCustomer from "./pages/MightyCustomer";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
+import CustomerPortal from "./pages/CustomerPortal";
+import MightyMail from "./pages/MightyMail";
 import Portfolio from "./pages/Portfolio";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import NotFound from "./pages/NotFound";
@@ -44,6 +46,8 @@ const App = () => (
             <Route path="/mighty-customer" element={<AppLayout><MightyCustomer /></AppLayout>} />
             <Route path="/approveflow" element={<AppLayout><ApproveFlowList /></AppLayout>} />
             <Route path="/approveflow/:projectId" element={<AppLayout><ApproveFlow /></AppLayout>} />
+            <Route path="/customer/:projectId" element={<CustomerPortal />} />
+            <Route path="/email-campaigns" element={<AppLayout><MightyMail /></AppLayout>} />
             <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
             <Route path="/admin/pricing" element={<AppLayout><ProductPricingAdmin /></AppLayout>} />
             <Route path="*" element={<NotFound />} />

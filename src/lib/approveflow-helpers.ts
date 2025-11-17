@@ -38,6 +38,30 @@ export async function createApproveFlowProjectFromQuote(
       },
     });
 
+    // Send customer welcome email via Klaviyo (disabled by default for testing)
+    const SEND_CUSTOMER_EMAILS = false; // Toggle this to enable customer emails
+    
+    if (SEND_CUSTOMER_EMAILS && quoteData.customerEmail) {
+      const customerPortalUrl = `${window.location.origin}/customer/${project.id}`;
+      
+      await supabase.functions.invoke('send-klaviyo-event', {
+        body: {
+          eventName: 'approveflow_customer_welcome',
+          customerEmail: quoteData.customerEmail,
+          properties: {
+            project_id: project.id,
+            order_number: quoteData.orderNumber,
+            customer_name: quoteData.customerName,
+            product_type: quoteData.productType,
+            portal_url: customerPortalUrl,
+            order_total: quoteData.orderTotal,
+          },
+        },
+      });
+      
+      console.log('Customer welcome email sent to:', quoteData.customerEmail);
+    }
+
     return project;
   } catch (error: any) {
     console.error('Error creating ApproveFlow project:', error);
