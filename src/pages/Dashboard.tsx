@@ -74,10 +74,10 @@ const metrics = [
 
 const adminModules = [
   {
-    name: "Design Vault",
-    subtitle: "Manage uploads",
+    name: "Design Vault Admin",
+    subtitle: "Manage all designs",
     icon: Database,
-    route: "/designvault",
+    route: "/admin/designvault",
   },
   {
     name: "MightyMail",
