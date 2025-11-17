@@ -619,7 +619,7 @@ export default function Dashboard() {
         </Card>
 
         {/* RIGHT: DesignVault Premium Card */}
-        <Card className="bg-card border-0 ring-2 ring-black">
+        <Card className="bg-card border-0 ring-1 ring-black">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-bold font-poppins">
