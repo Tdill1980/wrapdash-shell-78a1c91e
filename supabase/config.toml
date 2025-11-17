@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.sync-wc-approveflow]
 verify_jwt = false
 
+[functions.sync-wc-shopflow]
+verify_jwt = false
+
 [functions.transcribe-audio]
 verify_jwt = false
 
