@@ -5,9 +5,10 @@ export default function MonthlyDrops() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight font-poppins">
           <span className="text-foreground">Monthly</span>
-          <span className="text-primary">Drops</span>
+          <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Drops</span>
+          <span className="text-muted-foreground text-sm align-super">™</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Curated wrap design collections released monthly

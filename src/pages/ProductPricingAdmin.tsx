@@ -92,7 +92,10 @@ export default function ProductPricingAdmin() {
     <div className="space-y-6 max-w-[1200px] mx-auto p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gradient">Product Pricing Admin</h1>
+          <h1 className="text-3xl font-bold font-poppins">
+            <span className="text-foreground">Product Pricing</span>
+            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Admin</span>
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage WePrintWraps product catalog, install rates, and tax settings
           </p>
