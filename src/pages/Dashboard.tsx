@@ -14,12 +14,16 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  Mic,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDesignVault } from "@/modules/designvault/hooks/useDesignVault";
 import { useState } from "react";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 const metrics = [
   {
@@ -97,6 +101,36 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { data: designs, isLoading } = useDesignVault();
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
+  
+  // Quote Builder State
+  const [product, setProduct] = useState("");
+  const [vehicleMake, setVehicleMake] = useState("");
+  const [vehicleModel, setVehicleModel] = useState("");
+  const [vehicleYear, setVehicleYear] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [finish, setFinish] = useState("Gloss");
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
+  const [margin, setMargin] = useState(40);
+  const [isVehicleExpanded, setIsVehicleExpanded] = useState(false);
+  
+  // Pricing calculation
+  const productPricing: { [key: string]: number } = {
+    "Full Wrap": 3500,
+    "Partial Wrap": 1800,
+    "Chrome Delete": 800,
+    "PPF (Paint Protection Film)": 2500,
+    "Window Tint": 600,
+  };
+  
+  const basePrice = productPricing[product] || 0;
+  const subtotal = basePrice * quantity;
+  const installFee = subtotal * 0.15; // 15% install fee
+  const taxRate = 0.08; // 8% tax
+  const taxAmount = (subtotal + installFee) * taxRate;
+  const totalCost = subtotal + installFee + taxAmount;
   
   const latestDesigns = designs?.slice(0, 5) || [];
 
@@ -118,6 +152,51 @@ export default function Dashboard() {
     if (latestDesigns.length > 0) {
       setCarouselIndex((prev) => (prev - 1 + latestDesigns.length) % latestDesigns.length);
     }
+  };
+  
+  const handleVoiceButtonDown = () => {
+    startRecording();
+  };
+  
+  const handleVoiceButtonUp = async () => {
+    try {
+      const transcript = await stopRecording();
+      parseAndFillForm(transcript);
+    } catch (error) {
+      console.error('Voice input error:', error);
+    }
+  };
+  
+  const parseAndFillForm = (transcript: string) => {
+    const lowerTranscript = transcript.toLowerCase();
+    
+    // Parse product type
+    if (lowerTranscript.includes("full wrap")) setProduct("Full Wrap");
+    else if (lowerTranscript.includes("partial wrap")) setProduct("Partial Wrap");
+    else if (lowerTranscript.includes("chrome delete")) setProduct("Chrome Delete");
+    else if (lowerTranscript.includes("ppf") || lowerTranscript.includes("paint protection")) setProduct("PPF (Paint Protection Film)");
+    else if (lowerTranscript.includes("window tint") || lowerTranscript.includes("tint")) setProduct("Window Tint");
+    
+    // Parse vehicle info - looking for year, make, model patterns
+    const yearMatch = transcript.match(/\b(19|20)\d{2}\b/);
+    if (yearMatch) setVehicleYear(yearMatch[0]);
+    
+    // Common car makes
+    const makes = ["toyota", "honda", "ford", "chevrolet", "chevy", "tesla", "bmw", "mercedes", "audi", "lexus", "nissan", "hyundai"];
+    const foundMake = makes.find(make => lowerTranscript.includes(make));
+    if (foundMake) setVehicleMake(foundMake.charAt(0).toUpperCase() + foundMake.slice(1));
+    
+    // Parse customer name (usually after "for" or "customer")
+    const nameMatch = transcript.match(/(?:for|customer)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+    if (nameMatch) setCustomerName(nameMatch[1]);
+    
+    // Parse email
+    const emailMatch = transcript.match(/[\w.+-]+@[\w.-]+\.\w+/);
+    if (emailMatch) setCustomerEmail(emailMatch[0]);
+    
+    // Parse quantity
+    const qtyMatch = transcript.match(/(\d+)\s*(?:vehicle|car|unit)/i);
+    if (qtyMatch) setQuantity(parseInt(qtyMatch[1]));
   };
 
   return (
@@ -166,55 +245,101 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {/* Voice Command Button */}
+              <div className="flex items-center justify-center">
+                <Button
+                  onMouseDown={handleVoiceButtonDown}
+                  onMouseUp={handleVoiceButtonUp}
+                  onTouchStart={handleVoiceButtonDown}
+                  onTouchEnd={handleVoiceButtonUp}
+                  disabled={isProcessing}
+                  className={`${
+                    isRecording 
+                      ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                      : 'bg-gradient-primary hover:opacity-90'
+                  } text-white text-sm font-semibold px-6 py-2`}
+                >
+                  <Mic className="w-4 h-4 mr-2" />
+                  {isRecording ? 'Recording...' : isProcessing ? 'Processing...' : 'Hold to Speak'}
+                </Button>
+              </div>
+
               {/* Choose a Product */}
               <div>
                 <label className="text-xs text-muted-foreground mb-2 block">Choose a Product</label>
-                <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                  <option>Choose a Product</option>
-                  <option>Full Wrap</option>
-                  <option>Partial Wrap</option>
-                  <option>Chrome Delete</option>
-                  <option>PPF (Paint Protection Film)</option>
-                  <option>Window Tint</option>
+                <select 
+                  value={product}
+                  onChange={(e) => setProduct(e.target.value)}
+                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Choose a Product</option>
+                  <option value="Full Wrap">Full Wrap</option>
+                  <option value="Partial Wrap">Partial Wrap</option>
+                  <option value="Chrome Delete">Chrome Delete</option>
+                  <option value="PPF (Paint Protection Film)">PPF (Paint Protection Film)</option>
+                  <option value="Window Tint">Window Tint</option>
                 </select>
               </div>
 
-              {/* Vehicle Info Table Header */}
-              <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Car className="w-3 h-3" />
-                  <span>Make/Model</span>
-                </div>
-                <div>Total Sq. Ft.</div>
-                <div>Dimensions</div>
+              {/* Collapsible Vehicle Info */}
+              <div className="border border-border rounded-md">
+                <button
+                  onClick={() => setIsVehicleExpanded(!isVehicleExpanded)}
+                  className="w-full flex items-center justify-between px-3 py-2 hover:bg-background/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Car className="w-3 h-3" />
+                    <span>Vehicle: {vehicleYear || vehicleMake || vehicleModel ? `${vehicleYear} ${vehicleMake} ${vehicleModel}`.trim() : 'Not set'}</span>
+                  </div>
+                  {isVehicleExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+                
+                {isVehicleExpanded && (
+                  <div className="p-3 space-y-2 border-t border-border">
+                    <input
+                      type="text"
+                      placeholder="Year"
+                      value={vehicleYear}
+                      onChange={(e) => setVehicleYear(e.target.value)}
+                      className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Make"
+                      value={vehicleMake}
+                      onChange={(e) => setVehicleMake(e.target.value)}
+                      className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Model"
+                      value={vehicleModel}
+                      onChange={(e) => setVehicleModel(e.target.value)}
+                      className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                )}
               </div>
-
-              {/* Vehicle Dropdowns */}
-              <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                <option>Select Make</option>
-              </select>
-              
-              <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                <option>Select Model</option>
-              </select>
-              
-              <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                <option>Select Year</option>
-              </select>
 
               {/* Quantity and Finish */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Quantity</label>
                   <input 
-                    type="number" 
-                    defaultValue="1"
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    min="1"
                     className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Finish</label>
-                  <select className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                  <select 
+                    value={finish}
+                    onChange={(e) => setFinish(e.target.value)}
+                    className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
                     <option>Gloss</option>
                     <option>Matte</option>
                     <option>Satin</option>
@@ -226,15 +351,37 @@ export default function Dashboard() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs text-muted-foreground">Margin</label>
-                  <span className="text-xs font-bold text-primary">40%</span>
+                  <span className="text-xs font-bold text-primary">{margin}%</span>
                 </div>
                 <input 
                   type="range" 
                   min="0" 
                   max="100" 
-                  defaultValue="40"
+                  value={margin}
+                  onChange={(e) => setMargin(parseInt(e.target.value))}
                   className="w-full h-1 bg-gradient-primary rounded-full appearance-none cursor-pointer"
                 />
+              </div>
+
+              {/* Cost Breakdown */}
+              <div className="bg-background/50 rounded-lg p-3 border border-border space-y-1.5">
+                <div className="text-xs font-semibold text-foreground mb-2">Cost Breakdown</div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Product ({quantity}x)</span>
+                  <span className="text-foreground">${subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Install (15%)</span>
+                  <span className="text-foreground">${installFee.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Tax (8%)</span>
+                  <span className="text-foreground">${taxAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-bold pt-2 border-t border-border">
+                  <span className="text-foreground">Total</span>
+                  <span className="text-gradient">${totalCost.toFixed(2)}</span>
+                </div>
               </div>
 
               {/* Customer Info Section */}
@@ -244,18 +391,24 @@ export default function Dashboard() {
                 <input 
                   type="text" 
                   placeholder="Customer Name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 
                 <input 
                   type="email" 
                   placeholder="Customer Email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
                   className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 
                 <input 
                   type="text" 
                   placeholder="Order # from WePrintWraps.com (optional)"
+                  value={orderNumber}
+                  onChange={(e) => setOrderNumber(e.target.value)}
                   className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
