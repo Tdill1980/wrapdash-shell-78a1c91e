@@ -8,55 +8,55 @@ All colors MUST be HSL.
 
   @layer base {
     :root {
-      /* Pure black & charcoal base - Plum + Black Theme */
-      --background: 240 50% 3%;           /* #0A0A0F Pure black - darker */
+      /* Pure black & charcoal base - Purple + Blue Theme */
+      --background: 240 50% 3%;           /* #0A0A0F Pure black */
       --foreground: 240 10% 98%;          /* White text */
-      --card: 240 15% 8%;                 /* #111118 Charcoal - less saturated */
+      --card: 0 0% 7%;                    /* #111111 Pure charcoal - NO purple tint */
       --card-foreground: 240 10% 98%;
       --popover: 240 50% 3%;
       --popover-foreground: 240 10% 98%;
       
-      /* Deep plum accents */
-      --primary: 270 50% 50%;             /* #8B5CF6 Purple primary - more blue, less magenta */
+      /* Purple & Blue accents */
+      --primary: 250 70% 60%;             /* Blue-purple primary */
       --primary-foreground: 240 10% 98%;
-      --secondary: 275 35% 20%;           /* #221628 Deep plum - darker, less saturated */
+      --secondary: 240 15% 15%;           /* Neutral charcoal secondary */
       --secondary-foreground: 240 10% 98%;
       
       /* Charcoal variants */
-      --muted: 240 15% 12%;               /* Midnight plum - less purple tint */
+      --muted: 240 10% 12%;               /* Neutral charcoal muted */
       --muted-foreground: 240 6% 72%;     /* #B7B7C5 Soft gray */
-      --accent: 270 30% 18%;              /* Less purple, more neutral */
+      --accent: 240 15% 15%;              /* Neutral charcoal accent */
       --accent-foreground: 240 10% 98%;
       
       --destructive: 0 62.8% 30.6%;
       --destructive-foreground: 240 10% 98%;
       
-      /* Borders - very subtle, almost neutral */
-      --border: 240 5% 15%;               /* Less purple tint */
+      /* Borders - neutral */
+      --border: 240 5% 15%;
       --input: 240 5% 15%;
-      --ring: 270 50% 50%;
+      --ring: 250 70% 60%;
       --radius: 0.5rem;                   /* 6-8px radius */
       
-      /* Dynamic gradient stops (NO neon bloom) - reduced pink saturation */
-      --gradient-purple-start: 270 50% 60%;    /* #8B5CF6 - more blue purple */
-      --gradient-magenta: 320 55% 58%;         /* #D946EF - less saturated */
-      --gradient-blue: 210 80% 60%;            /* #3B82F6 */
-      --gradient-plum: 275 40% 38%;            /* #5B2A86 - darker */
-      --gradient-pink: 330 60% 60%;            /* Less saturated pink */
-      --gradient-teal: 180 90% 50%;            /* #0DDCEB */
-      --gradient-violet: 265 65% 58%;          /* #8A2BE2 */
+      /* Dynamic gradient stops - Purple + Blue (NO pink/magenta) */
+      --gradient-purple-start: 260 70% 60%;    /* Purple */
+      --gradient-purple-end: 250 70% 55%;      /* Blue-purple */
+      --gradient-blue: 220 85% 55%;            /* Blue */
+      --gradient-blue-deep: 230 75% 50%;       /* Deep blue */
+      --gradient-violet: 270 70% 60%;          /* Violet */
+      --gradient-indigo: 240 65% 58%;          /* Indigo */
+      --gradient-cyan: 190 85% 55%;            /* Cyan */
       
       --cyan-accent: 190 100% 50%;
       
-      /* Sidebar - charcoal, no purple tint */
-      --sidebar-background: 240 15% 8%;
+      /* Sidebar - pure charcoal */
+      --sidebar-background: 0 0% 7%;
       --sidebar-foreground: 240 10% 98%;
-      --sidebar-primary: 270 50% 50%;
+      --sidebar-primary: 250 70% 60%;
       --sidebar-primary-foreground: 240 10% 98%;
       --sidebar-accent: 240 10% 12%;
       --sidebar-accent-foreground: 240 10% 98%;
       --sidebar-border: 240 5% 15%;
-      --sidebar-ring: 270 50% 50%;
+      --sidebar-ring: 250 70% 60%;
     }
   }
 
@@ -80,36 +80,36 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Dynamic gradients (NO neon bloom) - Plum + Black Theme */
+  /* Dynamic gradients - Purple + Blue Theme */
   .bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)));
+    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-blue)));
   }
   
-  .bg-gradient-purple-magenta {
-    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)));
+  .bg-gradient-purple-blue {
+    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-blue)));
   }
   
-  .bg-gradient-magenta-blue {
-    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
+  .bg-gradient-blue-deep {
+    background: linear-gradient(135deg, hsl(var(--gradient-blue)), hsl(var(--gradient-blue-deep)));
   }
   
-  .bg-gradient-plum-pink {
-    background: linear-gradient(135deg, hsl(var(--gradient-plum)), hsl(var(--gradient-pink)));
+  .bg-gradient-purple-violet {
+    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-violet)));
   }
   
-  .bg-gradient-teal-violet {
-    background: linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-violet)));
+  .bg-gradient-cyan-blue {
+    background: linear-gradient(135deg, hsl(var(--gradient-cyan)), hsl(var(--gradient-blue)));
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-magenta)));
+    background: linear-gradient(135deg, hsl(var(--gradient-purple-start)), hsl(var(--gradient-blue)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   
-  .text-gradient-pink {
-    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-pink)));
+  .text-gradient-blue {
+    background: linear-gradient(135deg, hsl(var(--gradient-blue)), hsl(var(--gradient-indigo)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
