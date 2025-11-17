@@ -90,6 +90,12 @@ const adminModules = [
     route: "/shopflow",
   },
   {
+    name: "Product Pricing",
+    subtitle: "Manage pricing",
+    icon: DollarSign,
+    route: "/admin/pricing",
+  },
+  {
     name: "Admin Panel",
     subtitle: "Full admin access",
     icon: Settings,
@@ -116,6 +122,10 @@ export default function Dashboard() {
   const [orderNumber, setOrderNumber] = useState("");
   const [margin, setMargin] = useState(40);
   const [isVehicleExpanded, setIsVehicleExpanded] = useState(false);
+  const [installHours, setInstallHours] = useState(8);
+  const [sqFt, setSqFt] = useState(0);
+  const [panelWidth, setPanelWidth] = useState(0);
+  const [panelHeight, setPanelHeight] = useState(0);
   
   // Pricing calculation
   const productPricing: { [key: string]: number } = {
@@ -135,10 +145,18 @@ export default function Dashboard() {
   
   const basePrice = productPricing[product] || 0;
   const subtotal = basePrice * quantity;
-  const installFee = subtotal * 0.15; // 15% install fee
+  const installFee = installHours * 75; // $75/hour install rate
   const taxRate = 0.08; // 8% tax
   const taxAmount = (subtotal + installFee) * taxRate;
   const totalCost = subtotal + installFee + taxAmount;
+  
+  // Calculate sq ft from panel dimensions
+  const calculateSqFt = () => {
+    if (panelWidth > 0 && panelHeight > 0) {
+      const sqFtCalc = (panelWidth * panelHeight) / 144; // Convert inches to sq ft
+      setSqFt(Math.round(sqFtCalc * 100) / 100);
+    }
+  };
   
   const latestDesigns = designs?.slice(0, 5) || [];
 
@@ -268,7 +286,7 @@ export default function Dashboard() {
                       ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
                       : 'bg-gradient-primary hover:opacity-90'
                   } text-white w-8 h-8 p-0`}
-                  title={isRecording ? 'Recording...' : isProcessing ? 'Processing...' : 'Hold to Speak'}
+                  title={isRecording ? 'Recording...' : isProcessing ? 'Processing...' : 'Intelligent VoiceCommand'}
                 >
                   <Mic className="w-4 h-4" />
                 </Button>
@@ -277,7 +295,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* Product Quick Select Buttons */}
+              {/* Product Quick Select Buttons - No Duplicates */}
               <div>
                 <label className="text-xs text-muted-foreground mb-2 block">Quick Select Product</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -338,65 +356,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Product Category Buttons */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Or Browse by Category</label>
-                <div className="flex gap-2 mb-3">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={productCategory === 'weprintwraps' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setProductCategory('weprintwraps');
-                      setProduct('');
-                    }}
-                    className="flex-1 text-xs"
-                  >
-                    WePrintWraps.com Products
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={productCategory === 'window-perf' ? 'default' : 'outline'}
-                    onClick={() => {
-                      setProductCategory('window-perf');
-                      setProduct('');
-                    }}
-                    className="flex-1 text-xs"
-                  >
-                    Window Perf
-                  </Button>
-                </div>
-                
-                {/* Product Dropdown - Changes based on category */}
-                <select 
-                  value={product}
-                  onChange={(e) => setProduct(e.target.value)}
-                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary z-50"
-                >
-                  <option value="">Choose a Product</option>
-                  {productCategory === 'weprintwraps' ? (
-                    <>
-                      <option value="Full Wrap">Full Wrap</option>
-                      <option value="Partial Wrap">Partial Wrap</option>
-                      <option value="Chrome Delete">Chrome Delete</option>
-                      <option value="Color Change Film">Color Change Film</option>
-                      <option value="Printed Wrap Film">Printed Wrap Film</option>
-                      <option value="PPF (Paint Protection Film)">PPF (Paint Protection Film)</option>
-                      <option value="Window Tint">Window Tint</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="Full Window Perf">Full Window Perf</option>
-                      <option value="Rear Window Perf">Rear Window Perf</option>
-                      <option value="Side Window Perf">Side Window Perf</option>
-                      <option value="Custom Window Perf">Custom Window Perf</option>
-                      <option value="Window Perf">Window Perf</option>
-                    </>
-                  )}
-                </select>
-              </div>
-
               {/* Collapsible Vehicle Info */}
               <div className="border border-border rounded-md">
                 <button
@@ -412,33 +371,89 @@ export default function Dashboard() {
                 
                 {isVehicleExpanded && (
                   <div className="p-3 space-y-2 border-t border-border">
-                    <input
-                      type="text"
-                      placeholder="Year"
-                      value={vehicleYear}
-                      onChange={(e) => setVehicleYear(e.target.value)}
-                      className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Make"
-                      value={vehicleMake}
-                      onChange={(e) => setVehicleMake(e.target.value)}
-                      className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Model"
-                      value={vehicleModel}
-                      onChange={(e) => setVehicleModel(e.target.value)}
-                      className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <select
+                        value={vehicleYear}
+                        onChange={(e) => setVehicleYear(e.target.value)}
+                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="">Year</option>
+                        {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={vehicleMake}
+                        onChange={(e) => setVehicleMake(e.target.value)}
+                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="">Make</option>
+                        <option value="Toyota">Toyota</option>
+                        <option value="Honda">Honda</option>
+                        <option value="Ford">Ford</option>
+                        <option value="Chevrolet">Chevrolet</option>
+                        <option value="Tesla">Tesla</option>
+                        <option value="BMW">BMW</option>
+                        <option value="Mercedes">Mercedes</option>
+                        <option value="Audi">Audi</option>
+                        <option value="Lexus">Lexus</option>
+                        <option value="Nissan">Nissan</option>
+                        <option value="Hyundai">Hyundai</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Model"
+                        value={vehicleModel}
+                        onChange={(e) => setVehicleModel(e.target.value)}
+                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Quantity and Finish */}
+              {/* Sq Ft and Panel Dimensions */}
               <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Total Sq. Ft.</label>
+                  <input 
+                    type="number"
+                    value={sqFt}
+                    onChange={(e) => setSqFt(parseFloat(e.target.value) || 0)}
+                    step="0.01"
+                    className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Panel Dimensions (in)</label>
+                  <div className="flex gap-1">
+                    <input 
+                      type="number"
+                      value={panelWidth || ''}
+                      onChange={(e) => {
+                        setPanelWidth(parseFloat(e.target.value) || 0);
+                        setTimeout(calculateSqFt, 10);
+                      }}
+                      placeholder="W"
+                      className="w-1/2 bg-background border border-border text-xs px-2 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <span className="text-xs flex items-center text-muted-foreground">×</span>
+                    <input 
+                      type="number"
+                      value={panelHeight || ''}
+                      onChange={(e) => {
+                        setPanelHeight(parseFloat(e.target.value) || 0);
+                        setTimeout(calculateSqFt, 10);
+                      }}
+                      placeholder="H"
+                      className="w-1/2 bg-background border border-border text-xs px-2 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity, Finish, and Install Hours */}
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Quantity</label>
                   <input 
@@ -460,6 +475,17 @@ export default function Dashboard() {
                     <option>Matte</option>
                     <option>Satin</option>
                   </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Install Hours</label>
+                  <input 
+                    type="number"
+                    value={installHours}
+                    onChange={(e) => setInstallHours(parseFloat(e.target.value) || 0)}
+                    min="0"
+                    step="0.5"
+                    className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
                 </div>
               </div>
 
@@ -487,16 +513,16 @@ export default function Dashboard() {
                   <span className="text-foreground">${subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Install (15%)</span>
+                  <span className="text-muted-foreground">Install ({installHours}hrs @ $75/hr)</span>
                   <span className="text-foreground">${installFee.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Tax (8%)</span>
                   <span className="text-foreground">${taxAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm font-bold pt-2 border-t border-border">
+                <div className="flex justify-between text-xs font-bold border-t border-border pt-1.5 mt-1.5">
                   <span className="text-foreground">Total</span>
-                  <span className="text-gradient">${totalCost.toFixed(2)}</span>
+                  <span className="text-primary">${totalCost.toFixed(2)}</span>
                 </div>
               </div>
 
