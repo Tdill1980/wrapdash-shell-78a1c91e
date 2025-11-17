@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDesignVault } from "@/modules/designvault/hooks/useDesignVault";
 import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
-import vehicleDimensionsData from "@/data/vehicle-dimensions.json";
+import vehicleDimensionsData from "@/data/vehicle-dimensions";
 
 const metrics = [
   {
