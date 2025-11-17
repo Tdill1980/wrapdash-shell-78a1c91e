@@ -20,8 +20,9 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
         
         <div className="hidden sm:block">
           <h1 className="text-2xl font-bold font-poppins tracking-tight">
-            <span className="text-white">WrapCommand</span>
-            <span className="bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent"> Mission Control Board</span>
+            <span className="text-white">Wrap</span>
+            <span className="bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent">Command</span>
+            <span className="text-white"> Mission Control Board</span>
           </h1>
         </div>
       </div>
