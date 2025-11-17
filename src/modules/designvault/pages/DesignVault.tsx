@@ -1,18 +1,21 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDesignVault } from "../hooks/useDesignVault";
 import { DesignCard } from "../components/DesignCard";
 import { DesignDetailModal } from "../components/DesignDetailModal";
 import { FilterSidebar } from "../components/FilterSidebar";
 import type { DesignVisualization } from "../hooks/useDesignVault";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function DesignVault() {
+  const navigate = useNavigate();
   const [selectedDesign, setSelectedDesign] =
     useState<DesignVisualization | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [filters, setFilters] = useState({});
 
-  const { data: designs, isLoading } = useDesignVault(filters);
+  const { data: designs, isLoading, refetch } = useDesignVault(filters);
 
   const handleCardClick = (design: DesignVisualization) => {
     setSelectedDesign(design);
@@ -32,6 +35,10 @@ export default function DesignVault() {
             Premium 3D Mockup Library — Wrap Visualizations & Production-Ready Designs
           </p>
         </div>
+        <Button onClick={() => navigate('/designvault/upload')}>
+          <Plus className="mr-2 h-4 w-4" />
+          Upload Design
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
@@ -47,11 +54,12 @@ export default function DesignVault() {
           ) : designs && designs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 auto-rows-fr">
               {designs.map((design) => (
-                <DesignCard
-                  key={design.id}
-                  design={design}
-                  onClick={() => handleCardClick(design)}
-                />
+              <DesignCard
+                key={design.id}
+                design={design}
+                onClick={() => handleCardClick(design)}
+                onDelete={() => refetch()}
+              />
               ))}
             </div>
           ) : (

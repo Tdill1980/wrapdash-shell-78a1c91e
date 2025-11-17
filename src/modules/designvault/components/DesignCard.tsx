@@ -2,15 +2,20 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DesignVisualization } from "../hooks/useDesignVault";
-import { Eye, RotateCcw, Download, Info, Clock } from "lucide-react";
+import { Eye, RotateCcw, Download, Info, Clock, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface DesignCardProps {
   design: DesignVisualization;
   onClick: () => void;
+  onDelete?: () => void;
 }
 
-export const DesignCard = ({ design, onClick }: DesignCardProps) => {
+export const DesignCard = ({ design, onClick, onDelete }: DesignCardProps) => {
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
   const renderUrls = design.render_urls as { hero?: string } | null;
   const heroImage = renderUrls?.hero || "/placeholder.svg";
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -18,11 +23,57 @@ export const DesignCard = ({ design, onClick }: DesignCardProps) => {
   // Mock multiple images for carousel (in real app, would come from render_urls)
   const images = [heroImage, heroImage];
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm('Are you sure you want to delete this design?')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('color_visualizations')
+        .delete()
+        .eq('id', design.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Design deleted",
+        description: "The design has been removed from DesignVault",
+      });
+
+      onDelete?.();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete design",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Card
       className="group cursor-pointer overflow-hidden bg-black border-white/5 rounded-lg hover:border-purple-500/30 transition-all duration-300 flex flex-col"
       onClick={onClick}
     >
+      {/* Delete Button */}
+      <Button
+        variant="destructive"
+        size="icon"
+        className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={handleDelete}
+        disabled={isDeleting}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+
       {/* Hero Render with Carousel */}
       <div className="relative w-full aspect-[4/3] flex-shrink-0 overflow-hidden bg-[#3A3A3A]">
         <img

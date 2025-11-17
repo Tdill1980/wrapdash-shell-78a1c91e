@@ -8,6 +8,7 @@ import { AppLayout } from "@/layouts/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import { Visualize as WrapCloser } from "./modules/designproai";
 import { DesignVault } from "./modules/designvault";
+import DesignVaultUpload from "./pages/DesignVaultUpload";
 import { WrapBox } from "./modules/wrapbox";
 import MonthlyDrops from "./pages/MonthlyDrops";
 import DesignMarket from "./pages/DesignMarket";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
             <Route path="/wrapcloser" element={<AppLayout><WrapCloser /></AppLayout>} />
             <Route path="/designvault" element={<AppLayout><DesignVault /></AppLayout>} />
+            <Route path="/designvault/upload" element={<AppLayout><DesignVaultUpload /></AppLayout>} />
             <Route path="/wrapbox" element={<AppLayout><WrapBox /></AppLayout>} />
             <Route path="/monthly-drops" element={<AppLayout><MonthlyDrops /></AppLayout>} />
             <Route path="/design-market" element={<AppLayout><DesignMarket /></AppLayout>} />
