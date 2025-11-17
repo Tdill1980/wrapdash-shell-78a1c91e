@@ -270,19 +270,21 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 max-w-[1600px]">
-      {/* VoiceCommand Bar - Sticky at top */}
+      {/* Mission Control Board - Sticky at top */}
       <div className="sticky top-0 z-10 bg-card border-b border-border p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Sparkles className="w-5 h-5 text-primary" />
-            <span className="text-sm font-semibold text-foreground">VoiceCommand</span>
+            <span className="text-sm font-semibold text-foreground">WrapCommand Mission Control Board</span>
+          </div>
+          <div className="flex items-center gap-2">
             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
               ACTIVE
             </Badge>
+            <Button size="sm" className="bg-gradient-primary hover:opacity-90 h-8 text-white">
+              Start Recording
+            </Button>
           </div>
-          <Button size="sm" className="bg-gradient-primary hover:opacity-90 h-8 text-white">
-            Start Recording
-          </Button>
         </div>
       </div>
 
@@ -306,7 +308,11 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg font-bold text-gradient">MightyCustomer</CardTitle>
+                <CardTitle className="text-lg font-bold font-poppins">
+                  <span className="text-foreground">Mighty</span>
+                  <span className="bg-gradient-primary bg-clip-text text-transparent">Customer</span>
+                  <span className="text-muted-foreground text-sm align-super">™</span>
+                </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
                   Quote & Order Builder
                 </p>
@@ -633,7 +639,11 @@ export default function Dashboard() {
         <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold text-gradient">DesignVault Premium</CardTitle>
+              <CardTitle className="text-lg font-bold font-poppins">
+                <span className="text-foreground">Design</span>
+                <span className="bg-gradient-primary bg-clip-text text-transparent">Vault</span>
+                <span className="text-muted-foreground text-sm align-super">™</span>
+              </CardTitle>
               <Database className="w-5 h-5 text-primary" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -757,7 +767,11 @@ export default function Dashboard() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-bold text-gradient">ShopFlow Production</CardTitle>
+              <CardTitle className="text-lg font-bold font-poppins">
+                <span className="text-foreground">Shop</span>
+                <span className="bg-gradient-primary bg-clip-text text-transparent">Flow</span>
+                <span className="text-muted-foreground text-sm align-super">™</span>
+              </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
                 Active jobs and workflow management
               </p>

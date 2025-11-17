@@ -79,6 +79,9 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        poppins: ["Poppins", "sans-serif"],
+      },
       boxShadow: {
         card: "0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.24)",
         "card-hover": "0 2px 4px 0 rgba(139, 92, 246, 0.15)",
