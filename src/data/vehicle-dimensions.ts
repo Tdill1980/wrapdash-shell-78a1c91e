@@ -1,4 +1,4 @@
-[
+export default [
   {
     "Make": "Acura",
     "Model": "CSX 4 Door Sedan",
