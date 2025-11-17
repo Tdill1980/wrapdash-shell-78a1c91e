@@ -66,13 +66,13 @@ export default function ApproveFlow() {
         </div>
       </div>
 
-      {/* Progress Bar - Thinner, Plum Gradient */}
-      <Card className="p-4 bg-gradient-to-r from-purple-900/30 via-pink-900/30 to-purple-900/30 border-purple-500/20">
+      {/* Progress Bar - Thin plum gradient */}
+      <div className="py-3 px-4 bg-gradient-to-r from-purple-900/20 via-pink-900/20 to-purple-900/20 border-b border-border rounded-lg">
         <div className="relative">
           <div className="flex justify-between mb-2">
             {progressSteps.map((step, index) => (
               <div key={index} className="flex flex-col items-center flex-1">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1.5 ${
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center mb-1 ${
                   step.status === "complete" 
                     ? "bg-gradient-primary" 
                     : step.status === "current"
@@ -90,11 +90,11 @@ export default function ApproveFlow() {
               </div>
             ))}
           </div>
-          <div className="absolute top-3 left-0 right-0 h-[1px] bg-border -z-10">
+          <div className="absolute top-2.5 left-0 right-0 h-[1px] bg-border -z-10">
             <div className="h-full bg-gradient-primary w-2/5" />
           </div>
         </div>
-      </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left: Design Proof with 2D/3D Toggle */}
