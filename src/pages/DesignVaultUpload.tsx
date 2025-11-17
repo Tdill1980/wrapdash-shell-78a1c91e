@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 export default function DesignVaultUpload() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function DesignVaultUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [isUniversalDesign, setIsUniversalDesign] = useState(false);
   
   const [formData, setFormData] = useState({
     vehicleMake: "",
@@ -91,15 +93,15 @@ export default function DesignVaultUpload() {
       const { error: insertError } = await supabase
         .from('color_visualizations')
         .insert({
-          vehicle_make: formData.vehicleMake,
-          vehicle_model: formData.vehicleModel,
-          vehicle_year: formData.vehicleYear,
-          vehicle_type: formData.vehicleType,
+          vehicle_make: isUniversalDesign ? "Universal" : formData.vehicleMake,
+          vehicle_model: isUniversalDesign ? "Any Vehicle" : formData.vehicleModel,
+          vehicle_year: isUniversalDesign ? null : formData.vehicleYear,
+          vehicle_type: isUniversalDesign ? "universal" : formData.vehicleType,
           color_hex: formData.colorHex,
           color_name: formData.colorName,
           finish_type: formData.finishType,
           render_urls: renderUrls,
-          tags: tags,
+          tags: isUniversalDesign ? [...tags, 'universal', 'any-vehicle'] : tags,
           uses_custom_design: false,
         });
 
@@ -175,61 +177,80 @@ export default function DesignVaultUpload() {
             )}
           </div>
 
-          {/* Vehicle Info */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="make">Vehicle Make *</Label>
-              <Input
-                id="make"
-                value={formData.vehicleMake}
-                onChange={(e) => setFormData({ ...formData, vehicleMake: e.target.value })}
-                placeholder="e.g., Tesla"
-                required
-              />
+          {/* Universal Design Toggle */}
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div className="space-y-0.5">
+              <Label htmlFor="universal">Universal Wrap Design</Label>
+              <p className="text-sm text-muted-foreground">
+                This design can be used on any vehicle (no specific make/model required)
+              </p>
             </div>
-            <div>
-              <Label htmlFor="model">Vehicle Model *</Label>
-              <Input
-                id="model"
-                value={formData.vehicleModel}
-                onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
-                placeholder="e.g., Model 3"
-                required
-              />
-            </div>
+            <Switch
+              id="universal"
+              checked={isUniversalDesign}
+              onCheckedChange={setIsUniversalDesign}
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="year">Year</Label>
-              <Input
-                id="year"
-                type="number"
-                value={formData.vehicleYear}
-                onChange={(e) => setFormData({ ...formData, vehicleYear: parseInt(e.target.value) })}
-                min={2000}
-                max={2030}
-              />
-            </div>
-            <div>
-              <Label htmlFor="type">Vehicle Type *</Label>
-              <Select
-                value={formData.vehicleType}
-                onValueChange={(value) => setFormData({ ...formData, vehicleType: value })}
-              >
-                <SelectTrigger id="type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sedan">Sedan</SelectItem>
-                  <SelectItem value="suv">SUV</SelectItem>
-                  <SelectItem value="truck">Truck</SelectItem>
-                  <SelectItem value="coupe">Coupe</SelectItem>
-                  <SelectItem value="van">Van</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          {/* Vehicle Info - Only show if not universal */}
+          {!isUniversalDesign && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="make">Vehicle Make *</Label>
+                  <Input
+                    id="make"
+                    value={formData.vehicleMake}
+                    onChange={(e) => setFormData({ ...formData, vehicleMake: e.target.value })}
+                    placeholder="e.g., Tesla"
+                    required={!isUniversalDesign}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="model">Vehicle Model *</Label>
+                  <Input
+                    id="model"
+                    value={formData.vehicleModel}
+                    onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
+                    placeholder="e.g., Model 3"
+                    required={!isUniversalDesign}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="year">Year</Label>
+                  <Input
+                    id="year"
+                    type="number"
+                    value={formData.vehicleYear}
+                    onChange={(e) => setFormData({ ...formData, vehicleYear: parseInt(e.target.value) })}
+                    min={2000}
+                    max={2030}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="type">Vehicle Type *</Label>
+                  <Select
+                    value={formData.vehicleType}
+                    onValueChange={(value) => setFormData({ ...formData, vehicleType: value })}
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sedan">Sedan</SelectItem>
+                      <SelectItem value="suv">SUV</SelectItem>
+                      <SelectItem value="truck">Truck</SelectItem>
+                      <SelectItem value="coupe">Coupe</SelectItem>
+                      <SelectItem value="van">Van</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Color Info */}
           <div className="grid grid-cols-2 gap-4">
