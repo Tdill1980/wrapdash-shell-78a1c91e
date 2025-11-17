@@ -5,8 +5,9 @@ export default function DesignMarket() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gradient">
-          Design Market
+        <h1 className="text-3xl font-bold tracking-tight">
+          <span className="text-foreground">Design</span>
+          <span className="text-primary">Market</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Buy and sell premium wrap designs

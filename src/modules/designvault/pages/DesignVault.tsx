@@ -27,9 +27,10 @@ export default function DesignVault() {
       {/* Hero Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground relative inline-block">
-            DesignVault™
-            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-purple-500 to-pink-500"></span>
+          <h1 className="text-2xl font-bold tracking-tight relative inline-block">
+            <span className="text-foreground">Design</span>
+            <span className="text-primary">Vault</span>
+            <span className="text-muted-foreground text-lg align-super">™</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-2">
             Premium 3D Mockup Library — Wrap Visualizations & Production-Ready Designs
