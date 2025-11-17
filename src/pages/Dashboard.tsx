@@ -724,11 +724,16 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className="bg-black text-white border-black text-xs px-2 py-0.5">
+                          Universal Design
+                        </Badge>
+                      </div>
                       <p className="text-sm font-semibold text-foreground">
                         {latestDesigns[carouselIndex]?.vehicle_make} {latestDesigns[carouselIndex]?.vehicle_model}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {latestDesigns[carouselIndex]?.color_name || "Custom Color"} • {latestDesigns[carouselIndex]?.finish_type}
+                        {latestDesigns[carouselIndex]?.color_name || "Custom Color"} • {latestDesigns[carouselIndex]?.finish_type?.replace(/gloss/gi, '').trim()}
                       </p>
                     </div>
                     <Button
