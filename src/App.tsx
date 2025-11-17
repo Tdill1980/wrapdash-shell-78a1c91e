@@ -17,6 +17,7 @@ import MightyCustomer from "./pages/MightyCustomer";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
 import Portfolio from "./pages/Portfolio";
+import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/approveflow" element={<AppLayout><ApproveFlowList /></AppLayout>} />
             <Route path="/approveflow/:projectId" element={<AppLayout><ApproveFlow /></AppLayout>} />
             <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
+            <Route path="/admin/pricing" element={<AppLayout><ProductPricingAdmin /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
