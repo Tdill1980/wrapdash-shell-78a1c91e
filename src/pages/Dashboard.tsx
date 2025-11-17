@@ -22,8 +22,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDesignVault } from "@/modules/designvault/hooks/useDesignVault";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import vehicleDimensionsData from "@/data/vehicle-dimensions.json";
 
 const metrics = [
   {
@@ -126,6 +127,39 @@ export default function Dashboard() {
   const [sqFt, setSqFt] = useState(0);
   const [panelWidth, setPanelWidth] = useState(0);
   const [panelHeight, setPanelHeight] = useState(0);
+  
+  // Parse vehicle dimensions data
+  const vehicleData = useMemo(() => {
+    const makes = Array.from(new Set(vehicleDimensionsData.map((v: any) => v.Make))).sort();
+    
+    const modelsByMake = vehicleDimensionsData.reduce((acc: any, v: any) => {
+      if (!acc[v.Make]) acc[v.Make] = new Set();
+      acc[v.Make].add(v.Model);
+      return acc;
+    }, {});
+    
+    // Convert sets to sorted arrays
+    Object.keys(modelsByMake).forEach(make => {
+      modelsByMake[make] = Array.from(modelsByMake[make]).sort();
+    });
+    
+    return { makes, modelsByMake, data: vehicleDimensionsData };
+  }, []);
+  
+  // Auto-fill sq ft when vehicle is selected
+  useEffect(() => {
+    if (vehicleMake && vehicleModel && vehicleYear) {
+      const match = vehicleData.data.find((v: any) => 
+        v.Make === vehicleMake && 
+        v.Model === vehicleModel && 
+        (v.Year === vehicleYear || v.Year.includes(vehicleYear))
+      );
+      
+      if (match) {
+        setSqFt(match["Corrected Sq Foot"] || match["Total Sq Foot"] || 0);
+      }
+    }
+  }, [vehicleMake, vehicleModel, vehicleYear, vehicleData]);
   
   // Pricing calculation
   const productPricing: { [key: string]: number } = {
@@ -373,6 +407,30 @@ export default function Dashboard() {
                   <div className="p-3 space-y-2 border-t border-border">
                     <div className="grid grid-cols-3 gap-2">
                       <select
+                        value={vehicleMake}
+                        onChange={(e) => {
+                          setVehicleMake(e.target.value);
+                          setVehicleModel(""); // Reset model when make changes
+                        }}
+                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="">Make</option>
+                        {vehicleData.makes.map((make: string) => (
+                          <option key={make} value={make}>{make}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={vehicleModel}
+                        onChange={(e) => setVehicleModel(e.target.value)}
+                        disabled={!vehicleMake}
+                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                      >
+                        <option value="">Model</option>
+                        {vehicleMake && vehicleData.modelsByMake[vehicleMake]?.map((model: string) => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                      <select
                         value={vehicleYear}
                         onChange={(e) => setVehicleYear(e.target.value)}
                         className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -382,31 +440,6 @@ export default function Dashboard() {
                           <option key={year} value={year}>{year}</option>
                         ))}
                       </select>
-                      <select
-                        value={vehicleMake}
-                        onChange={(e) => setVehicleMake(e.target.value)}
-                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      >
-                        <option value="">Make</option>
-                        <option value="Toyota">Toyota</option>
-                        <option value="Honda">Honda</option>
-                        <option value="Ford">Ford</option>
-                        <option value="Chevrolet">Chevrolet</option>
-                        <option value="Tesla">Tesla</option>
-                        <option value="BMW">BMW</option>
-                        <option value="Mercedes">Mercedes</option>
-                        <option value="Audi">Audi</option>
-                        <option value="Lexus">Lexus</option>
-                        <option value="Nissan">Nissan</option>
-                        <option value="Hyundai">Hyundai</option>
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="Model"
-                        value={vehicleModel}
-                        onChange={(e) => setVehicleModel(e.target.value)}
-                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
                     </div>
                   </div>
                 )}
