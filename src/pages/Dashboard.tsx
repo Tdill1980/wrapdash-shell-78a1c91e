@@ -17,6 +17,9 @@ import {
   Mic,
   ChevronDown,
   ChevronUp,
+  ClipboardList,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDesignVault } from "@/modules/designvault/hooks/useDesignVault";
 import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { useShopFlow } from "@/hooks/useShopFlow";
 import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
@@ -109,6 +113,7 @@ const adminModules = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: designs, isLoading } = useDesignVault();
+  const { orders: shopflowOrders, loading: shopflowLoading } = useShopFlow();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
@@ -723,6 +728,105 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ShopFlow Production Hub Card */}
+      <Card className="bg-card border-border">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold text-gradient">ShopFlow Production</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Active jobs and workflow management
+              </p>
+            </div>
+            <ClipboardList className="w-5 h-5 text-primary" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {/* Active Orders Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-background rounded-lg border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertCircle className="w-4 h-4 text-yellow-500" />
+                  <span className="text-xs text-muted-foreground">Pending</span>
+                </div>
+                <div className="text-2xl font-bold text-foreground">
+                  {shopflowLoading ? "..." : shopflowOrders.filter(o => o.status === 'design_requested').length}
+                </div>
+              </div>
+              <div className="p-3 bg-background rounded-lg border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs text-muted-foreground">In Progress</span>
+                </div>
+                <div className="text-2xl font-bold text-foreground">
+                  {shopflowLoading ? "..." : shopflowOrders.filter(o => o.status === 'awaiting_feedback' || o.status === 'revision_sent').length}
+                </div>
+              </div>
+              <div className="p-3 bg-background rounded-lg border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-muted-foreground">Ready</span>
+                </div>
+                <div className="text-2xl font-bold text-foreground">
+                  {shopflowLoading ? "..." : shopflowOrders.filter(o => o.status === 'ready_for_print').length}
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Orders */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Recent Orders
+              </div>
+              {shopflowLoading ? (
+                <div className="p-4 bg-background rounded-lg border border-border text-center">
+                  <p className="text-sm text-muted-foreground">Loading orders...</p>
+                </div>
+              ) : shopflowOrders.length === 0 ? (
+                <div className="p-4 bg-background rounded-lg border border-border text-center">
+                  <ClipboardList className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No orders yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {shopflowOrders.slice(0, 3).map((order) => (
+                    <div
+                      key={order.id}
+                      onClick={() => navigate(`/shopflow/${order.id}`)}
+                      className="p-3 bg-background rounded-lg border border-border hover:border-primary/30 transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-foreground">#{order.order_number}</span>
+                        <span className="text-xs text-muted-foreground">{order.product_type}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">{order.customer_name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          order.status === 'ready_for_print' ? 'bg-green-500/10 text-green-500' :
+                          order.status === 'design_requested' ? 'bg-yellow-500/10 text-yellow-500' :
+                          'bg-blue-500/10 text-blue-500'
+                        }`}>
+                          {order.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* View All Button */}
+            <Button 
+              onClick={() => navigate("/shopflow")}
+              className="w-full bg-gradient-purple-magenta hover:opacity-90 text-white"
+            >
+              View All Orders
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Metrics Cards Below */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
