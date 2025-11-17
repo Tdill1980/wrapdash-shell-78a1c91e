@@ -104,6 +104,7 @@ export default function Dashboard() {
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
   // Quote Builder State
+  const [productCategory, setProductCategory] = useState<'weprintwraps' | 'window-perf'>('weprintwraps');
   const [product, setProduct] = useState("");
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
@@ -123,6 +124,10 @@ export default function Dashboard() {
     "Chrome Delete": 800,
     "PPF (Paint Protection Film)": 2500,
     "Window Tint": 600,
+    "Full Window Perf": 1200,
+    "Rear Window Perf": 500,
+    "Side Window Perf": 800,
+    "Custom Window Perf": 1500,
   };
   
   const basePrice = productPricing[product] || 0;
@@ -264,20 +269,59 @@ export default function Dashboard() {
                 </Button>
               </div>
 
-              {/* Choose a Product */}
+              {/* Product Category Buttons */}
               <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Choose a Product</label>
+                <label className="text-xs text-muted-foreground mb-2 block">Product Category</label>
+                <div className="flex gap-2 mb-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={productCategory === 'weprintwraps' ? 'default' : 'outline'}
+                    onClick={() => {
+                      setProductCategory('weprintwraps');
+                      setProduct('');
+                    }}
+                    className="flex-1 text-xs"
+                  >
+                    WePrintWraps.com Products
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={productCategory === 'window-perf' ? 'default' : 'outline'}
+                    onClick={() => {
+                      setProductCategory('window-perf');
+                      setProduct('');
+                    }}
+                    className="flex-1 text-xs"
+                  >
+                    Window Perf
+                  </Button>
+                </div>
+                
+                {/* Product Dropdown - Changes based on category */}
                 <select 
                   value={product}
                   onChange={(e) => setProduct(e.target.value)}
-                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary z-50"
                 >
                   <option value="">Choose a Product</option>
-                  <option value="Full Wrap">Full Wrap</option>
-                  <option value="Partial Wrap">Partial Wrap</option>
-                  <option value="Chrome Delete">Chrome Delete</option>
-                  <option value="PPF (Paint Protection Film)">PPF (Paint Protection Film)</option>
-                  <option value="Window Tint">Window Tint</option>
+                  {productCategory === 'weprintwraps' ? (
+                    <>
+                      <option value="Full Wrap">Full Wrap</option>
+                      <option value="Partial Wrap">Partial Wrap</option>
+                      <option value="Chrome Delete">Chrome Delete</option>
+                      <option value="PPF (Paint Protection Film)">PPF (Paint Protection Film)</option>
+                      <option value="Window Tint">Window Tint</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Full Window Perf">Full Window Perf</option>
+                      <option value="Rear Window Perf">Rear Window Perf</option>
+                      <option value="Side Window Perf">Side Window Perf</option>
+                      <option value="Custom Window Perf">Custom Window Perf</option>
+                    </>
+                  )}
                 </select>
               </div>
 
