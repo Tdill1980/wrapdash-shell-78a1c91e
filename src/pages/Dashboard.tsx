@@ -648,19 +648,31 @@ export default function Dashboard() {
                   <>
                     {/* Carousel Image */}
                     <div className="absolute inset-0">
-                      {latestDesigns[carouselIndex]?.render_urls && 
-                       typeof latestDesigns[carouselIndex].render_urls === 'object' && 
-                       'hero_angle' in (latestDesigns[carouselIndex].render_urls as any) ? (
-                        <img
-                          src={(latestDesigns[carouselIndex].render_urls as any).hero_angle}
-                          alt={`${latestDesigns[carouselIndex].vehicle_make} ${latestDesigns[carouselIndex].vehicle_model}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <Car className="w-12 h-12 text-muted-foreground" />
-                        </div>
-                      )}
+                      {(() => {
+                        const design = latestDesigns[carouselIndex];
+                        const renderUrls = design?.render_urls;
+                        let imageUrl = null;
+
+                        if (Array.isArray(renderUrls) && renderUrls.length > 0) {
+                          // Handle array format
+                          imageUrl = renderUrls[0];
+                        } else if (renderUrls && typeof renderUrls === 'object' && 'hero_angle' in renderUrls) {
+                          // Handle object format
+                          imageUrl = (renderUrls as any).hero_angle;
+                        }
+
+                        return imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={`${design.vehicle_make} ${design.vehicle_model}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <Car className="w-12 h-12 text-muted-foreground" />
+                          </div>
+                        );
+                      })()}
                     </div>
                     
                     {/* Gradient Overlay */}
