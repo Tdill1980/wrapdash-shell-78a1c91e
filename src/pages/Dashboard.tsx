@@ -660,15 +660,23 @@ export default function Dashboard() {
                         }
 
                         return imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={`${design.vehicle_make} ${design.vehicle_model}`}
-                            className="max-w-full max-h-full object-contain"
-                            onError={(e) => {
-                              console.error('Image failed to load:', imageUrl);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
+                          <>
+                            <img
+                              src={imageUrl}
+                              alt={`${design.vehicle_make} ${design.vehicle_model}`}
+                              className="max-w-full max-h-full object-contain"
+                              onError={(e) => {
+                                console.error('Image failed to load:', imageUrl);
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                            {/* Design Name Badge Overlay */}
+                            <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                              <Badge className="bg-background/95 backdrop-blur-sm border-border text-foreground text-sm px-3 py-1 shadow-lg">
+                                {design.color_name || design.design_file_name || "Custom Design"}
+                              </Badge>
+                            </div>
+                          </>
                         ) : (
                           <div className="flex flex-col items-center justify-center h-full gap-2">
                             <Car className="w-12 h-12 text-muted-foreground" />
@@ -728,9 +736,6 @@ export default function Dashboard() {
                         <Badge className="bg-black text-white border-black text-xs px-2 py-0.5">
                           Universal Any Vehicle
                         </Badge>
-                        <span className="text-sm font-semibold text-foreground">
-                          {latestDesigns[carouselIndex]?.color_name || latestDesigns[carouselIndex]?.design_file_name || "Custom Design"}
-                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {latestDesigns[carouselIndex]?.finish_type?.replace(/gloss/gi, '').trim()}
