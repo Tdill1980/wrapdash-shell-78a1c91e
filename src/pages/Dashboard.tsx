@@ -726,7 +726,7 @@ export default function Dashboard() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <Badge className="bg-black text-white border-black text-xs px-2 py-0.5">
-                          Universal Design
+                          Any Vehicle
                         </Badge>
                       </div>
                       <p className="text-sm font-semibold text-foreground">
