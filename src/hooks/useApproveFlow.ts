@@ -132,6 +132,21 @@ export const useApproveFlow = (projectId?: string) => {
     }
   };
 
+  // Helper to trigger ApproveFlow events
+  const triggerEvent = async (eventType: string, data: any = {}) => {
+    try {
+      await supabase.functions.invoke('approveflow-event', {
+        body: {
+          eventType,
+          projectId,
+          ...data,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error triggering event:', error);
+    }
+  };
+
   // Upload new version
   const uploadVersion = async (file: File, notes: string, submittedBy: 'designer' | 'customer') => {
     if (!projectId) return;
@@ -155,7 +170,7 @@ export const useApproveFlow = (projectId?: string) => {
       const nextVersion = versions.length > 0 ? Math.max(...versions.map(v => v.version_number)) + 1 : 1;
 
       // Insert version
-      const { error: versionError } = await supabase
+      const { data: versionData, error: versionError } = await supabase
         .from('approveflow_versions')
         .insert({
           project_id: projectId,
@@ -163,7 +178,9 @@ export const useApproveFlow = (projectId?: string) => {
           file_url: publicUrl,
           notes,
           submitted_by: submittedBy,
-        });
+        })
+        .select()
+        .single();
 
       if (versionError) throw versionError;
 
@@ -173,14 +190,11 @@ export const useApproveFlow = (projectId?: string) => {
         .update({ status: 'proof_delivered' })
         .eq('id', projectId);
 
-      // Create action
-      await supabase
-        .from('approveflow_actions')
-        .insert({
-          project_id: projectId,
-          action_type: 'delivered_proof',
-          payload: { version: nextVersion },
-        });
+      // Trigger event for Klaviyo + WooCommerce
+      await triggerEvent('proof_delivered', {
+        versionId: versionData.id,
+        notes,
+      });
 
       toast({
         title: 'Version uploaded',
@@ -233,12 +247,11 @@ export const useApproveFlow = (projectId?: string) => {
         .update({ status: 'approved' })
         .eq('id', projectId);
 
-      await supabase
-        .from('approveflow_actions')
-        .insert({
-          project_id: projectId,
-          action_type: 'approved',
-        });
+      // Trigger event for Klaviyo + WooCommerce
+      const latestVersion = versions[0];
+      await triggerEvent('design_approved', {
+        versionId: latestVersion?.id,
+      });
 
       toast({
         title: 'Design Approved',
@@ -266,13 +279,10 @@ export const useApproveFlow = (projectId?: string) => {
         .update({ status: 'revision_sent' })
         .eq('id', projectId);
 
-      await supabase
-        .from('approveflow_actions')
-        .insert({
-          project_id: projectId,
-          action_type: 'requested_revision',
-          payload: { notes: revisionNotes },
-        });
+      // Trigger event for Klaviyo + WooCommerce
+      await triggerEvent('revision_requested', {
+        notes: revisionNotes,
+      });
 
       toast({
         title: 'Revision Requested',

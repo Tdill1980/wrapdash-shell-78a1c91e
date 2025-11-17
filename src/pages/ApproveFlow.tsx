@@ -21,6 +21,7 @@ import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -116,16 +117,14 @@ export default function ApproveFlow() {
 
       if (error) throw error;
 
-      // Store 3D renders in approveflow_3d table
-      const { error: insertError } = await supabase
-        .from('approveflow_3d')
-        .insert({
-          project_id: urlProjectId,
-          version_id: latestVersion.id,
-          render_urls: data.renders || [],
-        });
-
-      if (insertError) throw insertError;
+      // Store 3D renders and trigger Klaviyo + WooCommerce events
+      if (data?.renders && urlProjectId) {
+        await save3DRendersToApproveFlow(
+          urlProjectId,
+          latestVersion.id,
+          data.renders
+        );
+      }
 
       toast({
         title: "3D renders generated",
