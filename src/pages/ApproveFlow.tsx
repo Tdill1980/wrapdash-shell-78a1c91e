@@ -1,35 +1,140 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Upload, 
   MessageSquare, 
   CheckCircle2, 
   Clock,
   Send,
-  AlertCircle,
   Eye,
-  RotateCcw,
   Box,
   Image as ImageIcon,
-  Paperclip
+  Loader2
 } from "lucide-react";
+import { useApproveFlow } from "@/hooks/useApproveFlow";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export default function ApproveFlow() {
+  const [projectId, setProjectId] = useState<string>();
   const [activeRole, setActiveRole] = useState<"designer" | "customer">("designer");
   const [chatMessage, setChatMessage] = useState("");
-  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  const [revisionNotes, setRevisionNotes] = useState("");
+  const [uploadNotes, setUploadNotes] = useState("");
+  const [selectedVersion, setSelectedVersion] = useState<string>("latest");
+  const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const progressSteps = [
-    { label: "Design Requested", status: "complete" },
-    { label: "Proof Delivered", status: "complete" },
-    { label: "Awaiting Feedback", status: "current" },
-    { label: "Revision Sent", status: "pending" },
-    { label: "Approved", status: "pending" },
-  ];
+  const { toast } = useToast();
+
+  // Fetch first available project
+  useEffect(() => {
+    const fetchProject = async () => {
+      const { data } = await supabase.from('approveflow_projects').select('id').limit(1).single();
+      if (data) setProjectId(data.id);
+    };
+    fetchProject();
+  }, []);
+  
+  const {
+    project,
+    versions,
+    chatMessages,
+    loading,
+    uploadVersion,
+    sendMessage,
+    approveDesign,
+    requestRevision,
+  } = useApproveFlow(projectId);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      await uploadVersion(file, uploadNotes, activeRole);
+      setUploadNotes("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim()) return;
+    await sendMessage(chatMessage, activeRole);
+    setChatMessage("");
+  };
+
+  const handleApprove = async () => {
+    await approveDesign();
+  };
+
+  const handleRequestRevision = async () => {
+    if (!revisionNotes.trim()) {
+      toast({
+        title: "Revision notes required",
+        description: "Please provide details about what needs to be changed",
+        variant: "destructive",
+      });
+      return;
+    }
+    await requestRevision(revisionNotes);
+    setRevisionNotes("");
+    setShowRevisionForm(false);
+  };
+
+  const getProgressSteps = () => {
+    const status = project?.status || 'design_requested';
+    const statusMap: Record<string, number> = {
+      'design_requested': 0,
+      'proof_delivered': 1,
+      'awaiting_feedback': 2,
+      'revision_sent': 3,
+      'approved': 4,
+    };
+    const currentStep = statusMap[status] || 0;
+
+    return [
+      { label: "Design Requested", status: currentStep >= 0 ? "complete" : "pending" },
+      { label: "Proof Delivered", status: currentStep >= 1 ? "complete" : currentStep === 1 ? "current" : "pending" },
+      { label: "Awaiting Feedback", status: currentStep >= 2 ? "complete" : currentStep === 2 ? "current" : "pending" },
+      { label: "Revision Sent", status: currentStep >= 3 ? "complete" : currentStep === 3 ? "current" : "pending" },
+      { label: "Approved", status: currentStep >= 4 ? "complete" : currentStep === 4 ? "current" : "pending" },
+    ];
+  };
+
+  const latestVersion = versions[0];
+  const displayVersion = selectedVersion === "latest" ? latestVersion : versions.find(v => v.id === selectedVersion);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <p className="text-muted-foreground">No project found</p>
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
+      </div>
+    );
+  }
+
+  const progressSteps = getProgressSteps();
 
   return (
     <div className="space-y-6 max-w-[1600px]">
@@ -66,7 +171,7 @@ export default function ApproveFlow() {
         </div>
       </div>
 
-      {/* Progress Bar - Thin plum gradient */}
+      {/* Progress Bar */}
       <div className="py-3 px-4 bg-gradient-to-r from-purple-900/20 via-pink-900/20 to-purple-900/20 border-b border-border rounded-lg">
         <div className="relative">
           <div className="flex justify-between mb-2">
@@ -91,257 +196,298 @@ export default function ApproveFlow() {
             ))}
           </div>
           <div className="absolute top-2.5 left-0 right-0 h-[1px] bg-border -z-10">
-            <div className="h-full bg-gradient-primary w-2/5" />
+            <div 
+              className="h-full bg-gradient-primary transition-all duration-500" 
+              style={{ width: `${(progressSteps.filter(s => s.status === "complete").length / progressSteps.length) * 100}%` }}
+            />
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left: Design Proof with 2D/3D Toggle */}
+        {/* LEFT: Order Info + Upload */}
         <div className="lg:col-span-1 space-y-6">
           {/* Order Info */}
           <Card className="p-4 bg-card border-border">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Order: <span className="text-foreground font-semibold">#32995</span></span>
-                <span>•</span>
-                <span className="text-foreground">Trish Dill</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Nov 1, 2025</span>
-                <span>•</span>
-                <span className="text-foreground font-semibold">$1000.00</span>
-              </div>
-              <p className="text-sm text-foreground">Custom Vehicle Wrap Design</p>
-            </div>
-          </Card>
-
-          {/* 2D Upload Section */}
-          <Card className="bg-card border-border">
-            <div className="p-3 border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground">Upload 2D Design</h3>
-            </div>
-            <div className="p-3">
-              <Button className="w-full bg-gradient-primary hover:opacity-90 text-white">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload 2D Proof
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Upload flat design first
-              </p>
-            </div>
-          </Card>
-
-          {/* 3D Generator Section */}
-          <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-500/20">
-            <div className="p-3 border-b border-purple-500/20">
-              <h3 className="text-sm font-semibold text-foreground">Generate 3D View</h3>
-            </div>
-            <div className="p-3 space-y-2">
-              <Button className="w-full bg-gradient-plum-pink hover:opacity-90 text-white">
-                <Box className="w-4 h-4 mr-2" />
-                Generate 3D Render
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                3D proofs increase conversion by 100x
-              </p>
-            </div>
-          </Card>
-        </div>
-
-        {/* Center: Large Design Proof Viewer */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Design Proof Card */}
-          <Card className="bg-card border-border">
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-foreground">Design Proof v3</h2>
-                <Badge variant="outline" className="bg-purple-900/30 text-purple-400 border-purple-500/20">
-                  <Clock className="w-3 h-3 mr-1" />
-                  Awaiting Approval
-                </Badge>
-              </div>
-            </div>
-
-            {/* Design Viewer */}
-            <div className="p-6">
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "2d" | "3d")} className="w-full">
-                <div className="flex items-center justify-between mb-4">
-                  <TabsList className="bg-background border border-border">
-                    <TabsTrigger value="2d" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
-                      <ImageIcon className="w-4 h-4 mr-2" />
-                      2D View
-                    </TabsTrigger>
-                    <TabsTrigger value="3d" className="data-[state=active]:bg-gradient-primary data-[state=active]:text-white">
-                      <Box className="w-4 h-4 mr-2" />
-                      3D View
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <div className="flex gap-2">
-                    <Button size="icon" variant="outline" className="h-8 w-8">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button size="icon" variant="outline" className="h-8 w-8">
-                      <RotateCcw className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <TabsContent value="2d" className="mt-0">
-                  <div className="aspect-video bg-background rounded-lg border border-border flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">2D Design Preview</p>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="3d" className="mt-0">
-                  <div className="aspect-video bg-background rounded-lg border border-border flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <Box className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">3D Render Preview</p>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              {/* Submission Info */}
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <Card className="bg-background border-border p-3">
-                  <div className="text-xs text-muted-foreground mb-1">SUBMITTED</div>
-                  <div className="text-foreground font-semibold text-sm">Nov 2, 2025</div>
-                  <div className="text-foreground font-semibold text-sm">3:36 PM</div>
-                </Card>
-
-                <Card className="bg-background border-border p-3">
-                  <div className="text-xs text-muted-foreground mb-1">VERSION</div>
-                  <div className="text-foreground font-semibold text-sm">Revision 3</div>
-                  <div className="text-purple-400 text-xs mt-1">Latest</div>
-                </Card>
-              </div>
-            </div>
-          </Card>
-
-          {/* Customer Design Instructions */}
-          <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-purple-500/20">
-            <div className="p-4 border-b border-purple-500/20">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">Customer Design Instructions</h3>
-                <Button size="sm" className="bg-gradient-primary hover:opacity-90 text-white h-8">
-                  <Upload className="w-3 h-3 mr-2" />
-                  Add File
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-4 space-y-4">
-              <Card className="bg-card/50 border-border p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                  <Clock className="w-3 h-3" />
-                  <span>Received Nov 2, 2025 at 2:28 PM</span>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="text-xs font-semibold text-purple-400 mb-2">Instructions</h4>
-                    <p className="text-sm text-foreground">
-                      I want a full wrap for this van excluding the roof, it's a 1500 ford van, 
-                      here's a picture of the design we chose
-                    </p>
-                  </div>
-
-                  <div className="text-xs text-muted-foreground italic">
-                    Please request a revision to update instructions
-                  </div>
-                </div>
-              </Card>
-
-              {/* Reference Files */}
+            <h3 className="text-sm font-semibold mb-3 text-gradient">Order Information</h3>
+            <div className="space-y-2 text-xs">
               <div>
-                <h4 className="text-xs font-semibold text-foreground mb-2">Reference Files</h4>
-                <div className="space-y-2">
-                  <Card className="bg-card/50 border-border p-2.5 flex items-center gap-2">
-                    <Paperclip className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="text-xs text-foreground">IMG_3329.jpg</span>
-                  </Card>
-                  <Card className="bg-card/50 border-border p-2.5 flex items-center gap-2">
-                    <Paperclip className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="text-xs text-foreground">BFD72520-2082-1EDE-...</span>
-                  </Card>
-                  <Button variant="outline" className="w-full border-purple-500/20 hover:bg-purple-500/10 h-8 text-xs">
-                    <Upload className="w-3 h-3 mr-2" />
-                    Add File
-                  </Button>
-                </div>
+                <span className="text-muted-foreground">Order:</span>
+                <span className="ml-2 font-mono">{project.order_number}</span>
               </div>
-
-              {/* Design Revision Note */}
-              <Card className="bg-card/50 border-border p-3">
-                <div className="text-sm font-semibold text-foreground mb-2">Design Revision 3:</div>
-                <div className="bg-purple-900/30 border border-purple-500/20 rounded-md p-2.5">
-                  <div className="text-[10px] text-purple-400 mb-1">Customer requested</div>
-                  <p className="text-xs text-foreground">
-                    brighter colors and logo repositioning on the driver side panel
-                  </p>
+              <div>
+                <span className="text-muted-foreground">Customer:</span>
+                <span className="ml-2">{project.customer_name}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Product:</span>
+                <span className="ml-2">{project.product_type}</span>
+              </div>
+              {project.order_total && (
+                <div>
+                  <span className="text-muted-foreground">Total:</span>
+                  <span className="ml-2">${project.order_total.toFixed(2)}</span>
                 </div>
-              </Card>
+              )}
+              <div>
+                <span className="text-muted-foreground">Status:</span>
+                <Badge className="ml-2 text-[10px]" variant="outline">{project.status}</Badge>
+              </div>
             </div>
           </Card>
-        </div>
 
-        {/* Right: Smaller SmartChat */}
-        <div className="lg:col-span-1">
-          <Card className="bg-card border-border h-full flex flex-col">
-            <div className="p-3 border-b border-border">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold text-foreground text-sm">Chat with Design Team</h3>
-              </div>
-            </div>
-
-            <div className="flex-1 p-4 flex items-center justify-center">
-              <div className="text-center space-y-2">
-                <div className="flex justify-center">
-                  <MessageSquare className="w-8 h-8 text-purple-500/50" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-1">Start chatting 👋</p>
-                  <p className="text-xs text-muted-foreground">
-                    Type or say what you need — we'll route it
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 border-t border-border space-y-2">
-              <div className="relative">
-                <Input
-                  placeholder="Type your message..."
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  className="pr-9 bg-background border-border text-sm h-9"
+          {/* Upload Section - Designer Only */}
+          {activeRole === "designer" && (
+            <Card className="p-4 bg-card border-border">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Upload 2D Proof
+              </h3>
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="Version notes (optional)"
+                  value={uploadNotes}
+                  onChange={(e) => setUploadNotes(e.target.value)}
+                  className="text-xs h-16"
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
                 <Button
-                  size="icon"
-                  className="absolute right-1 top-1 h-7 w-7 bg-primary hover:bg-primary/90"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full"
+                  size="sm"
                 >
-                  <Send className="w-3 h-3" />
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-3 h-3 mr-2" />
+                      Select File
+                    </>
+                  )}
                 </Button>
               </div>
+            </Card>
+          )}
 
-              <Button className="w-full bg-gradient-plum-pink hover:opacity-90 h-9 text-sm text-white">
-                <CheckCircle2 className="w-3 h-3 mr-2" />
-                Approve Design
-              </Button>
+          {/* Design Instructions */}
+          {project.design_instructions && (
+            <Card className="p-4 bg-card border-border">
+              <h3 className="text-sm font-semibold mb-2 text-gradient">Design Instructions</h3>
+              <p className="text-xs text-muted-foreground">{project.design_instructions}</p>
+            </Card>
+          )}
+        </div>
 
-              <Button variant="outline" className="w-full border-purple-500/20 hover:bg-purple-500/10 h-9 text-sm">
-                <AlertCircle className="w-3 h-3 mr-2" />
-                Request Revision
+        {/* CENTER: Design Proof Viewer */}
+        <div className="lg:col-span-2">
+          <Card className="p-4 bg-card border-border h-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Design Proof
+              </h3>
+              {versions.length > 0 && (
+                <Select value={selectedVersion} onValueChange={setSelectedVersion}>
+                  <SelectTrigger className="w-32 h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest">Latest</SelectItem>
+                    {versions.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        v{v.version_number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <Tabs defaultValue="2d" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="2d">2D View</TabsTrigger>
+                <TabsTrigger value="3d">3D View</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="2d" className="space-y-4">
+                {displayVersion ? (
+                  <div className="space-y-3">
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={displayVersion.file_url} 
+                        alt={`Version ${displayVersion.version_number}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <p className="text-muted-foreground">
+                        Version {displayVersion.version_number} • 
+                        Submitted by {displayVersion.submitted_by} • 
+                        {format(new Date(displayVersion.created_at), 'MMM d, yyyy h:mm a')}
+                      </p>
+                      {displayVersion.notes && (
+                        <p className="text-foreground">Notes: {displayVersion.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">No design uploaded yet</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="3d">
+                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                  <div className="text-center space-y-2">
+                    <Box className="w-12 h-12 mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">3D rendering coming soon</p>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Version History */}
+            {versions.length > 1 && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <h4 className="text-xs font-semibold mb-2">Version History</h4>
+                <div className="space-y-1">
+                  {versions.map((v) => (
+                    <div key={v.id} className="text-xs flex items-center justify-between py-1">
+                      <span className="text-muted-foreground">
+                        v{v.version_number} • {format(new Date(v.created_at), 'MMM d')}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setSelectedVersion(v.id)}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* RIGHT: Chat + Actions */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Chat Panel */}
+          <Card className="p-4 bg-card border-border">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Chat with {activeRole === "designer" ? "Customer" : "Design Team"}
+            </h3>
+            
+            <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
+              {chatMessages.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-8">
+                  No messages yet. Start the conversation!
+                </p>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.sender === activeRole ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] p-2 rounded-lg text-xs ${
+                        msg.sender === activeRole
+                          ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-foreground'
+                          : 'bg-muted text-foreground'
+                      }`}
+                    >
+                      <p className="text-[10px] text-muted-foreground mb-1 uppercase">{msg.sender}</p>
+                      <p>{msg.message}</p>
+                      <p className="text-[9px] text-muted-foreground mt-1">
+                        {format(new Date(msg.created_at), 'h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Type a message..."
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                className="text-xs"
+              />
+              <Button size="sm" onClick={handleSendMessage}>
+                <Send className="w-3 h-3" />
               </Button>
             </div>
           </Card>
+
+          {/* Action Buttons */}
+          {activeRole === "customer" && (
+            <Card className="p-4 bg-card border-border space-y-3">
+              {!showRevisionForm ? (
+                <>
+                  <Button
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500"
+                    onClick={handleApprove}
+                    disabled={project.status === 'approved'}
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {project.status === 'approved' ? 'Design Approved' : 'Approve Design'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setShowRevisionForm(true)}
+                    disabled={project.status === 'approved'}
+                  >
+                    Request Revision
+                  </Button>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <Textarea
+                    placeholder="What needs to be changed?"
+                    value={revisionNotes}
+                    onChange={(e) => setRevisionNotes(e.target.value)}
+                    className="text-xs"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={handleRequestRevision}
+                    >
+                      Submit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setShowRevisionForm(false);
+                        setRevisionNotes("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
       </div>
     </div>

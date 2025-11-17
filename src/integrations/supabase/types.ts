@@ -14,6 +14,227 @@ export type Database = {
   }
   public: {
     Tables: {
+      approveflow_3d: {
+        Row: {
+          created_at: string | null
+          id: string
+          project_id: string
+          render_urls: Json
+          version_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          project_id: string
+          render_urls: Json
+          version_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          project_id?: string
+          render_urls?: Json
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_3d_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approveflow_3d_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approveflow_actions: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          id: string
+          payload: Json | null
+          project_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          project_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          payload?: Json | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_actions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approveflow_assets: {
+        Row: {
+          created_at: string | null
+          file_type: string | null
+          file_url: string
+          id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approveflow_chat: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          project_id: string
+          sender: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          project_id: string
+          sender: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          project_id?: string
+          sender?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_chat_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approveflow_projects: {
+        Row: {
+          created_at: string | null
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string
+          design_instructions: string | null
+          designer_id: string | null
+          id: string
+          order_number: string
+          order_total: number | null
+          product_type: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name: string
+          design_instructions?: string | null
+          designer_id?: string | null
+          id?: string
+          order_number: string
+          order_total?: number | null
+          product_type: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string
+          design_instructions?: string | null
+          designer_id?: string | null
+          id?: string
+          order_number?: string
+          order_total?: number | null
+          product_type?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      approveflow_versions: {
+        Row: {
+          created_at: string | null
+          file_url: string
+          id: string
+          notes: string | null
+          project_id: string
+          submitted_by: string
+          thumbnail_url: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string | null
+          file_url: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          submitted_by: string
+          thumbnail_url?: string | null
+          version_number: number
+        }
+        Update: {
+          created_at?: string | null
+          file_url?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          submitted_by?: string
+          thumbnail_url?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       color_visualizations: {
         Row: {
           color_hex: string | null
