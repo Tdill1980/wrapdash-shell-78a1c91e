@@ -647,17 +647,15 @@ export default function Dashboard() {
                 ) : latestDesigns.length > 0 ? (
                   <>
                     {/* Carousel Image */}
-                    <div className="absolute inset-0 bg-muted/5 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center">
                       {(() => {
                         const design = latestDesigns[carouselIndex];
                         const renderUrls = design?.render_urls;
                         let imageUrl = null;
 
                         if (Array.isArray(renderUrls) && renderUrls.length > 0) {
-                          // Handle array format
                           imageUrl = renderUrls[0];
                         } else if (renderUrls && typeof renderUrls === 'object') {
-                          // Handle object format - check multiple possible keys
                           imageUrl = (renderUrls as any).hero_angle || (renderUrls as any).hero || (renderUrls as any).front;
                         }
 
@@ -680,37 +678,24 @@ export default function Dashboard() {
                       })()}
                     </div>
                     
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-                    
-                    {/* Info Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className="text-xs font-semibold text-foreground">
-                        {latestDesigns[carouselIndex]?.vehicle_make} {latestDesigns[carouselIndex]?.vehicle_model}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {latestDesigns[carouselIndex]?.color_name || "Custom Color"}
-                      </p>
-                    </div>
-                    
                     {/* Navigation Buttons */}
                     {latestDesigns.length > 1 && (
                       <>
                         <button
                           onClick={prevSlide}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-card/80 backdrop-blur-sm border border-border rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm border border-border rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-lg z-10"
                         >
                           <ChevronLeft className="w-4 h-4 text-foreground" />
                         </button>
                         <button
                           onClick={nextSlide}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-card/80 backdrop-blur-sm border border-border rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/90 backdrop-blur-sm border border-border rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background shadow-lg z-10"
                         >
                           <ChevronRight className="w-4 h-4 text-foreground" />
                         </button>
                         
                         {/* Dots Indicator */}
-                        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                           {latestDesigns.map((_, idx) => (
                             <button
                               key={idx}
@@ -718,7 +703,7 @@ export default function Dashboard() {
                               className={`w-1.5 h-1.5 rounded-full transition-all ${
                                 idx === carouselIndex
                                   ? "bg-primary w-4"
-                                  : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                                  : "bg-background/60 hover:bg-background/80"
                               }`}
                             />
                           ))}
@@ -727,15 +712,47 @@ export default function Dashboard() {
                     )}
                   </>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center space-y-2">
-                      <Car className="w-12 h-12 text-muted-foreground mx-auto" />
-                      <p className="text-sm text-muted-foreground">No designs yet</p>
-                      <p className="text-xs text-muted-foreground/70">Start creating renders</p>
-                    </div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <Database className="w-12 h-12 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No designs yet</p>
                   </div>
                 )}
               </div>
+              
+              {/* Info Bar with Tags */}
+              {latestDesigns.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {latestDesigns[carouselIndex]?.vehicle_make} {latestDesigns[carouselIndex]?.vehicle_model}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {latestDesigns[carouselIndex]?.color_name || "Custom Color"} • {latestDesigns[carouselIndex]?.finish_type}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/designvault')}
+                      className="text-xs"
+                    >
+                      View All
+                    </Button>
+                  </div>
+                  
+                  {/* Tags */}
+                  {latestDesigns[carouselIndex]?.tags && latestDesigns[carouselIndex].tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {latestDesigns[carouselIndex].tags.slice(0, 5).map((tag: string, idx: number) => (
+                        <Badge key={idx} variant="secondary" className="text-xs px-2 py-0.5">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
                 <div>
