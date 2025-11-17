@@ -12,10 +12,14 @@ import {
   CheckCircle,
   DollarSign,
   Activity,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useDesignVault } from "@/modules/designvault/hooks/useDesignVault";
+import { useState } from "react";
 
 const metrics = [
   {
@@ -91,6 +95,10 @@ const adminModules = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { data: designs, isLoading } = useDesignVault();
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  
+  const latestDesigns = designs?.slice(0, 5) || [];
 
   const productTypes = [
     { name: "Full Wraps", gradient: "bg-gradient-purple-magenta" },
@@ -99,6 +107,18 @@ export default function Dashboard() {
     { name: "PPF", gradient: "bg-gradient-teal-violet" },
     { name: "Window Tint", gradient: "bg-gradient-primary" },
   ];
+
+  const nextSlide = () => {
+    if (latestDesigns.length > 0) {
+      setCarouselIndex((prev) => (prev + 1) % latestDesigns.length);
+    }
+  };
+
+  const prevSlide = () => {
+    if (latestDesigns.length > 0) {
+      setCarouselIndex((prev) => (prev - 1 + latestDesigns.length) % latestDesigns.length);
+    }
+  };
 
   return (
     <div className="space-y-4 max-w-[1600px]">
@@ -171,7 +191,7 @@ export default function Dashboard() {
         </Card>
 
         {/* RIGHT: DesignVault Premium Card */}
-        <Card className="bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-primary/20">
+        <Card className="bg-card border-border">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-bold text-gradient">DesignVault Premium</CardTitle>
@@ -183,23 +203,108 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-border">
+              {/* Latest Designs Carousel */}
+              <div className="relative h-48 bg-background rounded-lg border border-border overflow-hidden mb-3 group">
+                {isLoading ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                      <Car className="w-12 h-12 text-muted-foreground mx-auto animate-pulse" />
+                      <p className="text-sm text-muted-foreground">Loading designs...</p>
+                    </div>
+                  </div>
+                ) : latestDesigns.length > 0 ? (
+                  <>
+                    {/* Carousel Image */}
+                    <div className="absolute inset-0">
+                      {latestDesigns[carouselIndex]?.render_urls && 
+                       typeof latestDesigns[carouselIndex].render_urls === 'object' && 
+                       'hero_angle' in (latestDesigns[carouselIndex].render_urls as any) ? (
+                        <img
+                          src={(latestDesigns[carouselIndex].render_urls as any).hero_angle}
+                          alt={`${latestDesigns[carouselIndex].vehicle_make} ${latestDesigns[carouselIndex].vehicle_model}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Car className="w-12 h-12 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+                    
+                    {/* Info Overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <p className="text-xs font-semibold text-foreground">
+                        {latestDesigns[carouselIndex]?.vehicle_make} {latestDesigns[carouselIndex]?.vehicle_model}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {latestDesigns[carouselIndex]?.color_name || "Custom Color"}
+                      </p>
+                    </div>
+                    
+                    {/* Navigation Buttons */}
+                    {latestDesigns.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevSlide}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-card/80 backdrop-blur-sm border border-border rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
+                        >
+                          <ChevronLeft className="w-4 h-4 text-foreground" />
+                        </button>
+                        <button
+                          onClick={nextSlide}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-card/80 backdrop-blur-sm border border-border rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-card"
+                        >
+                          <ChevronRight className="w-4 h-4 text-foreground" />
+                        </button>
+                        
+                        {/* Dots Indicator */}
+                        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex gap-1.5">
+                          {latestDesigns.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setCarouselIndex(idx)}
+                              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                idx === carouselIndex
+                                  ? "bg-primary w-4"
+                                  : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                      <Car className="w-12 h-12 text-muted-foreground mx-auto" />
+                      <p className="text-sm text-muted-foreground">No designs yet</p>
+                      <p className="text-xs text-muted-foreground/70">Start creating renders</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
                 <div>
                   <div className="text-sm font-semibold text-foreground">Total Renders</div>
                   <div className="text-xs text-muted-foreground">All visualizations</div>
                 </div>
                 <div className="text-2xl font-bold text-gradient">1,284</div>
               </div>
-              <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-border">
+              <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
                 <div>
                   <div className="text-sm font-semibold text-foreground">Production Packs</div>
                   <div className="text-xs text-muted-foreground">Ready to print</div>
                 </div>
-                <div className="text-2xl font-bold text-gradient-pink">847</div>
+                <div className="text-2xl font-bold text-gradient">847</div>
               </div>
               <Button 
                 onClick={() => navigate("/designvault")}
-                className="w-full bg-gradient-plum-pink hover:opacity-90 text-white"
+                className="w-full bg-gradient-magenta-blue hover:opacity-90 text-white"
               >
                 Open DesignVault
               </Button>

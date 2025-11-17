@@ -37,15 +37,13 @@ All colors MUST be HSL.
       --ring: 250 70% 60%;
       --radius: 0.5rem;                   /* 6-8px radius */
       
-      /* Dynamic gradient stops - Magenta to Purple */
-      --gradient-magenta: 320 70% 60%;         /* Magenta */
-      --gradient-purple: 270 70% 60%;          /* Purple */
-      --gradient-purple-deep: 260 70% 55%;     /* Deep Purple */
-      --gradient-blue: 220 85% 55%;            /* Blue */
-      --gradient-blue-deep: 230 75% 50%;       /* Deep blue */
+      /* Dynamic gradient stops - Instagram style Magenta to Blue */
+      --gradient-magenta: 330 80% 60%;         /* Vibrant Magenta */
+      --gradient-purple: 280 75% 60%;          /* Purple */
+      --gradient-blue: 210 90% 55%;            /* Bright Blue */
+      --gradient-cyan: 190 85% 55%;            /* Cyan */
       --gradient-violet: 270 70% 60%;          /* Violet */
       --gradient-indigo: 240 65% 58%;          /* Indigo */
-      --gradient-cyan: 190 85% 55%;            /* Cyan */
       
       --cyan-accent: 190 100% 50%;
       
@@ -81,21 +79,17 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Dynamic gradients - Magenta to Purple Theme */
+  /* Dynamic gradients - Instagram Magenta to Blue Theme */
   .bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-purple)));
+    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
   }
   
   .bg-gradient-purple-blue {
     background: linear-gradient(135deg, hsl(var(--gradient-purple)), hsl(var(--gradient-blue)));
   }
   
-  .bg-gradient-blue-deep {
-    background: linear-gradient(135deg, hsl(var(--gradient-blue)), hsl(var(--gradient-blue-deep)));
-  }
-  
-  .bg-gradient-purple-violet {
-    background: linear-gradient(135deg, hsl(var(--gradient-purple-deep)), hsl(var(--gradient-violet)));
+  .bg-gradient-magenta-blue {
+    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
   }
   
   .bg-gradient-cyan-blue {
@@ -103,7 +97,7 @@ All colors MUST be HSL.
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-purple)));
+    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
