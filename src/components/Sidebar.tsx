@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Briefcase,
 } from "lucide-react";
+import logo from "@/assets/wrapcommand-logo.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -29,10 +30,7 @@ export const Sidebar = () => {
   return (
     <aside className="hidden lg:flex lg:flex-col w-60 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
       <div className="px-6 py-5 border-b border-sidebar-border">
-        <h1 className="text-xl font-bold text-gradient">
-          WrapCommand
-        </h1>
-        <p className="text-[11px] text-muted-foreground mt-0.5">Command Your Wrap Brand</p>
+        <img src={logo} alt="WrapCommand AI" className="w-full h-auto" />
       </div>
       
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
