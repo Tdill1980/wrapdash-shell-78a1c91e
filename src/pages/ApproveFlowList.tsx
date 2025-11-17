@@ -44,7 +44,7 @@ export default function ApproveFlowList() {
       });
 
       const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
-        body: { target: 'approveflow', days: 7 }
+        body: { target: 'approveflow', days: 5 }
       });
 
       if (error) throw error;
