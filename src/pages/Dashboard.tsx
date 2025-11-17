@@ -619,9 +619,8 @@ export default function Dashboard() {
         </Card>
 
         {/* RIGHT: DesignVault Premium Card */}
-        <div className="border border-black rounded-lg">
-          <Card className="bg-card border-0">
-            <CardHeader className="pb-3">
+        <Card className="bg-card border-0" style={{ boxShadow: '0 0 0 1px black' }}>
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-bold font-poppins">
                 <span className="text-foreground">Design</span>
@@ -788,7 +787,6 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-        </div>
       </div>
 
       {/* ShopFlow Production Hub Card */}
