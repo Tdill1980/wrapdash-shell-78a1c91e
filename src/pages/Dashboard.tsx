@@ -270,23 +270,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 max-w-[1600px]">
-      {/* Mission Control Board - Sticky at top */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <span className="text-sm font-semibold text-foreground">WrapCommand Mission Control Board</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
-              ACTIVE
-            </Badge>
-            <Button size="sm" className="bg-gradient-primary hover:opacity-90 h-8 text-white">
-              Start Recording
-            </Button>
-          </div>
-        </div>
-      </div>
 
       {/* Product Type Chips */}
       <div className="flex flex-wrap gap-2">
