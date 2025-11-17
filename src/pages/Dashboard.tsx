@@ -26,7 +26,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
 
-const vehicleDimensionsData = vehicleDimensionsDataRaw as any[];
+const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
 const metrics = [
   {
