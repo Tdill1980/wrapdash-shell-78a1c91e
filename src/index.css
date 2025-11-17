@@ -37,13 +37,13 @@ All colors MUST be HSL.
       --ring: 250 70% 60%;
       --radius: 0.5rem;                   /* 6-8px radius */
       
-      /* Dynamic gradient stops - Instagram style Magenta to Blue */
-      --gradient-magenta: 330 80% 60%;         /* Vibrant Magenta */
-      --gradient-purple: 280 75% 60%;          /* Purple */
-      --gradient-blue: 210 90% 55%;            /* Bright Blue */
-      --gradient-cyan: 190 85% 55%;            /* Cyan */
-      --gradient-violet: 270 70% 60%;          /* Violet */
-      --gradient-indigo: 240 65% 58%;          /* Indigo */
+      /* Dynamic gradient stops - Instagram style Magenta to Blue (Darker) */
+      --gradient-magenta: 330 85% 50%;         /* Deep Magenta */
+      --gradient-purple: 280 80% 48%;          /* Deep Purple */
+      --gradient-blue: 210 95% 45%;            /* Deep Blue */
+      --gradient-cyan: 190 90% 48%;            /* Deep Cyan */
+      --gradient-violet: 270 75% 50%;          /* Deep Violet */
+      --gradient-indigo: 240 70% 48%;          /* Deep Indigo */
       
       --cyan-accent: 190 100% 50%;
       
