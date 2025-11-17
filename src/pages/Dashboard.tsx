@@ -310,7 +310,7 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="text-lg font-bold font-poppins">
                   <span className="text-foreground">Mighty</span>
-                  <span className="bg-gradient-primary bg-clip-text text-transparent">Customer</span>
+                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Customer</span>
                   <span className="text-muted-foreground text-sm align-super">™</span>
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -641,7 +641,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-bold font-poppins">
                 <span className="text-foreground">Design</span>
-                <span className="bg-gradient-primary bg-clip-text text-transparent">Vault</span>
+                <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Vault</span>
                 <span className="text-muted-foreground text-sm align-super">™</span>
               </CardTitle>
               <Database className="w-5 h-5 text-primary" />
@@ -769,7 +769,7 @@ export default function Dashboard() {
             <div>
               <CardTitle className="text-lg font-bold font-poppins">
                 <span className="text-foreground">Shop</span>
-                <span className="bg-gradient-primary bg-clip-text text-transparent">Flow</span>
+                <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Flow</span>
                 <span className="text-muted-foreground text-sm align-super">™</span>
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
