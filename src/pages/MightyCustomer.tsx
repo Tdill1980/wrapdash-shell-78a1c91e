@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import VoiceCommand from "@/components/VoiceCommand";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   FileImage,
   Palette,
@@ -14,6 +17,7 @@ import {
   Package,
   Car,
   Plus,
+  Send,
 } from "lucide-react";
 
 const serviceTypes = [
@@ -87,6 +91,8 @@ const addOnOptions = [
 ];
 
 export default function MightyCustomer() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedService, setSelectedService] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
@@ -103,6 +109,7 @@ export default function MightyCustomer() {
   const [margin, setMargin] = useState(40);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
+  const [sending, setSending] = useState(false);
 
   const handleVoiceTranscript = (_transcript: string, parsedData: any) => {
     setCustomerData({
@@ -138,6 +145,61 @@ export default function MightyCustomer() {
         ? prev.filter(a => a !== addOn)
         : [...prev, addOn]
     );
+  };
+
+  const handleSendToApproveFlow = async () => {
+    if (!customerData.name || !selectedService) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in customer name and select a service type",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSending(true);
+    try {
+      const orderNumber = `MQ-${Date.now()}`;
+      const productType = selectedProduct || serviceTypes.find(s => s.id === selectedService)?.name || 'Custom Wrap';
+      
+      // Calculate order total (basic calculation)
+      const basePrice = 2500;
+      const addOnPrice = selectedAddOns.length * 250;
+      const orderTotal = (basePrice + addOnPrice) * (1 + margin / 100);
+
+      // Create ApproveFlow project
+      const { data: newProject, error } = await supabase
+        .from('approveflow_projects')
+        .insert({
+          order_number: orderNumber,
+          customer_name: customerData.name,
+          customer_email: customerData.email,
+          product_type: productType,
+          design_instructions: `Vehicle: ${customerData.year} ${customerData.make} ${customerData.model}\nService: ${productType}\nAdd-ons: ${selectedAddOns.join(', ')}\nFinish: ${finish}\nQuantity: ${quantity}`,
+          order_total: orderTotal,
+          status: 'design_requested',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Sent to ApproveFlow",
+        description: `Project ${orderNumber} created successfully`,
+      });
+
+      navigate(`/approveflow/${newProject.id}`);
+    } catch (error) {
+      console.error('Error creating ApproveFlow project:', error);
+      toast({
+        title: "Failed to send",
+        description: "Unable to create ApproveFlow project",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -361,8 +423,20 @@ export default function MightyCustomer() {
                 <Car className="w-3.5 h-3.5 mr-1.5" />
                 Add to Quote
               </Button>
-              <Button variant="outline" className="w-full bg-[#0F0F14] border-border/40 hover:bg-[#141419] h-9 text-sm rounded-md">
-                Save Customer
+              <Button 
+                onClick={handleSendToApproveFlow}
+                disabled={sending}
+                variant="outline" 
+                className="w-full bg-[#0F0F14] border-border/40 hover:bg-[#141419] h-9 text-sm rounded-md"
+              >
+                {sending ? (
+                  "Sending..."
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5 mr-1.5" />
+                    Send to ApproveFlow
+                  </>
+                )}
               </Button>
             </div>
           </div>
