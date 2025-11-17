@@ -28,6 +28,7 @@ import { useDesignVault } from "@/modules/designvault/hooks/useDesignVault";
 import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useShopFlow } from "@/hooks/useShopFlow";
+import { useProducts } from "@/hooks/useProducts";
 import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
@@ -114,6 +115,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { data: designs, isLoading } = useDesignVault();
   const { orders: shopflowOrders, loading: shopflowLoading } = useShopFlow();
+  const { products, settings, loading: productsLoading } = useProducts();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
@@ -168,28 +170,18 @@ export default function Dashboard() {
     }
   }, [vehicleMake, vehicleModel, vehicleYear, vehicleData]);
   
-  // Pricing calculation
-  const productPricing: { [key: string]: number } = {
-    "Full Wrap": 3500,
-    "Partial Wrap": 1800,
-    "Chrome Delete": 800,
-    "Color Change Film": 2800,
-    "Printed Wrap Film": 3200,
-    "PPF (Paint Protection Film)": 2500,
-    "Window Tint": 600,
-    "Window Perf": 1200,
-    "Full Window Perf": 1200,
-    "Rear Window Perf": 500,
-    "Side Window Perf": 800,
-    "Custom Window Perf": 1500,
-  };
+  // Pricing calculation based on WPW products
+  const selectedProduct = products.find(p => p.product_name === product);
+  const materialCost = selectedProduct 
+    ? selectedProduct.pricing_type === 'per_sqft'
+      ? (selectedProduct.price_per_sqft || 0) * sqFt * quantity
+      : (selectedProduct.flat_price || 0) * quantity
+    : 0;
   
-  const basePrice = productPricing[product] || 0;
-  const subtotal = basePrice * quantity;
-  const installFee = installHours * 75; // $75/hour install rate
-  const taxRate = 0.08; // 8% tax
-  const taxAmount = (subtotal + installFee) * taxRate;
-  const totalCost = subtotal + installFee + taxAmount;
+  const installFee = installHours * settings.install_rate_per_hour;
+  const taxRate = settings.tax_rate_percentage / 100;
+  const taxAmount = (materialCost + installFee) * taxRate;
+  const totalCost = materialCost + installFee + taxAmount;
   
   // Calculate sq ft from panel dimensions
   const calculateSqFt = () => {
@@ -237,15 +229,22 @@ export default function Dashboard() {
   const parseAndFillForm = (transcript: string) => {
     const lowerTranscript = transcript.toLowerCase();
     
-    // Parse product type
-    if (lowerTranscript.includes("full wrap")) setProduct("Full Wrap");
-    else if (lowerTranscript.includes("partial wrap")) setProduct("Partial Wrap");
-    else if (lowerTranscript.includes("chrome delete")) setProduct("Chrome Delete");
-    else if (lowerTranscript.includes("color change")) setProduct("Color Change Film");
-    else if (lowerTranscript.includes("printed wrap")) setProduct("Printed Wrap Film");
-    else if (lowerTranscript.includes("window perf")) setProduct("Window Perf");
-    else if (lowerTranscript.includes("ppf") || lowerTranscript.includes("paint protection")) setProduct("PPF (Paint Protection Film)");
-    else if (lowerTranscript.includes("window tint") || lowerTranscript.includes("tint")) setProduct("Window Tint");
+    // Parse product type with WPW product names
+    if (lowerTranscript.includes("avery wrap") || lowerTranscript.includes("printed wrap")) {
+      setProduct("Printed Wrap Film (Avery Brand, UV Lamination)");
+    } else if (lowerTranscript.includes("3m wrap") || lowerTranscript.includes("ij180")) {
+      setProduct("3M IJ180CV3 + 8518 Lamination");
+    } else if (lowerTranscript.includes("avery cut") || lowerTranscript.includes("avery contour")) {
+      setProduct("Avery Cut Contour Vinyl Graphics");
+    } else if (lowerTranscript.includes("3m cut") || lowerTranscript.includes("3m contour")) {
+      setProduct("3M Cut Contour Vinyl Graphics");
+    } else if (lowerTranscript.includes("fade wrap")) {
+      setProduct("Custom Fade Wrap Printing");
+    } else if (lowerTranscript.includes("window perf") || lowerTranscript.includes("perforated")) {
+      setProduct("Perforated Window Vinyl 50/50 (Unlaminated)");
+    } else if (lowerTranscript.includes("design service") || lowerTranscript.includes("custom design")) {
+      setProduct("Custom Vehicle Wrap Design");
+    }
     
     // Parse vehicle info - looking for year, make, model patterns
     const yearMatch = transcript.match(/\b(19|20)\d{2}\b/);
@@ -336,33 +335,50 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* Product Quick Select Buttons - No Duplicates */}
+              {/* Product Selection */}
               <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Quick Select Product</label>
+                <label className="text-xs text-muted-foreground mb-2 block">Select Product</label>
+                <select
+                  value={product}
+                  onChange={(e) => setProduct(e.target.value)}
+                  className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Choose a product...</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.product_name}>
+                      {p.product_name} - {p.pricing_type === 'per_sqft' ? `$${p.price_per_sqft}/sq ft` : `$${p.flat_price}`} (ID: {p.woo_product_id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Product Quick Select Buttons */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Quick Select</label>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
                     type="button"
                     size="sm"
-                    variant={product === 'Color Change Film' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Color Change Film')}
+                    variant={product === 'Printed Wrap Film (Avery Brand, UV Lamination)' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Printed Wrap Film (Avery Brand, UV Lamination)')}
                     className="text-xs py-1 h-auto"
                   >
-                    Color Change Film
+                    Avery Wrap
                   </Button>
                   <Button
                     type="button"
                     size="sm"
-                    variant={product === 'Printed Wrap Film' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Printed Wrap Film')}
+                    variant={product === '3M IJ180CV3 + 8518 Lamination' ? 'default' : 'outline'}
+                    onClick={() => setProduct('3M IJ180CV3 + 8518 Lamination')}
                     className="text-xs py-1 h-auto"
                   >
-                    Printed Wrap
+                    3M Wrap
                   </Button>
                   <Button
                     type="button"
                     size="sm"
-                    variant={product === 'Window Perf' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Window Perf')}
+                    variant={product === 'Perforated Window Vinyl 50/50 (Unlaminated)' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Perforated Window Vinyl 50/50 (Unlaminated)')}
                     className="text-xs py-1 h-auto"
                   >
                     Window Perf
@@ -370,20 +386,20 @@ export default function Dashboard() {
                   <Button
                     type="button"
                     size="sm"
-                    variant={product === 'Window Tint' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Window Tint')}
+                    variant={product === 'Custom Fade Wrap Printing' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Custom Fade Wrap Printing')}
                     className="text-xs py-1 h-auto"
                   >
-                    Tint
+                    Fade Wrap
                   </Button>
                   <Button
                     type="button"
                     size="sm"
-                    variant={product === 'PPF (Paint Protection Film)' ? 'default' : 'outline'}
-                    onClick={() => setProduct('PPF (Paint Protection Film)')}
+                    variant={product === 'Avery Cut Contour Vinyl Graphics' ? 'default' : 'outline'}
+                    onClick={() => setProduct('Avery Cut Contour Vinyl Graphics')}
                     className="text-xs py-1 h-auto"
                   >
-                    PPF
+                    Avery Cut
                   </Button>
                   <Button
                     type="button"
@@ -549,15 +565,22 @@ export default function Dashboard() {
               <div className="bg-background/50 rounded-lg p-3 border border-border space-y-1.5">
                 <div className="text-xs font-semibold text-foreground mb-2">Cost Breakdown</div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Product ({quantity}x)</span>
-                  <span className="text-foreground">${subtotal.toFixed(2)}</span>
+                  <span className="text-muted-foreground">
+                    Material ({sqFt} sq ft × {quantity}x)
+                    {selectedProduct && (
+                      <span className="ml-1 text-xs opacity-70">
+                        ID:{selectedProduct.woo_product_id}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-foreground">${materialCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Install ({installHours}hrs @ $75/hr)</span>
+                  <span className="text-muted-foreground">Install ({installHours}hrs @ ${settings.install_rate_per_hour}/hr)</span>
                   <span className="text-foreground">${installFee.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Tax (8%)</span>
+                  <span className="text-muted-foreground">Tax ({settings.tax_rate_percentage}%)</span>
                   <span className="text-foreground">${taxAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold border-t border-border pt-1.5 mt-1.5">
