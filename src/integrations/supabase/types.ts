@@ -307,6 +307,72 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          flat_price: number | null
+          id: string
+          is_active: boolean
+          price_per_sqft: number | null
+          pricing_type: string
+          product_name: string
+          updated_at: string
+          woo_product_id: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          flat_price?: number | null
+          id?: string
+          is_active?: boolean
+          price_per_sqft?: number | null
+          pricing_type: string
+          product_name: string
+          updated_at?: string
+          woo_product_id: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          flat_price?: number | null
+          id?: string
+          is_active?: boolean
+          price_per_sqft?: number | null
+          pricing_type?: string
+          product_name?: string
+          updated_at?: string
+          woo_product_id?: number
+        }
+        Relationships: []
+      }
+      quote_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shopflow_logs: {
         Row: {
           created_at: string
