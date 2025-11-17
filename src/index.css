@@ -9,54 +9,54 @@ All colors MUST be HSL.
   @layer base {
     :root {
       /* Pure black & charcoal base - Plum + Black Theme */
-      --background: 240 40% 4%;           /* #0A0A0F Pure black */
+      --background: 240 50% 3%;           /* #0A0A0F Pure black - darker */
       --foreground: 240 10% 98%;          /* White text */
-      --card: 240 30% 7%;                 /* #111118 Charcoal */
+      --card: 240 15% 8%;                 /* #111118 Charcoal - less saturated */
       --card-foreground: 240 10% 98%;
-      --popover: 240 40% 4%;
+      --popover: 240 50% 3%;
       --popover-foreground: 240 10% 98%;
       
       /* Deep plum accents */
-      --primary: 278 55% 45%;             /* #8B5CF6 Purple primary */
+      --primary: 270 50% 50%;             /* #8B5CF6 Purple primary - more blue, less magenta */
       --primary-foreground: 240 10% 98%;
-      --secondary: 275 45% 25%;           /* #221628 Deep plum */
+      --secondary: 275 35% 20%;           /* #221628 Deep plum - darker, less saturated */
       --secondary-foreground: 240 10% 98%;
       
       /* Charcoal variants */
-      --muted: 240 20% 10%;               /* #1A1020 Midnight plum */
-      --muted-foreground: 240 8% 72%;     /* #B7B7C5 Soft gray */
-      --accent: 275 40% 20%;
+      --muted: 240 15% 12%;               /* Midnight plum - less purple tint */
+      --muted-foreground: 240 6% 72%;     /* #B7B7C5 Soft gray */
+      --accent: 270 30% 18%;              /* Less purple, more neutral */
       --accent-foreground: 240 10% 98%;
       
       --destructive: 0 62.8% 30.6%;
       --destructive-foreground: 240 10% 98%;
       
-      /* Borders - subtle */
-      --border: 240 10% 12%;
-      --input: 240 10% 12%;
-      --ring: 278 55% 45%;
+      /* Borders - very subtle, almost neutral */
+      --border: 240 5% 15%;               /* Less purple tint */
+      --input: 240 5% 15%;
+      --ring: 270 50% 50%;
       --radius: 0.5rem;                   /* 6-8px radius */
       
-      /* Dynamic gradient stops (NO neon bloom) */
-      --gradient-purple-start: 278 55% 63%;    /* #8B5CF6 */
-      --gradient-magenta: 328 75% 63%;         /* #D946EF */
-      --gradient-blue: 210 90% 55%;            /* #3B82F6 */
-      --gradient-plum: 275 45% 40%;            /* #5B2A86 */
-      --gradient-pink: 330 85% 65%;            /* #FF5ACD */
-      --gradient-teal: 180 95% 47%;            /* #0DDCEB */
-      --gradient-violet: 265 70% 55%;          /* #8A2BE2 */
+      /* Dynamic gradient stops (NO neon bloom) - reduced pink saturation */
+      --gradient-purple-start: 270 50% 60%;    /* #8B5CF6 - more blue purple */
+      --gradient-magenta: 320 55% 58%;         /* #D946EF - less saturated */
+      --gradient-blue: 210 80% 60%;            /* #3B82F6 */
+      --gradient-plum: 275 40% 38%;            /* #5B2A86 - darker */
+      --gradient-pink: 330 60% 60%;            /* Less saturated pink */
+      --gradient-teal: 180 90% 50%;            /* #0DDCEB */
+      --gradient-violet: 265 65% 58%;          /* #8A2BE2 */
       
       --cyan-accent: 190 100% 50%;
       
-      /* Sidebar */
-      --sidebar-background: 240 30% 7%;
+      /* Sidebar - charcoal, no purple tint */
+      --sidebar-background: 240 15% 8%;
       --sidebar-foreground: 240 10% 98%;
-      --sidebar-primary: 278 55% 45%;
+      --sidebar-primary: 270 50% 50%;
       --sidebar-primary-foreground: 240 10% 98%;
-      --sidebar-accent: 240 20% 10%;
+      --sidebar-accent: 240 10% 12%;
       --sidebar-accent-foreground: 240 10% 98%;
-      --sidebar-border: 240 10% 12%;
-      --sidebar-ring: 278 55% 45%;
+      --sidebar-border: 240 5% 15%;
+      --sidebar-ring: 270 50% 50%;
     }
   }
 
