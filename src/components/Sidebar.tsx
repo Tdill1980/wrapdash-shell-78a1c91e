@@ -11,7 +11,7 @@ import {
   CheckCircle,
   Briefcase,
 } from "lucide-react";
-import logo from "@/assets/wrapcommand-logo.png";
+import logo from "@/assets/wrapcommand-logo-astronaut.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },

@@ -5,8 +5,9 @@ export default function Portfolio() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gradient">
-          Portfolio
+        <h1 className="text-3xl font-bold tracking-tight">
+          <span className="text-foreground">Port</span>
+          <span className="text-primary">folio</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Showcase your best wrap projects

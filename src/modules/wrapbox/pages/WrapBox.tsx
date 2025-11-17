@@ -9,8 +9,9 @@ export default function WrapBox() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gradient">
-          WrapBox
+        <h1 className="text-3xl font-bold">
+          <span className="text-foreground">Wrap</span>
+          <span className="text-primary">Box</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Print pack manager for production-ready wrap files

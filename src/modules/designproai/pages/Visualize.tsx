@@ -193,8 +193,10 @@ export default function Visualize() {
       {/* Left Panel - Configuration */}
       <div className="space-y-6">
         <Card className="p-6 bg-card border-border rounded-2xl">
-          <h2 className="text-2xl font-bold mb-6 bg-gradient-purple bg-clip-text text-transparent">
-            WrapCloser AI
+          <h2 className="text-2xl font-bold mb-6">
+            <span className="text-foreground">Wrap</span>
+            <span className="text-primary">Closer</span>
+            <span className="text-muted-foreground"> AI</span>
           </h2>
 
           <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)} className="mb-6">

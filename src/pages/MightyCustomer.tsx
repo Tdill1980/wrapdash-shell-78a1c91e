@@ -208,8 +208,9 @@ export default function MightyCustomer() {
 
       <div className="max-w-5xl mx-auto p-4 space-y-4">
         <div className="mb-4">
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-purple-400 via-primary to-pink-400 bg-clip-text text-transparent">
-            MightyCustomer
+          <h1 className="text-2xl font-bold tracking-tight">
+            <span className="text-foreground">Mighty</span>
+            <span className="text-primary">Customer</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Quote & Order Builder
