@@ -11,7 +11,7 @@ import {
   CheckCircle,
   Briefcase,
 } from "lucide-react";
-import logo from "@/assets/wrapcommand-logo-car.png";
+import logo from "@/assets/wrapcommand-logo.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -29,12 +29,11 @@ const navigationItems = [
 export const Sidebar = () => {
   return (
     <aside className="hidden lg:flex lg:flex-col w-60 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
-      <div className="px-4 py-4 border-b border-sidebar-border">
+      <div className="px-3 py-6 border-b border-sidebar-border">
         <img 
           src={logo} 
           alt="WrapCommand AI" 
-          className="w-full h-16 object-contain object-center" 
-          style={{ filter: 'brightness(1.1)' }}
+          className="w-full h-auto object-contain" 
         />
       </div>
       
