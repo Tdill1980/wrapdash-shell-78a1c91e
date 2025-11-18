@@ -120,7 +120,7 @@ export default function Dashboard() {
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
   // Quote Builder State
-  const [productCategory, setProductCategory] = useState<'weprintwraps' | 'window-perf'>('weprintwraps');
+  const [productCategory, setProductCategory] = useState<'wrap' | 'ppf' | 'tint' | 'all'>('all');
   const [product, setProduct] = useState("");
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
@@ -136,6 +136,12 @@ export default function Dashboard() {
   const [sqFt, setSqFt] = useState(0);
   const [panelWidth, setPanelWidth] = useState(0);
   const [panelHeight, setPanelHeight] = useState(0);
+  
+  // Filter products by category
+  const filteredProducts = useMemo(() => {
+    if (productCategory === 'all') return products;
+    return products.filter(p => p.category === productCategory);
+  }, [products, productCategory]);
   
   // Parse vehicle dimensions data
   const vehicleData = useMemo(() => {
@@ -324,82 +330,66 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {/* Category Filter Buttons */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Product Category</label>
+                <div className="grid grid-cols-4 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={productCategory === 'all' ? 'default' : 'outline'}
+                    onClick={() => { setProductCategory('all'); setProduct(""); }}
+                    className="text-xs py-1 h-auto"
+                  >
+                    All Products
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={productCategory === 'wrap' ? 'default' : 'outline'}
+                    onClick={() => { setProductCategory('wrap'); setProduct(""); }}
+                    className="text-xs py-1 h-auto"
+                  >
+                    Wraps
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={productCategory === 'ppf' ? 'default' : 'outline'}
+                    onClick={() => { setProductCategory('ppf'); setProduct(""); }}
+                    className="text-xs py-1 h-auto"
+                  >
+                    PPF
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={productCategory === 'tint' ? 'default' : 'outline'}
+                    onClick={() => { setProductCategory('tint'); setProduct(""); }}
+                    className="text-xs py-1 h-auto"
+                  >
+                    Window Tint
+                  </Button>
+                </div>
+              </div>
+
               {/* Product Selection */}
               <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Select Product</label>
+                <label className="text-xs text-muted-foreground mb-2 block">
+                  Select Product {productCategory !== 'all' && `(${productCategory.toUpperCase()})`}
+                </label>
                 <select
                   value={product}
                   onChange={(e) => setProduct(e.target.value)}
                   className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="">Choose a product...</option>
-                  {products.map((p) => (
+                  {filteredProducts.map((p) => (
                     <option key={p.id} value={p.product_name}>
-                      {p.product_name} - {p.pricing_type === 'per_sqft' ? `$${p.price_per_sqft}/sq ft` : `$${p.flat_price}`} (ID: {p.woo_product_id})
+                      {p.product_name} - {p.pricing_type === 'per_sqft' ? `$${p.price_per_sqft}/sq ft` : `$${p.flat_price}`}
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Product Quick Select Buttons */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-2 block">Quick Select</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={product === 'Printed Wrap Film (Avery Brand, UV Lamination)' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Printed Wrap Film (Avery Brand, UV Lamination)')}
-                    className="text-xs py-1 h-auto"
-                  >
-                    Avery Wrap
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={product === '3M IJ180CV3 + 8518 Lamination' ? 'default' : 'outline'}
-                    onClick={() => setProduct('3M IJ180CV3 + 8518 Lamination')}
-                    className="text-xs py-1 h-auto"
-                  >
-                    3M Wrap
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={product === 'Perforated Window Vinyl 50/50 (Unlaminated)' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Perforated Window Vinyl 50/50 (Unlaminated)')}
-                    className="text-xs py-1 h-auto"
-                  >
-                    Window Perf
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={product === 'Custom Fade Wrap Printing' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Custom Fade Wrap Printing')}
-                    className="text-xs py-1 h-auto"
-                  >
-                    Fade Wrap
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={product === 'Avery Cut Contour Vinyl Graphics' ? 'default' : 'outline'}
-                    onClick={() => setProduct('Avery Cut Contour Vinyl Graphics')}
-                    className="text-xs py-1 h-auto"
-                  >
-                    Avery Cut
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate('/mightycustomer')}
-                    className="text-xs py-1 h-auto bg-gradient-primary text-white border-0"
-                  >
-                    WePrintWraps.com
-                  </Button>
-                </div>
               </div>
 
               {/* Collapsible Vehicle Info */}
