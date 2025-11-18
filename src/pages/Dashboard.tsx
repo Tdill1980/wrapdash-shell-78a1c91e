@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Clock,
   AlertCircle,
+  Plus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -612,16 +613,28 @@ export default function Dashboard() {
         <Card className="bg-card border-0" style={{ boxShadow: '0 0 0 1px black' }}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold font-poppins">
-                <span className="text-foreground">Design</span>
-                <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Vault</span>
-                <span className="text-muted-foreground text-sm align-super">™</span>
-              </CardTitle>
-              <Database className="w-5 h-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg font-bold font-poppins">
+                  <span className="text-foreground">Design</span>
+                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Vault</span>
+                  <span className="text-muted-foreground text-sm align-super">™</span>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  AI-powered design library & visualization
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/admin/designvault/upload')}
+                  className="bg-gradient-primary text-white"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Upload
+                </Button>
+                <Database className="w-5 h-5 text-primary" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              AI-powered design library & visualization
-            </p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
