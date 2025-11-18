@@ -37,20 +37,28 @@ export const useShopFlow = (orderId?: string) => {
   const { toast } = useToast();
 
   const fetchOrders = async () => {
+    console.log('[ShopFlow] fetchOrders called');
     try {
       const { data, error } = await supabase
         .from('shopflow_orders')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[ShopFlow] fetchOrders error:', error);
+        throw error;
+      }
+      
+      console.log('[ShopFlow] fetchOrders success, orders:', data?.length || 0);
       setOrders(data || []);
     } catch (error: any) {
+      console.error('[ShopFlow] fetchOrders catch:', error);
       toast({
         title: 'Error loading orders',
         description: error.message,
         variant: 'destructive',
       });
+      setOrders([]); // Set empty array on error to prevent infinite loading
     }
   };
 
@@ -269,9 +277,14 @@ export const useShopFlow = (orderId?: string) => {
   };
 
   useEffect(() => {
+    console.log('[ShopFlow] useEffect triggered, orderId:', orderId);
     setLoading(true);
+    
     if (orderId) {
-      Promise.all([fetchOrder(), fetchLogs()]).finally(() => setLoading(false));
+      Promise.all([fetchOrder(), fetchLogs()]).finally(() => {
+        console.log('[ShopFlow] Single order loaded, setting loading to false');
+        setLoading(false);
+      });
 
       const channel = supabase
         .channel(`shopflow-${orderId}`)
@@ -287,11 +300,16 @@ export const useShopFlow = (orderId?: string) => {
         supabase.removeChannel(channel);
       };
     } else {
-      fetchOrders().finally(() => setLoading(false));
+      console.log('[ShopFlow] Fetching all orders...');
+      fetchOrders().finally(() => {
+        console.log('[ShopFlow] Orders loaded, setting loading to false');
+        setLoading(false);
+      });
 
       const channel = supabase
         .channel('shopflow-orders')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'shopflow_orders' }, () => {
+          console.log('[ShopFlow] Realtime update detected, refetching orders');
           fetchOrders();
         })
         .subscribe();
