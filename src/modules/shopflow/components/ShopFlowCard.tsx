@@ -15,9 +15,9 @@ export function ShopFlowCard({ order, internalStatus }: ShopFlowCardProps) {
   const navigate = useNavigate();
 
   return (
-    <Card className="p-4 bg-card border-border hover:border-primary/50 transition-colors cursor-pointer">
+    <Card className="p-4 bg-card/50 border border-border/50 hover:border-border hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer">
       <div className="flex gap-3">
-        <div className="w-16 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
+        <div className="w-16 h-16 bg-background rounded border border-border flex items-center justify-center flex-shrink-0">
           <Package className="w-8 h-8 text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0">
@@ -27,7 +27,7 @@ export function ShopFlowCard({ order, internalStatus }: ShopFlowCardProps) {
           <p className="text-sm text-muted-foreground">
             Order #{order.order_number}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1 truncate">
             {order.customer_name}
           </p>
           <div className="mt-2">
@@ -38,7 +38,7 @@ export function ShopFlowCard({ order, internalStatus }: ShopFlowCardProps) {
       <Button
         variant="outline"
         size="sm"
-        className="w-full mt-3"
+        className="w-full mt-3 hover:bg-muted"
         onClick={() => navigate(`/shopflow/${order.id}`)}
       >
         View Details

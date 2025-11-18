@@ -33,11 +33,11 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
           return (
             <Card
               key={order.id}
-              className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+              className="p-4 cursor-pointer hover:border-border hover:shadow-md hover:shadow-primary/5 transition-all border-border/50 bg-card/50"
               onClick={() => navigate(`/shopflow/${order.id}`)}
             >
               <div className="flex gap-3">
-                <div className="w-12 h-12 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 bg-background rounded border border-border/50 flex items-center justify-center flex-shrink-0">
                   <Package className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -47,7 +47,7 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
                   <p className="text-sm text-muted-foreground">
                     Order #{order.order_number}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-muted-foreground mt-1 truncate">
                     {order.customer_name}
                   </p>
                 </div>
@@ -67,16 +67,16 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
 
   // Desktop table view
   return (
-    <Card>
+    <Card className="border-border/50 shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="font-bold text-foreground">Product</TableHead>
-            <TableHead className="font-bold text-foreground">Order #</TableHead>
-            <TableHead className="font-bold text-foreground">Customer</TableHead>
-            <TableHead className="font-bold text-foreground">Status</TableHead>
-            <TableHead className="font-bold text-foreground">Created</TableHead>
-            <TableHead className="font-bold text-foreground text-right">Actions</TableHead>
+          <TableRow className="border-border/50 hover:bg-transparent">
+            <TableHead className="font-bold text-foreground uppercase text-xs tracking-wider">Product</TableHead>
+            <TableHead className="font-bold text-foreground uppercase text-xs tracking-wider">Order #</TableHead>
+            <TableHead className="font-bold text-foreground uppercase text-xs tracking-wider">Customer</TableHead>
+            <TableHead className="font-bold text-foreground uppercase text-xs tracking-wider">Status</TableHead>
+            <TableHead className="font-bold text-foreground uppercase text-xs tracking-wider">Created</TableHead>
+            <TableHead className="font-bold text-foreground uppercase text-xs tracking-wider text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -85,12 +85,12 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
             return (
               <TableRow
                 key={order.id}
-                className="cursor-pointer hover:bg-muted/30 border-border"
+                className="cursor-pointer hover:bg-muted/20 border-border/50 transition-colors"
                 onClick={() => navigate(`/shopflow/${order.id}`)}
               >
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-background rounded border border-border/50 flex items-center justify-center flex-shrink-0">
                       <Package className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <span className="font-medium text-foreground">
