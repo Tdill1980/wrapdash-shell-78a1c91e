@@ -9,10 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function DesignVaultUpload() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -107,12 +109,15 @@ export default function DesignVaultUpload() {
 
       if (insertError) throw insertError;
 
+      // Invalidate React Query cache to refresh Dashboard
+      queryClient.invalidateQueries({ queryKey: ["design-vault"] });
+
       toast({
         title: "Upload successful",
         description: `${selectedFiles.length} image(s) uploaded to DesignVault`,
       });
 
-      navigate('/designvault');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Upload error:', error);
       toast({
