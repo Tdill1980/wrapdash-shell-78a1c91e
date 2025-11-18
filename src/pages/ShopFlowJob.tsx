@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
-import { ArrowLeft, Clock, User, Package, Calendar, Truck, ExternalLink } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Calendar, Truck, ExternalLink, FileText, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import {
@@ -16,14 +16,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { wooToInternalStatus, InternalStatus } from "@/lib/status-mapping";
 
-const statusOptions = [
-  { value: 'design_requested', label: 'Design Requested' },
-  { value: 'awaiting_feedback', label: 'Awaiting Feedback' },
-  { value: 'revision_sent', label: 'Revision Sent' },
-  { value: 'ready_for_print', label: 'Ready for Print' },
-  { value: 'in_production', label: 'In Production' },
-  { value: 'completed', label: 'Completed' },
+// Internal status options for staff
+const internalStatusOptions: { value: string; label: string; stage: string }[] = [
+  { value: 'pending', label: 'Pending', stage: 'Order Received' },
+  { value: 'processing', label: 'Processing', stage: 'Order Received' },
+  { value: 'missing-file', label: 'Missing File', stage: 'File Required' },
+  { value: 'file-error', label: 'File Error', stage: 'File Issue' },
+  { value: 'in-design', label: 'In Design', stage: 'In Design' },
+  { value: 'design-complete', label: 'Design Complete', stage: 'Awaiting Approval' },
+  { value: 'ready-for-print', label: 'Ready for Print', stage: 'Preflight' },
+  { value: 'pre-press', label: 'Pre-Press', stage: 'Preflight' },
+  { value: 'print-production', label: 'Print Production', stage: 'Printing' },
+  { value: 'lamination', label: 'Lamination', stage: 'Lamination' },
+  { value: 'finishing', label: 'Finishing', stage: 'Cut/Weed' },
+  { value: 'ready-for-pickup', label: 'Ready for Pickup', stage: 'Packaging' },
+  { value: 'shipped', label: 'Shipped', stage: 'Shipped' },
+  { value: 'completed', label: 'Completed', stage: 'Completed' },
 ];
 
 const priorityOptions = [
@@ -87,13 +97,18 @@ export default function ShopFlowJob() {
     setAddingTracking(false);
   };
 
+  const internalStatus = wooToInternalStatus[order.status] || "order_received";
+  const currentStatusOption = internalStatusOptions.find(opt => opt.value === order.status);
+  const isFileIssue = internalStatus === "action_required";
+
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl">
       <Button variant="ghost" onClick={() => navigate('/shopflow')}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Orders
       </Button>
 
+      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -102,6 +117,11 @@ export default function ShopFlowJob() {
           <p className="text-sm text-muted-foreground mt-1">
             {order.customer_name}
           </p>
+          {currentStatusOption && (
+            <Badge variant="outline" className="mt-2 bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] border-0 text-white">
+              {currentStatusOption.stage}
+            </Badge>
+          )}
         </div>
         <div className="flex gap-2">
           {order.approveflow_project_id && (
@@ -115,83 +135,159 @@ export default function ShopFlowJob() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Order Details</h2>
-          
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Product:</span>
-              <span className="font-medium">{order.product_type}</span>
-            </div>
-
-            <div className="flex items-center gap-3 text-sm">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Created:</span>
-              <span className="font-medium">{format(new Date(order.created_at), 'MMM d, yyyy h:mm a')}</span>
-            </div>
-
-            {order.assigned_to && (
-              <div className="flex items-center gap-3 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Assigned to:</span>
-                <span className="font-medium">{order.assigned_to}</span>
-              </div>
-            )}
-
-            {order.estimated_completion_date && (
-              <div className="flex items-center gap-3 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Est. Completion:</span>
-                <span className="font-medium">{format(new Date(order.estimated_completion_date), 'MMM d, yyyy')}</span>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Status & Priority</h2>
-          
-          <div className="space-y-4">
+      {/* File Issue Alert */}
+      {isFileIssue && (
+        <Card className="p-4 bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20">
+          <div className="flex gap-3">
+            <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
             <div>
-              <Label>Status</Label>
-              <Select value={order.status} onValueChange={updateOrderStatus}>
-                <SelectTrigger className="mt-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Priority</Label>
-              <Select 
-                value={order.priority || 'normal'} 
-                onValueChange={(value) => updateOrderDetails({ priority: value })}
-              >
-                <SelectTrigger className="mt-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {priorityOptions.map((priority) => (
-                    <SelectItem key={priority.value} value={priority.value}>
-                      <Badge variant="outline" className={priority.color}>
-                        {priority.label}
-                      </Badge>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <h3 className="font-semibold text-foreground">File Issue Detected</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Customer needs to upload a corrected file. Status: {order.status}
+              </p>
             </div>
           </div>
         </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Order Details */}
+        <div className="space-y-6">
+          <Card className="p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Order Details</h2>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Product:</span>
+                <span className="font-medium">{order.product_type}</span>
+              </div>
+
+              <div className="flex items-center gap-3 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Created:</span>
+                <span className="font-medium">{format(new Date(order.created_at), 'MMM d, yyyy h:mm a')}</span>
+              </div>
+
+              {order.assigned_to && (
+                <div className="flex items-center gap-3 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Assigned to:</span>
+                  <span className="font-medium">{order.assigned_to}</span>
+                </div>
+              )}
+
+              {order.estimated_completion_date && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Est. Completion:</span>
+                  <span className="font-medium">{format(new Date(order.estimated_completion_date), 'MMM d, yyyy')}</span>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Priority</h2>
+            <Select 
+              value={order.priority || 'normal'} 
+              onValueChange={(value) => updateOrderDetails({ priority: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {priorityOptions.map((priority) => (
+                  <SelectItem key={priority.value} value={priority.value}>
+                    <Badge variant="outline" className={priority.color}>
+                      {priority.label}
+                    </Badge>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Card>
+        </div>
+
+        {/* Center Column - Production Workflow */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="p-6 space-y-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Production Workflow
+            </h2>
+            
+            <div className="space-y-3">
+              <div>
+                <Label>WooCommerce Status (Internal)</Label>
+                <Select value={order.status} onValueChange={updateOrderStatus}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {internalStatusOptions.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{status.label}</span>
+                          <span className="text-xs text-muted-foreground">Stage: {status.stage}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Current Stage: <span className="font-medium">{currentStatusOption?.stage || 'Unknown'}</span>
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Production Notes */}
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Production Notes</h2>
+              {!editingNotes && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setNotes(order.notes || '');
+                    setEditingNotes(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+            
+            {editingNotes ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add production notes..."
+                  className="min-h-[120px]"
+                />
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveNotes} size="sm">
+                    Save Notes
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingNotes(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                {order.notes || 'No production notes yet.'}
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
 
       <Card className="p-6 space-y-4">
