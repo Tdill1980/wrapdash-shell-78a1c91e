@@ -35,6 +35,25 @@ const priorityOptions = [
 export default function ShopFlowJob() {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // Check if ID is valid
+  if (!id || id === ':id') {
+    return (
+      <div className="space-y-6 max-w-5xl">
+        <Button variant="ghost" onClick={() => navigate('/shopflow')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Orders
+        </Button>
+        <Card className="p-12 text-center">
+          <p className="text-muted-foreground">Invalid order ID. Please select an order from the list.</p>
+          <Button onClick={() => navigate('/shopflow')} className="mt-4">
+            View All Orders
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   const { order, logs, loading, updateOrderStatus, updateOrderDetails, addTracking } = useShopFlow(id);
   const [notes, setNotes] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
