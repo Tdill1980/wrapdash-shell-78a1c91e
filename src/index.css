@@ -37,10 +37,10 @@ All colors MUST be HSL.
       --ring: 198 100% 50%;
       --radius: 0.5rem;                   /* 8px radius */
       
-      /* Electric Blue → Ice Blue gradient stops */
-      --gradient-electric: 198 100% 50%;       /* #00AFFF Electric Blue */
-      --gradient-mid-blue: 207 100% 50%;       /* #008CFF Mid Blue */
-      --gradient-ice: 189 100% 63%;            /* #4EEAFF Ice Blue */
+      /* Ice Blue → Dark Blue gradient stops (lighter to darker) */
+      --gradient-ice: 189 100% 63%;            /* #4EEAFF Ice Blue (lightest) */
+      --gradient-electric: 198 100% 50%;       /* #00AFFF Electric Blue (mid) */
+      --gradient-dark-blue: 207 100% 50%;      /* #008CFF Dark Blue (darkest) */
       
       /* Sidebar - charcoal */
       --sidebar-background: 0 0% 9%;
@@ -74,17 +74,17 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Electric Blue → Ice Blue gradient */
+  /* Lighter to Darker Blue gradient */
   .bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--gradient-electric)), hsl(var(--gradient-ice)));
+    background: linear-gradient(135deg, hsl(var(--gradient-ice)), hsl(var(--gradient-dark-blue)));
   }
   
   .bg-gradient-blue {
-    background: linear-gradient(135deg, hsl(var(--gradient-electric)), hsl(var(--gradient-mid-blue)));
+    background: linear-gradient(135deg, hsl(var(--gradient-ice)), hsl(var(--gradient-electric)));
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--gradient-electric)), hsl(var(--gradient-ice)));
+    background: linear-gradient(135deg, hsl(var(--gradient-ice)), hsl(var(--gradient-dark-blue)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
