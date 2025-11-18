@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
-import { ArrowLeft, Clock, User, Package, Calendar, Truck, ExternalLink, FileText, AlertCircle } from "lucide-react";
+import { ArrowLeft, Clock, User, Package, Calendar, Truck, ExternalLink, FileText, AlertCircle, CheckCircle2, AlertTriangle, FileCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import {
@@ -16,7 +16,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { wooToInternalStatus, InternalStatus } from "@/lib/status-mapping";
+import { wooToInternalStatus, internalToCustomerStatus } from "@/lib/status-mapping";
+
+// Customer-facing stage names for progress timeline
+const progressStages = [
+  { id: 'order_received', label: 'Order Received' },
+  { id: 'files_received', label: 'Files Received' },
+  { id: 'preflight', label: 'Preflight Check' },
+  { id: 'preparing_print_files', label: 'Preparing Print Files' },
+  { id: 'awaiting_approval', label: 'Awaiting Approval' },
+  { id: 'printing', label: 'Printing' },
+  { id: 'laminating', label: 'Laminating' },
+  { id: 'cutting', label: 'Cutting & Prep' },
+  { id: 'qc', label: 'Quality Check' },
+  { id: 'ready', label: 'Ready' },
+];
 
 // Internal status options for staff
 const internalStatusOptions: { value: string; label: string; stage: string }[] = [
@@ -41,6 +55,42 @@ const priorityOptions = [
   { value: 'normal', label: 'Normal', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
   { value: 'high', label: 'High', color: 'bg-red-500/10 text-red-500 border-red-500/20' },
 ];
+
+const getStageMessage = (customerStage: string): string => {
+  const messages: Record<string, string> = {
+    'order_received': 'Order received and queued for processing.',
+    'files_received': 'Files received. Awaiting preflight check.',
+    'preflight': 'Preflight check in progress.',
+    'file_error': 'File error detected. Customer notified.',
+    'missing_file': 'Missing required files. Customer notified.',
+    'preparing_print_files': 'Preparing print files for production.',
+    'awaiting_approval': 'Awaiting customer approval.',
+    'printing': 'Print production in progress.',
+    'laminating': 'Lamination in progress.',
+    'cutting': 'Cutting and finishing in progress.',
+    'qc': 'Final quality inspection.',
+    'ready': 'Job complete and ready for shipment/pickup.',
+  };
+  return messages[customerStage] || 'Processing order.';
+};
+
+const getNextStep = (customerStage: string): string => {
+  const nextSteps: Record<string, string> = {
+    'order_received': 'Awaiting customer artwork files.',
+    'files_received': 'Running preflight check on files.',
+    'preflight': 'Preparing print-ready files.',
+    'file_error': 'Awaiting corrected files from customer.',
+    'missing_file': 'Awaiting missing files from customer.',
+    'preparing_print_files': 'Queueing for print production.',
+    'awaiting_approval': 'Awaiting customer approval.',
+    'printing': 'Moving to lamination station.',
+    'laminating': 'Moving to cutting/finishing station.',
+    'cutting': 'Final quality inspection.',
+    'qc': 'Packaging and preparing for shipment.',
+    'ready': 'Ship or notify customer for pickup.',
+  };
+  return nextSteps[customerStage] || 'Continue processing.';
+};
 
 export default function ShopFlowJob() {
   const { id } = useParams();
