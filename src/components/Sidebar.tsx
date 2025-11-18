@@ -29,8 +29,13 @@ const navigationItems = [
 export const Sidebar = () => {
   return (
     <aside className="hidden lg:flex lg:flex-col w-60 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
-      <div className="px-6 py-5 border-b border-sidebar-border">
-        <img src={logo} alt="WrapCommand AI" className="w-full h-auto" />
+      <div className="px-4 py-4 border-b border-sidebar-border">
+        <img 
+          src={logo} 
+          alt="WrapCommand AI" 
+          className="w-full h-16 object-contain object-center" 
+          style={{ filter: 'brightness(1.1)' }}
+        />
       </div>
       
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
