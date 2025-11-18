@@ -8,6 +8,12 @@ import { NotesCard } from '@/modules/shopflow/components/NotesCard';
 import { ProofViewer } from '@/modules/shopflow/components/ProofViewer';
 import { Timeline } from '@/modules/shopflow/components/Timeline';
 import { ActionSidebar } from '@/modules/shopflow/components/ActionSidebar';
+import {
+  getStageFromWoo,
+  getNextStage,
+  detectMissing,
+  buildTimeline
+} from "@/modules/shopflow/utils/stageMap";
 
 export default function ShopFlowJob() {
   const { id } = useParams<{ id: string }>();
@@ -24,19 +30,27 @@ export default function ShopFlowJob() {
   if (!order) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Job not found</p>
+        <p className="text-gray-400">Job not found.</p>
       </div>
     );
   }
 
+  // INTERNAL SHOPFLOW ENGINE
+  const internalStage = getStageFromWoo(order.status);
+  const nextStage = getNextStage(internalStage);
+  const missingItems = detectMissing(order);
+  const timelineData = buildTimeline(order);
+
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-6 py-8">
 
       {/* Sticky Progress Bar */}
-      <div className="w-full h-[6px] bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF] rounded-md mb-6 sticky top-[60px] z-40"></div>
+      <div className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md py-3 border-b border-white/10 mb-6">
+        <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]"></div>
+      </div>
 
-      {/* Sticky Job Header */}
-      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-6 flex justify-between items-center sticky top-0 z-50 backdrop-blur-md">
+      {/* Sticky Header */}
+      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-6 sticky top-[54px] z-40 backdrop-blur-xl flex justify-between items-center">
         <div>
           <h1 className="text-xl font-semibold text-white">
             {order.product_type}
@@ -46,53 +60,40 @@ export default function ShopFlowJob() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="px-3 py-1 rounded-md text-xs text-white font-medium bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]">
-            {order.status}
-          </span>
-
-          {order.approveflow_project_id && (
-            <a
-              href={`/approveflow/${order.approveflow_project_id}`}
-              className="px-4 py-2 rounded-md text-sm text-white bg-gradient-to-r from-[#8FD3FF] to-[#0047FF]"
-            >
-              Open ApproveFlow
-            </a>
-          )}
-        </div>
+        <span className="px-3 py-1 rounded-md text-xs text-white font-medium bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]">
+          {order.status}
+        </span>
       </div>
 
-      {/* Quick Summary Bar */}
-      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Quick Summary */}
+      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-10 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">Vehicle</p>
-          <p className="text-white text-sm font-medium">
+          <p className="text-gray-400 text-xs uppercase">Vehicle</p>
+          <p className="text-white text-sm">
             {(order.vehicle_info as any)?.year} {(order.vehicle_info as any)?.make} {(order.vehicle_info as any)?.model}
           </p>
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">Customer</p>
-          <p className="text-white text-sm font-medium">{order.customer_name}</p>
+          <p className="text-gray-400 text-xs uppercase">Customer</p>
+          <p className="text-white text-sm">{order.customer_name}</p>
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">Order #</p>
-          <p className="text-white text-sm font-medium">{order.order_number}</p>
+          <p className="text-gray-400 text-xs uppercase">Order #</p>
+          <p className="text-white text-sm">{order.order_number}</p>
         </div>
 
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">Last Update</p>
-          <p className="text-white text-sm font-medium">
-            {order.updated_at?.slice(0, 10)}
-          </p>
+          <p className="text-gray-400 text-xs uppercase">Last Update</p>
+          <p className="text-white text-sm">{order.updated_at?.slice(0, 10)}</p>
         </div>
       </div>
 
       {/* 3 Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
-        {/* LEFT SIDEBAR */}
+        {/* LEFT */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           <VehicleInfoCard order={order} />
           <CustomerInfoCard order={order} />
@@ -101,16 +102,29 @@ export default function ShopFlowJob() {
           <NotesCard orderId={order.id} />
         </div>
 
-        {/* CENTER "STORY" WITH SUBTLE LINE */}
+        {/* CENTER */}
         <div className="lg:col-span-2 flex flex-col gap-10 relative">
           <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-20 rounded-full"></div>
 
+          {/* Missing Items */}
+          {missingItems.length > 0 && (
+            <div className="bg-[#101016] border border-white/5 rounded-lg p-5 text-white">
+              <h2 className="text-lg font-semibold mb-3">Missing Items</h2>
+              <ul className="list-disc pl-5 text-gray-300 text-sm">
+                {missingItems.map((m, idx) => (
+                  <li key={idx}>{m}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <ProofViewer order={order} />
-          <Timeline order={order} />
+
+          <Timeline timeline={timelineData} />
         </div>
 
-        {/* RIGHT STICKY ACTION BAR */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
+        {/* RIGHT */}
+        <div className="lg:col-span-1 sticky top-[140px]">
           <ActionSidebar order={order} />
         </div>
 
