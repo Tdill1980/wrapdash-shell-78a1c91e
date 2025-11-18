@@ -35,16 +35,18 @@ export function ShopFlowKanban({ orders }: ShopFlowKanbanProps) {
         return (
           <div
             key={lane.key}
-            className="flex-shrink-0 w-80 bg-background/50 rounded-lg border border-border p-4"
+            className="flex-shrink-0 w-80 bg-card/30 rounded-lg border border-border/50 p-4 shadow-sm"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-foreground">{lane.title}</h3>
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
+              <h3 className="font-bold text-foreground text-sm uppercase tracking-wide">
+                {lane.title}
+              </h3>
+              <span className="text-xs font-semibold text-foreground bg-muted/50 px-2.5 py-1 rounded-full border border-border/30">
                 {laneOrders.length}
               </span>
             </div>
             <ScrollArea className="h-[calc(100vh-300px)]">
-              <div className="space-y-3">
+              <div className="space-y-3 pr-2">
                 {laneOrders.map((order) => (
                   <ShopFlowCard
                     key={order.id}
@@ -53,7 +55,7 @@ export function ShopFlowKanban({ orders }: ShopFlowKanbanProps) {
                   />
                 ))}
                 {laneOrders.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
+                  <div className="text-center py-12 px-4 text-muted-foreground text-sm border border-dashed border-border/30 rounded-lg bg-background/20">
                     No orders
                   </div>
                 )}
