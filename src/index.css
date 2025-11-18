@@ -37,10 +37,10 @@ All colors MUST be HSL.
       --ring: 198 100% 50%;
       --radius: 0.5rem;                   /* 8px radius */
       
-      /* Ice Blue → Dark Blue gradient stops (lighter to darker) */
-      --gradient-ice: 189 100% 63%;            /* #4EEAFF Ice Blue (lightest) */
-      --gradient-electric: 198 100% 50%;       /* #00AFFF Electric Blue (mid) */
-      --gradient-dark-blue: 207 100% 50%;      /* #008CFF Dark Blue (darkest) */
+      /* Teal Blue → Dark Blue gradient (standard to dark) */
+      --gradient-teal: 198 100% 50%;           /* #00AFFF Teal Blue (start) */
+      --gradient-mid-blue: 207 100% 45%;       /* Mid Blue */
+      --gradient-dark: 215 100% 35%;           /* #0066B3 Dark Blue (end) */
       
       /* Sidebar - charcoal */
       --sidebar-background: 0 0% 9%;
@@ -74,17 +74,17 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Lighter to Darker Blue gradient */
+  /* Teal Blue to Dark Blue gradient */
   .bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--gradient-ice)), hsl(var(--gradient-dark-blue)));
+    background: linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-dark)));
   }
   
   .bg-gradient-blue {
-    background: linear-gradient(135deg, hsl(var(--gradient-ice)), hsl(var(--gradient-electric)));
+    background: linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-mid-blue)));
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--gradient-ice)), hsl(var(--gradient-dark-blue)));
+    background: linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-dark)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

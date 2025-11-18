@@ -57,12 +57,12 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        "ice-blue": "hsl(189 100% 63%)",
-        "dark-blue": "hsl(207 100% 50%)",
+        "teal-blue": "hsl(198 100% 50%)",
+        "dark-blue": "hsl(215 100% 35%)",
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, hsl(189 100% 63%), hsl(207 100% 50%))",
-        "gradient-blue": "linear-gradient(135deg, hsl(189 100% 63%), hsl(198 100% 50%))",
+        "gradient-primary": "linear-gradient(135deg, hsl(198 100% 50%), hsl(215 100% 35%))",
+        "gradient-blue": "linear-gradient(135deg, hsl(198 100% 50%), hsl(207 100% 45%))",
       },
       borderRadius: {
         lg: "var(--radius)",
