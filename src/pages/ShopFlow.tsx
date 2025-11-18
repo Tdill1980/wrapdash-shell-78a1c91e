@@ -4,11 +4,13 @@ import { Card } from "@/components/ui/card";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { ShopFlowKanban, ShopFlowTable } from "@/modules/shopflow";
 import { LayoutGrid, Table, RefreshCw, Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type ViewMode = "kanban" | "table";
 
 export default function ShopFlow() {
-  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? "table" : "kanban");
   const { orders, loading, syncFromWooCommerce } = useShopFlow();
 
   if (loading) {
@@ -35,10 +37,10 @@ export default function ShopFlow() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight font-poppins">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-poppins">
             <span className="text-foreground">Shop</span>
             <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
               Flow
@@ -70,42 +72,46 @@ export default function ShopFlow() {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant={viewMode === "kanban" ? "default" : "outline"}
-          onClick={() => setViewMode("kanban")}
-          className={
-            viewMode === "kanban"
-              ? "bg-gradient-to-r from-purple-500 to-pink-500"
-              : ""
-          }
-        >
-          <LayoutGrid className="w-4 h-4 mr-2" />
-          Kanban View
-        </Button>
-        <Button
-          variant={viewMode === "table" ? "default" : "outline"}
-          onClick={() => setViewMode("table")}
-          className={
-            viewMode === "table"
-              ? "bg-gradient-to-r from-purple-500 to-pink-500"
-              : ""
-          }
-        >
-          <Table className="w-4 h-4 mr-2" />
-          Table View
-        </Button>
-      </div>
+      {!isMobile && (
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "kanban" ? "default" : "outline"}
+            onClick={() => setViewMode("kanban")}
+            className={
+              viewMode === "kanban"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500"
+                : ""
+            }
+          >
+            <LayoutGrid className="w-4 h-4 mr-2" />
+            Kanban View
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            onClick={() => setViewMode("table")}
+            className={
+              viewMode === "table"
+                ? "bg-gradient-to-r from-purple-500 to-pink-500"
+                : ""
+            }
+          >
+            <Table className="w-4 h-4 mr-2" />
+            Table View
+          </Button>
+        </div>
+      )}
 
       {orders.length === 0 ? (
-        <Card className="p-12 text-center">
+        <Card className="p-6 md:p-12 text-center">
           <div className="max-w-lg mx-auto space-y-5">
-            <h2 className="text-xl font-semibold">No Orders Yet</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-lg md:text-xl font-semibold">No Orders Yet</h2>
+            <p className="text-sm md:text-base text-muted-foreground">
               Orders will appear here once they're synced from WooCommerce.
             </p>
           </div>
         </Card>
+      ) : isMobile ? (
+        <ShopFlowTable orders={orders} />
       ) : viewMode === "kanban" ? (
         <ShopFlowKanban orders={orders} />
       ) : (

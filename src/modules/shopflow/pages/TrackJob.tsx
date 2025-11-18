@@ -70,9 +70,9 @@ export default function TrackJob() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold font-poppins">
+      <div className="container mx-auto py-4 md:py-8 px-4 max-w-4xl">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-bold font-poppins">
             <span className="text-foreground">Track Your</span>
             <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
               {" "}
