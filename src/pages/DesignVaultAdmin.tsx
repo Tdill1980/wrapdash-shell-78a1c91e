@@ -17,7 +17,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Users,
+  Layout,
 } from "lucide-react";
+import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 
 interface Design {
   id: string;
@@ -209,6 +211,26 @@ export default function DesignVaultAdmin() {
           </Link>
         </div>
       </div>
+
+      {/* Dashboard Card Preview Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Layout className="w-5 h-5 text-primary" />
+                Dashboard Preview
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                See how your designs appear on the main dashboard
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <DashboardCardPreview />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
