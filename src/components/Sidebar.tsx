@@ -29,11 +29,11 @@ const navigationItems = [
 export const Sidebar = () => {
   return (
     <aside className="hidden lg:flex lg:flex-col w-60 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
-      <div className="px-3 py-6 border-b border-sidebar-border">
+      <div className="px-3 py-8 border-b border-sidebar-border">
         <img 
           src={logo} 
           alt="WrapCommand AI" 
-          className="w-full h-auto object-contain" 
+          className="w-full h-24 object-contain" 
         />
       </div>
       
