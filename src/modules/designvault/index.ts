@@ -4,3 +4,4 @@ export * from "./components/DesignCard";
 export * from "./components/DesignDetailModal";
 export * from "./components/FilterSidebar";
 export * from "./components/DashboardCardPreview";
+export * from "./components/DesignUploadForm";
