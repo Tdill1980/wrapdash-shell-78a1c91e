@@ -31,11 +31,12 @@ export default function ShopFlowJob() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Progress Bar */}
-      <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF] mb-6"></div>
 
-      {/* Job Header */}
-      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-6 flex justify-between items-center">
+      {/* Sticky Progress Bar */}
+      <div className="w-full h-[6px] bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF] rounded-md mb-6 sticky top-[60px] z-40"></div>
+
+      {/* Sticky Job Header */}
+      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-6 flex justify-between items-center sticky top-0 z-50 backdrop-blur-md">
         <div>
           <h1 className="text-xl font-semibold text-white">
             {order.product_type}
@@ -53,7 +54,7 @@ export default function ShopFlowJob() {
           {order.approveflow_project_id && (
             <a
               href={`/approveflow/${order.approveflow_project_id}`}
-              className="px-4 py-2 rounded-md text-sm text-white bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]"
+              className="px-4 py-2 rounded-md text-sm text-white bg-gradient-to-r from-[#8FD3FF] to-[#0047FF]"
             >
               Open ApproveFlow
             </a>
@@ -61,8 +62,36 @@ export default function ShopFlowJob() {
         </div>
       </div>
 
-      {/* 3-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Quick Summary Bar */}
+      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <p className="text-gray-400 text-xs uppercase tracking-wide">Vehicle</p>
+          <p className="text-white text-sm font-medium">
+            {(order.vehicle_info as any)?.year} {(order.vehicle_info as any)?.make} {(order.vehicle_info as any)?.model}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-gray-400 text-xs uppercase tracking-wide">Customer</p>
+          <p className="text-white text-sm font-medium">{order.customer_name}</p>
+        </div>
+
+        <div>
+          <p className="text-gray-400 text-xs uppercase tracking-wide">Order #</p>
+          <p className="text-white text-sm font-medium">{order.order_number}</p>
+        </div>
+
+        <div>
+          <p className="text-gray-400 text-xs uppercase tracking-wide">Last Update</p>
+          <p className="text-white text-sm font-medium">
+            {order.updated_at?.slice(0, 10)}
+          </p>
+        </div>
+      </div>
+
+      {/* 3 Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
+
         {/* LEFT SIDEBAR */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           <VehicleInfoCard order={order} />
@@ -72,16 +101,19 @@ export default function ShopFlowJob() {
           <NotesCard orderId={order.id} />
         </div>
 
-        {/* CENTER CONTENT */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        {/* CENTER "STORY" WITH SUBTLE LINE */}
+        <div className="lg:col-span-2 flex flex-col gap-10 relative">
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-20 rounded-full"></div>
+
           <ProofViewer order={order} />
           <Timeline order={order} />
         </div>
 
-        {/* RIGHT SIDEBAR ACTIONS */}
+        {/* RIGHT STICKY ACTION BAR */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           <ActionSidebar order={order} />
         </div>
+
       </div>
     </div>
   );
