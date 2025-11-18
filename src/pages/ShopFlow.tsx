@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { ShopFlowKanban, ShopFlowTable } from "@/modules/shopflow";
-import { LayoutGrid, Table, RefreshCw, Loader2 } from "lucide-react";
+import { LayoutGrid, Table, RefreshCw, Loader2, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type ViewMode = "kanban" | "table";
@@ -11,7 +12,19 @@ type ViewMode = "kanban" | "table";
 export default function ShopFlow() {
   const isMobile = useIsMobile();
   const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? "table" : "kanban");
+  const [searchQuery, setSearchQuery] = useState("");
   const { orders, loading, syncFromWooCommerce } = useShopFlow();
+
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery.trim()) return orders;
+    
+    const query = searchQuery.toLowerCase();
+    return orders.filter(order => 
+      order.order_number.toLowerCase().includes(query) ||
+      order.customer_name.toLowerCase().includes(query) ||
+      order.product_type.toLowerCase().includes(query)
+    );
+  }, [orders, searchQuery]);
 
   if (loading) {
     return (
@@ -72,50 +85,65 @@ export default function ShopFlow() {
         </div>
       </div>
 
-      {!isMobile && (
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === "kanban" ? "default" : "outline"}
-            onClick={() => setViewMode("kanban")}
-            className={
-              viewMode === "kanban"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                : ""
-            }
-          >
-            <LayoutGrid className="w-4 h-4 mr-2" />
-            Kanban View
-          </Button>
-          <Button
-            variant={viewMode === "table" ? "default" : "outline"}
-            onClick={() => setViewMode("table")}
-            className={
-              viewMode === "table"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                : ""
-            }
-          >
-            <Table className="w-4 h-4 mr-2" />
-            Table View
-          </Button>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by order #, customer, or product..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
         </div>
-      )}
+        {!isMobile && (
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === "kanban" ? "default" : "outline"}
+              onClick={() => setViewMode("kanban")}
+              className={
+                viewMode === "kanban"
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500"
+                  : ""
+              }
+            >
+              <LayoutGrid className="w-4 h-4 mr-2" />
+              Kanban View
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "outline"}
+              onClick={() => setViewMode("table")}
+              className={
+                viewMode === "table"
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500"
+                  : ""
+              }
+            >
+              <Table className="w-4 h-4 mr-2" />
+              Table View
+            </Button>
+          </div>
+        )}
+      </div>
 
-      {orders.length === 0 ? (
+      {filteredOrders.length === 0 ? (
         <Card className="p-6 md:p-12 text-center">
           <div className="max-w-lg mx-auto space-y-5">
-            <h2 className="text-lg md:text-xl font-semibold">No Orders Yet</h2>
+            <h2 className="text-lg md:text-xl font-semibold">
+              {orders.length === 0 ? "No Orders Yet" : "No Orders Found"}
+            </h2>
             <p className="text-sm md:text-base text-muted-foreground">
-              Orders will appear here once they're synced from WooCommerce.
+              {orders.length === 0 
+                ? "Orders will appear here once they're synced from WooCommerce."
+                : "No orders match your search criteria. Try a different search term."}
             </p>
           </div>
         </Card>
       ) : isMobile ? (
-        <ShopFlowTable orders={orders} />
+        <ShopFlowTable orders={filteredOrders} />
       ) : viewMode === "kanban" ? (
-        <ShopFlowKanban orders={orders} />
+        <ShopFlowKanban orders={filteredOrders} />
       ) : (
-        <ShopFlowTable orders={orders} />
+        <ShopFlowTable orders={filteredOrders} />
       )}
     </div>
   );
