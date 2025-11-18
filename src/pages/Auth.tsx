@@ -106,7 +106,7 @@ export default function Auth() {
         <CardHeader>
           <CardTitle className="font-poppins">
             <span className="text-foreground">Wrap</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+            <span className="text-gradient">
               Command
             </span>
           </CardTitle>

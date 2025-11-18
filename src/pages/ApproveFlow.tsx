@@ -246,7 +246,6 @@ export default function ApproveFlow() {
               variant={activeRole === "designer" ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveRole("designer")}
-              className={activeRole === "designer" ? "bg-gradient-to-r from-purple-500 to-pink-500" : ""}
             >
               DESIGNER
             </Button>
@@ -254,20 +253,19 @@ export default function ApproveFlow() {
               variant={activeRole === "customer" ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveRole("customer")}
-              className={activeRole === "customer" ? "bg-gradient-to-r from-cyan-400 to-cyan-500" : ""}
             >
               CUSTOMER
             </Button>
           </div>
 
-          <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
             🔄 LIVE SYNC
           </Badge>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="py-3 px-4 bg-gradient-to-r from-purple-900/20 via-pink-900/20 to-purple-900/20 border-b border-border rounded-lg">
+      <div className="py-3 px-4 bg-card border border-border rounded-lg">
         <div className="relative">
           <div className="flex justify-between mb-2">
             {progressSteps.map((step, index) => (
@@ -276,7 +274,7 @@ export default function ApproveFlow() {
                   step.status === "complete" 
                     ? "bg-gradient-primary" 
                     : step.status === "current"
-                    ? "bg-gradient-plum-pink"
+                    ? "bg-gradient-primary"
                     : "bg-card border border-border"
                 }`}>
                   {step.status === "complete" && <CheckCircle2 className="w-3 h-3 text-white" />}
@@ -290,10 +288,12 @@ export default function ApproveFlow() {
               </div>
             ))}
           </div>
-          <div className="absolute top-2.5 left-0 right-0 h-[1px] bg-border -z-10">
+          <div className="absolute top-2.5 left-0 right-0 h-[2px] bg-border -z-10">
             <div 
-              className="h-full bg-gradient-primary transition-all duration-500" 
-              style={{ width: `${(progressSteps.filter(s => s.status === "complete").length / progressSteps.length) * 100}%` }}
+              className="h-full bg-gradient-primary transition-all duration-500"
+              style={{ 
+                width: `${((progressSteps.filter(s => s.status === "complete").length) / (progressSteps.length - 1)) * 100}%` 
+              }}
             />
           </div>
         </div>
@@ -549,7 +549,7 @@ export default function ApproveFlow() {
                     <div
                       className={`max-w-[80%] p-2 rounded-lg text-xs ${
                         msg.sender === activeRole
-                          ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-foreground'
+                          ? 'bg-primary/20 text-foreground'
                           : 'bg-muted text-foreground'
                       }`}
                     >

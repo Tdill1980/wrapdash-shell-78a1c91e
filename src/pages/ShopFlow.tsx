@@ -32,7 +32,7 @@ export default function ShopFlow() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-poppins">
             <span className="text-foreground">Shop</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+            <span className="text-gradient">
               Flow
             </span>
             <span className="text-muted-foreground text-sm align-super">™</span>
@@ -55,7 +55,7 @@ export default function ShopFlow() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-poppins">
             <span className="text-foreground">Shop</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+            <span className="text-gradient">
               Flow
             </span>
             <span className="text-muted-foreground text-sm align-super">™</span>
@@ -100,11 +100,6 @@ export default function ShopFlow() {
             <Button
               variant={viewMode === "kanban" ? "default" : "outline"}
               onClick={() => setViewMode("kanban")}
-              className={
-                viewMode === "kanban"
-                  ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                  : ""
-              }
             >
               <LayoutGrid className="w-4 h-4 mr-2" />
               Kanban View
@@ -112,11 +107,6 @@ export default function ShopFlow() {
             <Button
               variant={viewMode === "table" ? "default" : "outline"}
               onClick={() => setViewMode("table")}
-              className={
-                viewMode === "table"
-                  ? "bg-gradient-to-r from-purple-500 to-pink-500"
-                  : ""
-              }
             >
               <Table className="w-4 h-4 mr-2" />
               Table View

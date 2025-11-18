@@ -107,7 +107,7 @@ export default function MightyMail() {
         <div>
           <h1 className="text-3xl font-bold font-poppins">
             <span className="text-foreground">Mighty</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Mail</span>
+            <span className="text-gradient">Mail</span>
             <span className="text-muted-foreground text-sm align-super">™</span>
           </h1>
           <p className="text-muted-foreground mt-1">

@@ -7,7 +7,7 @@ export default function Portfolio() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight font-poppins">
           <span className="text-foreground">Port</span>
-          <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">folio</span>
+          <span className="text-gradient">folio</span>
           <span className="text-muted-foreground text-sm align-super">™</span>
         </h1>
         <p className="text-sm text-muted-foreground mt-1">

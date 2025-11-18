@@ -40,8 +40,8 @@ export const Sidebar = () => {
             <NavLink
               key={item.path}
               to={item.path}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm text-sidebar-foreground hover:text-foreground hover:bg-white/5 transition-all rounded-lg border-l-3 border-transparent"
-              activeClassName="text-foreground bg-white/5 border-l-primary"
+              className="flex items-center gap-3 px-3 py-2.5 text-sm text-sidebar-foreground hover:text-foreground hover:bg-white/5 transition-all rounded-lg relative"
+              activeClassName="text-foreground bg-white/5 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-gradient-primary before:rounded-r"
             >
               <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} />
               <span className="font-medium">{item.name}</span>

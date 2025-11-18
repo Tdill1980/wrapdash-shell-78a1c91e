@@ -156,7 +156,7 @@ export default function UserManagement() {
         <div>
           <h1 className="text-3xl font-bold font-poppins">
             <span className="text-foreground">User</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+            <span className="text-gradient">
               Management
             </span>
           </h1>
