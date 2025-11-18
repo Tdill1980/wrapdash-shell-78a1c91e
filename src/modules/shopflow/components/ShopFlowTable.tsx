@@ -14,6 +14,7 @@ import {
 import { Package } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ShopFlowTableProps {
   orders: ShopFlowOrder[];
@@ -21,7 +22,50 @@ interface ShopFlowTableProps {
 
 export function ShopFlowTable({ orders }: ShopFlowTableProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
+  // Mobile card view
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {orders.map((order) => {
+          const internalStatus = wooToInternalStatus[order.status] || "order_received";
+          return (
+            <Card
+              key={order.id}
+              className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => navigate(`/shopflow/${order.id}`)}
+            >
+              <div className="flex gap-3">
+                <div className="w-12 h-12 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                  <Package className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-foreground truncate">
+                    {order.product_type}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Order #{order.order_number}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {order.customer_name}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <ShopFlowStatusTag status={internalStatus} />
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(order.created_at), "MMM d")}
+                </span>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Desktop table view
   return (
     <Card>
       <Table>
