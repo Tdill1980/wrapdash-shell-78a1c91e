@@ -410,52 +410,76 @@ export type Database = {
           approveflow_project_id: string | null
           assigned_to: string | null
           created_at: string
+          customer_email: string | null
           customer_name: string
+          customer_stage: string | null
           estimated_completion_date: string | null
+          file_error_details: Json | null
+          files: Json | null
           id: string
+          missing_file_list: Json | null
           notes: string | null
           order_number: string
+          preflight_status: string | null
           priority: string | null
           product_type: string
           shipped_at: string | null
           status: string
+          timeline: Json | null
           tracking_number: string | null
           tracking_url: string | null
           updated_at: string
+          vehicle_info: Json | null
         }
         Insert: {
           approveflow_project_id?: string | null
           assigned_to?: string | null
           created_at?: string
+          customer_email?: string | null
           customer_name: string
+          customer_stage?: string | null
           estimated_completion_date?: string | null
+          file_error_details?: Json | null
+          files?: Json | null
           id?: string
+          missing_file_list?: Json | null
           notes?: string | null
           order_number: string
+          preflight_status?: string | null
           priority?: string | null
           product_type: string
           shipped_at?: string | null
           status?: string
+          timeline?: Json | null
           tracking_number?: string | null
           tracking_url?: string | null
           updated_at?: string
+          vehicle_info?: Json | null
         }
         Update: {
           approveflow_project_id?: string | null
           assigned_to?: string | null
           created_at?: string
+          customer_email?: string | null
           customer_name?: string
+          customer_stage?: string | null
           estimated_completion_date?: string | null
+          file_error_details?: Json | null
+          files?: Json | null
           id?: string
+          missing_file_list?: Json | null
           notes?: string | null
           order_number?: string
+          preflight_status?: string | null
           priority?: string | null
           product_type?: string
           shipped_at?: string | null
           status?: string
+          timeline?: Json | null
           tracking_number?: string | null
           tracking_url?: string | null
           updated_at?: string
+          vehicle_info?: Json | null
         }
         Relationships: [
           {

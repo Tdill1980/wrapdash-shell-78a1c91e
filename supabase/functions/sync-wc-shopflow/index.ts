@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
-// Status mapping layer
+// Status mapping layer (internal staff view)
 const wooToInternalStatus: Record<string, string> = {
   "pending": "order_received",
   "processing": "order_received",
@@ -24,6 +24,32 @@ const wooToInternalStatus: Record<string, string> = {
   "shipping-cost": "ready_or_shipped",
   "shipped": "ready_or_shipped",
   "completed": "completed"
+};
+
+// Customer-facing stage mapping (for public tracker)
+const wooToCustomerStage: Record<string, string> = {
+  "pending": "order_received",
+  "processing": "order_received",
+  "on-hold": "order_received",
+  "waiting-to-place-order": "order_received",
+  "waiting-on-email-response": "order_received",
+  "add-on": "order_received",
+  "dropbox-link-sent": "order_received",
+  "file-error": "file_error",
+  "missing-file": "missing_file",
+  "in-design": "preparing_print_files",
+  "lance": "preparing_print_files",
+  "manny": "preparing_print_files",
+  "design-complete": "awaiting_approval",
+  "work-order-printed": "awaiting_approval",
+  "ready-for-print": "preparing_print_files",
+  "pre-press": "preflight",
+  "print-production": "printing",
+  "lamination": "laminating",
+  "finishing": "cutting",
+  "ready-for-pickup": "ready",
+  "shipped": "ready",
+  "completed": "ready"
 };
 
 const corsHeaders = {
@@ -82,6 +108,13 @@ serve(async (req) => {
     const productType = extractProductType(payload.line_items);
     const wooStatus = payload.status;
     const status = mapWooStatusToShopFlow(wooStatus);
+    const customerStage = mapWooStatusToCustomerStage(wooStatus);
+    
+    // Extract vehicle info from line items meta data
+    const vehicleInfo = extractVehicleInfo(payload.line_items);
+    
+    // Extract files from meta data or attachments
+    const files = extractFiles(payload);
 
     if (!orderNumber) {
       throw new Error('Order number is required');
@@ -97,14 +130,48 @@ serve(async (req) => {
     if (existingOrder) {
       console.log('ShopFlow order already exists:', orderNumber);
       
+      // Get current order data for timeline
+      const { data: currentOrder } = await supabase
+        .from('shopflow_orders')
+        .select('customer_stage, timeline, files')
+        .eq('order_number', orderNumber)
+        .single();
+      
+      let updatedCustomerStage = customerStage;
+      let updatedTimeline = currentOrder?.timeline || {};
+      let updatedFiles = files.length > 0 ? files : (currentOrder?.files || []);
+      
+      // AUTO-TRIGGER: If files exist and stage is still "order_received", move to "files_received"
+      if (updatedFiles.length > 0 && customerStage === 'order_received') {
+        updatedCustomerStage = 'files_received';
+        updatedTimeline['files_received'] = new Date().toISOString();
+        console.log('Auto-triggered: files_received stage');
+      }
+      
+      // Update timeline for the new stage
+      if (!updatedTimeline[updatedCustomerStage]) {
+        updatedTimeline[updatedCustomerStage] = new Date().toISOString();
+      }
+      
       // Update existing order
       await supabase
         .from('shopflow_orders')
         .update({
           status,
+          customer_stage: updatedCustomerStage,
+          timeline: updatedTimeline,
+          files: updatedFiles,
+          customer_email: customerEmail,
+          vehicle_info: vehicleInfo,
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
+      
+      // AUTO-STAGE ENGINE: If entering "printing", queue internal progression
+      if (updatedCustomerStage === 'printing' && currentOrder?.customer_stage !== 'printing') {
+        console.log('Starting auto-stage progression from printing');
+        triggerAutoStageProgression(orderNumber, supabase);
+      }
 
       // Log status change
       await supabase
@@ -142,6 +209,20 @@ serve(async (req) => {
       .eq('order_number', orderNumber)
       .maybeSingle();
 
+    // Initialize timeline
+    const initialTimeline: Record<string, string> = {};
+    let initialCustomerStage = customerStage;
+    
+    // AUTO-TRIGGER: If files exist on creation, start at "files_received"
+    if (files.length > 0 && customerStage === 'order_received') {
+      initialCustomerStage = 'files_received';
+      initialTimeline['order_received'] = new Date().toISOString();
+      initialTimeline['files_received'] = new Date().toISOString();
+      console.log('New order with files - starting at files_received');
+    } else {
+      initialTimeline[initialCustomerStage] = new Date().toISOString();
+    }
+    
     // Create new ShopFlow order
     const { data: newOrder, error: insertError } = await supabase
       .from('shopflow_orders')
@@ -150,11 +231,22 @@ serve(async (req) => {
         customer_name: customerName,
         product_type: productType,
         status,
+        customer_stage: initialCustomerStage,
+        customer_email: customerEmail,
+        vehicle_info: vehicleInfo,
+        timeline: initialTimeline,
+        files,
         approveflow_project_id: approveflowProject?.id || null,
         priority: 'normal',
       })
       .select()
       .single();
+    
+    // AUTO-STAGE ENGINE: If starting at "printing", queue progression
+    if (initialCustomerStage === 'printing') {
+      console.log('New order starting at printing - triggering auto-stage');
+      triggerAutoStageProgression(orderNumber, supabase);
+    }
 
     if (insertError) throw insertError;
 
@@ -213,6 +305,112 @@ function mapWooStatusToShopFlow(wooStatus: string): string {
   return wooToInternalStatus[wooStatus] || 'order_received';
 }
 
+function mapWooStatusToCustomerStage(wooStatus: string): string {
+  return wooToCustomerStage[wooStatus] || 'order_received';
+}
+
+function extractVehicleInfo(lineItems: any[]): any {
+  if (!lineItems || lineItems.length === 0) return {};
+  
+  const firstItem = lineItems[0];
+  const metaData = firstItem.meta_data || [];
+  
+  const vehicleInfo: any = {};
+  
+  for (const meta of metaData) {
+    const key = meta.key?.toLowerCase();
+    if (key?.includes('vehicle') || key?.includes('make') || key?.includes('model') || key?.includes('year')) {
+      vehicleInfo[meta.key] = meta.value;
+    }
+  }
+  
+  return vehicleInfo;
+}
+
+function extractFiles(payload: any): any[] {
+  const files: any[] = [];
+  
+  // Check meta_data for file URLs
+  if (payload.meta_data) {
+    for (const meta of payload.meta_data) {
+      const key = meta.key?.toLowerCase();
+      if (key?.includes('file') || key?.includes('artwork') || key?.includes('design')) {
+        if (typeof meta.value === 'string' && (meta.value.startsWith('http') || meta.value.includes('dropbox'))) {
+          files.push({
+            name: meta.key,
+            url: meta.value,
+            status: 'print_ready'
+          });
+        }
+      }
+    }
+  }
+  
+  // Check line items for uploaded files
+  if (payload.line_items) {
+    for (const item of payload.line_items) {
+      if (item.meta_data) {
+        for (const meta of item.meta_data) {
+          const key = meta.key?.toLowerCase();
+          if (key?.includes('file') || key?.includes('artwork') || key?.includes('upload')) {
+            if (typeof meta.value === 'string' && meta.value.startsWith('http')) {
+              files.push({
+                name: `${item.name} - ${meta.key}`,
+                url: meta.value,
+                status: 'print_ready'
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return files;
+}
+
+// AUTO-STAGE PROGRESSION ENGINE
+// Automatically advances through internal production stages
+async function triggerAutoStageProgression(orderNumber: string, supabase: any) {
+  const stages = [
+    { stage: 'laminating', delayMinutes: 20 },
+    { stage: 'cutting', delayMinutes: 40 },
+    { stage: 'qc', delayMinutes: 60 }
+  ];
+  
+  for (const { stage, delayMinutes } of stages) {
+    // Schedule stage update (simulated with immediate execution for webhook context)
+    // In production, you'd use a queue system or scheduled function
+    setTimeout(async () => {
+      try {
+        const { data: order } = await supabase
+          .from('shopflow_orders')
+          .select('timeline, id')
+          .eq('order_number', orderNumber)
+          .single();
+        
+        if (order) {
+          const updatedTimeline = order.timeline || {};
+          updatedTimeline[stage] = new Date().toISOString();
+          
+          await supabase
+            .from('shopflow_orders')
+            .update({
+              customer_stage: stage,
+              timeline: updatedTimeline,
+              updated_at: new Date().toISOString()
+            })
+            .eq('order_number', orderNumber);
+          
+          console.log(`Auto-progressed to ${stage} for order ${orderNumber}`);
+        }
+      } catch (error) {
+        console.error(`Auto-stage progression error for ${stage}:`, error);
+      }
+    }, delayMinutes * 60 * 1000);
+  }
+}
+
 async function sendKlaviyoEvent(eventName: string, properties: any, customerEmail: string) {
   try {
     const klaviyoKey = Deno.env.get('KLAVIYO_API_KEY');
@@ -232,8 +430,22 @@ async function sendKlaviyoEvent(eventName: string, properties: any, customerEmai
         data: {
           type: 'event',
           attributes: {
-            profile: { $email: customerEmail },
-            metric: { name: eventName },
+            profile: {
+              data: {
+                type: 'profile',
+                attributes: {
+                  email: customerEmail
+                }
+              }
+            },
+            metric: {
+              data: {
+                type: 'metric',
+                attributes: {
+                  name: eventName
+                }
+              }
+            },
             properties,
             time: new Date().toISOString()
           }
