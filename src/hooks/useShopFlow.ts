@@ -8,16 +8,12 @@ export interface ShopFlowOrder {
   order_number: string;
   approveflow_project_id?: string;
   customer_name: string;
-  customer_email?: string;
   product_type: string;
   status: string;
-  customer_stage?: string;
-  preflight_status?: string;
   priority?: string;
   estimated_completion_date?: string;
   assigned_to?: string;
   notes?: string;
-  files?: any;
   tracking_number?: string;
   tracking_url?: string;
   shipped_at?: string;
