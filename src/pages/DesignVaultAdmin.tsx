@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -16,6 +16,7 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  Users,
 } from "lucide-react";
 
 interface Design {
@@ -195,10 +196,18 @@ export default function DesignVaultAdmin() {
             Manage all DesignVault visualizations
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate("/designvault")}>
-          <Database className="w-4 h-4 mr-2" />
-          View Public Gallery
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/designvault")}>
+            <Database className="w-4 h-4 mr-2" />
+            View Public Gallery
+          </Button>
+          <Link to="/admin/users">
+            <Button variant="outline">
+              <Users className="w-4 h-4 mr-2" />
+              Manage Users
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card>

@@ -22,6 +22,8 @@ import MightyMail from "./pages/MightyMail";
 import Portfolio from "./pages/Portfolio";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import DesignVaultAdmin from "./pages/DesignVaultAdmin";
+import Auth from "./pages/Auth";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +54,8 @@ const App = () => (
             <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
             <Route path="/admin/pricing" element={<AppLayout><ProductPricingAdmin /></AppLayout>} />
             <Route path="/admin/designvault" element={<AppLayout><DesignVaultAdmin /></AppLayout>} />
+            <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
