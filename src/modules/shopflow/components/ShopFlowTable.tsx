@@ -86,7 +86,10 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
               <TableRow
                 key={order.id}
                 className="cursor-pointer hover:bg-muted/20 border-border/50 transition-colors"
-                onClick={() => navigate(`/shopflow/${order.id}`)}
+                onClick={() => {
+                  console.log('ShopFlowTable: Navigating to order ID:', order.id);
+                  navigate(`/shopflow/${order.id}`);
+                }}
               >
                 <TableCell>
                   <div className="flex items-center gap-3">
