@@ -18,8 +18,10 @@ import {
   CheckCircle2,
   Users,
   Layout,
+  Upload,
 } from "lucide-react";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
+import { DesignUploadForm } from "@/modules/designvault/components/DesignUploadForm";
 
 interface Design {
   id: string;
@@ -211,6 +213,26 @@ export default function DesignVaultAdmin() {
           </Link>
         </div>
       </div>
+
+      {/* Upload Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Upload className="w-5 h-5 text-primary" />
+                Upload to DesignVault
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Add new designs that will appear on the dashboard
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <DesignUploadForm onUploadComplete={fetchDesigns} />
+        </CardContent>
+      </Card>
 
       {/* Dashboard Card Preview Section */}
       <Card>
