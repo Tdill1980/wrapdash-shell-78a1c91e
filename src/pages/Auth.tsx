@@ -36,6 +36,26 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
+    const ensureInitialAdmin = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const user = data.user;
+        if (!user) return;
+
+        // This will only succeed for the very first admin due to RLS policy
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: user.id, role: "admin" });
+
+        if (error) {
+          // Ignore RLS/duplicate errors once an admin already exists
+          console.warn("ensureInitialAdmin error (safe to ignore after first admin)", error);
+        }
+      } catch (err) {
+        console.warn("ensureInitialAdmin unexpected error", err);
+      }
+    };
+
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
@@ -44,6 +64,8 @@ export default function Auth() {
         });
 
         if (error) throw error;
+
+        await ensureInitialAdmin();
 
         toast({
           title: "Success",
@@ -59,6 +81,8 @@ export default function Auth() {
         });
 
         if (error) throw error;
+
+        await ensureInitialAdmin();
 
         toast({
           title: "Success",
