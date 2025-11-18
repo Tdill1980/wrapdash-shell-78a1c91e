@@ -1,8 +1,44 @@
-export function NextStepCard() {
+import { ArrowRight } from "lucide-react";
+
+interface NextStepCardProps {
+  order: {
+    customer_stage: string;
+  };
+}
+
+const NEXT_STEPS: Record<string, string> = {
+  order_received: "Files will be received and logged.",
+  files_received: "Preflight check will begin.",
+  preflight: "Print files will be prepared.",
+  file_error: "File corrections needed before production.",
+  missing_file: "Upload missing file to proceed.",
+  preparing_print_files: "Proof will be generated for approval.",
+  awaiting_approval: "Production will begin after approval.",
+  printing: "Lamination will be applied.",
+  laminating: "Cutting and finishing will begin.",
+  cutting: "Quality inspection will be performed.",
+  qc: "Order will be finalized and packaged.",
+  ready: "Order is ready for delivery.",
+};
+
+export function NextStepCard({ order }: NextStepCardProps) {
+  const nextStep = NEXT_STEPS[order.customer_stage] || "Processing your order.";
+
   return (
-    <div className="p-6 rounded-lg border border-border bg-card">
-      <h2 className="text-xl font-semibold mb-2">NextStepCard</h2>
-      <p className="text-muted-foreground text-sm">Component placeholder</p>
+    <div className="bg-[#141414] border border-white/10 rounded-xl p-6 shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+      <div className="flex items-start gap-4">
+        <div className="p-2 rounded-lg bg-white/5">
+          <ArrowRight className="w-5 h-5 text-[#5AC8FF]" />
+        </div>
+        <div>
+          <h3 className="text-white font-semibold font-poppins text-[16px] mb-1">
+            What's Next
+          </h3>
+          <p className="text-white/70 text-[14px] font-inter">
+            {nextStep}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
