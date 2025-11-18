@@ -19,7 +19,7 @@ const statusConfig = {
   awaiting_feedback: { label: "Awaiting Feedback", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
   revision_sent: { label: "Revision Sent", color: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
   ready_for_print: { label: "Ready for Print", color: "bg-green-500/10 text-green-500 border-green-500/20" },
-  in_production: { label: "In Production", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+  in_production: { label: "In Production", color: "bg-primary/10 text-primary border-primary/20" },
   completed: { label: "Completed", color: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
 };
 
@@ -46,7 +46,7 @@ export default function ShopFlowList() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-poppins">
             <span className="text-foreground">Shop</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Flow</span>
+            <span className="text-gradient">Flow</span>
             <span className="text-muted-foreground text-sm align-super">™</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -66,7 +66,7 @@ export default function ShopFlowList() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-poppins">
             <span className="text-foreground">Shop</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Flow</span>
+            <span className="text-gradient">Flow</span>
             <span className="text-muted-foreground text-sm align-super">™</span>
           </h1>
           <p className="text-sm text-muted-foreground mt-1">

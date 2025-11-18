@@ -201,10 +201,10 @@ export default function Dashboard() {
   const latestDesigns = designs?.slice(0, 5) || [];
 
   const productTypes = [
-    { name: "Full Wraps", gradient: "bg-gradient-purple-magenta" },
-    { name: "Partial Wraps", gradient: "bg-gradient-magenta-blue" },
-    { name: "Chrome Delete", gradient: "bg-gradient-plum-pink" },
-    { name: "PPF", gradient: "bg-gradient-teal-violet" },
+    { name: "Full Wraps", gradient: "bg-gradient-primary" },
+    { name: "Partial Wraps", gradient: "bg-gradient-primary" },
+    { name: "Chrome Delete", gradient: "bg-gradient-primary" },
+    { name: "PPF", gradient: "bg-gradient-primary" },
     { name: "Window Tint", gradient: "bg-gradient-primary" },
   ];
 
@@ -300,7 +300,7 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="text-lg font-bold font-poppins">
                   <span className="text-foreground">Mighty</span>
-                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Customer</span>
+                  <span className="text-gradient">Customer</span>
                   <span className="text-muted-foreground text-sm align-super">™</span>
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -616,7 +616,7 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="text-lg font-bold font-poppins">
                   <span className="text-foreground">Design</span>
-                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Vault</span>
+                  <span className="text-gradient">Vault</span>
                   <span className="text-muted-foreground text-sm align-super">™</span>
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -783,7 +783,7 @@ export default function Dashboard() {
               </div>
               <Button 
                 onClick={() => navigate("/designvault")}
-                className="w-full bg-gradient-magenta-blue hover:opacity-90 text-white"
+                className="w-full bg-gradient-primary hover:opacity-90 text-white"
               >
                 Open DesignVault
               </Button>
@@ -799,7 +799,7 @@ export default function Dashboard() {
             <div>
               <CardTitle className="text-lg font-bold font-poppins">
                 <span className="text-foreground">Shop</span>
-                <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Flow</span>
+                <span className="text-gradient">Flow</span>
                 <span className="text-muted-foreground text-sm align-super">™</span>
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
@@ -887,7 +887,7 @@ export default function Dashboard() {
             {/* View All Button */}
             <Button 
               onClick={() => navigate("/shopflow")}
-              className="w-full bg-gradient-purple-magenta hover:opacity-90 text-white"
+              className="w-full bg-gradient-primary hover:opacity-90 text-white"
             >
               View All Orders
             </Button>

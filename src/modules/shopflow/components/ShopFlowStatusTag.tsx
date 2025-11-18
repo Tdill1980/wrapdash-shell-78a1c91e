@@ -8,11 +8,11 @@ interface ShopFlowStatusTagProps {
 const statusConfig: Record<InternalStatus, { label: string; gradient: string }> = {
   order_received: {
     label: "Order Received",
-    gradient: "bg-gradient-to-r from-blue-500 to-cyan-500",
+    gradient: "bg-gradient-primary",
   },
   in_design: {
     label: "In Design",
-    gradient: "bg-gradient-to-r from-purple-500 to-pink-500",
+    gradient: "bg-gradient-primary",
   },
   action_required: {
     label: "Action Required",
@@ -24,11 +24,11 @@ const statusConfig: Record<InternalStatus, { label: string; gradient: string }> 
   },
   preparing_for_print: {
     label: "Preparing for Print",
-    gradient: "bg-gradient-to-r from-indigo-500 to-purple-500",
+    gradient: "bg-gradient-primary",
   },
   in_production: {
     label: "In Production",
-    gradient: "bg-gradient-to-r from-violet-500 to-fuchsia-500",
+    gradient: "bg-gradient-primary",
   },
   ready_or_shipped: {
     label: "Ready / Shipped",

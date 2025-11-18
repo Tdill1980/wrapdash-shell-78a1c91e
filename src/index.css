@@ -8,54 +8,49 @@ All colors MUST be HSL.
 
   @layer base {
     :root {
-      /* Pure black & charcoal base - Purple + Blue Theme */
+      /* Pure black & charcoal base - Electric Blue Brand */
       --background: 240 50% 3%;           /* #0A0A0F Pure black */
       --foreground: 240 10% 98%;          /* White text */
-      --card: 0 0% 12%;                   /* Lighter charcoal */
+      --card: 0 0% 9%;                    /* #101016 Charcoal */
       --card-foreground: 240 10% 98%;
       --popover: 240 50% 3%;
       --popover-foreground: 240 10% 98%;
       
-      /* Purple & Blue accents */
-      --primary: 250 70% 60%;             /* Blue-purple primary */
+      /* Electric Blue → Ice Blue gradient */
+      --primary: 198 100% 50%;            /* #00AFFF Electric Blue */
       --primary-foreground: 240 10% 98%;
-      --secondary: 240 15% 15%;           /* Neutral charcoal secondary */
+      --secondary: 240 15% 9%;            /* #16161E Soft charcoal */
       --secondary-foreground: 240 10% 98%;
       
       /* Charcoal variants */
-      --muted: 240 10% 12%;               /* Neutral charcoal muted */
-      --muted-foreground: 240 6% 72%;     /* #B7B7C5 Soft gray */
-      --accent: 240 15% 15%;              /* Neutral charcoal accent */
+      --muted: 240 10% 9%;                /* #101016 Charcoal */
+      --muted-foreground: 225 8% 77%;     /* #B8B8C7 Soft gray */
+      --accent: 240 15% 9%;               /* #16161E Soft charcoal */
       --accent-foreground: 240 10% 98%;
       
       --destructive: 0 62.8% 30.6%;
       --destructive-foreground: 240 10% 98%;
       
       /* Borders - neutral */
-      --border: 240 5% 15%;
-      --input: 240 5% 15%;
-      --ring: 250 70% 60%;
-      --radius: 0.5rem;                   /* 6-8px radius */
+      --border: 0 0% 100% / 0.06;
+      --input: 0 0% 100% / 0.06;
+      --ring: 198 100% 50%;
+      --radius: 0.5rem;                   /* 8px radius */
       
-      /* Dynamic gradient stops - Instagram style Magenta to Blue (Darker) */
-      --gradient-magenta: 330 85% 50%;         /* Deep Magenta */
-      --gradient-purple: 280 80% 48%;          /* Deep Purple */
-      --gradient-blue: 210 95% 45%;            /* Deep Blue */
-      --gradient-cyan: 190 90% 48%;            /* Deep Cyan */
-      --gradient-violet: 270 75% 50%;          /* Deep Violet */
-      --gradient-indigo: 240 70% 48%;          /* Deep Indigo */
+      /* Electric Blue → Ice Blue gradient stops */
+      --gradient-electric: 198 100% 50%;       /* #00AFFF Electric Blue */
+      --gradient-mid-blue: 207 100% 50%;       /* #008CFF Mid Blue */
+      --gradient-ice: 189 100% 63%;            /* #4EEAFF Ice Blue */
       
-      --cyan-accent: 190 100% 50%;
-      
-      /* Sidebar - lighter charcoal */
-      --sidebar-background: 0 0% 10%;
+      /* Sidebar - charcoal */
+      --sidebar-background: 0 0% 9%;
       --sidebar-foreground: 240 10% 98%;
-      --sidebar-primary: 320 70% 60%;
+      --sidebar-primary: 198 100% 50%;
       --sidebar-primary-foreground: 240 10% 98%;
-      --sidebar-accent: 0 0% 15%;
+      --sidebar-accent: 0 0% 11%;
       --sidebar-accent-foreground: 240 10% 98%;
-      --sidebar-border: 240 5% 15%;
-      --sidebar-ring: 320 70% 60%;
+      --sidebar-border: 0 0% 100% / 0.06;
+      --sidebar-ring: 198 100% 50%;
     }
   }
 
@@ -79,32 +74,17 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  /* Dynamic gradients - Instagram Magenta to Blue Theme */
+  /* Electric Blue → Ice Blue gradient */
   .bg-gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
+    background: linear-gradient(135deg, hsl(var(--gradient-electric)), hsl(var(--gradient-ice)));
   }
   
-  .bg-gradient-purple-blue {
-    background: linear-gradient(135deg, hsl(var(--gradient-purple)), hsl(var(--gradient-blue)));
-  }
-  
-  .bg-gradient-magenta-blue {
-    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
-  }
-  
-  .bg-gradient-cyan-blue {
-    background: linear-gradient(135deg, hsl(var(--gradient-cyan)), hsl(var(--gradient-blue)));
+  .bg-gradient-blue {
+    background: linear-gradient(135deg, hsl(var(--gradient-electric)), hsl(var(--gradient-mid-blue)));
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--gradient-magenta)), hsl(var(--gradient-blue)));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  .text-gradient-blue {
-    background: linear-gradient(135deg, hsl(var(--gradient-blue)), hsl(var(--gradient-indigo)));
+    background: linear-gradient(135deg, hsl(var(--gradient-electric)), hsl(var(--gradient-ice)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

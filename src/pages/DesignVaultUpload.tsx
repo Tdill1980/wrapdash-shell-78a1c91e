@@ -135,7 +135,7 @@ export default function DesignVaultUpload() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 font-poppins">
           <span className="text-foreground">Upload to Design</span>
-          <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Vault</span>
+          <span className="text-gradient">Vault</span>
           <span className="text-muted-foreground text-sm align-super">™</span>
         </h1>
         <p className="text-muted-foreground">Add new design visualizations with images and tags</p>

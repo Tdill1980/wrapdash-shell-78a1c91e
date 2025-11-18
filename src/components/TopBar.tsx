@@ -7,7 +7,8 @@ interface TopBarProps {
 
 export const TopBar = ({ onMenuClick }: TopBarProps) => {
   return (
-    <header className="h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-5 sticky top-0 z-50">
+    <header className="h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-5 sticky top-0 z-50 relative">
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-primary opacity-60"></div>
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -21,7 +22,7 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
         <div className="hidden sm:block">
           <h1 className="text-2xl font-bold font-poppins tracking-tight">
             <span className="text-white">Wrap</span>
-            <span className="bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent">Command</span>
+            <span className="text-gradient">Command</span>
             <span className="text-white"> Mission Control Board</span>
           </h1>
         </div>

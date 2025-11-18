@@ -210,7 +210,7 @@ export default function MightyCustomer() {
         <div className="mb-4">
           <h1 className="text-2xl font-bold tracking-tight font-poppins">
             <span className="text-foreground">Mighty</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Customer</span>
+            <span className="text-gradient">Customer</span>
             <span className="text-muted-foreground text-sm align-super">™</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
