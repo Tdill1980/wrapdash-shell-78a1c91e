@@ -8,6 +8,7 @@ export interface ShopFlowOrder {
   order_number: string;
   approveflow_project_id?: string;
   customer_name: string;
+  customer_email?: string;
   product_type: string;
   status: string;
   priority?: string;
@@ -19,6 +20,9 @@ export interface ShopFlowOrder {
   shipped_at?: string;
   created_at: string;
   updated_at: string;
+  vehicle_info?: any;
+  files?: any;
+  timeline?: any;
 }
 
 export interface ShopFlowLog {
