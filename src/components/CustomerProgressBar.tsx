@@ -1,17 +1,13 @@
+import { Package, Upload, CheckCircle, Eye, Printer, Scissors, Truck } from "lucide-react";
+
 const CUSTOMER_STEPS = [
-  "Order Received",
-  "Awaiting Payment",
-  "Files Needed",
-  "Files Received",
-  "Preflight",
-  "Awaiting Your Approval",
-  "Preparing Print Files",
-  "Printing Your Wrap",
-  "Finishing Your Wrap",
-  "Quality Check",
-  "Ready for Pickup",
-  "Shipped",
-  "Completed"
+  { label: "Order Received", icon: Package },
+  { label: "Files Received", icon: Upload },
+  { label: "Preflight", icon: CheckCircle },
+  { label: "Awaiting Approval", icon: Eye },
+  { label: "Print Production", icon: Printer },
+  { label: "In Production", icon: Scissors },
+  { label: "Ready/Shipped", icon: Truck },
 ];
 
 interface CustomerProgressBarProps {
@@ -19,48 +15,50 @@ interface CustomerProgressBarProps {
 }
 
 export const CustomerProgressBar = ({ currentStatus }: CustomerProgressBarProps) => {
-  // Map internal status to customer-friendly display
+  // Map internal status to simplified customer stages
   const statusMap: Record<string, string> = {
     "order_received": "Order Received",
-    "awaiting_payment": "Awaiting Payment",
-    "in_design": "Files Needed",
-    "action_required": "Files Needed",
-    "awaiting_approval": "Awaiting Your Approval",
-    "preparing_for_print": "Preparing Print Files",
-    "in_production": "Printing Your Wrap",
-    "ready_or_shipped": "Ready for Pickup",
-    "completed": "Completed"
+    "awaiting_payment": "Order Received",
+    "in_design": "Files Received",
+    "action_required": "Files Received",
+    "awaiting_approval": "Awaiting Approval",
+    "preparing_for_print": "Print Production",
+    "in_production": "In Production",
+    "ready_or_shipped": "Ready/Shipped",
+    "completed": "Ready/Shipped"
   };
 
-  const displayStatus = statusMap[currentStatus] || currentStatus;
+  const displayStatus = statusMap[currentStatus] || "Order Received";
   const currentIndex = CUSTOMER_STEPS.findIndex(step => 
-    step.toLowerCase().includes(displayStatus.toLowerCase())
+    step.label === displayStatus
   );
 
   return (
-    <div className="w-full py-6">
-      {/* Progress dots */}
-      <div className="flex items-center justify-between gap-2 mb-4">
+    <div className="w-full py-6 bg-[#0A0A0F]">
+      {/* Progress icons with labels */}
+      <div className="flex items-center justify-between gap-2 px-4 overflow-x-auto">
         {CUSTOMER_STEPS.map((step, i) => {
           const active = i <= currentIndex;
+          const Icon = step.icon;
+          
           return (
-            <div key={i} className="flex-1 flex flex-col items-center">
+            <div key={step.label} className="flex flex-col items-center min-w-[80px]">
               <div 
-                className={`h-3 w-3 rounded-full transition-all ${
+                className={`h-10 w-10 flex items-center justify-center rounded-full transition-all ${
                   active 
-                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF]" 
-                    : "bg-gray-600"
-                }`} 
-              />
+                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg" 
+                    : "bg-gray-700"
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${active ? 'text-white' : 'text-white/40'}`} />
+              </div>
+              <p className={`text-xs mt-2 text-center ${active ? 'text-[#15D1FF]' : 'text-white/40'}`}>
+                {step.label}
+              </p>
             </div>
           );
         })}
       </div>
-
-      {/* Current status label */}
-      <p className="text-center text-sm font-medium text-white">
-        {displayStatus}
-      </p>
     </div>
   );
 };

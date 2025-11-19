@@ -3,7 +3,13 @@ import { useShopFlow } from "@/hooks/useShopFlow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Package, Car, User, Activity, ArrowRight, CheckCircle, Palette, AlertCircle, FileText, Printer, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ShopFlowHeader } from "@/components/ShopFlowHeader";
+import { ShopFlowBrandHeader } from "@/components/ShopFlowBrandHeader";
+import { UploadedFilesCard } from "@/modules/shopflow/components/UploadedFilesCard";
+import { OrderInfoCard } from "@/components/tracker/OrderInfoCard";
+import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
+import { NextStepCard } from "@/components/tracker/NextStepCard";
+import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
+import { TimelineCard } from "@/components/tracker/TimelineCard";
 
 import { VehicleInfoCard } from "@/modules/shopflow/components/VehicleInfoCard";
 import { CustomerInfoCard } from "@/modules/shopflow/components/CustomerInfoCard";
@@ -73,25 +79,29 @@ export default function ShopFlowInternal() {
   const artworkFiles = extractFiles(order);
   const missing = detectMissing({ ...order, files: artworkFiles });
   const timeline = buildProductionTimeline(order);
-
-  const vehicleInfo = order.vehicle_info as any;
-  const vehicleDisplay = vehicleInfo 
-    ? `${vehicleInfo.year || ''} ${vehicleInfo.make || ''} ${vehicleInfo.model || ''}`.trim()
-    : 'Vehicle Info Pending';
+  const files = (order.files as any[]) || [];
+  const missingFiles = ((order as any).missing_file_list as any) || [];
+  const fileErrors = ((order as any).file_error_details as any) || [];
+  const sharedTimeline = [
+    { label: "Order Received", timestamp: order.created_at, completed: true },
+    { label: "Files Received", timestamp: "", completed: internalStatus !== "order_received" },
+    { label: "Preflight", timestamp: "", completed: ["awaiting_approval", "preparing_for_print", "in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
+    { label: "Awaiting Approval", timestamp: "", completed: ["preparing_for_print", "in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
+    { label: "Print Production", timestamp: "", completed: ["in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
+    { label: "Ready/Shipped", timestamp: order.shipped_at || "", completed: ["ready_or_shipped", "completed"].includes(internalStatus) },
+  ];
 
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
       <div className="container mx-auto py-8 px-4 max-w-6xl">
-        {/* ShopFlow™ Gradient Header */}
-        <ShopFlowHeader
-          orderNumber={order.woo_order_number ?? order.order_number}
-          productName={order.product_type}
-          customerName={order.customer_name}
-          vehicle={vehicleDisplay}
-        />
-
-        {/* Customer Progress Bar */}
-        <CustomerProgressBar currentStatus={order.status} />
+        <ShopFlowBrandHeader />
+        <CustomerProgressBar currentStatus={internalStatus} />
+        <div className="mb-6"><UploadedFilesCard files={files} missingFiles={missingFiles} fileErrors={fileErrors} internalMode={true} orderId={order.id} /></div>
+        <div className="mb-6"><OrderInfoCard order={order} /></div>
+        <div className="mb-6"><CurrentStageCard order={{ customer_stage: internalStatus }} /></div>
+        <div className="mb-6"><NextStepCard order={{ customer_stage: internalStatus }} /></div>
+        <div className="mb-6"><OrderSummaryCard order={order} /></div>
+        <div className="mb-6"><TimelineCard timeline={sharedTimeline} /></div>
 
         {/* Current Stage Card */}
         <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
