@@ -105,7 +105,11 @@ export const AffiliateAdmin = () => {
   return (
     <div className="p-8 text-white flex flex-col gap-8">
       <div className="bg-[#0A0A0F] p-6 rounded-2xl border border-white/10">
-        <h1 className="text-3xl font-bold">Affiliate Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold font-poppins">
+          <span className="text-white">Mighty</span>
+          <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Affiliate</span>
+          <span className="text-white"> Admin Dashboard</span>
+        </h1>
         <p className="text-[#B8B8C7] mt-2">
           Manage affiliates, commissions, product payouts, and platform-wide performance.
         </p>

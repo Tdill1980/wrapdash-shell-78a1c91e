@@ -112,8 +112,10 @@ export default function AffiliatePayments() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00AFFF] via-[#008CFF] to-[#4EEAFF] bg-clip-text text-transparent">
-          Affiliate Payments
+        <h1 className="text-3xl font-bold font-poppins">
+          <span className="text-white">Mighty</span>
+          <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Affiliate</span>
+          <span className="text-white"> Payments</span>
         </h1>
         <p className="text-muted-foreground mt-1">Manage and process monthly affiliate commissions</p>
       </div>

@@ -331,7 +331,7 @@ export const SignupWizard = () => {
             <div>
               <h2 className="text-3xl font-bold text-white mb-2">Application Submitted!</h2>
               <p className="text-muted-foreground">
-                Thank you for your interest in becoming a MightyAffiliate partner.
+                Thank you for your interest in becoming a <span className="font-poppins font-semibold"><span className="text-white">Mighty</span><span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Affiliate</span></span> partner.
               </p>
             </div>
             <div className="p-6 bg-background rounded-lg border border-border text-left">
