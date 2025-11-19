@@ -10,6 +10,8 @@ import { ProofViewer } from "@/modules/shopflow/components/ProofViewer";
 import { Timeline } from "@/modules/shopflow/components/Timeline";
 import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
 import { FilesCard } from "@/modules/shopflow/components/FilesCard";
+import { ShopFlowHeader } from "@/components/ShopFlowHeader";
+import { InternalProductionTracker } from "@/components/InternalProductionTracker";
 
 import {
   getProductionStage,
@@ -72,28 +74,27 @@ export default function ShopFlowInternal() {
   return (
     <div className={`container mx-auto text-white ${isMobile ? 'px-4 py-6' : 'px-6 py-10'}`}>
 
-      {/* Sticky Gradient Header */}
-      <div className="sticky top-0 z-50 bg-[#0B0B10]/90 backdrop-blur-md py-3 border-b border-white/10">
-        <div className="w-full h-[8px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#5AAEFF] to-[#0047FF]" />
-      </div>
+      {/* ShopFlow™ Header */}
+      <ShopFlowHeader
+        orderNumber={order.woo_order_number ?? order.order_number}
+        productName={order.product_type}
+        customerName={order.customer_name}
+        vehicle={order.vehicle_info}
+      />
 
-      {/* Job Header */}
-      <div className={isMobile ? 'mb-6' : 'mb-10'}>
-        <h1 className={`font-bold ${isMobile ? 'text-2xl' : 'text-3xl'}`}>Order #{order.woo_order_number ?? order.order_number}</h1>
-        <p className="text-gray-400">{order.customer_name}</p>
+      {/* Internal Production Tracker */}
+      <InternalProductionTracker internalStatus={internalStage} />
 
-        <div className={`flex gap-4 mt-4 ${isMobile ? 'flex-col' : ''}`}>
-          <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
-            <span className="text-gray-400">Internal Stage:</span>{" "}
-            <span className="text-white">{internalStage}</span>
-          </div>
-          <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
-            <span className="text-gray-400">WooCommerce:</span>{" "}
-            <span className="text-white">{order.status}</span>
-          </div>
+      {/* Job Status Info */}
+      <div className={`flex gap-4 ${isMobile ? 'flex-col mb-6' : 'mb-10'}`}>
+        <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
+          <span className="text-gray-400">Internal Stage:</span>{" "}
+          <span className="text-white">{internalStage}</span>
         </div>
-
-        <p className="text-gray-300 text-sm mt-4">{stageDescription}</p>
+        <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
+          <span className="text-gray-400">WooCommerce:</span>{" "}
+          <span className="text-white">{order.status}</span>
+        </div>
       </div>
 
       {/* FULL-WIDTH INTERNAL PRODUCTION TRACKER */}

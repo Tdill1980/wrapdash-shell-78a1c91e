@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { wooToInternalStatus, internalToCustomerStatus } from "@/lib/status-mapping";
+import { ShopFlowHeader } from "@/components/ShopFlowHeader";
+import { CustomerProgressBar } from "@/components/CustomerProgressBar";
 
 export default function TrackJob() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
@@ -114,15 +116,16 @@ export default function TrackJob() {
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
       <div className="container mx-auto py-8 px-4 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            Track Your Order
-          </h1>
-          <p className="text-[#B7B7C5]">
-            Order #{order.woo_order_number ?? order.order_number}
-          </p>
-        </div>
+        {/* ShopFlow™ Header */}
+        <ShopFlowHeader
+          orderNumber={order.woo_order_number ?? order.order_number}
+          productName={order.product_type}
+          customerName={order.customer_name}
+          vehicle={order.vehicle_info}
+        />
+
+        {/* Customer Progress Bar */}
+        <CustomerProgressBar currentStatus={internalStatus} />
 
         {/* Main Status Card */}
         <Card className="p-6 md:p-8 mb-6 bg-[#111118] border-white/5">
