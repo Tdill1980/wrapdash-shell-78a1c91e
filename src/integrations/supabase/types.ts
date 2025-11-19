@@ -883,6 +883,9 @@ export type Database = {
         Row: {
           auto_retarget: boolean | null
           click_count: number | null
+          conversion_date: string | null
+          conversion_revenue: number | null
+          converted_to_order: boolean | null
           created_at: string
           customer_company: string | null
           customer_email: string
@@ -912,10 +915,14 @@ export type Database = {
           vehicle_model: string | null
           vehicle_year: string | null
           wc_sync_status: string | null
+          woo_order_id: string | null
         }
         Insert: {
           auto_retarget?: boolean | null
           click_count?: number | null
+          conversion_date?: string | null
+          conversion_revenue?: number | null
+          converted_to_order?: boolean | null
           created_at?: string
           customer_company?: string | null
           customer_email: string
@@ -945,10 +952,14 @@ export type Database = {
           vehicle_model?: string | null
           vehicle_year?: string | null
           wc_sync_status?: string | null
+          woo_order_id?: string | null
         }
         Update: {
           auto_retarget?: boolean | null
           click_count?: number | null
+          conversion_date?: string | null
+          conversion_revenue?: number | null
+          converted_to_order?: boolean | null
           created_at?: string
           customer_company?: string | null
           customer_email?: string
@@ -978,6 +989,7 @@ export type Database = {
           vehicle_model?: string | null
           vehicle_year?: string | null
           wc_sync_status?: string | null
+          woo_order_id?: string | null
         }
         Relationships: []
       }
