@@ -31,7 +31,7 @@ export function ShopFlowCard({ order, internalStatus }: ShopFlowCardProps) {
             {order.product_type}
           </h4>
           <p className="text-sm text-muted-foreground">
-            Order #{order.order_number}
+            Order #{order.woo_order_number ?? order.order_number}
           </p>
           <p className="text-xs text-muted-foreground mt-1 truncate">
             {order.customer_name}

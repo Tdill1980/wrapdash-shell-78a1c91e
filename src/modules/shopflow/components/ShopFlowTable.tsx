@@ -45,7 +45,7 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
                     {order.product_type}
                   </h4>
                   <p className="text-sm text-muted-foreground">
-                    Order #{order.order_number}
+                    Order #{order.woo_order_number ?? order.order_number}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1 truncate">
                     {order.customer_name}
@@ -100,10 +100,10 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
                       {order.product_type}
                     </span>
                   </div>
-                </TableCell>
-                <TableCell className="text-foreground">
-                  {order.order_number}
-                </TableCell>
+                  </TableCell>
+                  <TableCell className="text-foreground">
+                    {order.woo_order_number ?? order.order_number}
+                  </TableCell>
                 <TableCell className="text-muted-foreground">
                   {order.customer_name}
                 </TableCell>

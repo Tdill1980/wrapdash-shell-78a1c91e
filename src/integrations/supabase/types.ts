@@ -1200,6 +1200,8 @@ export type Database = {
           tracking_url: string | null
           updated_at: string
           vehicle_info: Json | null
+          woo_order_id: number | null
+          woo_order_number: number | null
         }
         Insert: {
           affiliate_ref_code?: string | null
@@ -1227,6 +1229,8 @@ export type Database = {
           tracking_url?: string | null
           updated_at?: string
           vehicle_info?: Json | null
+          woo_order_id?: number | null
+          woo_order_number?: number | null
         }
         Update: {
           affiliate_ref_code?: string | null
@@ -1254,6 +1258,8 @@ export type Database = {
           tracking_url?: string | null
           updated_at?: string
           vehicle_info?: Json | null
+          woo_order_id?: number | null
+          woo_order_number?: number | null
         }
         Relationships: [
           {

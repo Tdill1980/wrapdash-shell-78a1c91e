@@ -79,7 +79,7 @@ export default function ShopFlowInternal() {
 
       {/* Job Header */}
       <div className={isMobile ? 'mb-6' : 'mb-10'}>
-        <h1 className={`font-bold ${isMobile ? 'text-2xl' : 'text-3xl'}`}>Order #{order.order_number}</h1>
+        <h1 className={`font-bold ${isMobile ? 'text-2xl' : 'text-3xl'}`}>Order #{order.woo_order_number ?? order.order_number}</h1>
         <p className="text-gray-400">{order.customer_name}</p>
 
         <div className={`flex gap-4 mt-4 ${isMobile ? 'flex-col' : ''}`}>

@@ -120,7 +120,7 @@ export default function TrackJob() {
             Track Your Order
           </h1>
           <p className="text-[#B7B7C5]">
-            Order #{order.order_number}
+            Order #{order.woo_order_number ?? order.order_number}
           </p>
         </div>
 

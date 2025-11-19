@@ -6,6 +6,8 @@ import { wooToInternalStatus, internalToCustomerStatus, type InternalStatus } fr
 export interface ShopFlowOrder {
   id: string;
   order_number: string;
+  woo_order_id?: number | null;
+  woo_order_number?: number | null;
   approveflow_project_id?: string;
   customer_name: string;
   customer_email?: string;

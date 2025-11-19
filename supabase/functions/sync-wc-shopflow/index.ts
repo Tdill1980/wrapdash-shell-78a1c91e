@@ -224,6 +224,8 @@ serve(async (req) => {
           customer_email: customerEmail,
           vehicle_info: vehicleInfo,
           affiliate_ref_code: affiliateRefCode,
+          woo_order_id: payload.id,
+          woo_order_number: payload.number,
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
@@ -297,6 +299,8 @@ serve(async (req) => {
         vehicle_info: vehicleInfo,
         timeline: initialTimeline,
         files,
+        woo_order_id: payload.id,
+        woo_order_number: payload.number,
         approveflow_project_id: approveflowProject?.id || null,
         priority: 'normal',
         affiliate_ref_code: affiliateRefCode,
