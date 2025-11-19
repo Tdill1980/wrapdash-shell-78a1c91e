@@ -14,6 +14,7 @@ import {
   DollarSign,
   Settings,
   Mail,
+  TrendingUp,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-car.png";
 
@@ -73,6 +74,17 @@ const navigationItems = [
   { name: "ShopFlow Internal", path: "/shopflow-internal", icon: ShoppingCart },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
+  { 
+    name: "Affiliate Dashboard", 
+    path: "/affiliate/dashboard", 
+    icon: TrendingUp,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Affiliate </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Dashboard</span>
+      </span>
+    )
+  },
   { 
     name: "MightyAffiliate", 
     path: "/affiliate/admin", 
