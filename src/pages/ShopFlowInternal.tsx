@@ -28,6 +28,7 @@ import {
   buildProductionTimeline,
   detectMissing
 } from "@/modules/shopflow/utils/stageEngine";
+import { wooToInternalStatus } from "@/lib/status-mapping";
 
 // Extract WooCommerce files
 function extractFiles(order: any) {
@@ -75,6 +76,7 @@ export default function ShopFlowInternal() {
 
   // Internal production logic
   const internalStage = getProductionStage(order.status);
+  const internalStatus = wooToInternalStatus[order.status] || "order_received";
   const stageDescription = getProductionStageDescription(internalStage);
   const artworkFiles = extractFiles(order);
   const missing = detectMissing({ ...order, files: artworkFiles });
