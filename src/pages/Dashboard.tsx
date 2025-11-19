@@ -31,6 +31,7 @@ import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useProducts } from "@/hooks/useProducts";
 import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
+import VoiceCommand from "@/components/VoiceCommand";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -309,27 +310,14 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
-                {/* Voice Command Button - Small in corner */}
-                <Button
-                  size="sm"
-                  onMouseDown={handleVoiceButtonDown}
-                  onMouseUp={handleVoiceButtonUp}
-                  onTouchStart={handleVoiceButtonDown}
-                  onTouchEnd={handleVoiceButtonUp}
-                  disabled={isProcessing}
-                  className={`${
-                    isRecording 
-                      ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                      : 'bg-gradient-primary hover:opacity-90'
-                  } text-white w-8 h-8 p-0`}
-                  title={isRecording ? 'Recording...' : isProcessing ? 'Processing...' : 'Intelligent VoiceCommand'}
-                >
-                  <Mic className="w-4 h-4" />
-                </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
+            {/* VoiceCommand Component */}
+            <div className="-mx-6 mb-4">
+              <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
+            </div>
             <div className="space-y-3">
               {/* Category Filter Buttons */}
               <div>
