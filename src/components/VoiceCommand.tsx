@@ -119,28 +119,55 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
 
   return (
     <div className="sticky top-0 z-50 bg-gradient-to-r from-[#0A0A0F] via-[#121218] to-[#16161E] border-b border-border/30 backdrop-blur-sm">
-      <div className="px-4 py-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Mic className="w-4 h-4 text-primary" />
-          <span className="text-xs font-bold text-foreground tracking-wide">
-            Speak to MightyCustomer™ — VoiceCommand AI
-          </span>
+      <div className="px-4 py-4 space-y-3">
+        {/* Header with branding */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-gradient-to-r from-[#8FD3FF] to-[#0047FF]">
+              <Mic className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF] bg-clip-text text-transparent">
+                VoiceCommand AI™
+              </h3>
+              <p className="text-[10px] text-muted-foreground">Powered by MightyCustomer</p>
+            </div>
+          </div>
+          {isRecording && (
+            <span className="text-xs text-primary font-medium animate-pulse">
+              ● RECORDING
+            </span>
+          )}
         </div>
+
+        {/* Instructions */}
+        <div className="bg-[#0F0F14] border border-border/40 rounded-lg p-3">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <span className="text-foreground font-semibold">Hold down</span> the button below and speak naturally. 
+            Include <span className="text-foreground">vehicle details, customer info, service type,</span> and any special requests. 
+            Release when finished — fields auto-populate instantly.
+          </p>
+        </div>
+
+        {/* Voice Button */}
         <button
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onTouchStart={handleMouseDown}
           onTouchEnd={handleMouseUp}
-          className={`w-full px-4 py-3 rounded-md border transition-all duration-200 ${
+          className={`w-full px-4 py-4 rounded-lg border-2 transition-all duration-200 ${
             isRecording
-              ? "bg-primary/15 border-primary/60 shadow-[0_0_16px_rgba(168,85,247,0.2)]"
-              : "bg-[#0F0F14] border-border/40 hover:border-primary/40 hover:bg-[#141419]"
+              ? "bg-gradient-to-r from-[#8FD3FF]/10 via-[#6AB9FF]/10 to-[#0047FF]/10 border-[#0047FF] shadow-[0_0_20px_rgba(0,71,255,0.3)]"
+              : "bg-[#0F0F14] border-border/40 hover:border-[#0047FF]/60 hover:bg-[#141419]"
           }`}
         >
-          <div className="flex items-center justify-center gap-2">
-            <Mic className={`w-4 h-4 ${isRecording ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
-            <span className="text-xs text-foreground font-medium">
-              {isRecording ? "Listening... (Release when done)" : "Hold to speak your full job request..."}
+          <div className="flex flex-col items-center gap-2">
+            <Mic className={`w-6 h-6 ${isRecording ? "text-[#0047FF] animate-pulse" : "text-muted-foreground"}`} />
+            <span className="text-sm text-foreground font-semibold">
+              {isRecording ? "Listening... Release when done" : "Hold & Speak"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {isRecording ? "Recording in progress..." : "Press and hold to start"}
             </span>
           </div>
         </button>
