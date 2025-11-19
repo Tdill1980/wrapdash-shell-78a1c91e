@@ -8,6 +8,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { VehicleSelector } from "../components/VehicleSelector";
 import { FinishSelector } from "../components/FinishSelector";
 import { DesignUploader } from "../components/DesignUploader";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function WBTY() {
   const { organizationId, subscriptionTier } = useOrganization();

@@ -15,6 +15,7 @@ import { RenderResults } from "../components/RenderResults";
 import { useRenderPolling } from "../hooks/useRenderPolling";
 import { getColorById } from "../lib/infusion-colors";
 import { generateVisualizationTags } from "../lib/tag-engine";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function Visualize() {
   const { organizationId, subscriptionTier } = useOrganization();
@@ -234,7 +235,9 @@ export default function Visualize() {
   };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-6">
+    <MainLayout>
+      <div className="space-y-6 w-full">
+        <div className="grid lg:grid-cols-2 gap-6">
       {/* Left Panel - Configuration */}
       <div className="space-y-6">
         <Card className="p-6 bg-card border-border rounded-2xl">
@@ -360,6 +363,8 @@ export default function Visualize() {
           colorInfo={{ hex: customColorHex || getColorById(selectedColorId)?.hex || "", name: customColorName || getColorById(selectedColorId)?.name || "" }}
         />
       </div>
-    </div>
+        </div>
+      </div>
+    </MainLayout>
   );
 }

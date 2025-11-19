@@ -7,6 +7,7 @@ import { FilterSidebar } from "../components/FilterSidebar";
 import type { DesignVisualization } from "../hooks/useDesignVault";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function DesignVault() {
   const navigate = useNavigate();
@@ -23,7 +24,8 @@ export default function DesignVault() {
   };
 
   return (
-    <div className="space-y-5 max-w-7xl">
+    <MainLayout>
+      <div className="space-y-5 w-full">
       {/* Hero Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -77,6 +79,7 @@ export default function DesignVault() {
         open={modalOpen}
         onOpenChange={setModalOpen}
       />
-    </div>
+      </div>
+    </MainLayout>
   );
 }

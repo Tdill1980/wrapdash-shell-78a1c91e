@@ -1,9 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function MonthlyDrops() {
   return (
-    <div className="space-y-6 max-w-4xl">
+    <MainLayout>
+      <div className="space-y-6 w-full">
       <div>
         <h1 className="text-3xl font-bold tracking-tight font-poppins">
           <span className="text-foreground">Monthly</span>
@@ -29,6 +31,7 @@ export default function MonthlyDrops() {
           </p>
         </div>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
