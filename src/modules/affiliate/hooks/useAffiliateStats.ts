@@ -38,8 +38,34 @@ export const useAffiliateStats = (founderId?: string) => {
     }
   };
 
+  // Calculate status-based totals
+  const pendingTotal = commissions
+    .filter((c) => c.status === 'pending')
+    .reduce((sum, c) => sum + c.commissionAmount, 0);
+
+  const approvedTotal = commissions
+    .filter((c) => c.status === 'approved')
+    .reduce((sum, c) => sum + c.commissionAmount, 0);
+
+  const paidThisMonth = commissions
+    .filter((c) => {
+      if (!c.createdAt || c.status !== 'paid') return false;
+      const commDate = new Date(c.createdAt);
+      const now = new Date();
+      return (
+        commDate.getMonth() === now.getMonth() &&
+        commDate.getFullYear() === now.getFullYear()
+      );
+    })
+    .reduce((sum, c) => sum + c.commissionAmount, 0);
+
   return {
-    stats,
+    stats: stats ? {
+      ...stats,
+      pendingTotal,
+      approvedTotal,
+      paidThisMonth,
+    } : null,
     commissions,
     loading,
     refresh: () => {

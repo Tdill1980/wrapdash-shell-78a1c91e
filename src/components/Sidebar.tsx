@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Briefcase,
   Award,
+  DollarSign,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo.png";
 
@@ -27,6 +28,7 @@ const navigationItems = [
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
   { name: "MightyAffiliate", path: "/affiliate/admin", icon: Award },
+  { name: "Affiliate Payments", path: "/affiliate/payments", icon: DollarSign },
 ];
 
 export const Sidebar = () => {

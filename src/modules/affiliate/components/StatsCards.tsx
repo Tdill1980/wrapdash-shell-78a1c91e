@@ -12,6 +12,7 @@ export const StatsCards = ({ stats, loading }: StatsCardsProps) => {
     {
       title: 'Total Earnings',
       value: stats ? `$${stats.totalEarnings.toFixed(2)}` : '$0.00',
+      subtitle: stats ? `Pending: $${(stats as any).pendingTotal?.toFixed(2) || '0.00'} | Approved: $${(stats as any).approvedTotal?.toFixed(2) || '0.00'}` : '',
       icon: DollarSign,
       gradient: 'from-[#00AFFF] to-[#0047FF]',
     },
@@ -58,6 +59,9 @@ export const StatsCards = ({ stats, loading }: StatsCardsProps) => {
               <div>
                 <p className="text-sm text-[#B8B8C7] mb-1">{card.title}</p>
                 <p className="text-2xl font-bold text-white">{card.value}</p>
+                {(card as any).subtitle && (
+                  <p className="text-xs text-[#B8B8C7] mt-1">{(card as any).subtitle}</p>
+                )}
               </div>
               <div className={`p-3 rounded-lg bg-gradient-to-br ${card.gradient}`}>
                 <Icon className="w-5 h-5 text-white" />

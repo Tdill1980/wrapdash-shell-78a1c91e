@@ -51,33 +51,45 @@ export type Database = {
       }
       affiliate_commissions: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           commission_amount: number
           created_at: string | null
           customer_email: string
           founder_id: string
           id: string
+          notes: string | null
           order_number: string
           order_total: number
+          paid_at: string | null
           status: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           commission_amount: number
           created_at?: string | null
           customer_email: string
           founder_id: string
           id?: string
+          notes?: string | null
           order_number: string
           order_total: number
+          paid_at?: string | null
           status?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           commission_amount?: number
           created_at?: string | null
           customer_email?: string
           founder_id?: string
           id?: string
+          notes?: string | null
           order_number?: string
           order_total?: number
+          paid_at?: string | null
           status?: string | null
         }
         Relationships: [
@@ -652,6 +664,7 @@ export type Database = {
       }
       shopflow_orders: {
         Row: {
+          affiliate_ref_code: string | null
           approveflow_project_id: string | null
           assigned_to: string | null
           created_at: string
@@ -677,6 +690,7 @@ export type Database = {
           vehicle_info: Json | null
         }
         Insert: {
+          affiliate_ref_code?: string | null
           approveflow_project_id?: string | null
           assigned_to?: string | null
           created_at?: string
@@ -702,6 +716,7 @@ export type Database = {
           vehicle_info?: Json | null
         }
         Update: {
+          affiliate_ref_code?: string | null
           approveflow_project_id?: string | null
           assigned_to?: string | null
           created_at?: string
