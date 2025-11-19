@@ -21,6 +21,7 @@ import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
 import { FilesCard } from "@/modules/shopflow/components/FilesCard";
 import { CustomerProgressBar } from "@/components/CustomerProgressBar";
 import { InternalProductionTracker } from "@/components/InternalProductionTracker";
+import { MainLayout } from "@/layouts/MainLayout";
 
 import {
   getProductionStage,
@@ -60,17 +61,21 @@ export default function ShopFlowInternal() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Loading internal job…
-      </div>
+      <MainLayout userName="Trish">
+        <div className="flex items-center justify-center min-h-screen text-gray-400">
+          Loading internal job…
+        </div>
+      </MainLayout>
     );
   }
 
   if (!order) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Job not found.
-      </div>
+      <MainLayout userName="Trish">
+        <div className="flex items-center justify-center min-h-screen text-gray-400">
+          Job not found.
+        </div>
+      </MainLayout>
     );
   }
 
@@ -94,7 +99,8 @@ export default function ShopFlowInternal() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F]">
+    <MainLayout userName="Trish">
+      <div className="min-h-screen bg-[#0A0A0F]">
       <div className="container mx-auto py-8 px-4 max-w-6xl">
         <ShopFlowBrandHeader />
         <CustomerProgressBar currentStatus={internalStatus} />
@@ -278,5 +284,6 @@ export default function ShopFlowInternal() {
       </div>
       </div>
     </div>
+    </MainLayout>
   );
 }
