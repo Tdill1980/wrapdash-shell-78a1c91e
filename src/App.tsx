@@ -29,7 +29,7 @@ import DesignVaultAdmin from "./pages/DesignVaultAdmin";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
-import { AffiliateCard, AffiliateDashboard, AffiliateAdmin } from "./modules/affiliate";
+import { AffiliateCard, AffiliateDashboard, AffiliateAdmin, AffiliateSignup } from "./modules/affiliate";
 import AffiliatePayments from "./modules/affiliate/pages/AffiliatePayments";
 
 const queryClient = new QueryClient();
@@ -66,6 +66,7 @@ const App = () => (
             <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
           <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
           <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+          <Route path="/affiliate/signup" element={<AffiliateSignup />} />
           <Route path="/affiliate/admin" element={<AppLayout><AffiliateAdmin /></AppLayout>} />
           <Route path="/affiliate/payments" element={<AppLayout><AffiliatePayments /></AppLayout>} />
             <Route path="/auth" element={<Auth />} />
