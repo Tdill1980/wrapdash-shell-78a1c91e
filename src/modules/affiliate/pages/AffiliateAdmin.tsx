@@ -3,7 +3,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { affiliateApi, AffiliateFounder } from '../services/affiliateApi';
 import { useAdminActions } from '../hooks/useAdminActions';
 import { AffiliateAdminView } from './AffiliateAdminView';
-import { Mail, ToggleLeft, ToggleRight, Download } from 'lucide-react';
+import { Mail, ToggleLeft, ToggleRight, Download, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const AffiliateAdmin = () => {
@@ -98,6 +98,16 @@ export const AffiliateAdmin = () => {
               </p>
               
               <div className="flex flex-col gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(`/affiliate/card/${f.affiliateCode}`, '_blank');
+                  }}
+                  className="px-3 py-1 rounded-lg bg-gradient-to-r from-[#00AFFF] to-[#0047FF] hover:opacity-90 transition text-xs flex items-center gap-2"
+                >
+                  <ExternalLink size={12} /> Preview Card
+                </button>
+                
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
