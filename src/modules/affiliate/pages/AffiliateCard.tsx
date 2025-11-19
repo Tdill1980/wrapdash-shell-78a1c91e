@@ -157,12 +157,22 @@ export const AffiliateCard = () => {
             </div>
           )}
 
-          <Button
-            onClick={handleConnect}
-            className="w-full bg-gradient-to-r from-[#00AFFF] to-[#0047FF] text-white text-lg py-6"
-          >
-            Connect & Get Started
-          </Button>
+          <div className="space-y-3">
+            <Button
+              onClick={handleConnect}
+              className="w-full bg-gradient-to-r from-[#00AFFF] to-[#0047FF] text-white text-lg py-6 hover:opacity-90 transition"
+            >
+              Connect & Get Started
+            </Button>
+
+            <Button
+              onClick={() => window.location.href = '/affiliate/dashboard?token=demo'}
+              variant="outline"
+              className="w-full border-[#00AFFF] text-[#00AFFF] hover:bg-[#00AFFF]/10 text-lg py-6"
+            >
+              Access My Dashboard
+            </Button>
+          </div>
 
           <p className="text-xs text-[#B8B8C7] text-center mt-4">
             By clicking Connect, you'll be referred by {founder.full_name}
