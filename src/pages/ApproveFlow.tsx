@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { MainLayout } from "@/layouts/MainLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -214,25 +215,30 @@ export default function ApproveFlow() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <MainLayout userName="Trish">
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
     );
   }
 
   if (!project) {
     return (
-      <div className="flex flex-col items-center justify-center h-96 space-y-4">
-        <p className="text-muted-foreground">No project found</p>
-        <Button onClick={() => window.location.reload()}>Refresh</Button>
-      </div>
+      <MainLayout userName="Trish">
+        <div className="flex flex-col items-center justify-center h-96 space-y-4">
+          <p className="text-muted-foreground">No project found</p>
+          <Button onClick={() => window.location.reload()}>Refresh</Button>
+        </div>
+      </MainLayout>
     );
   }
 
   const progressSteps = getProgressSteps();
 
   return (
-    <div className="space-y-6 max-w-[1600px]">
+    <MainLayout userName="Trish">
+      <div className="space-y-6 max-w-[1600px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -633,6 +639,7 @@ export default function ApproveFlow() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

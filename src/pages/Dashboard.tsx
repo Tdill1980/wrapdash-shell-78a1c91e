@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { MainLayout } from "@/layouts/MainLayout";
 import {
   Database,
   Mail,
@@ -280,7 +281,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-4 max-w-[1600px]">
+    <MainLayout userName="Trish">
+      <div className="space-y-4 max-w-[1600px]">
 
       {/* Product Type Chips */}
       <div className="flex flex-wrap gap-2">
@@ -970,5 +972,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
     </div>
+    </MainLayout>
   );
 }
