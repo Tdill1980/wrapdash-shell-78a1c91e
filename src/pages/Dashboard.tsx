@@ -34,6 +34,7 @@ import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
 import VoiceCommand from "@/components/VoiceCommand";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
+import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -784,6 +785,9 @@ export default function Dashboard() {
         
         {/* UTIM Analytics Dashboard */}
         <UTIMAnalyticsDashboard />
+        
+        {/* Tone & Design Performance */}
+        <ToneDesignPerformance />
       </div>
     </div>
 
