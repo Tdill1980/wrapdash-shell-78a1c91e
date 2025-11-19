@@ -9,9 +9,24 @@ export const useAffiliate = (token?: string) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Special demo path: load Jessica directly without magic link
+    if (token === 'demo') {
+      loadDemoFounder();
+      return;
+    }
+
     if (token) {
       verifyToken(token);
     } else {
+      const stored = sessionStorage.getItem('affiliate_founder');
+      if (stored) {
+        try {
+          setFounder(JSON.parse(stored));
+        } catch (e) {
+          console.error('Failed to parse stored affiliate founder', e);
+          sessionStorage.removeItem('affiliate_founder');
+        }
+      }
       setLoading(false);
     }
   }, [token]);
@@ -38,6 +53,41 @@ export const useAffiliate = (token?: string) => {
       toast({
         title: 'Error',
         description: 'Failed to verify your login token.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDemoFounder = async () => {
+    try {
+      setLoading(true);
+      // Load demo founder by code for Jessica (VINYLVIXEN)
+      const rawData = await affiliateApi.getFounderByCode('VINYLVIXEN');
+      
+      // Transform snake_case DB fields to camelCase
+      const founderData: AffiliateFounder = {
+        id: rawData.id,
+        affiliateCode: rawData.affiliate_code,
+        fullName: rawData.full_name,
+        email: rawData.email,
+        commissionRate: rawData.commission_rate,
+        avatarUrl: rawData.avatar_url,
+        bio: rawData.bio,
+        companyName: rawData.company_name,
+        phone: rawData.phone,
+        socialLinks: (rawData.social_links || {}) as Record<string, string>,
+        isActive: rawData.is_active,
+      };
+      
+      setFounder(founderData);
+      sessionStorage.setItem('affiliate_founder', JSON.stringify(founderData));
+    } catch (err) {
+      console.error('Demo founder load error:', err);
+      toast({
+        title: 'Error',
+        description: 'Unable to load demo affiliate dashboard.',
         variant: 'destructive',
       });
     } finally {
