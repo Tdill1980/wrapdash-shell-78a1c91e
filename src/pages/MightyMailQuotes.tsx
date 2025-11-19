@@ -31,6 +31,11 @@ interface Quote {
   email_tone: string;
   email_design: string;
   created_at: string;
+  utim_score?: number;
+  engagement_level?: string;
+  last_activity?: string;
+  open_count?: number;
+  click_count?: number;
 }
 
 export default function MightyMailQuotes() {
@@ -310,6 +315,9 @@ export default function MightyMailQuotes() {
                       Status
                     </th>
                     <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">
+                      Engagement
+                    </th>
+                    <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">
                       Follow-ups
                     </th>
                     <th className="text-left py-3 px-2 text-sm font-medium text-muted-foreground">
@@ -375,6 +383,30 @@ export default function MightyMailQuotes() {
                         >
                           {quote.status}
                         </Badge>
+                      </td>
+                      <td className="py-4 px-2">
+                        <div className="flex flex-col gap-1">
+                          <Badge 
+                            variant="outline" 
+                            className={
+                              quote.engagement_level === 'hot' 
+                                ? 'border-green-500 text-green-500' 
+                                : quote.engagement_level === 'warm' 
+                                ? 'border-yellow-500 text-yellow-500' 
+                                : 'border-muted text-muted-foreground'
+                            }
+                          >
+                            {quote.engagement_level || 'cold'}
+                          </Badge>
+                          <div className="text-xs text-muted-foreground">
+                            Score: {quote.utim_score || 0}
+                          </div>
+                          {quote.last_activity && (
+                            <div className="text-xs opacity-50">
+                              {new Date(quote.last_activity).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-2 text-sm text-center text-foreground">
                         {quote.follow_up_count}/3

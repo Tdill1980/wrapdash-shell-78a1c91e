@@ -633,6 +633,51 @@ export type Database = {
         }
         Relationships: []
       }
+      email_events: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          quote_id: string | null
+          utim_data: Json
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          quote_id?: string | null
+          utim_data?: Json
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          quote_id?: string | null
+          utim_data?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "email_retarget_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_events_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_retarget_customers: {
         Row: {
           created_at: string | null
@@ -837,6 +882,7 @@ export type Database = {
       quotes: {
         Row: {
           auto_retarget: boolean | null
+          click_count: number | null
           created_at: string
           customer_company: string | null
           customer_email: string
@@ -844,19 +890,23 @@ export type Database = {
           customer_phone: string | null
           email_design: string | null
           email_tone: string | null
+          engagement_level: string | null
           expires_at: string | null
           follow_up_count: number | null
           id: string
           labor_cost: number | null
+          last_activity: string | null
           last_follow_up_sent: string | null
           margin: number | null
           material_cost: number | null
+          open_count: number | null
           product_name: string | null
           quote_number: string
           sqft: number | null
           status: string | null
           total_price: number
           updated_at: string
+          utim_score: number | null
           vehicle_details: string | null
           vehicle_make: string | null
           vehicle_model: string | null
@@ -865,6 +915,7 @@ export type Database = {
         }
         Insert: {
           auto_retarget?: boolean | null
+          click_count?: number | null
           created_at?: string
           customer_company?: string | null
           customer_email: string
@@ -872,19 +923,23 @@ export type Database = {
           customer_phone?: string | null
           email_design?: string | null
           email_tone?: string | null
+          engagement_level?: string | null
           expires_at?: string | null
           follow_up_count?: number | null
           id?: string
           labor_cost?: number | null
+          last_activity?: string | null
           last_follow_up_sent?: string | null
           margin?: number | null
           material_cost?: number | null
+          open_count?: number | null
           product_name?: string | null
           quote_number: string
           sqft?: number | null
           status?: string | null
           total_price: number
           updated_at?: string
+          utim_score?: number | null
           vehicle_details?: string | null
           vehicle_make?: string | null
           vehicle_model?: string | null
@@ -893,6 +948,7 @@ export type Database = {
         }
         Update: {
           auto_retarget?: boolean | null
+          click_count?: number | null
           created_at?: string
           customer_company?: string | null
           customer_email?: string
@@ -900,19 +956,23 @@ export type Database = {
           customer_phone?: string | null
           email_design?: string | null
           email_tone?: string | null
+          engagement_level?: string | null
           expires_at?: string | null
           follow_up_count?: number | null
           id?: string
           labor_cost?: number | null
+          last_activity?: string | null
           last_follow_up_sent?: string | null
           margin?: number | null
           material_cost?: number | null
+          open_count?: number | null
           product_name?: string | null
           quote_number?: string
           sqft?: number | null
           status?: string | null
           total_price?: number
           updated_at?: string
+          utim_score?: number | null
           vehicle_details?: string | null
           vehicle_make?: string | null
           vehicle_model?: string | null

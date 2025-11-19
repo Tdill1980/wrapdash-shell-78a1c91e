@@ -30,6 +30,8 @@ interface QuoteEmailRequest {
   };
   tone?: string;
   design?: string;
+  quoteId?: string;
+  customerId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -44,6 +46,8 @@ const handler = async (req: Request): Promise<Response> => {
       quoteData,
       tone = "installer",
       design = "performance",
+      quoteId,
+      customerId,
     }: QuoteEmailRequest = await req.json();
 
     if (!customerEmail || !quoteData.quote_total) {
@@ -62,7 +66,13 @@ const handler = async (req: Request): Promise<Response> => {
       .select("*")
       .single();
 
-    const emailHTML = renderEmailTemplate(tone, design, {
+    // Generate UTIM for tracking
+    const emailId = crypto.randomUUID();
+    const utim = quoteId && customerId 
+      ? btoa(`${customerId}:${quoteId}:quote_sent:${emailId}:${Date.now()}:${tone}:${design}:mightymail`)
+      : '';
+
+    let emailHTML = renderEmailTemplate(tone, design, {
       customer_name: customerName,
       footer_text: branding?.footer_text || "",
       logo_url: branding?.logo_url || "",
@@ -70,6 +80,16 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const subject = getSubjectLine(tone, quoteData);
+
+    // Inject UTIM tracking if available
+    if (utim) {
+      const baseUrl = Deno.env.get("SUPABASE_URL")?.replace('/rest/v1', '') || '';
+      emailHTML = emailHTML.replace(/\{\{utim\}\}/g, utim);
+      
+      // Add tracking pixel
+      const trackingPixel = `<img src="${baseUrl}/functions/v1/track-email-open?utim=${utim}" width="1" height="1" style="display:none;" alt="" />`;
+      emailHTML = emailHTML.replace('</body>', `${trackingPixel}</body>`);
+    }
 
     const emailResponse = await resend.emails.send({
       from: branding?.sender_name

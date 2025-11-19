@@ -32,6 +32,8 @@ import { useShopFlow } from "@/hooks/useShopFlow";
 import { useProducts } from "@/hooks/useProducts";
 import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
 import VoiceCommand from "@/components/VoiceCommand";
+import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
+import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -597,20 +599,21 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* RIGHT: DesignVault Premium Card */}
-        <Card className="bg-card border-0" style={{ boxShadow: '0 0 0 1px black' }}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-bold font-poppins">
-                  <span className="text-foreground">Design</span>
-                  <span className="text-gradient">Vault</span>
-                  <span className="text-muted-foreground text-sm align-super">™</span>
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  AI-powered design library & visualization
-                </p>
-              </div>
+        {/* RIGHT: DesignVault Premium Card & UTIM Analytics */}
+        <div className="space-y-4">
+          <Card className="bg-card border-0" style={{ boxShadow: '0 0 0 1px black' }}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg font-bold font-poppins">
+                    <span className="text-foreground">Design</span>
+                    <span className="text-gradient">Vault</span>
+                    <span className="text-muted-foreground text-sm align-super">™</span>
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    AI-powered design library & visualization
+                  </p>
+                </div>
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -778,7 +781,11 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        
+        {/* UTIM Analytics Dashboard */}
+        <UTIMAnalyticsDashboard />
       </div>
+    </div>
 
       {/* ShopFlow Production Hub Card */}
       <Card className="bg-card border-border">
