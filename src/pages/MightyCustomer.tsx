@@ -12,6 +12,7 @@ import VoiceCommand from "@/components/VoiceCommand";
 import { Plus, ShoppingCart, Lock } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
+import { useQuoteEngine } from "@/hooks/useQuoteEngine";
 
 const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -28,10 +29,10 @@ const finishTypes = ["Gloss", "Satin", "Matte", "Gloss PPF", "Matte PPF"];
 export default function MightyCustomer() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { products: allProducts, loading: productsLoading } = useProducts();
+  const { products: allProducts, loading: productsLoading, settings } = useProducts();
 
   const [selectedService, setSelectedService] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [addOns, setAddOns] = useState<string[]>([]);
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -46,6 +47,26 @@ export default function MightyCustomer() {
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
   const [isSending, setIsSending] = useState(false);
+
+  // Auto-SQFT Quote Engine
+  const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
+    ? {
+        year: customerData.vehicleYear,
+        make: customerData.vehicleMake,
+        model: customerData.vehicleModel,
+      }
+    : null;
+
+  const {
+    sqft,
+    setSqft,
+    materialCost,
+    laborCost,
+    installHours,
+    subtotal,
+    marginAmount,
+    total,
+  } = useQuoteEngine(selectedProduct, vehicle, quantity, settings.install_rate_per_hour, margin);
 
   const handleVoiceTranscript = (transcript: string) => {
     const lower = transcript.toLowerCase();
@@ -93,6 +114,10 @@ export default function MightyCustomer() {
         ? prev.filter(a => a !== addOn)
         : [...prev, addOn]
     );
+  };
+
+  const handleProductSelect = (product: Product) => {
+    setSelectedProduct(product);
   };
 
   const handleAddToCart = async (product: Product) => {
@@ -157,10 +182,10 @@ export default function MightyCustomer() {
                 <Button
                   key={category}
                   variant={selectedService === category ? "default" : "outline"}
-                  onClick={() => {
-                    setSelectedService(category);
-                    setSelectedProduct("");
-                  }}
+                onClick={() => {
+                  setSelectedService(category);
+                  setSelectedProduct(null);
+                }}
                   className="whitespace-nowrap px-6"
                 >
                   {category}
@@ -168,10 +193,10 @@ export default function MightyCustomer() {
               ))}
               <Button
                 variant={selectedService === "All Products" ? "default" : "outline"}
-                onClick={() => {
-                  setSelectedService("All Products");
-                  setSelectedProduct("");
-                }}
+              onClick={() => {
+                setSelectedService("All Products");
+                setSelectedProduct(null);
+              }}
                 className="whitespace-nowrap px-6"
               >
                 All Products
@@ -198,69 +223,148 @@ export default function MightyCustomer() {
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Product</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {filteredProducts.map((product) => (
-                    <div key={product.id} className="relative">
-                      <button
-                        onClick={() => setSelectedProduct(product.product_name)}
-                        className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                          selectedProduct === product.product_name
-                            ? "border-primary bg-primary/10"
-                            : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{product.product_name}</span>
-                          {product.product_type === 'quote-only' && (
-                            <Lock className="h-3 w-3 ml-2 text-muted-foreground" />
+                  {filteredProducts.map((product) => {
+                    const productIsWPW = product.woo_product_id && isWPW(product.woo_product_id);
+                    const isSelected = selectedProduct?.id === product.id;
+                    
+                    return (
+                      <div key={product.id} className="relative">
+                        <button
+                          onClick={() => handleProductSelect(product)}
+                          className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                            isSelected
+                              ? "border-primary bg-primary/10"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{product.product_name}</span>
+                            {product.is_locked && (
+                              <Lock className="h-3 w-3 ml-2 text-muted-foreground" />
+                            )}
+                          </div>
+                          {product.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{product.description}</p>
                           )}
-                        </div>
-                        {product.product_type === 'quote-only' && (
-                          <span className="text-xs text-muted-foreground mt-1 block">
-                            Quote Only — Cannot Add to Cart
-                          </span>
-                        )}
-                        {product.product_type === 'wpw' && product.woo_product_id && (
-                          <span className="text-xs text-primary/70 mt-1 block">
-                            WC ID: {product.woo_product_id}
-                          </span>
-                        )}
-                      </button>
-                    </div>
-                  ))}
+                          <p className="text-xs font-semibold mt-2">
+                            {product.pricing_type === 'per_sqft' 
+                              ? `$${product.price_per_sqft}/sqft`
+                              : `$${product.flat_price} flat`
+                            }
+                          </p>
+                          {product.product_type === 'quote-only' && (
+                            <span className="text-xs text-muted-foreground mt-1 block">
+                              Quote Only
+                            </span>
+                          )}
+                          {productIsWPW && (
+                            <span className="text-xs text-blue-400 mt-1 block font-medium">
+                              WPW Product
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })()}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Vehicle Year</Label>
-              <Input
-                type="text"
-                placeholder="2024"
-                value={customerData.vehicleYear}
-                onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }))}
-              />
+          {/* Vehicle Information & Auto-SQFT */}
+          <div className="space-y-4 pt-4 border-t">
+            <Label className="text-lg font-semibold">Vehicle Information</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Vehicle Year</Label>
+                <Input
+                  type="text"
+                  placeholder="2024"
+                  value={customerData.vehicleYear}
+                  onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Make</Label>
+                <Input
+                  type="text"
+                  placeholder="Chevrolet"
+                  value={customerData.vehicleMake}
+                  onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Model</Label>
+                <Input
+                  type="text"
+                  placeholder="Tahoe"
+                  value={customerData.vehicleModel}
+                  onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }))}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Vehicle Make</Label>
-              <Input
-                type="text"
-                placeholder="Chevrolet"
-                value={customerData.vehicleMake}
-                onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Vehicle Model</Label>
-              <Input
-                type="text"
-                placeholder="Tahoe"
-                value={customerData.vehicleModel}
-                onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }))}
-              />
+
+            {/* Auto-calculated SQFT Display */}
+            <div className="p-4 bg-gradient-to-r from-blue-950/50 to-blue-900/30 rounded-lg border border-blue-500/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-blue-300 text-base font-semibold">Total SQFT</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {sqft > 0 ? "✓ Auto-calculated from vehicle database" : "Enter vehicle details above"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    value={sqft || ""}
+                    onChange={(e) => setSqft(Number(e.target.value))}
+                    placeholder="0"
+                    className="w-28 text-xl font-bold text-right bg-background"
+                  />
+                  <span className="text-sm text-muted-foreground font-medium">sq ft</span>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Quote Summary */}
+          {selectedProduct && sqft > 0 && (
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="text-lg font-semibold">Quote Summary</Label>
+              <div className="p-4 bg-gradient-to-br from-background to-muted/20 rounded-lg border space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Material Cost:</span>
+                  <span className="font-semibold">${materialCost.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Labor ({installHours}h × ${settings.install_rate_per_hour}/h):
+                  </span>
+                  <span className="font-semibold">${laborCost.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Margin ({margin}%):</span>
+                  <span className="font-semibold text-blue-400">${marginAmount.toFixed(2)}</span>
+                </div>
+                
+                <div className="pt-3 border-t border-border">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold">Total:</span>
+                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+                      ${total.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -371,9 +475,7 @@ export default function MightyCustomer() {
               Save Quote
             </Button>
             {(() => {
-              const product = allProducts.find(p => p.product_name === selectedProduct);
-              
-              if (!product) {
+              if (!selectedProduct) {
                 return (
                   <Button
                     disabled
@@ -385,18 +487,18 @@ export default function MightyCustomer() {
               }
 
               // Check if this is a WPW product with valid WooCommerce ID
-              const productIsWPW = product.product_type === 'wpw' && 
-                           product.woo_product_id && 
-                           isWPW(product.woo_product_id);
+              const productIsWPW = selectedProduct.product_type === 'wpw' && 
+                           selectedProduct.woo_product_id && 
+                           isWPW(selectedProduct.woo_product_id);
               
               return productIsWPW ? (
                 <Button
-                  onClick={() => handleAddToCart(product)}
-                  disabled={!selectedProduct}
-                  className="flex-1 bg-gradient-primary hover:opacity-90"
+                  onClick={() => handleAddToCart(selectedProduct)}
+                  disabled={isSending || sqft === 0}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
-                  Add to Cart
+                  {isSending ? "Adding..." : "Add to Cart"}
                 </Button>
               ) : (
                 <Button
@@ -404,7 +506,7 @@ export default function MightyCustomer() {
                   className="flex-1 bg-gray-600 cursor-not-allowed"
                 >
                   <Lock className="mr-2 h-4 w-4" />
-                  Quote Only – Not Available for Cart
+                  Quote Only
                 </Button>
               );
             })()}
