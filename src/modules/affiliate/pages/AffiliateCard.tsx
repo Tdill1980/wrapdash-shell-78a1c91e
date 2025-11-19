@@ -26,10 +26,15 @@ export const AffiliateCard = () => {
       const data = await affiliateApi.getFounderByCode(affiliateCode!);
       setFounder(data);
       
-      // Load stats
+      // Try to load stats (will fail for unauthenticated users, which is OK)
       if (data?.id) {
-        const founderStats = await affiliateApi.getFounderStats(data.id);
-        setStats(founderStats);
+        try {
+          const founderStats = await affiliateApi.getFounderStats(data.id);
+          setStats(founderStats);
+        } catch (statsError) {
+          // Stats require authentication, skip for public view
+          console.log('Stats unavailable for public view');
+        }
       }
     } catch (error) {
       console.error('Error loading founder:', error);
