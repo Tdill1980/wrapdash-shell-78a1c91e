@@ -1,23 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
-import { affiliateApi } from '../services/affiliateApi';
+import { affiliateApi, AffiliateFounder } from '../services/affiliateApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Mail, QrCode } from 'lucide-react';
+import { Plus, Mail, Eye } from 'lucide-react';
+import { AffiliateAdminView } from './AffiliateAdminView';
 
 export const AffiliateAdmin = () => {
   const { isAdmin, loading: adminLoading } = useAdmin();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [founders, setFounders] = useState<any[]>([]);
+  const [founders, setFounders] = useState<AffiliateFounder[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedFounder, setSelectedFounder] = useState<AffiliateFounder | null>(null);
+  const [activeView, setActiveView] = useState<'list' | 'detail'>('list');
   const [newFounder, setNewFounder] = useState({
     email: '',
     fullName: '',
@@ -40,7 +42,21 @@ export const AffiliateAdmin = () => {
   const loadFounders = async () => {
     try {
       const data = await affiliateApi.getAllFounders();
-      setFounders(data);
+      // Map snake_case to camelCase
+      const mappedFounders: AffiliateFounder[] = data.map((f: any) => ({
+        id: f.id,
+        affiliateCode: f.affiliate_code,
+        fullName: f.full_name,
+        email: f.email,
+        commissionRate: f.commission_rate,
+        avatarUrl: f.avatar_url,
+        bio: f.bio,
+        companyName: f.company_name,
+        phone: f.phone,
+        socialLinks: f.social_links,
+        isActive: f.is_active,
+      }));
+      setFounders(mappedFounders);
     } catch (error) {
       console.error('Error loading founders:', error);
       toast({
@@ -93,7 +109,7 @@ export const AffiliateAdmin = () => {
 
   if (adminLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-white">Loading...</div>
       </div>
     );
@@ -103,15 +119,36 @@ export const AffiliateAdmin = () => {
     return null;
   }
 
+  if (activeView === 'detail' && selectedFounder) {
+    return (
+      <div className="min-h-screen bg-background py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          <Button
+            onClick={() => {
+              setActiveView('list');
+              setSelectedFounder(null);
+            }}
+            variant="outline"
+            className="mb-6"
+          >
+            ← Back to Founders List
+          </Button>
+          
+          <AffiliateAdminView founder={selectedFounder} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#0A0A0F] py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">
               Affiliate Admin
             </h1>
-            <p className="text-[#B8B8C7] mt-1">Manage affiliate founders and settings</p>
+            <p className="text-muted-foreground mt-1">Manage affiliate founders and their performance</p>
           </div>
           
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -121,7 +158,7 @@ export const AffiliateAdmin = () => {
                 Add Founder
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#16161E] border-[#ffffff0f] text-white">
+            <DialogContent className="bg-card border-border text-white">
               <DialogHeader>
                 <DialogTitle>Create New Founder</DialogTitle>
               </DialogHeader>
@@ -134,7 +171,7 @@ export const AffiliateAdmin = () => {
                     value={newFounder.email}
                     onChange={(e) => setNewFounder({ ...newFounder, email: e.target.value })}
                     required
-                    className="bg-[#0A0A0F] border-[#ffffff0f] text-white mt-1"
+                    className="bg-background border-border text-white mt-1"
                   />
                 </div>
                 <div>
@@ -144,7 +181,7 @@ export const AffiliateAdmin = () => {
                     value={newFounder.fullName}
                     onChange={(e) => setNewFounder({ ...newFounder, fullName: e.target.value })}
                     required
-                    className="bg-[#0A0A0F] border-[#ffffff0f] text-white mt-1"
+                    className="bg-background border-border text-white mt-1"
                   />
                 </div>
                 <div>
@@ -154,7 +191,7 @@ export const AffiliateAdmin = () => {
                     value={newFounder.affiliateCode}
                     onChange={(e) => setNewFounder({ ...newFounder, affiliateCode: e.target.value.toUpperCase() })}
                     required
-                    className="bg-[#0A0A0F] border-[#ffffff0f] text-white mt-1"
+                    className="bg-background border-border text-white mt-1"
                   />
                 </div>
                 <div>
@@ -168,7 +205,7 @@ export const AffiliateAdmin = () => {
                     min="0"
                     max="100"
                     step="0.1"
-                    className="bg-[#0A0A0F] border-[#ffffff0f] text-white mt-1"
+                    className="bg-background border-border text-white mt-1"
                   />
                 </div>
                 <Button type="submit" className="w-full bg-gradient-to-r from-[#00AFFF] to-[#0047FF] text-white">
@@ -179,57 +216,70 @@ export const AffiliateAdmin = () => {
           </Dialog>
         </div>
 
-        <Card className="p-6 bg-[#16161E] border-[#ffffff0f]">
-          <h3 className="text-lg font-semibold text-white mb-4">All Founders</h3>
+        <Card className="p-6 bg-card border-border">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-white">All Founders ({founders.length})</h3>
+          </div>
           
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-[#ffffff0f]">
-                  <TableHead className="text-[#B8B8C7]">Name</TableHead>
-                  <TableHead className="text-[#B8B8C7]">Email</TableHead>
-                  <TableHead className="text-[#B8B8C7]">Affiliate Code</TableHead>
-                  <TableHead className="text-[#B8B8C7]">Commission Rate</TableHead>
-                  <TableHead className="text-[#B8B8C7]">Status</TableHead>
-                  <TableHead className="text-[#B8B8C7]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {founders.map((founder) => (
-                  <TableRow key={founder.id} className="border-[#ffffff0f]">
-                    <TableCell className="text-white">{founder.full_name}</TableCell>
-                    <TableCell className="text-white">{founder.email}</TableCell>
-                    <TableCell className="text-white font-mono">{founder.affiliate_code}</TableCell>
-                    <TableCell className="text-white">{founder.commission_rate}%</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${founder.is_active ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                        {founder.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleSendAccessLink(founder.email)}
-                          className="border-[#ffffff0f] text-white"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(`/affiliate/card/${founder.affiliate_code}`, '_blank')}
-                          className="border-[#ffffff0f] text-white"
-                        >
-                          <QrCode className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {founders.map((founder) => (
+              <Card 
+                key={founder.id} 
+                className="p-5 bg-background border-border hover:border-primary/50 transition-all cursor-pointer group"
+                onClick={() => {
+                  setSelectedFounder(founder);
+                  setActiveView('detail');
+                }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#00AFFF] to-[#0047FF] flex items-center justify-center text-white font-bold text-lg">
+                    {founder.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-white truncate">{founder.fullName}</h4>
+                    <p className="text-xs text-muted-foreground truncate">{founder.email}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Code:</span>
+                    <span className="font-mono text-primary">{founder.affiliateCode}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Rate:</span>
+                    <span className="text-white font-semibold">{founder.commissionRate}%</span>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSendAccessLink(founder.email);
+                    }}
+                  >
+                    <Mail className="w-3 h-3 mr-1" />
+                    Send Link
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFounder(founder);
+                      setActiveView('detail');
+                    }}
+                  >
+                    <Eye className="w-3 h-3 mr-1" />
+                    View
+                  </Button>
+                </div>
+              </Card>
+            ))}
           </div>
         </Card>
       </div>

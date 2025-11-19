@@ -62,6 +62,7 @@ export type Database = {
           order_number: string
           order_total: number
           paid_at: string | null
+          product_name: string | null
           status: string | null
         }
         Insert: {
@@ -76,6 +77,7 @@ export type Database = {
           order_number: string
           order_total: number
           paid_at?: string | null
+          product_name?: string | null
           status?: string | null
         }
         Update: {
@@ -90,6 +92,7 @@ export type Database = {
           order_number?: string
           order_total?: number
           paid_at?: string | null
+          product_name?: string | null
           status?: string | null
         }
         Relationships: [
@@ -184,6 +187,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      affiliate_products: {
+        Row: {
+          commission_rate: number
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          product_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          commission_rate: number
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          product_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          product_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       affiliate_referrals: {
         Row: {
