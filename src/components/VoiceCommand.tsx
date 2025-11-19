@@ -44,9 +44,21 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
+      
+      let title = "Voice Command Error";
+      let description = "Could not process voice input";
+      
+      if (event.error === 'not-allowed') {
+        title = "Microphone Access Denied";
+        description = "Please allow microphone access in your browser settings and try again";
+      } else if (event.error === 'no-speech') {
+        title = "No Speech Detected";
+        description = "Hold the button and speak clearly";
+      }
+      
       toast({
-        title: "Error",
-        description: "Could not process voice input",
+        title,
+        description,
         variant: "destructive",
       });
     };
