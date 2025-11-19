@@ -14,10 +14,10 @@ import { ActiveStageHeader } from "@/modules/shopflow/components/ActiveStageHead
 
 import {
   getStageFromWoo,
-  getNextStage,
-  getStageDescription,
+  getCustomerStageLabel,
+  getCustomerStageDescription,
   detectMissing,
-  buildTimeline
+  buildCustomerTimeline
 } from "@/modules/shopflow/utils/stageEngine";
 
 // Extract WooCommerce customer-uploaded files
@@ -70,12 +70,13 @@ export default function ShopFlowJob() {
   // Extract files
   const wooFiles = extractWooFiles(order);
 
-  // Stage Engine
-  const stage = getStageFromWoo(order.status);
-  const nextStage = getNextStage(stage);
-  const stageDescription = getStageDescription(stage);
+  // Stage Engine - Customer Facing
+  const internalStage = getStageFromWoo(order.status);
+  const customerStage = getCustomerStageLabel(internalStage);
+  const stageDescription = getCustomerStageDescription(internalStage);
+  const nextStepDescription = getCustomerStageDescription(internalStage, true);
   const missing = detectMissing({ ...order, files: wooFiles });
-  const timeline = buildTimeline(order);
+  const timeline = buildCustomerTimeline(order);
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -85,15 +86,21 @@ export default function ShopFlowJob() {
         <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]"></div>
       </div>
 
-      {/* ACTIVE STAGE HERO (Style A) */}
+      {/* ACTIVE STAGE HERO - Customer Facing */}
       <ActiveStageHeader
-        stage={stage}
+        stage={internalStage}
+        customerLabel={customerStage}
         description={stageDescription}
         updatedAt={order.updated_at}
       />
 
       {/* NEXT STEP CARD */}
-      <NextStepCard nextStage={nextStage} />
+      {nextStepDescription && (
+        <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-10 text-white">
+          <h2 className="text-lg font-semibold mb-2">What Happens Next</h2>
+          <p className="text-gray-300 text-sm">{nextStepDescription}</p>
+        </div>
+      )}
 
       {/* MISSING ITEMS */}
       {missing.length > 0 && (
