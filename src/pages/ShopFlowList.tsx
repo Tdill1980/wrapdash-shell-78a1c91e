@@ -75,7 +75,7 @@ export default function ShopFlowList() {
         </div>
         <Button 
           variant="outline" 
-          onClick={() => syncFromWooCommerce()} 
+          onClick={() => syncFromWooCommerce(2)} 
           disabled={loading}
         >
           {loading ? (
@@ -86,7 +86,7 @@ export default function ShopFlowList() {
           ) : (
             <>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Sync from WooCommerce
+              Sync Last 48 Hours
             </>
           )}
         </Button>
