@@ -25,8 +25,12 @@ export default function MightyMailAdmin() {
         </div>
       </div>
 
-      <Tabs defaultValue="sequences" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full bg-[#16161E]">
+      <Tabs defaultValue="quotes" className="w-full">
+        <TabsList className="grid grid-cols-6 w-full bg-[#16161E]">
+          <TabsTrigger value="quotes">
+            <Mail size={16} className="mr-2" /> Quotes
+          </TabsTrigger>
+          
           <TabsTrigger value="sequences">
             <Mail size={16} className="mr-2" /> Sequences
           </TabsTrigger>
@@ -47,6 +51,12 @@ export default function MightyMailAdmin() {
             <Upload size={16} className="mr-2" /> CSV Upload
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="quotes">
+          <div className="text-muted-foreground">
+            <p>View the Quotes tab in the navigation to access the full Quote Management interface.</p>
+          </div>
+        </TabsContent>
 
         <TabsContent value="sequences">
           <SequenceManager />

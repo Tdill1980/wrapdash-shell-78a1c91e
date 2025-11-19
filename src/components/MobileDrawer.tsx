@@ -31,6 +31,7 @@ const navigationItems = [
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
   { name: "MightyMail", path: "/admin/mightymail", icon: Mail },
+  { name: "MM Quotes", path: "/admin/mightymail/quotes", icon: Mail },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
 ];
 
