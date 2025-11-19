@@ -14,12 +14,14 @@ import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
 import { TimelineCard } from "@/components/tracker/TimelineCard";
+import { toast } from "@/hooks/use-toast";
 
 export default function TrackJob() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const [order, setOrder] = useState<ShopFlowOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchOrder();
@@ -34,6 +36,73 @@ export default function TrackJob() {
       if (error) throw error;
       if (!data) { setError("Order not found"); } else { setOrder(data); }
     } catch (err: any) { console.error("Error fetching order:", err); setError(err.message || "Failed to load order"); } finally { setLoading(false); }
+  };
+
+  const handleFileUpload = async (fileList: FileList) => {
+    if (!order || !orderNumber) return;
+    
+    setUploading(true);
+    try {
+      const uploadedFiles: any[] = [];
+      
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${file.name}`;
+        const filePath = `${orderNumber}/${fileName}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('shopflow-files')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('shopflow-files')
+          .getPublicUrl(filePath);
+        
+        uploadedFiles.push({
+          name: file.name,
+          url: publicUrl,
+          status: 'uploaded',
+          uploaded_at: new Date().toISOString()
+        });
+      }
+      
+      const existingFiles = (order.files as any[]) || [];
+      const updatedFiles = [...existingFiles, ...uploadedFiles];
+      
+      const updateData: any = { files: updatedFiles };
+      if (order.status === 'dropbox-link-sent' || order.status === 'pending') {
+        updateData.status = 'order_received';
+      }
+      
+      const { error: updateError } = await supabase
+        .from('shopflow_orders')
+        .update(updateData)
+        .eq('id', order.id);
+      
+      if (updateError) throw updateError;
+      
+      toast({
+        title: "Files uploaded successfully",
+        description: `${uploadedFiles.length} file(s) uploaded`,
+      });
+      
+      await fetchOrder();
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      toast({
+        title: "Upload failed",
+        description: err.message || "Failed to upload files",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (loading) return (<div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>);
@@ -58,7 +127,14 @@ export default function TrackJob() {
         <ShopFlowBrandHeader />
         <CustomerProgressBar currentStatus={internalStatus} />
         <OrderInfoCard order={order} />
-        <UploadedFilesCard files={files} missingFiles={missingFiles} fileErrors={fileErrors} orderId={order.id} />
+        <UploadedFilesCard 
+          files={files} 
+          missingFiles={missingFiles} 
+          fileErrors={fileErrors} 
+          orderId={order.id}
+          onFileUpload={handleFileUpload}
+          uploading={uploading}
+        />
         <CurrentStageCard order={{ customer_stage: internalStatus }} />
         <NextStepCard order={{ customer_stage: internalStatus }} />
         <ActionRequiredCard order={{ customer_stage: internalStatus, file_error_details: fileErrors, missing_file_list: missingFiles }} />
