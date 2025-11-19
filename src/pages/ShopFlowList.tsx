@@ -125,7 +125,7 @@ export default function ShopFlowList() {
                 const statusInfo = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.design_requested;
                 return (
                   <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/shopflow/${order.id}`)}>
-                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell className="font-medium">{order.woo_order_number ?? order.order_number}</TableCell>
                     <TableCell>{order.customer_name}</TableCell>
                     <TableCell className="text-muted-foreground">{order.product_type}</TableCell>
                     <TableCell>

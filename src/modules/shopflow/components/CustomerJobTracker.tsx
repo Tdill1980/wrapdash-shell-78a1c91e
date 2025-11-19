@@ -58,7 +58,7 @@ export function CustomerJobTracker({ order }: CustomerJobTrackerProps) {
               {order.product_type}
             </h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Order #{order.order_number}
+              Order #{order.woo_order_number ?? order.order_number}
             </p>
             <div className="mt-2 md:mt-3">
               <span

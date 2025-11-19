@@ -135,7 +135,7 @@ export default function ShopFlowInternalList() {
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">#{order.order_number}</p>
+                      <p className="text-sm text-muted-foreground">#{order.woo_order_number ?? order.order_number}</p>
                       <p className="font-semibold text-foreground">{order.customer_name}</p>
                       {order.customer_email && (
                         <p className="text-xs text-muted-foreground">{order.customer_email}</p>
@@ -190,7 +190,7 @@ export default function ShopFlowInternalList() {
                     onClick={() => navigate(`/shopflow-internal/${order.id}`)}
                   >
                     <TableCell className="font-mono text-sm">
-                      #{order.order_number}
+                      #{order.woo_order_number ?? order.order_number}
                     </TableCell>
                     <TableCell>
                       <div>

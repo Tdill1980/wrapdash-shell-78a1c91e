@@ -864,7 +864,7 @@ export default function Dashboard() {
                       className="p-3 bg-background rounded-lg border border-border hover:border-primary/30 transition-all cursor-pointer"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-foreground">#{order.order_number}</span>
+                        <span className="text-sm font-semibold text-foreground">#{order.woo_order_number ?? order.order_number}</span>
                         <span className="text-xs text-muted-foreground">{order.product_type}</span>
                       </div>
                       <div className="flex items-center justify-between">

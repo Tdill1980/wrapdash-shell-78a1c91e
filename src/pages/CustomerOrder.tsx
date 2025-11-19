@@ -58,7 +58,7 @@ export default function CustomerOrder() {
       {/* Sticky Top Bar */}
       <div className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md py-4 border-b border-white/10">
         <h1 className="text-white text-lg font-semibold">
-          Tracking Order #{order.order_number}
+          Tracking Order #{order.woo_order_number ?? order.order_number}
         </h1>
 
         <div className="w-full h-[6px] mt-4 bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF] rounded-md"></div>

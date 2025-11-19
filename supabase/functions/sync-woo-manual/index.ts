@@ -103,6 +103,8 @@ Deno.serve(async (req) => {
                 product_type: productType,
                 status: mappedStatus,
                 priority: mappedStatus === 'awaiting_feedback' ? 'high' : 'normal',
+                woo_order_id: order.id,
+                woo_order_number: order.number,
                 created_at: order.date_created,
               });
 

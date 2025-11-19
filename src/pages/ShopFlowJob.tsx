@@ -105,7 +105,7 @@ export default function ShopFlowJob() {
 
         {/* Order Summary */}
         <OrderSummaryCard order={{
-          orderNumber: order.order_number,
+          orderNumber: order.woo_order_number?.toString() ?? order.order_number,
           customerName: order.customer_name,
           vehicle: order.vehicle_info?.make && order.vehicle_info?.model 
             ? `${order.vehicle_info.make} ${order.vehicle_info.model}`
