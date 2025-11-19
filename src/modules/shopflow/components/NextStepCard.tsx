@@ -1,41 +1,22 @@
-import { Card } from '@/components/ui/card';
-import { ArrowRight, CheckCircle } from 'lucide-react';
-import { InternalStage } from '../utils/stageEngine';
+// 🟩 NEXT STEP CARD — shows what happens next in the job flow
 
-interface NextStepCardProps {
-  nextStage: InternalStage | null;
-}
+export const NextStepCard = ({ nextStage }: any) => {
+  if (!nextStage) return null;
 
-export const NextStepCard = ({ nextStage }: NextStepCardProps) => {
-  if (!nextStage) {
-    return (
-      <Card className="p-6 bg-gradient-to-r from-[#00AFFF]/10 to-[#0047FF]/10 border-[#00AFFF]/30 mb-10">
-        <div className="flex items-center gap-4">
-          <CheckCircle className="w-8 h-8 text-[#00AFFF]" />
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-1">Order Complete</h3>
-            <p className="text-[#B8B8C7] text-sm">
-              This job has been completed and delivered to the customer.
-            </p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
+  const TEXT: any = {
+    files_received: "Next: Review files and move job to Design.",
+    in_design: "Next: Designer must upload a proof.",
+    awaiting_approval: "Next: Customer must approve the proof.",
+    design_complete: "Next: Send job to Print Production.",
+    print_production: "Next: Prepare job for pickup or shipment.",
+    ready_for_pickup: "Next: Mark job as Shipped or Completed.",
+    shipped: "Job has completed production.",
+  };
 
   return (
-    <Card className="p-6 bg-[#16161E] border-[#ffffff0f] mb-10">
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-lg bg-gradient-to-br from-[#00AFFF] to-[#0047FF]">
-          <ArrowRight className="w-6 h-6 text-white" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-sm text-[#B8B8C7] mb-1">NEXT STEP</h3>
-          <p className="text-lg font-semibold text-white">
-            {nextStage.replace(/_/g, ' ').toUpperCase()}
-          </p>
-        </div>
-      </div>
-    </Card>
+    <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-10 text-white">
+      <h2 className="text-lg font-semibold mb-2">What Happens Next</h2>
+      <p className="text-gray-300 text-sm">{TEXT[nextStage] || "Next step coming soon…"}</p>
+    </div>
   );
 };
