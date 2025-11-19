@@ -151,9 +151,9 @@ export const CUSTOMER_LABELS: Record<string, string> = {
   files_received: "Files Received",
   file_error: "Action Required",
   missing_file: "Files Needed",
-  in_design: "In Design",
-  awaiting_approval: "Awaiting Your Approval",
-  design_complete: "Design Approved",
+  in_design: "Preparing for Print",
+  awaiting_approval: "Preparing for Print",
+  design_complete: "Preparing for Print",
   print_production: "In Production",
   ready_for_pickup: "Ready for Pickup",
   shipped: "Shipped",
@@ -174,10 +174,10 @@ export const CUSTOMER_DESCRIPTIONS: Record<string, string> = {
   order_received: "We've received your order and will begin reviewing it shortly.",
   files_received: "Your files have been received. Our team is reviewing them.",
   file_error: "One or more files may need an update. We will contact you if required.",
-  missing_file: "We need additional files before we can begin your design.",
-  in_design: "Our design team is working on your artwork.",
-  awaiting_approval: "Your proof is ready. Please review and approve.",
-  design_complete: "Your design is approved and will now move to production.",
+  missing_file: "We need additional files before we can begin production.",
+  in_design: "Your files are being prepared and prepped for print production.",
+  awaiting_approval: "Your files are being prepared and prepped for print production.",
+  design_complete: "Your files are being prepared and prepped for print production.",
   print_production: "Your wrap is being printed and prepared.",
   ready_for_pickup: "Your order is ready for pickup.",
   shipped: "Your order has shipped and is on the way.",
@@ -190,12 +190,12 @@ export function getCustomerStageDescription(stage: string, next = false) {
 
   const NEXT: Record<string, string> = {
     order_received: "Next: Our team will begin reviewing your order.",
-    files_received: "Next: Your designer will begin your layout.",
+    files_received: "Next: Your files will be prepped for production.",
     file_error: "Next: Please upload corrected artwork.",
     missing_file: "Next: Please upload the missing files.",
-    in_design: "Next: You will receive a proof to approve.",
-    awaiting_approval: "Next: Please approve or request changes.",
-    design_complete: "Next: Your wrap will move to production.",
+    in_design: "Next: Your files will move to print production.",
+    awaiting_approval: "Next: Your files will move to print production.",
+    design_complete: "Next: Your files will move to print production.",
     print_production: "Next: We will package and prepare your wrap.",
     ready_for_pickup: "Next: Pick up your wrap or await shipment.",
     shipped: "Next: Delivery is on the way.",
@@ -234,27 +234,9 @@ export function buildCustomerTimeline(order: any) {
 
   if (["in_design", "awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal)) {
     timeline.push({
-      label: "Design In Progress",
+      label: "Preparing for Print",
       stage: "in_design",
       active: ["in_design", "awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
-      timestamp: order.updated_at,
-    });
-  }
-
-  if (["awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal)) {
-    timeline.push({
-      label: "Proof Sent",
-      stage: "awaiting_approval",
-      active: ["awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
-      timestamp: order.updated_at,
-    });
-  }
-
-  if (["design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal)) {
-    timeline.push({
-      label: "Design Approved",
-      stage: "design_complete",
-      active: ["design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
       timestamp: order.updated_at,
     });
   }
