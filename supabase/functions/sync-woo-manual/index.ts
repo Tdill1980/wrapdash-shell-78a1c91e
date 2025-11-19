@@ -92,9 +92,10 @@ Deno.serve(async (req) => {
             .from('shopflow_orders')
             .select('id')
             .eq('order_number', orderNumber)
-            .single();
+            .maybeSingle();
 
           if (!existing) {
+            // Insert new order
             const { error: insertError } = await supabase
               .from('shopflow_orders')
               .insert({
@@ -115,7 +116,24 @@ Deno.serve(async (req) => {
               console.log(`Synced order ${orderNumber} to ShopFlow`);
             }
           } else {
-            skipped++;
+            // Update existing order with Woo fields (backfill)
+            const { error: updateError } = await supabase
+              .from('shopflow_orders')
+              .update({
+                woo_order_id: order.id,
+                woo_order_number: order.number,
+                customer_name: customerName,
+                status: mappedStatus,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existing.id);
+
+            if (updateError) {
+              errors.push(`ShopFlow - Order ${orderNumber} update: ${updateError.message}`);
+            } else {
+              syncedShopFlow++;
+              console.log(`Updated order ${orderNumber} with Woo fields`);
+            }
           }
         }
 

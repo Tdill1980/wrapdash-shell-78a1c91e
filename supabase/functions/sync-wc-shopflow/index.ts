@@ -158,8 +158,10 @@ serve(async (req) => {
     
     console.log('WooCommerce webhook received:', payload);
 
-    // Extract order data
-    const orderNumber = payload.id?.toString() || payload.number?.toString();
+    // Extract order data - prioritize display number
+    const displayNumber = payload.number?.toString();
+    const internalId = payload.id?.toString();
+    const orderNumber = displayNumber || internalId;
     const customerName = `${payload.billing?.first_name || ''} ${payload.billing?.last_name || ''}`.trim() || 'Guest';
     const customerEmail = payload.billing?.email || '';
     const productType = extractProductType(payload.line_items);
@@ -224,8 +226,8 @@ serve(async (req) => {
           customer_email: customerEmail,
           vehicle_info: vehicleInfo,
           affiliate_ref_code: affiliateRefCode,
-          woo_order_id: payload.id,
-          woo_order_number: payload.number,
+          woo_order_id: internalId ? parseInt(internalId) : null,
+          woo_order_number: displayNumber ? parseInt(displayNumber) : null,
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
@@ -299,8 +301,8 @@ serve(async (req) => {
         vehicle_info: vehicleInfo,
         timeline: initialTimeline,
         files,
-        woo_order_id: payload.id,
-        woo_order_number: payload.number,
+        woo_order_id: internalId ? parseInt(internalId) : null,
+        woo_order_number: displayNumber ? parseInt(displayNumber) : null,
         approveflow_project_id: approveflowProject?.id || null,
         priority: 'normal',
         affiliate_ref_code: affiliateRefCode,
