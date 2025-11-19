@@ -161,6 +161,7 @@ All colors MUST be HSL.
   /* SIDEBAR HOVER GRADIENT */
   [data-sidebar="menu-button"]:hover,
   [data-sidebar="menu-item"]:hover [data-sidebar="menu-button"] {
-    background: linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-mid-blue))) !important;
+    background: linear-gradient(90deg, hsl(198, 100%, 50%), hsl(207, 100%, 45%)) !important;
+    color: white !important;
   }
 }
