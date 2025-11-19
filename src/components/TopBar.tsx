@@ -1,5 +1,6 @@
 import { Menu, Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import wrapCommandLogo from "@/assets/wrapcommand-logo-new.png";
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -20,11 +21,11 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
         </Button>
         
         <div className="hidden sm:block">
-          <h1 className="text-2xl font-bold font-poppins tracking-tight">
-            <span className="text-white">Wrap</span>
-            <span className="text-gradient">Command</span>
-            <span className="text-white"> Mission Control Board</span>
-          </h1>
+          <img 
+            src={wrapCommandLogo} 
+            alt="WrapCommand AI - Command Your Wrap Brand" 
+            className="h-10 w-auto object-contain"
+          />
         </div>
       </div>
 
