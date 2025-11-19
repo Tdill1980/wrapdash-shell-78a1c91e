@@ -52,6 +52,7 @@ export default function MightyCustomer() {
   const [emailTone, setEmailTone] = useState("installer");
   const [emailDesign, setEmailDesign] = useState("clean");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSavingQuote, setIsSavingQuote] = useState(false);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -169,6 +170,71 @@ export default function MightyCustomer() {
       });
     } finally {
       setIsSendingEmail(false);
+    }
+  };
+
+  const handleSaveQuote = async () => {
+    if (!customerData.name || !customerData.email) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter customer name and email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedProduct || !total) {
+      toast({
+        title: "Incomplete Quote",
+        description: "Please complete the quote before saving",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingQuote(true);
+    try {
+      const quoteNumber = `WPW-${Date.now().toString().slice(-6)}`;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
+
+      const { error } = await supabase.from("quotes").insert({
+        quote_number: quoteNumber,
+        customer_name: customerData.name,
+        customer_email: customerData.email,
+        customer_phone: customerData.phone,
+        customer_company: customerData.company,
+        vehicle_year: customerData.vehicleYear,
+        vehicle_make: customerData.vehicleMake,
+        vehicle_model: customerData.vehicleModel,
+        product_name: selectedProduct.product_name,
+        sqft: sqft,
+        material_cost: materialCost,
+        labor_cost: laborCost,
+        total_price: total,
+        margin: margin,
+        status: "pending",
+        auto_retarget: true,
+        email_tone: emailTone,
+        email_design: emailDesign,
+        expires_at: expiresAt.toISOString(),
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Quote Saved!",
+        description: `Quote ${quoteNumber} has been saved successfully`,
+      });
+    } catch (error: any) {
+      console.error("Error saving quote:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save quote",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingQuote(false);
     }
   };
 
@@ -563,12 +629,13 @@ export default function MightyCustomer() {
 
           <div className="flex gap-3 pt-4">
             <Button
-              onClick={() => toast({ title: "Quote Saved", description: "Quote has been saved locally" })}
+              onClick={handleSaveQuote}
               variant="outline"
+              disabled={isSavingQuote || !selectedProduct || !total || !customerData.name || !customerData.email}
               className="flex-1 border-primary/40 hover:bg-primary/10"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Save Quote
+              {isSavingQuote ? "Saving..." : "Save Quote"}
             </Button>
             
             <Button

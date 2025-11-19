@@ -53,6 +53,11 @@ const navigationItems = [
       </span>
     )
   },
+  { 
+    name: "MM Quotes", 
+    path: "/admin/mightymail/quotes", 
+    icon: Mail
+  },
   { name: "Product Admin", path: "/admin/products", icon: Settings },
 ];
 

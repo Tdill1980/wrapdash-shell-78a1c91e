@@ -834,6 +834,93 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          auto_retarget: boolean | null
+          created_at: string
+          customer_company: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          email_design: string | null
+          email_tone: string | null
+          expires_at: string | null
+          follow_up_count: number | null
+          id: string
+          labor_cost: number | null
+          last_follow_up_sent: string | null
+          margin: number | null
+          material_cost: number | null
+          product_name: string | null
+          quote_number: string
+          sqft: number | null
+          status: string | null
+          total_price: number
+          updated_at: string
+          vehicle_details: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: string | null
+          wc_sync_status: string | null
+        }
+        Insert: {
+          auto_retarget?: boolean | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          email_design?: string | null
+          email_tone?: string | null
+          expires_at?: string | null
+          follow_up_count?: number | null
+          id?: string
+          labor_cost?: number | null
+          last_follow_up_sent?: string | null
+          margin?: number | null
+          material_cost?: number | null
+          product_name?: string | null
+          quote_number: string
+          sqft?: number | null
+          status?: string | null
+          total_price: number
+          updated_at?: string
+          vehicle_details?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+          wc_sync_status?: string | null
+        }
+        Update: {
+          auto_retarget?: boolean | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          email_design?: string | null
+          email_tone?: string | null
+          expires_at?: string | null
+          follow_up_count?: number | null
+          id?: string
+          labor_cost?: number | null
+          last_follow_up_sent?: string | null
+          margin?: number | null
+          material_cost?: number | null
+          product_name?: string | null
+          quote_number?: string
+          sqft?: number | null
+          status?: string | null
+          total_price?: number
+          updated_at?: string
+          vehicle_details?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+          wc_sync_status?: string | null
+        }
+        Relationships: []
+      }
       shopflow_logs: {
         Row: {
           created_at: string
