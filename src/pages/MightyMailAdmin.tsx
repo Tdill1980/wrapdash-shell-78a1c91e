@@ -16,6 +16,11 @@ export default function MightyMailAdmin() {
         <p className="text-muted-foreground">
           Manage email sequences, branding, retargeting lists, and customer campaigns.
         </p>
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-xs px-2 py-1 rounded bg-gradient-to-r from-[#00AFFF]/20 to-[#4EEAFF]/20 text-[#00AFFF] border border-[#00AFFF]/30">
+            ✓ Connected to Resend
+          </span>
+        </div>
       </div>
 
       <Tabs defaultValue="sequences" className="w-full">

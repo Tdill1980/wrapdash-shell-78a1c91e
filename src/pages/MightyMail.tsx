@@ -70,18 +70,11 @@ export default function MightyMail() {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('send-klaviyo-event', {
+      const { error } = await supabase.functions.invoke('send-mightymail-test', {
         body: {
-          eventName: campaign.event,
-          customerEmail: testEmail,
-          properties: {
-            test_mode: true,
-            campaign_name: campaign.name,
-            project_id: 'test-project-123',
-            order_number: 'TEST-ORDER-001',
-            customer_name: 'Test Customer',
-            portal_url: `${window.location.origin}/customer/test-project-123`,
-          },
+          testEmail: testEmail,
+          campaignName: campaign.name,
+          campaignEvent: campaign.id,
         },
       });
 
@@ -89,7 +82,7 @@ export default function MightyMail() {
 
       toast({
         title: "Test Email Sent",
-        description: `Test email sent to ${testEmail}`,
+        description: `Test email sent to ${testEmail} via Resend`,
       });
     } catch (error) {
       console.error('Error sending test email:', error);
@@ -111,7 +104,7 @@ export default function MightyMail() {
             <span className="text-muted-foreground text-sm align-super">™</span>
           </h1>
           <p className="text-muted-foreground mt-1">
-            Manage email campaigns and customer notifications via Klaviyo
+            Manage email campaigns and customer notifications via Resend
           </p>
         </div>
         <Badge variant="outline" className="gap-2">
