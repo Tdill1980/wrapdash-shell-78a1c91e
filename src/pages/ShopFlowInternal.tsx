@@ -8,35 +8,31 @@ import { NotesCard } from "@/modules/shopflow/components/NotesCard";
 import { ProofViewer } from "@/modules/shopflow/components/ProofViewer";
 import { Timeline } from "@/modules/shopflow/components/Timeline";
 import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
+import { FilesCard } from "@/modules/shopflow/components/FilesCard";
 
 import {
   getProductionStage,
-  isProductionReady,
   getProductionStageDescription,
   buildProductionTimeline,
   detectMissing
 } from "@/modules/shopflow/utils/stageEngine";
 
-// Extract WooCommerce file uploads from line_items → meta_data
-function extractFilesFromWoo(order: any) {
+// Extract WooCommerce files
+function extractFiles(order: any) {
   const files: any[] = [];
-
   if (!order.line_items) return files;
 
   order.line_items.forEach((item: any) => {
-    if (!item.meta_data) return;
-
-    item.meta_data.forEach((meta: any) => {
+    item.meta_data?.forEach((meta: any) => {
       if (
         typeof meta.key === "string" &&
-        meta.key.toLowerCase().includes("upload files")
+        meta.key.toLowerCase().includes("upload files") &&
+        typeof meta.value === "string"
       ) {
-        if (typeof meta.value === "string") {
-          files.push({
-            name: meta.value.split("/").pop(),
-            url: meta.value
-          });
-        }
+        files.push({
+          name: meta.value.split("/").pop(),
+          url: meta.value
+        });
       }
     });
   });
@@ -50,171 +46,127 @@ export default function ShopFlowInternal() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Loading job...</p>
+      <div className="flex items-center justify-center min-h-screen text-gray-400">
+        Loading internal job…
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Job not found</p>
+      <div className="flex items-center justify-center min-h-screen text-gray-400">
+        Job not found.
       </div>
     );
   }
 
-  // Extract WooCommerce artwork files
-  const artworkFiles = extractFilesFromWoo(order);
-
-  // Internal Production Logic (Staff View)
-  const productionStage = getProductionStage(order.status);
-  const productionReady = isProductionReady(order.status);
-  const stageDescription = getProductionStageDescription(productionStage);
-  const missingItems = detectMissing({ ...order, files: artworkFiles });
-  const timelineData = buildProductionTimeline(order);
+  // Internal production logic
+  const internalStage = getProductionStage(order.status);
+  const stageDescription = getProductionStageDescription(internalStage);
+  const artworkFiles = extractFiles(order);
+  const missing = detectMissing({ ...order, files: artworkFiles });
+  const timeline = buildProductionTimeline(order);
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="container mx-auto px-6 py-10 text-white">
 
-      {/* Sticky Bar */}
-      <div className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md py-3 border-b border-white/10">
-        <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]"></div>
+      {/* Sticky Gradient Header */}
+      <div className="sticky top-0 z-50 bg-[#0B0B10]/90 backdrop-blur-md py-3 border-b border-white/10">
+        <div className="w-full h-[8px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#5AAEFF] to-[#0047FF]" />
       </div>
 
-      {/* Sticky Job Header */}
-      <div className="sticky top-[54px] z-40 bg-[#101016]/90 backdrop-blur-xl border border-white/5 rounded-lg p-5 mb-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h1 className="text-xl text-white font-semibold">{order.product_type}</h1>
-            <p className="text-sm text-gray-400">
-              {order.customer_name} — Order #{order.order_number}
-            </p>
-          </div>
+      {/* Job Header */}
+      <div className="mb-10">
+        <h1 className="text-3xl font-bold">Order #{order.order_number}</h1>
+        <p className="text-gray-400">{order.customer_name}</p>
 
-          <div className="flex flex-col items-end gap-2">
-            <span className={`px-3 py-1 rounded-md text-xs text-white ${
-              productionReady 
-                ? 'bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]'
-                : 'bg-gradient-to-r from-yellow-500 to-orange-500'
-            }`}>
-              Production: {productionStage}
-            </span>
-            <span className="px-2 py-0.5 rounded text-xs text-gray-400 bg-[#16161E] border border-white/5">
-              WooCommerce: {order.status}
-            </span>
+        <div className="flex gap-4 mt-4">
+          <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
+            <span className="text-gray-400">Internal Stage:</span>{" "}
+            <span className="text-white">{internalStage}</span>
+          </div>
+          <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
+            <span className="text-gray-400">WooCommerce:</span>{" "}
+            <span className="text-white">{order.status}</span>
           </div>
         </div>
 
-        {/* Production Stage Description */}
-        {!productionReady && (
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-3">
-            <p className="text-sm text-yellow-200">
-              ⚠️ <span className="font-semibold">Pre-Production:</span> This job is not yet ready for the production floor.
-            </p>
-          </div>
-        )}
-
-        <div className="bg-[#0D0D12] border border-white/5 rounded-lg p-4">
-          <p className="text-sm text-gray-300">
-            <span className="text-[#8FD3FF] font-semibold">Status:</span> {stageDescription}
-          </p>
-        </div>
+        <p className="text-gray-300 text-sm mt-4">{stageDescription}</p>
       </div>
 
-      {/* Quick Summary */}
-      <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-10 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <p className="text-gray-400 text-xs uppercase">Customer Email</p>
-          <p className="text-white text-sm">{order.customer_email || 'N/A'}</p>
-        </div>
-
-        <div>
-          <p className="text-gray-400 text-xs uppercase">Order #</p>
-          <p className="text-white text-sm">{order.order_number}</p>
-        </div>
-
-        <div>
-          <p className="text-gray-400 text-xs uppercase">Priority</p>
-          <p className="text-white text-sm">{order.priority || 'Standard'}</p>
-        </div>
-
-        <div>
-          <p className="text-gray-400 text-xs uppercase">Last Update</p>
-          <p className="text-white text-sm">{order.updated_at?.slice(0, 10)}</p>
-        </div>
-      </div>
-
-      {/* 3-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-
-        {/* LEFT COLUMN */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <VehicleInfoCard order={order} />
-          <CustomerInfoCard order={order} />
-          <JobDetailsCard order={order} />
-
-          {/* Artwork Files Card */}
-          <div className="bg-[#101016] border border-white/5 rounded-lg p-5">
-            <h2 className="text-lg text-white font-semibold mb-3">Uploaded Files</h2>
-
-            {artworkFiles.length === 0 ? (
-              <p className="text-gray-500 text-sm">No files uploaded</p>
-            ) : (
-              <ul className="space-y-2">
-                {artworkFiles.map((file, idx) => (
-                  <li key={idx}>
-                    <a
-                      href={file.url}
-                      target="_blank"
-                      className="text-blue-300 underline text-sm"
-                    >
-                      {file.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <NotesCard orderId={order.id} />
-        </div>
-
-        {/* CENTER COLUMN (Flow Spine + Story) */}
-        <div className="lg:col-span-2 flex flex-col gap-10 relative">
-
-          {/* Flow Spine */}
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-20 rounded-full"></div>
-
-          {/* Missing Items */}
-          {missingItems.length > 0 && (
-            <div className="bg-[#101016] border border-white/5 rounded-lg p-5 text-white relative ml-6">
-              <h2 className="text-lg font-semibold mb-3">Missing Items</h2>
-              <ul className="list-disc pl-6 text-gray-300 text-sm">
-                {missingItems.map((m, idx) => (
-                  <li key={idx}>{m}</li>
-                ))}
-              </ul>
+      {/* FULL-WIDTH INTERNAL PRODUCTION TRACKER */}
+      <div className="bg-[#111118] border border-white/10 rounded-lg py-6 px-6 mb-14">
+        <h2 className="text-lg font-semibold mb-4">Production Tracker</h2>
+        <div className="flex items-center justify-between gap-4 overflow-x-auto">
+          {timeline.map((step: any, idx: number) => (
+            <div key={idx} className="flex flex-col items-center min-w-[120px]">
+              <div
+                className={[
+                  "w-6 h-6 rounded-full mb-2",
+                  step.active
+                    ? "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] ring-2 ring-[#5AAEFF]"
+                    : "bg-white/20 border border-white/10"
+                ].join(" ")}
+              />
+              <p className="text-xs text-gray-300 text-center">{step.label}</p>
             </div>
-          )}
+          ))}
+        </div>
+      </div>
 
-          {/* Proof Viewer */}
-          <div className="relative ml-6">
-            <ProofViewer order={order} />
+      {/* FULL WIDTH CENTER SPINE LAYOUT */}
+      <div className="relative">
+
+        {/* Thick glowing SPINE */}
+        <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[5px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-40 rounded-full"></div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
+          {/* LEFT COLUMN — Info Cards */}
+          <div className="flex flex-col gap-6">
+            <VehicleInfoCard order={order} />
+            <CustomerInfoCard order={order} />
+            <JobDetailsCard order={order} />
+            <NotesCard orderId={order.id} />
           </div>
 
-          {/* Timeline */}
-          <div className="relative ml-6">
-            <Timeline timeline={timelineData} />
+          {/* CENTER COLUMN — Spine Items */}
+          <div className="flex flex-col gap-12">
+
+            {/* Proof Viewer */}
+            <div className="relative px-6">
+              <ProofViewer order={order} />
+            </div>
+
+            {/* Uploaded Files */}
+            <div className="relative px-6">
+              <FilesCard files={artworkFiles} orderId={order.id} />
+            </div>
+
+            {/* Missing Items */}
+            {missing.length > 0 && (
+              <div className="relative px-6 bg-[#111118] border border-white/10 rounded-lg p-5">
+                <h2 className="text-lg font-semibold mb-3">Missing Items</h2>
+                <ul className="text-gray-300 text-sm list-disc pl-6">
+                  {missing.map((m: string, idx: number) => (
+                    <li key={idx}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Timeline */}
+            <div className="relative px-6">
+              <Timeline timeline={timeline} />
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN — Actions */}
+          <div className="sticky top-[140px] h-fit">
+            <ActionSidebar order={order} />
           </div>
 
         </div>
-
-        {/* RIGHT ACTION BAR */}
-        <div className="lg:col-span-1 sticky top-[140px]">
-          <ActionSidebar order={order} />
-        </div>
-
       </div>
     </div>
   );
