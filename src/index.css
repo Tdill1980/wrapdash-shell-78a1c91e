@@ -159,9 +159,14 @@ All colors MUST be HSL.
   }
 
   /* SIDEBAR HOVER GRADIENT */
+  [data-sidebar="menu-button"] {
+    transition: all 0.3s ease-out !important;
+  }
+  
   [data-sidebar="menu-button"]:hover,
   [data-sidebar="menu-item"]:hover [data-sidebar="menu-button"] {
     background: linear-gradient(90deg, hsl(198, 100%, 50%), hsl(207, 100%, 45%)) !important;
     color: white !important;
+    transform: translateX(4px) !important;
   }
 }
