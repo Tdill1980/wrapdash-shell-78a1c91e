@@ -71,14 +71,13 @@ const navigationItems = [
   { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
   { name: "Design Market", path: "/design-market", icon: Store },
   { 
-    name: "ShopFlow™", 
+    name: "ShopFlow Jobs", 
     path: "/shopflow", 
-    icon: ShoppingCart,
+    icon: Package,
     customRender: (
       <span className="font-medium">
-        <span className="text-white">Shop</span>
-        <span className="text-gradient">Flow</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
+        <span className="text-white">ShopFlow</span>
+        <span className="text-gradient"> Jobs</span>
       </span>
     )
   },
