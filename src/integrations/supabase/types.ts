@@ -14,6 +14,251 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_card_views: {
+        Row: {
+          created_at: string | null
+          founder_id: string
+          id: string
+          referrer_url: string | null
+          viewer_country: string | null
+          viewer_ip: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          founder_id: string
+          id?: string
+          referrer_url?: string | null
+          viewer_country?: string | null
+          viewer_ip?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          founder_id?: string
+          id?: string
+          referrer_url?: string | null
+          viewer_country?: string | null
+          viewer_ip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_card_views_founder_id_fkey"
+            columns: ["founder_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_founders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_commissions: {
+        Row: {
+          commission_amount: number
+          created_at: string | null
+          customer_email: string
+          founder_id: string
+          id: string
+          order_number: string
+          order_total: number
+          status: string | null
+        }
+        Insert: {
+          commission_amount: number
+          created_at?: string | null
+          customer_email: string
+          founder_id: string
+          id?: string
+          order_number: string
+          order_total: number
+          status?: string | null
+        }
+        Update: {
+          commission_amount?: number
+          created_at?: string | null
+          customer_email?: string
+          founder_id?: string
+          id?: string
+          order_number?: string
+          order_total?: number
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_founder_id_fkey"
+            columns: ["founder_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_founders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_founders: {
+        Row: {
+          affiliate_code: string
+          avatar_url: string | null
+          bio: string | null
+          commission_rate: number | null
+          company_name: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          social_links: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          affiliate_code: string
+          avatar_url?: string | null
+          bio?: string | null
+          commission_rate?: number | null
+          company_name?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          social_links?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          affiliate_code?: string
+          avatar_url?: string | null
+          bio?: string | null
+          commission_rate?: number | null
+          company_name?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          social_links?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_login_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          founder_id: string
+          id: string
+          token: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          founder_id: string
+          id?: string
+          token: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          founder_id?: string
+          id?: string
+          token?: string
+          used?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_login_tokens_founder_id_fkey"
+            columns: ["founder_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_founders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_referrals: {
+        Row: {
+          conversion_date: string | null
+          converted: boolean | null
+          created_at: string | null
+          founder_id: string
+          id: string
+          referred_email: string
+        }
+        Insert: {
+          conversion_date?: string | null
+          converted?: boolean | null
+          created_at?: string | null
+          founder_id: string
+          id?: string
+          referred_email: string
+        }
+        Update: {
+          conversion_date?: string | null
+          converted?: boolean | null
+          created_at?: string | null
+          founder_id?: string
+          id?: string
+          referred_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_founder_id_fkey"
+            columns: ["founder_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_founders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_signup_tokens: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          ref_code: string
+          token: string
+          used: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          ref_code: string
+          token: string
+          used?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          ref_code?: string
+          token?: string
+          used?: boolean | null
+        }
+        Relationships: []
+      }
       approveflow_3d: {
         Row: {
           created_at: string | null
