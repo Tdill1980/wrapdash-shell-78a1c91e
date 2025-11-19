@@ -7,6 +7,7 @@ export const useVoiceInput = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recordingStartTimeRef = useRef<number>(0);
   const { toast } = useToast();
 
   const startRecording = useCallback(async () => {
@@ -23,6 +24,7 @@ export const useVoiceInput = () => {
       };
 
       mediaRecorder.start();
+      recordingStartTimeRef.current = Date.now();
       setIsRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -43,6 +45,21 @@ export const useVoiceInput = () => {
 
       mediaRecorderRef.current.onstop = async () => {
         setIsRecording(false);
+        
+        // Check minimum recording duration (500ms)
+        const recordingDuration = Date.now() - recordingStartTimeRef.current;
+        const MIN_RECORDING_DURATION = 500; // 500ms minimum
+        
+        if (recordingDuration < MIN_RECORDING_DURATION) {
+          toast({
+            title: "Recording Too Short",
+            description: "Please hold the button for at least half a second",
+            variant: "destructive",
+          });
+          reject(new Error('Recording too short'));
+          return;
+        }
+
         setIsProcessing(true);
 
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
