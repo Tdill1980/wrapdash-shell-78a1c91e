@@ -23,7 +23,7 @@ export const MainLayout = ({ children, userName = "User" }: MainLayoutProps) => 
         <GlobalHeader userName={userName} />
 
         {/* PAGE BODY */}
-        <div className="flex-1 px-10 py-8 bg-[#0D0F12]">
+        <div className="flex-1 pl-6 pr-10 py-8 bg-[#0D0F12]">
           <div className="max-w-[1600px] mr-auto space-y-10">
             {children}
           </div>
