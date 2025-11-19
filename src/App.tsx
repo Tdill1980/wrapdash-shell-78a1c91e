@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { AppLayout } from "@/layouts/AppLayout";
 import Dashboard from "./pages/Dashboard";
-import { Visualize as WrapCloser } from "./modules/designproai";
+import { Visualize as WrapCloser, InkFusion, DesignPanelPro, FadeWraps, WBTY } from "./modules/designproai";
 import { DesignVault } from "./modules/designvault";
 import DesignVaultUpload from "./pages/DesignVaultUpload";
 import { WrapBox } from "./modules/wrapbox";
@@ -53,6 +53,10 @@ const App = () => (
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
             <Route path="/wrapcloser" element={<AppLayout><WrapCloser /></AppLayout>} />
+            <Route path="/inkfusion" element={<AppLayout><InkFusion /></AppLayout>} />
+            <Route path="/designpanel" element={<AppLayout><DesignPanelPro /></AppLayout>} />
+            <Route path="/fadewraps" element={<AppLayout><FadeWraps /></AppLayout>} />
+            <Route path="/wbty" element={<AppLayout><WBTY /></AppLayout>} />
             <Route path="/designvault" element={<AppLayout><DesignVault /></AppLayout>} />
             <Route path="/designvault/upload" element={<AppLayout><DesignVaultUpload /></AppLayout>} />
             <Route path="/wrapbox" element={<AppLayout><WrapBox /></AppLayout>} />

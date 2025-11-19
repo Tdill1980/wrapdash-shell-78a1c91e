@@ -19,7 +19,52 @@ import logo from "@/assets/wrapcommand-logo.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { name: "WrapCloser", path: "/wrapcloser", icon: Sparkles },
+  { 
+    name: "InkFusion™", 
+    path: "/inkfusion", 
+    icon: Sparkles,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Ink</span>
+        <span className="text-gradient">Fusion</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "DesignPanelPro™", 
+    path: "/designpanel", 
+    icon: Sparkles,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Design</span>
+        <span className="text-gradient">Panel</span>
+        <span className="text-white">Pro</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "FadeWraps™", 
+    path: "/fadewraps", 
+    icon: Sparkles,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Fade</span>
+        <span className="text-gradient">Wraps</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "WBTY™", 
+    path: "/wbty", 
+    icon: Sparkles,
+    customRender: (
+      <span className="font-medium text-gradient">WBTY™</span>
+    )
+  },
+  { name: "ApproveMode", path: "/approveflow", icon: CheckCircle },
   { name: "DesignVault", path: "/designvault", icon: FolderOpen },
   { name: "WrapBox", path: "/wrapbox", icon: Package },
   { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
@@ -27,7 +72,6 @@ const navigationItems = [
   { name: "ShopFlow", path: "/shopflow", icon: ShoppingCart },
   { name: "ShopFlow Internal", path: "/shopflow-internal", icon: ShoppingCart },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
-  { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
   { 
     name: "MightyAffiliate", 

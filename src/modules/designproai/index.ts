@@ -1,5 +1,9 @@
 // DesignProAI Module Exports
 export { default as Visualize } from "./pages/Visualize";
+export { default as InkFusion } from "./pages/InkFusion";
+export { default as DesignPanelPro } from "./pages/DesignPanelPro";
+export { default as FadeWraps } from "./pages/FadeWraps";
+export { default as WBTY } from "./pages/WBTY";
 export * from "./components/VehicleSelector";
 export * from "./components/FinishSelector";
 export * from "./components/ColorDropdown";
