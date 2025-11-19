@@ -32,6 +32,7 @@ import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import ProductAdmin from "./pages/ProductAdmin";
 import DesignVaultAdmin from "./pages/DesignVaultAdmin";
 import Auth from "./pages/Auth";
+import Signup from "./pages/Signup";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import { AffiliateCard, AffiliateDashboard, AffiliateAdmin, AffiliateSignup } from "./modules/affiliate";
@@ -47,6 +48,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
             <Route path="/wrapcloser" element={<AppLayout><WrapCloser /></AppLayout>} />

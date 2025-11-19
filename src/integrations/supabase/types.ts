@@ -450,6 +450,7 @@ export type Database = {
           id: string
           order_number: string
           order_total: number | null
+          organization_id: string | null
           product_type: string
           status: string
           updated_at: string | null
@@ -464,6 +465,7 @@ export type Database = {
           id?: string
           order_number: string
           order_total?: number | null
+          organization_id?: string | null
           product_type: string
           status?: string
           updated_at?: string | null
@@ -478,11 +480,20 @@ export type Database = {
           id?: string
           order_number?: string
           order_total?: number | null
+          organization_id?: string | null
           product_type?: string
           status?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       approveflow_versions: {
         Row: {
@@ -603,6 +614,7 @@ export type Database = {
           footer_text: string | null
           id: string
           logo_url: string | null
+          organization_id: string | null
           primary_color: string | null
           secondary_color: string | null
           sender_email: string | null
@@ -614,6 +626,7 @@ export type Database = {
           footer_text?: string | null
           id?: string
           logo_url?: string | null
+          organization_id?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           sender_email?: string | null
@@ -625,13 +638,22 @@ export type Database = {
           footer_text?: string | null
           id?: string
           logo_url?: string | null
+          organization_id?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           sender_email?: string | null
           sender_name?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_branding_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_events: {
         Row: {
@@ -686,6 +708,7 @@ export type Database = {
           last_quote_amount: number | null
           last_quote_date: string | null
           name: string
+          organization_id: string | null
           phone: string | null
           status: string | null
           tags: string[] | null
@@ -698,6 +721,7 @@ export type Database = {
           last_quote_amount?: number | null
           last_quote_date?: string | null
           name: string
+          organization_id?: string | null
           phone?: string | null
           status?: string | null
           tags?: string[] | null
@@ -710,12 +734,21 @@ export type Database = {
           last_quote_amount?: number | null
           last_quote_date?: string | null
           name?: string
+          organization_id?: string | null
           phone?: string | null
           status?: string | null
           tags?: string[] | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_retarget_customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_sequences: {
         Row: {
@@ -726,6 +759,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          organization_id: string | null
           send_delay_days: number | null
           updated_at: string | null
           writing_tone: string | null
@@ -738,6 +772,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          organization_id?: string | null
           send_delay_days?: number | null
           updated_at?: string | null
           writing_tone?: string | null
@@ -750,11 +785,20 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          organization_id?: string | null
           send_delay_days?: number | null
           updated_at?: string | null
           writing_tone?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_sequences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_tracking: {
         Row: {
@@ -807,6 +851,88 @@ export type Database = {
           },
         ]
       }
+      organization_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          invited_by: string | null
+          organization_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          invited_by?: string | null
+          organization_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          invited_by?: string | null
+          organization_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          affiliate_founder_id: string | null
+          branding: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          owner_id: string | null
+          subdomain: string
+          subscription_tier: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          affiliate_founder_id?: string | null
+          branding?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          owner_id?: string | null
+          subdomain: string
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          affiliate_founder_id?: string | null
+          branding?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          owner_id?: string | null
+          subdomain?: string
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_affiliate_founder_id_fkey"
+            columns: ["affiliate_founder_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_founders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -817,6 +943,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_locked: boolean
+          organization_id: string | null
           price_per_sqft: number | null
           pricing_type: string
           product_name: string
@@ -833,6 +960,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_locked?: boolean
+          organization_id?: string | null
           price_per_sqft?: number | null
           pricing_type: string
           product_name: string
@@ -849,6 +977,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_locked?: boolean
+          organization_id?: string | null
           price_per_sqft?: number | null
           pricing_type?: string
           product_name?: string
@@ -856,7 +985,15 @@ export type Database = {
           updated_at?: string
           woo_product_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quote_settings: {
         Row: {
@@ -903,6 +1040,7 @@ export type Database = {
           margin: number | null
           material_cost: number | null
           open_count: number | null
+          organization_id: string | null
           product_name: string | null
           quote_number: string
           sqft: number | null
@@ -940,6 +1078,7 @@ export type Database = {
           margin?: number | null
           material_cost?: number | null
           open_count?: number | null
+          organization_id?: string | null
           product_name?: string | null
           quote_number: string
           sqft?: number | null
@@ -977,6 +1116,7 @@ export type Database = {
           margin?: number | null
           material_cost?: number | null
           open_count?: number | null
+          organization_id?: string | null
           product_name?: string | null
           quote_number?: string
           sqft?: number | null
@@ -991,7 +1131,15 @@ export type Database = {
           wc_sync_status?: string | null
           woo_order_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "quotes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shopflow_logs: {
         Row: {
@@ -1041,6 +1189,7 @@ export type Database = {
           missing_file_list: Json | null
           notes: string | null
           order_number: string
+          organization_id: string | null
           preflight_status: string | null
           priority: string | null
           product_type: string
@@ -1067,6 +1216,7 @@ export type Database = {
           missing_file_list?: Json | null
           notes?: string | null
           order_number: string
+          organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
           product_type: string
@@ -1093,6 +1243,7 @@ export type Database = {
           missing_file_list?: Json | null
           notes?: string | null
           order_number?: string
+          organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
           product_type?: string
@@ -1110,6 +1261,13 @@ export type Database = {
             columns: ["approveflow_project_id"]
             isOneToOne: false
             referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopflow_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1184,6 +1342,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_organization_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1191,6 +1350,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_organization_owner: { Args: { _org_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
