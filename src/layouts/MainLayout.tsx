@@ -9,17 +9,26 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children, userName = "User" }: MainLayoutProps) => {
   return (
-    <div className="flex w-full min-h-screen page-dark">
-      {/* FIXED LEFT SIDEBAR */}
-      <aside className="w-64 bg-[#0B0D11] border-r border-white/10 fixed top-0 left-0 bottom-0 z-50 overflow-y-auto">
+    <div className="w-full h-screen flex overflow-hidden">
+
+      {/* LEFT SIDEBAR */}
+      <aside className="w-64 bg-[#0B0D11] border-r border-white/10 fixed inset-y-0 left-0 z-50">
         <Sidebar />
       </aside>
 
-      {/* PAGE CONTENT */}
-      <main className="flex-1 ml-64 min-h-screen flex flex-col">
+      {/* PAGE AREA */}
+      <div className="flex flex-col flex-1 ml-64 h-screen overflow-y-auto">
+
+        {/* TOP HEADER */}
         <GlobalHeader userName={userName} />
-        <div className="flex-1 p-6">{children}</div>
-      </main>
+
+        {/* PAGE BODY */}
+        <div className="flex-1 px-10 py-8 bg-[#0D0F12]">
+          <div className="max-w-[1600px] mx-auto space-y-10">
+            {children}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
