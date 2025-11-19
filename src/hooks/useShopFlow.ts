@@ -23,6 +23,8 @@ export interface ShopFlowOrder {
   vehicle_info?: any;
   files?: any;
   timeline?: any;
+  line_items?: any[];
+  proof_url?: string;
 }
 
 export interface ShopFlowLog {
