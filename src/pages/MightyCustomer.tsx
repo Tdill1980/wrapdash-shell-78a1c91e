@@ -304,8 +304,8 @@ export default function MightyCustomer() {
 
   return (
     <MainLayout userName="Trish">
-      <div className="space-y-4 w-full">
-        <div className="max-w-5xl">
+      <div className="w-full space-y-10">
+        <div className="w-full">
           <VoiceCommand onTranscript={handleVoiceTranscript} />
           
         <Card className="p-6 space-y-6">
