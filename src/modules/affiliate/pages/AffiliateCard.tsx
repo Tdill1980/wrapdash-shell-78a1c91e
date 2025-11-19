@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 export const AffiliateCard = () => {
   const { affiliateCode } = useParams<{ affiliateCode: string }>();
   const [founder, setFounder] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -24,6 +25,12 @@ export const AffiliateCard = () => {
     try {
       const data = await affiliateApi.getFounderByCode(affiliateCode!);
       setFounder(data);
+      
+      // Load stats
+      if (data?.id) {
+        const founderStats = await affiliateApi.getFounderStats(data.id);
+        setStats(founderStats);
+      }
     } catch (error) {
       console.error('Error loading founder:', error);
       toast({
@@ -95,6 +102,24 @@ export const AffiliateCard = () => {
               <p className="text-[#B8B8C7] max-w-md mb-6">{founder.bio}</p>
             )}
           </div>
+
+          {/* Sales Stats */}
+          {stats && (
+            <div className="grid grid-cols-2 gap-4 mb-8 p-4 rounded-xl bg-[#0A0A0F] border border-[#ffffff0f]">
+              <div className="text-center">
+                <p className="text-sm text-[#B8B8C7] mb-1">Total Sales</p>
+                <p className="text-2xl font-bold text-white">${stats.totalEarnings.toFixed(2)}</p>
+                <p className="text-xs text-[#4EEAFF] mt-1">{stats.totalReferrals} referrals</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-[#B8B8C7] mb-1">Commission Rate</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">
+                  {founder.commission_rate}%
+                </p>
+                <p className="text-xs text-[#B8B8C7] mt-1">WePrintWraps</p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4 mb-8">
             {founder.email && (
