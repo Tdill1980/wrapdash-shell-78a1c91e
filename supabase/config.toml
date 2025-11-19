@@ -26,3 +26,18 @@ verify_jwt = false
 
 [functions.update-woo-order]
 verify_jwt = false
+
+[functions.track-affiliate-card-view]
+verify_jwt = false
+
+[functions.track-affiliate-signup]
+verify_jwt = false
+
+[functions.send-affiliate-access-link]
+verify_jwt = true
+
+[functions.affiliate-verify-login]
+verify_jwt = false
+
+[functions.affiliate-magic-link]
+verify_jwt = false
