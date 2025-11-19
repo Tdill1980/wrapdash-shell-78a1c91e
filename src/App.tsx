@@ -15,6 +15,7 @@ import DesignMarket from "./pages/DesignMarket";
 import ShopFlow from "./pages/ShopFlow";
 
 import ShopFlowJob from "./pages/ShopFlowJob";
+import ShopFlowInternal from "./pages/ShopFlowInternal";
 import { TrackJob } from "./modules/shopflow";
 import TrackOrder from "./pages/TrackOrder";
 import MightyCustomer from "./pages/MightyCustomer";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/design-market" element={<AppLayout><DesignMarket /></AppLayout>} />
             <Route path="/shopflow" element={<AppLayout><ShopFlow /></AppLayout>} />
             <Route path="/shopflow/:id" element={<AppLayout><ShopFlowJob /></AppLayout>} />
+            <Route path="/shopflow-internal/:id" element={<AppLayout><ShopFlowInternal /></AppLayout>} />
             <Route path="/track/:orderNumber" element={<TrackJob />} />
             <Route path="/track-order/:orderNumber" element={<TrackOrder />} />
             <Route path="/mighty-customer" element={<AppLayout><MightyCustomer /></AppLayout>} />
