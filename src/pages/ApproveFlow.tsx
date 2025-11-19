@@ -238,14 +238,17 @@ export default function ApproveFlow() {
 
   return (
     <MainLayout userName="Trish">
-      <div className="space-y-6 max-w-[1600px]">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-white">Approve</span>
-            <span className="text-gradient">Flow™</span>
-          </h1>
+      <div className="space-y-6 w-full">
+      {/* Header Card */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              <span className="text-white">Approve</span>
+              <span className="text-gradient">Flow™</span>
+            </h1>
+            <p className="text-muted-foreground mt-1">Design approval workflow</p>
+          </div>
           
           <div className="flex items-center gap-2">
             <Button
@@ -263,12 +266,8 @@ export default function ApproveFlow() {
               CUSTOMER
             </Button>
           </div>
-
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-            🔄 LIVE SYNC
-          </Badge>
         </div>
-      </div>
+      </Card>
 
       {/* Progress Bar */}
       <div className="py-3 px-4 bg-card border border-border rounded-lg">
