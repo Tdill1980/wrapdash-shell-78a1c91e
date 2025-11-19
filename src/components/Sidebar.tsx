@@ -12,6 +12,7 @@ import {
   Briefcase,
   Award,
   DollarSign,
+  Settings,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo.png";
 
@@ -39,6 +40,7 @@ const navigationItems = [
     )
   },
   { name: "Affiliate Payments", path: "/affiliate/payments", icon: DollarSign },
+  { name: "Product Admin", path: "/admin/products", icon: Settings },
 ];
 
 export const Sidebar = () => {
