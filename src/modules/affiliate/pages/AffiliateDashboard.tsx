@@ -13,6 +13,8 @@ import { UTMLinkGenerator } from '../components/UTMLinkGenerator';
 import { QRCodeGenerator } from '../components/QRCodeGenerator';
 import { SalesChart } from '../components/SalesChart';
 import { SalesBreakdown } from '../components/SalesBreakdown';
+import { ProductCommissionCards } from '../components/ProductCommissionCards';
+import { AffiliateHeader } from '../components/AffiliateHeader';
 import { LogOut } from 'lucide-react';
 
 export const AffiliateDashboard = () => {
@@ -86,20 +88,15 @@ export const AffiliateDashboard = () => {
   const cardUrl = `${window.location.origin}/affiliate/card/${founder.affiliateCode}`;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] py-8 px-4">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">
-              MightyAffiliate OS™
-            </h1>
-            <p className="text-[#B8B8C7] mt-1">Welcome back, {founder.fullName}!</p>
-          </div>
+        {/* Header with Avatar */}
+        <div className="flex justify-between items-start mb-8">
+          <AffiliateHeader founder={founder} />
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="border-[#ffffff0f] text-white"
+            className="border-border text-white ml-4"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
@@ -108,6 +105,11 @@ export const AffiliateDashboard = () => {
 
         {/* Stats Cards */}
         <StatsCards stats={stats} loading={statsLoading} />
+
+        {/* Product Commission Cards */}
+        <div className="mt-8">
+          <ProductCommissionCards commissions={commissions} />
+        </div>
 
         {/* Time Period Selector & Charts */}
         <div className="mt-8 space-y-6">

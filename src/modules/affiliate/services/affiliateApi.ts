@@ -11,6 +11,7 @@ export interface AffiliateFounder {
   companyName?: string;
   phone?: string;
   socialLinks?: Record<string, string>;
+  isActive?: boolean;
 }
 
 export interface AffiliateStats {
@@ -28,6 +29,7 @@ export interface AffiliateCommission {
   commissionAmount: number;
   status: string;
   createdAt: string;
+  productName?: string;
 }
 
 export const affiliateApi = {
