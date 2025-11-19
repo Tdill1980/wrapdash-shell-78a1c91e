@@ -10,7 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
 import { Plus, ShoppingCart, Lock } from "lucide-react";
-import { useProducts } from "@/hooks/useProducts";
+import { useProducts, type Product } from "@/hooks/useProducts";
+
+// LOCKED WPW PRODUCT IDs - ONLY these can be added to WooCommerce cart
+const WPW_ALLOWED_PRODUCT_IDS = [
+  58391, 19420, 72, 108, 79, 234, 58160,
+  15192, 80, 475, 39628, 4179,
+  42809, 1726, 39698, 52489, 69439
+];
 
 const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -94,53 +101,57 @@ export default function MightyCustomer() {
     );
   };
 
-  const handleSendToApproveFlow = async () => {
-    if (!selectedProduct || !customerData.name) {
+  const handleAddToCart = async (product: Product) => {
+    // SECURITY: Only allow WPW products with valid WooCommerce IDs
+    if (!product.woo_product_id || !WPW_ALLOWED_PRODUCT_IDS.includes(product.woo_product_id)) {
       toast({
-        title: "Missing Information",
-        description: "Please select a product and enter customer name",
+        title: "Cannot Add to Cart",
+        description: "This product is for quoting only and cannot be added to cart.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSending(true);
-
-    try {
-      const orderTotal = 5000; // Placeholder calculation
-      const orderNumber = `QUOTE-${Date.now()}`;
-
-      const { data, error } = await supabase
-        .from("approveflow_projects")
-        .insert({
-          order_number: orderNumber,
-          customer_name: customerData.name,
-          customer_email: customerData.email || null,
-          product_type: selectedProduct,
-          status: "design_requested",
-          order_total: orderTotal,
-          design_instructions: `Vehicle: ${customerData.vehicleYear} ${customerData.vehicleMake} ${customerData.vehicleModel}\nFinish: ${finish}\nAdd-ons: ${addOns.join(", ")}`,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
+    // Additional validation
+    if (product.product_type !== 'wpw') {
       toast({
-        title: "Success",
-        description: `Project sent to ApproveFlow`,
-      });
-
-      navigate(`/approveflow/${data.id}`);
-    } catch (error) {
-      console.error("Error creating project:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send to ApproveFlow",
+        title: "Cannot Add to Cart",
+        description: "Only WPW products can be added to the cart.",
         variant: "destructive",
       });
-    } finally {
-      setIsSending(false);
+      return;
+    }
+
+    try {
+      // Calculate price based on product type
+      let total = 0;
+      if (product.pricing_type === 'per_sqft' && product.price_per_sqft) {
+        // For per_sqft products, would need SQFT calculation
+        total = product.price_per_sqft * 100; // Placeholder
+      } else if (product.pricing_type === 'flat' && product.flat_price) {
+        total = product.flat_price * quantity;
+      }
+
+      // Here you would integrate with WooCommerce API
+      // For now, just show success message
+      toast({
+        title: "Added to Cart",
+        description: `${product.product_name} (WC ID: ${product.woo_product_id}) added to cart`,
+      });
+
+      console.log('Adding to WooCommerce cart:', {
+        woo_product_id: product.woo_product_id,
+        product_name: product.product_name,
+        quantity,
+        total
+      });
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add product to cart",
+        variant: "destructive",
+      });
     }
   };
 
@@ -224,6 +235,11 @@ export default function MightyCustomer() {
                         {product.product_type === 'quote-only' && (
                           <span className="text-xs text-muted-foreground mt-1 block">
                             Quote Only — Cannot Add to Cart
+                          </span>
+                        )}
+                        {product.product_type === 'wpw' && product.woo_product_id && (
+                          <span className="text-xs text-primary/70 mt-1 block">
+                            WC ID: {product.woo_product_id}
                           </span>
                         )}
                       </button>
@@ -374,16 +390,26 @@ export default function MightyCustomer() {
             </Button>
             {(() => {
               const product = allProducts.find(p => p.product_name === selectedProduct);
-              const isWPW = product?.product_type === 'wpw';
+              
+              if (!product) {
+                return (
+                  <Button
+                    disabled
+                    className="flex-1 bg-gray-600 cursor-not-allowed"
+                  >
+                    Select a Product
+                  </Button>
+                );
+              }
+
+              // Check if this is a WPW product with valid WooCommerce ID
+              const isWPW = product.product_type === 'wpw' && 
+                           product.woo_product_id && 
+                           WPW_ALLOWED_PRODUCT_IDS.includes(product.woo_product_id);
               
               return isWPW ? (
                 <Button
-                  onClick={() => {
-                    toast({
-                      title: "Added to Cart",
-                      description: `${selectedProduct} added to WooCommerce cart`,
-                    });
-                  }}
+                  onClick={() => handleAddToCart(product)}
                   disabled={!selectedProduct}
                   className="flex-1 bg-gradient-primary hover:opacity-90"
                 >
