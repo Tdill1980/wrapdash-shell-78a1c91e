@@ -42,30 +42,41 @@ export const CommissionTable = ({ commissions }: CommissionTableProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {commissions.map((commission) => (
-                <TableRow key={commission.id} className="border-[#ffffff0f]">
-                  <TableCell className="text-white">
-                    {format(new Date(commission.createdAt), 'MMM dd, yyyy')}
-                  </TableCell>
-                  <TableCell className="text-white font-mono">
-                    #{commission.orderNumber}
-                  </TableCell>
-                  <TableCell className="text-white">
-                    {commission.customerEmail}
-                  </TableCell>
-                  <TableCell className="text-white">
-                    ${commission.orderTotal.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-[#00AFFF] font-semibold">
-                    ${commission.commissionAmount.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(commission.status)}>
-                      {commission.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {commissions.map((commission) => {
+                const getStatusBadge = (status: string) => {
+                  const variants: Record<string, { label: string; className: string }> = {
+                    pending: { label: '🟡 Pending', className: 'bg-yellow-500/10 text-yellow-500' },
+                    approved: { label: '🟢 Approved', className: 'bg-green-500/10 text-green-500' },
+                    paid: { label: '🔵 Paid', className: 'bg-blue-500/10 text-blue-500' },
+                    cancelled: { label: '🔴 Cancelled', className: 'bg-red-500/10 text-red-500' },
+                  };
+                  const config = variants[status] || variants.pending;
+                  return <Badge className={config.className}>{config.label}</Badge>;
+                };
+
+                return (
+                  <TableRow key={commission.id} className="border-[#ffffff0f]">
+                    <TableCell className="text-white">
+                      {format(new Date(commission.createdAt), 'MMM dd, yyyy')}
+                    </TableCell>
+                    <TableCell className="text-white font-mono">
+                      #{commission.orderNumber}
+                    </TableCell>
+                    <TableCell className="text-white">
+                      {commission.customerEmail}
+                    </TableCell>
+                    <TableCell className="text-white">
+                      ${commission.orderTotal.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-[#00AFFF] font-semibold">
+                      ${commission.commissionAmount.toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(commission.status)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

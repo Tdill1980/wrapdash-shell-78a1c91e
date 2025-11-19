@@ -115,6 +115,9 @@ serve(async (req) => {
     
     // Extract files from meta data or attachments
     const files = extractFiles(payload);
+    
+    // Extract affiliate ref code
+    const affiliateRefCode = extractAffiliateRefCode(payload);
 
     if (!orderNumber) {
       throw new Error('Order number is required');
@@ -163,6 +166,7 @@ serve(async (req) => {
           files: updatedFiles,
           customer_email: customerEmail,
           vehicle_info: vehicleInfo,
+          affiliate_ref_code: affiliateRefCode,
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
@@ -238,9 +242,22 @@ serve(async (req) => {
         files,
         approveflow_project_id: approveflowProject?.id || null,
         priority: 'normal',
+        affiliate_ref_code: affiliateRefCode,
       })
       .select()
       .single();
+    
+    // Track affiliate referral if ref code exists
+    if (affiliateRefCode && customerEmail && newOrder) {
+      await trackAffiliateReferral(
+        affiliateRefCode,
+        customerEmail,
+        orderNumber,
+        parseFloat(payload.total || '0'),
+        productType,
+        supabase
+      );
+    }
     
     // AUTO-STAGE ENGINE: If starting at "printing", queue progression
     if (initialCustomerStage === 'printing') {
@@ -367,6 +384,67 @@ function extractFiles(payload: any): any[] {
   }
   
   return files;
+}
+
+function extractAffiliateRefCode(payload: any): string | null {
+  // Check meta_data array for affiliate ref codes
+  if (payload.meta_data) {
+    const refMeta = payload.meta_data.find((m: any) => 
+      m.key === '_affiliate_ref' || 
+      m.key === 'ref_code' ||
+      m.key === '_wc_affiliate_code' ||
+      m.key === 'affiliate_code'
+    );
+    if (refMeta) return refMeta.value;
+  }
+  
+  // Check billing meta_data
+  if (payload.billing?.meta_data) {
+    const refMeta = payload.billing.meta_data.find((m: any) => 
+      m.key === '_affiliate_ref' || 
+      m.key === 'ref_code'
+    );
+    if (refMeta) return refMeta.value;
+  }
+  
+  // Check customer note for ref code pattern
+  if (payload.customer_note) {
+    const match = payload.customer_note.match(/REF:(\w+)/i);
+    if (match) return match[1];
+  }
+  
+  // Check utm_source
+  if (payload.utm_source) return payload.utm_source;
+  
+  return null;
+}
+
+async function trackAffiliateReferral(refCode: string, customerEmail: string, orderNumber: string, orderTotal: number, productType: string, supabase: any) {
+  try {
+    // Calculate 2.5% commission
+    const commissionAmount = orderTotal * 0.025;
+    
+    console.log(`Tracking affiliate referral: ${refCode} for order ${orderNumber}, commission: $${commissionAmount}`);
+    
+    // Call the track-affiliate-signup function
+    const { data, error } = await supabase.functions.invoke('track-affiliate-signup', {
+      body: {
+        refCode,
+        email: customerEmail,
+        orderNumber,
+        orderTotal,
+        productType
+      }
+    });
+    
+    if (error) {
+      console.error('Error tracking affiliate signup:', error);
+    } else {
+      console.log('Affiliate signup tracked successfully:', data);
+    }
+  } catch (error) {
+    console.error('Error in trackAffiliateReferral:', error);
+  }
 }
 
 // AUTO-STAGE PROGRESSION ENGINE
