@@ -155,19 +155,16 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
           onMouseUp={handleMouseUp}
           onTouchStart={handleMouseDown}
           onTouchEnd={handleMouseUp}
-          className={`w-full px-4 py-4 rounded-lg border-2 transition-all duration-200 ${
+          className={`w-full px-3 py-2.5 rounded-lg border transition-all duration-200 ${
             isRecording
-              ? "bg-gradient-to-r from-[#8FD3FF]/10 via-[#6AB9FF]/10 to-[#0047FF]/10 border-[#0047FF] shadow-[0_0_20px_rgba(0,71,255,0.3)]"
+              ? "bg-gradient-to-r from-[#8FD3FF]/10 via-[#6AB9FF]/10 to-[#0047FF]/10 border-[#0047FF] shadow-[0_0_16px_rgba(0,71,255,0.25)]"
               : "bg-[#0F0F14] border-border/40 hover:border-[#0047FF]/60 hover:bg-[#141419]"
           }`}
         >
-          <div className="flex flex-col items-center gap-2">
-            <Mic className={`w-6 h-6 ${isRecording ? "text-[#0047FF] animate-pulse" : "text-muted-foreground"}`} />
-            <span className="text-sm text-foreground font-semibold">
+          <div className="flex items-center justify-center gap-2">
+            <Mic className={`w-4 h-4 ${isRecording ? "text-[#0047FF] animate-pulse" : "text-muted-foreground"}`} />
+            <span className="text-xs text-foreground font-medium">
               {isRecording ? "Listening... Release when done" : "Hold & Speak"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {isRecording ? "Recording in progress..." : "Press and hold to start"}
             </span>
           </div>
         </button>
