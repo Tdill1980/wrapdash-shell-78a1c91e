@@ -3,6 +3,9 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { affiliateApi, AffiliateFounder } from '../services/affiliateApi';
 import { useAdminActions } from '../hooks/useAdminActions';
 import { AffiliateAdminView } from './AffiliateAdminView';
+import { StatsCards } from '../components/StatsCards';
+import { SalesChart } from '../components/SalesChart';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Mail, ToggleLeft, ToggleRight, Download, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,11 +14,15 @@ export const AffiliateAdmin = () => {
   const [founders, setFounders] = useState<AffiliateFounder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFounder, setSelectedFounder] = useState<AffiliateFounder | null>(null);
+  const [timePeriod, setTimePeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [platformStats, setPlatformStats] = useState<any>(null);
+  const [allCommissions, setAllCommissions] = useState<any[]>([]);
   const { sendMagicLink, toggleFounderStatus, exportCSV } = useAdminActions();
 
   useEffect(() => {
     if (isAdmin) {
       fetchFounders();
+      fetchPlatformStats();
     }
   }, [isAdmin]);
 
@@ -42,6 +49,34 @@ export const AffiliateAdmin = () => {
       toast.error('Failed to load affiliates');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPlatformStats = async () => {
+    try {
+      // Fetch all commissions and aggregate platform-wide stats
+      const commissions = await affiliateApi.getAllCommissions();
+      setAllCommissions(commissions);
+      
+      const totalEarnings = commissions.reduce((sum: number, c: any) => sum + Number(c.commission_amount), 0);
+      const totalReferrals = commissions.length;
+      const pendingTotal = commissions
+        .filter((c: any) => c.status === 'pending')
+        .reduce((sum: number, c: any) => sum + Number(c.commission_amount), 0);
+      const approvedTotal = commissions
+        .filter((c: any) => c.status === 'approved' || c.status === 'paid')
+        .reduce((sum: number, c: any) => sum + Number(c.commission_amount), 0);
+
+      setPlatformStats({
+        totalEarnings,
+        totalReferrals,
+        conversionRate: 0, // Would need card views data to calculate
+        cardViews: 0, // Would need to aggregate from all founders
+        pendingTotal,
+        approvedTotal,
+      });
+    } catch (error) {
+      console.error('Error fetching platform stats:', error);
     }
   };
 
@@ -74,6 +109,30 @@ export const AffiliateAdmin = () => {
         <p className="text-[#B8B8C7] mt-2">
           Manage affiliates, commissions, product payouts, and platform-wide performance.
         </p>
+      </div>
+
+      {/* Platform Stats & Chart */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">Platform Performance</h2>
+          <Tabs value={timePeriod} onValueChange={(v) => setTimePeriod(v as any)}>
+            <TabsList className="bg-[#16161E] border border-[#ffffff0f]">
+              <TabsTrigger value="daily" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00AFFF] data-[state=active]:to-[#0047FF]">
+                Daily
+              </TabsTrigger>
+              <TabsTrigger value="weekly" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00AFFF] data-[state=active]:to-[#0047FF]">
+                Weekly
+              </TabsTrigger>
+              <TabsTrigger value="monthly" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00AFFF] data-[state=active]:to-[#0047FF]">
+                Monthly
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <StatsCards stats={platformStats} loading={loading} />
+        
+        <SalesChart commissions={allCommissions} timePeriod={timePeriod} />
       </div>
 
       <div className="p-6 bg-[#101016] rounded-2xl border border-white/10">

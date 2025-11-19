@@ -305,4 +305,15 @@ export const affiliateApi = {
     if (error) throw error;
     return data;
   },
+
+  // Admin: Get all commissions across all founders
+  async getAllCommissions() {
+    const { data, error } = await supabase
+      .from('affiliate_commissions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
 };
