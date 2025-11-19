@@ -11,13 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
 import { Plus, ShoppingCart, Lock } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
-
-// LOCKED WPW PRODUCT IDs - ONLY these can be added to WooCommerce cart
-const WPW_ALLOWED_PRODUCT_IDS = [
-  58391, 19420, 72, 108, 79, 234, 58160,
-  15192, 80, 475, 39628, 4179,
-  42809, 1726, 39698, 52489, 69439
-];
+import { isWPW } from "@/lib/wpwProducts";
 
 const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -102,8 +96,8 @@ export default function MightyCustomer() {
   };
 
   const handleAddToCart = async (product: Product) => {
-    // SECURITY: Only allow WPW products with valid WooCommerce IDs
-    if (!product.woo_product_id || !WPW_ALLOWED_PRODUCT_IDS.includes(product.woo_product_id)) {
+    // Validate product is WPW and has valid WooCommerce ID
+    if (!product.woo_product_id || !isWPW(product.woo_product_id)) {
       toast({
         title: "Cannot Add to Cart",
         description: "This product is for quoting only and cannot be added to cart.",
@@ -112,46 +106,34 @@ export default function MightyCustomer() {
       return;
     }
 
-    // Additional validation
-    if (product.product_type !== 'wpw') {
-      toast({
-        title: "Cannot Add to Cart",
-        description: "Only WPW products can be added to the cart.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
-      // Calculate price based on product type
-      let total = 0;
-      if (product.pricing_type === 'per_sqft' && product.price_per_sqft) {
-        // For per_sqft products, would need SQFT calculation
-        total = product.price_per_sqft * 100; // Placeholder
-      } else if (product.pricing_type === 'flat' && product.flat_price) {
-        total = product.flat_price * quantity;
-      }
+      setIsSending(true);
+      
+      // Call server-side protected edge function
+      const { data, error } = await supabase.functions.invoke('add-to-woo-cart', {
+        body: {
+          product_id: product.woo_product_id,
+          quantity: quantity,
+        },
+      });
 
-      // Here you would integrate with WooCommerce API
-      // For now, just show success message
+      if (error) throw error;
+
       toast({
         title: "Added to Cart",
-        description: `${product.product_name} (WC ID: ${product.woo_product_id}) added to cart`,
+        description: `${product.product_name} added to your cart!`,
       });
-
-      console.log('Adding to WooCommerce cart:', {
-        woo_product_id: product.woo_product_id,
-        product_name: product.product_name,
-        quantity,
-        total
-      });
+      
+      console.log("Added to cart:", data);
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      console.error("Cart error:", error);
       toast({
         title: "Error",
-        description: "Failed to add product to cart",
+        description: "Failed to add item to cart. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -403,11 +385,11 @@ export default function MightyCustomer() {
               }
 
               // Check if this is a WPW product with valid WooCommerce ID
-              const isWPW = product.product_type === 'wpw' && 
+              const productIsWPW = product.product_type === 'wpw' && 
                            product.woo_product_id && 
-                           WPW_ALLOWED_PRODUCT_IDS.includes(product.woo_product_id);
+                           isWPW(product.woo_product_id);
               
-              return isWPW ? (
+              return productIsWPW ? (
                 <Button
                   onClick={() => handleAddToCart(product)}
                   disabled={!selectedProduct}
