@@ -65,6 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailHTML = renderEmailTemplate(tone, design, {
       customer_name: customerName,
       footer_text: branding?.footer_text || "",
+      logo_url: branding?.logo_url || "",
       ...quoteData,
     });
 

@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { renderEmailTemplate } from "@/lib/mightymail-tones";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmailPreviewDialogProps {
   open: boolean;
@@ -18,11 +19,27 @@ export function EmailPreviewDialog({ open, onOpenChange, quoteData, tone: initia
   const [design, setDesign] = useState(initialDesign);
   const [previewHTML, setPreviewHTML] = useState("");
   const [loading, setLoading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
     setTone(initialTone);
     setDesign(initialDesign);
   }, [initialTone, initialDesign]);
+
+  useEffect(() => {
+    loadBranding();
+  }, []);
+
+  async function loadBranding() {
+    const { data } = await supabase
+      .from("email_branding")
+      .select("logo_url")
+      .single();
+    
+    if (data?.logo_url) {
+      setLogoUrl(data.logo_url);
+    }
+  }
 
   useEffect(() => {
     if (open && quoteData) {
@@ -45,6 +62,7 @@ export function EmailPreviewDialog({ open, onOpenChange, quoteData, tone: initia
         quote_total: quoteData.total,
         portal_url: quoteData.portalUrl || "#",
         footer_text: "Professional vehicle wrap solutions.",
+        logo_url: logoUrl,
       });
       setPreviewHTML(html);
     } catch (error) {

@@ -10,8 +10,10 @@ export default function MightyMailAdmin() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-[#00AFFF] via-[#008CFF] to-[#4EEAFF] bg-clip-text text-transparent">
-          MightyMail™ Admin
+        <h2 className="text-3xl font-bold tracking-tight">
+          <span className="text-white">Mighty</span>
+          <span className="bg-gradient-to-r from-[#00AFFF] via-[#008CFF] to-[#4EEAFF] bg-clip-text text-transparent">Mail™</span>
+          <span className="text-white"> Admin</span>
         </h2>
         <p className="text-muted-foreground">
           Manage email sequences, branding, retargeting lists, and customer campaigns.

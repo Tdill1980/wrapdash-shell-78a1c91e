@@ -182,7 +182,7 @@ function buildEmailHTML(
       <body>
         <div class="container">
           <div class="header">
-            <h1>WrapCommand™</h1>
+            ${data.logo_url ? `<img src="${data.logo_url}" alt="Company Logo" style="max-width: 200px; max-height: 80px; margin-bottom: 10px;" />` : `<h1>WrapCommand™</h1>`}
           </div>
           <div class="content">
             <h2>${subject}</h2>
@@ -205,7 +205,8 @@ function buildEmailHTML(
             <p style="margin-top: 30px;">${tone.closing}</p>
           </div>
           <div class="footer">
-            <p>© ${new Date().getFullYear()} WrapCommand™. Powered by MightyMail™</p>
+            ${data.logo_url ? `<img src="${data.logo_url}" alt="Company Logo" style="max-width: 150px; max-height: 60px; margin-bottom: 10px; opacity: 0.8;" />` : ''}
+            <p>© ${new Date().getFullYear()} WrapCommand™. Powered by <span style="color: white;">Mighty</span><span style="background: linear-gradient(90deg, #00AFFF, #4EEAFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Mail™</span></p>
             <p>${data.footer_text || 'Professional vehicle wrap solutions.'}</p>
           </div>
         </div>
