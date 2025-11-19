@@ -10,11 +10,11 @@ import { Timeline } from "@/modules/shopflow/components/Timeline";
 import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
 
 import {
-  getStageFromWoo,
-  getNextStage,
-  getStageDescription,
-  detectMissing,
-  buildTimeline
+  getProductionStage,
+  isProductionReady,
+  getProductionStageDescription,
+  buildProductionTimeline,
+  detectMissing
 } from "@/modules/shopflow/utils/stageEngine";
 
 // Extract WooCommerce file uploads from line_items → meta_data
@@ -67,13 +67,12 @@ export default function ShopFlowInternal() {
   // Extract WooCommerce artwork files
   const artworkFiles = extractFilesFromWoo(order);
 
-  // Internal Flow Logic (Staff View)
-  const internalStage = getStageFromWoo(order.status);
-  const nextStage = getNextStage(internalStage);
-  const stageDescription = getStageDescription(internalStage);
-  const nextStepDescription = getStageDescription(nextStage);
+  // Internal Production Logic (Staff View)
+  const productionStage = getProductionStage(order.status);
+  const productionReady = isProductionReady(order.status);
+  const stageDescription = getProductionStageDescription(productionStage);
   const missingItems = detectMissing({ ...order, files: artworkFiles });
-  const timelineData = buildTimeline(order);
+  const timelineData = buildProductionTimeline(order);
 
   return (
     <div className="container mx-auto px-6 py-8">
@@ -94,8 +93,12 @@ export default function ShopFlowInternal() {
           </div>
 
           <div className="flex flex-col items-end gap-2">
-            <span className="px-3 py-1 rounded-md text-xs text-white bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]">
-              Internal: {internalStage}
+            <span className={`px-3 py-1 rounded-md text-xs text-white ${
+              productionReady 
+                ? 'bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]'
+                : 'bg-gradient-to-r from-yellow-500 to-orange-500'
+            }`}>
+              Production: {productionStage}
             </span>
             <span className="px-2 py-0.5 rounded text-xs text-gray-400 bg-[#16161E] border border-white/5">
               WooCommerce: {order.status}
@@ -103,21 +106,20 @@ export default function ShopFlowInternal() {
           </div>
         </div>
 
-        {/* Current Stage Description */}
-        <div className="bg-[#0D0D12] border border-white/5 rounded-lg p-4 mb-3">
-          <p className="text-sm text-gray-300 mb-1">
-            <span className="text-[#8FD3FF] font-semibold">Current:</span> {stageDescription}
-          </p>
-        </div>
-
-        {/* Next Step Description */}
-        {nextStage && nextStepDescription && (
-          <div className="bg-[#0D0D12] border border-[#0047FF]/20 rounded-lg p-4">
-            <p className="text-sm text-gray-300">
-              <span className="text-[#6AB9FF] font-semibold">Next:</span> {nextStepDescription}
+        {/* Production Stage Description */}
+        {!productionReady && (
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-3">
+            <p className="text-sm text-yellow-200">
+              ⚠️ <span className="font-semibold">Pre-Production:</span> This job is not yet ready for the production floor.
             </p>
           </div>
         )}
+
+        <div className="bg-[#0D0D12] border border-white/5 rounded-lg p-4">
+          <p className="text-sm text-gray-300">
+            <span className="text-[#8FD3FF] font-semibold">Status:</span> {stageDescription}
+          </p>
+        </div>
       </div>
 
       {/* Quick Summary */}
