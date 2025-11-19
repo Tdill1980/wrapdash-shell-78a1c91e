@@ -135,6 +135,13 @@ export default function MightyCustomer() {
 
     setIsSendingEmail(true);
     try {
+      // Get customer ID if they exist in retarget_customers
+      const { data: customer } = await supabase
+        .from('email_retarget_customers')
+        .select('id')
+        .eq('email', customerData.email)
+        .maybeSingle();
+
       const { data, error } = await supabase.functions.invoke("send-mightymail-quote", {
         body: {
           customerEmail: customerData.email,
@@ -152,6 +159,8 @@ export default function MightyCustomer() {
           },
           tone: emailTone,
           design: emailDesign,
+          quoteId: null, // Will be set when quote is saved
+          customerId: customer?.id || null,
         },
       });
 
