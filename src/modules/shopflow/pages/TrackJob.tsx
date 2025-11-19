@@ -55,7 +55,7 @@ export default function TrackJob() {
         .from("shopflow_orders")
         .select("*")
         .eq("order_number", orderNumber)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
