@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useShopFlow } from "@/hooks/useShopFlow";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { VehicleInfoCard } from "@/modules/shopflow/components/VehicleInfoCard";
 import { CustomerInfoCard } from "@/modules/shopflow/components/CustomerInfoCard";
@@ -43,6 +44,7 @@ function extractFiles(order: any) {
 export default function ShopFlowInternal() {
   const { id } = useParams<{ id: string }>();
   const { order, loading } = useShopFlow(id);
+  const isMobile = useIsMobile();
 
   if (loading) {
     return (
@@ -68,7 +70,7 @@ export default function ShopFlowInternal() {
   const timeline = buildProductionTimeline(order);
 
   return (
-    <div className="container mx-auto px-6 py-10 text-white">
+    <div className={`container mx-auto text-white ${isMobile ? 'px-4 py-6' : 'px-6 py-10'}`}>
 
       {/* Sticky Gradient Header */}
       <div className="sticky top-0 z-50 bg-[#0B0B10]/90 backdrop-blur-md py-3 border-b border-white/10">
@@ -76,11 +78,11 @@ export default function ShopFlowInternal() {
       </div>
 
       {/* Job Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold">Order #{order.order_number}</h1>
+      <div className={isMobile ? 'mb-6' : 'mb-10'}>
+        <h1 className={`font-bold ${isMobile ? 'text-2xl' : 'text-3xl'}`}>Order #{order.order_number}</h1>
         <p className="text-gray-400">{order.customer_name}</p>
 
-        <div className="flex gap-4 mt-4">
+        <div className={`flex gap-4 mt-4 ${isMobile ? 'flex-col' : ''}`}>
           <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
             <span className="text-gray-400">Internal Stage:</span>{" "}
             <span className="text-white">{internalStage}</span>
@@ -95,9 +97,9 @@ export default function ShopFlowInternal() {
       </div>
 
       {/* FULL-WIDTH INTERNAL PRODUCTION TRACKER */}
-      <div className="bg-[#111118] border border-white/10 rounded-lg py-6 px-6 mb-14">
-        <h2 className="text-lg font-semibold mb-4">Production Tracker</h2>
-        <div className="flex items-center justify-between gap-4 overflow-x-auto">
+      <div className={`bg-[#111118] border border-white/10 rounded-lg mb-14 ${isMobile ? 'py-4 px-4' : 'py-6 px-6'}`}>
+        <h2 className={`font-semibold mb-4 ${isMobile ? 'text-base' : 'text-lg'}`}>Production Tracker</h2>
+        <div className="flex items-center justify-between gap-4 overflow-x-auto pb-2">
           {timeline.map((step: any, idx: number) => (
             <div key={idx} className="flex flex-col items-center min-w-[120px]">
               <div
@@ -117,10 +119,12 @@ export default function ShopFlowInternal() {
       {/* FULL WIDTH CENTER SPINE LAYOUT */}
       <div className="relative">
 
-        {/* Thick glowing SPINE */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[5px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-40 rounded-full"></div>
+        {/* Thick glowing SPINE - hide on mobile */}
+        {!isMobile && (
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[5px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-40 rounded-full"></div>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className={`grid gap-10 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
 
           {/* LEFT COLUMN — Info Cards */}
           <div className="flex flex-col gap-6">
@@ -162,7 +166,7 @@ export default function ShopFlowInternal() {
           </div>
 
           {/* RIGHT COLUMN — Actions */}
-          <div className="sticky top-[140px] h-fit">
+          <div className={isMobile ? '' : 'sticky top-[140px] h-fit'}>
             <ActionSidebar order={order} />
           </div>
 

@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const statusConfig = {
   order_received: { label: "Order Received", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
@@ -31,6 +32,7 @@ const statusConfig = {
 export default function ShopFlowInternalList() {
   const { orders, loading, syncFromWooCommerce } = useShopFlow();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Auto-load last 48 hours on mount
   useEffect(() => {
@@ -118,6 +120,52 @@ export default function ShopFlowInternalList() {
             </p>
           </div>
         </Card>
+      ) : isMobile ? (
+        <div className="space-y-4">
+          {orders.map((order) => {
+            const status = order.status || 'order_received';
+            const config = statusConfig[status] || statusConfig.order_received;
+            
+            return (
+              <Card 
+                key={order.id} 
+                className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => navigate(`/shopflow-internal/${order.id}`)}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">#{order.order_number}</p>
+                      <p className="font-semibold text-foreground">{order.customer_name}</p>
+                      {order.customer_email && (
+                        <p className="text-xs text-muted-foreground">{order.customer_email}</p>
+                      )}
+                    </div>
+                    <Badge className={config.color}>
+                      <span className="flex items-center gap-1.5">
+                        {getStatusIcon(status)}
+                        {config.label}
+                      </span>
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{order.product_type}</span>
+                    <span className="text-muted-foreground">
+                      {format(new Date(order.created_at), "MMM d, h:mm a")}
+                    </span>
+                  </div>
+
+                  {order.priority && (
+                    <Badge variant={order.priority === 'high' ? 'destructive' : 'secondary'}>
+                      {order.priority}
+                    </Badge>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
       ) : (
         <Card>
           <Table>
