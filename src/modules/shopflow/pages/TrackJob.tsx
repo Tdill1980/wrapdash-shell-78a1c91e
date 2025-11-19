@@ -116,51 +116,100 @@ export default function TrackJob() {
   return (
     <div className="min-h-screen bg-[#0A0A0F]">
       <div className="container mx-auto py-8 px-4 max-w-4xl">
-        {/* ShopFlow™ Header */}
-        <ShopFlowHeader
-          orderNumber={order.woo_order_number ?? order.order_number}
-          productName={order.product_type}
-          customerName={order.customer_name}
-          vehicle={order.vehicle_info}
-        />
+        {/* ShopFlow™ Gradient Header */}
+        <div 
+          className="w-full rounded-xl p-8 text-white mb-6"
+          style={{
+            background: "linear-gradient(90deg, #2F81F7 0%, #15D1FF 100%)"
+          }}
+        >
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold tracking-wide mb-1">
+                SHOP<span className="text-[#15D1FF]">FLOW</span>™
+              </h1>
+              <p className="text-sm opacity-90">Real-Time Wrap Tracking for WePrintWraps.com</p>
+            </div>
+            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
+              TRACKING
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-start gap-3">
+              <Package className="w-5 h-5 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-xs opacity-80 mb-1">Product</p>
+                <p className="font-medium">{order.product_type}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Upload className="w-5 h-5 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-xs opacity-80 mb-1">Vehicle</p>
+                <p className="font-medium">
+                  {order.vehicle_info 
+                    ? `${order.vehicle_info.year || ''} ${order.vehicle_info.make || ''} ${order.vehicle_info.model || ''}`.trim()
+                    : 'Vehicle Info Pending'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-xs opacity-80 mb-1">Customer</p>
+                <p className="font-medium">{order.customer_name}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-white/20">
+            <p className="text-2xl font-bold">Order #{order.woo_order_number ?? order.order_number}</p>
+          </div>
+        </div>
 
         {/* Customer Progress Bar */}
         <CustomerProgressBar currentStatus={internalStatus} />
 
-        {/* Main Status Card */}
-        <Card className="p-6 md:p-8 mb-6 bg-[#111118] border-white/5">
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            {/* Thumbnail */}
-            <div className="w-24 h-24 bg-[#221628] rounded-lg border border-white/10 flex items-center justify-center flex-shrink-0">
-              <Package className="w-12 h-12 text-[#B7B7C5]" />
+        {/* Current Stage Card */}
+        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2F81F7] to-[#15D1FF] flex items-center justify-center flex-shrink-0">
+              <Package className="w-6 h-6 text-white" />
             </div>
-
-            {/* Order Info */}
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-white mb-2">
-                {order.product_type}
-              </h2>
-              <p className="text-[#B7B7C5] mb-4">
-                Customer: {order.customer_name}
-              </p>
-
-              {/* Status Badge */}
-              <Badge 
-                className={`text-base px-4 py-2 ${
-                  isActionRequired 
-                    ? "bg-gradient-to-r from-orange-500 to-red-500" 
-                    : "bg-gradient-to-r from-[#8B5CF6] to-[#D946EF]"
-                }`}
-              >
+              <h2 className="text-xl font-bold text-white mb-2">
                 {customerStatus}
-              </Badge>
+              </h2>
+              <p className="text-[#B7B7C5] text-sm">
+                Order received and logged into our production system.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* What's Next Card */}
+        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-[#1a1a1f] flex items-center justify-center flex-shrink-0">
+              <Upload className="w-6 h-6 text-[#2F81F7]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-white mb-2">
+                What's Next
+              </h3>
+              <p className="text-[#B7B7C5] text-sm">
+                Files will be received and logged.
+              </p>
             </div>
           </div>
         </Card>
 
         {/* Action Required Warning */}
         {isActionRequired && (
-          <Card className="p-6 mb-6 bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20">
+          <Card className="p-6 mb-6 bg-[#111317] border border-orange-500/20">
             <div className="flex gap-4">
               <AlertCircle className="w-6 h-6 text-orange-500 flex-shrink-0" />
               <div className="flex-1">
@@ -170,7 +219,7 @@ export default function TrackJob() {
                 <p className="text-[#B7B7C5] mb-4">
                   We need a corrected file to continue with your order. Please upload a new file below.
                 </p>
-                <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90">
+                <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 text-white">
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Corrected File
                 </Button>
@@ -180,7 +229,7 @@ export default function TrackJob() {
         )}
 
         {/* Progress Timeline */}
-        <Card className="p-6 md:p-8 mb-6 bg-[#111118] border-white/5">
+        <Card className="p-6 md:p-8 mb-6 bg-[#111317] border border-white/10">
           <h3 className="text-lg font-bold text-white mb-6">Order Progress</h3>
           
           {/* Horizontal Progress Bar */}
@@ -233,7 +282,7 @@ export default function TrackJob() {
 
         {/* Shipping & Tracking */}
         {order.tracking_number && (
-          <Card className="p-6 bg-[#111118] border-white/5">
+          <Card className="p-6 bg-[#111317] border border-white/10">
             <div className="flex items-start gap-4">
               <Truck className="w-6 h-6 text-[#8B5CF6] flex-shrink-0" />
               <div className="flex-1">
