@@ -1192,6 +1192,7 @@ export type Database = {
           organization_id: string | null
           preflight_status: string | null
           priority: string | null
+          product_image_url: string | null
           product_type: string
           shipped_at: string | null
           status: string
@@ -1221,6 +1222,7 @@ export type Database = {
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
+          product_image_url?: string | null
           product_type: string
           shipped_at?: string | null
           status?: string
@@ -1250,6 +1252,7 @@ export type Database = {
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
+          product_image_url?: string | null
           product_type?: string
           shipped_at?: string | null
           status?: string

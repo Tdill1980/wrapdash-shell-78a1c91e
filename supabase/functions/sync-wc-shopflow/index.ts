@@ -58,6 +58,47 @@ const corsHeaders = {
 };
 
 /**
+ * Fetch WooCommerce product image by product ID
+ */
+async function fetchWooProductImage(productId: number | string): Promise<string | null> {
+  try {
+    const wooUrl = Deno.env.get('WOO_URL') || 'https://weprintwraps.com';
+    const consumerKey = Deno.env.get('WOO_CONSUMER_KEY');
+    const consumerSecret = Deno.env.get('WOO_CONSUMER_SECRET');
+
+    if (!consumerKey || !consumerSecret) {
+      console.error('WooCommerce credentials not configured');
+      return null;
+    }
+
+    const url = `${wooUrl}/wp-json/wc/v3/products/${productId}?consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+    
+    console.log(`Fetching product image for product ID: ${productId}`);
+    
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error(`Failed to fetch product ${productId}: ${response.status}`);
+      return null;
+    }
+
+    const product = await response.json();
+    const imageUrl = product?.images?.[0]?.src || null;
+    
+    if (imageUrl) {
+      console.log(`✅ Product image found: ${imageUrl}`);
+    } else {
+      console.log(`No image found for product ${productId}`);
+    }
+
+    return imageUrl;
+  } catch (err) {
+    console.error('Error fetching WooCommerce product image:', err);
+    return null;
+  }
+}
+
+/**
  * Track quote conversion when WooCommerce order is created
  */
 async function trackQuoteConversion(supabase: any, customerEmail: string, orderNumber: string, orderTotal: number) {
@@ -178,6 +219,10 @@ serve(async (req) => {
     // Extract affiliate ref code
     const affiliateRefCode = extractAffiliateRefCode(payload);
 
+    // Extract product ID and fetch product image
+    const productId = payload.line_items?.[0]?.product_id;
+    const productImageUrl = productId ? await fetchWooProductImage(productId) : null;
+
     if (!orderNumber) {
       throw new Error('Order number is required');
     }
@@ -226,6 +271,7 @@ serve(async (req) => {
           customer_email: customerEmail,
           vehicle_info: vehicleInfo,
           affiliate_ref_code: affiliateRefCode,
+          product_image_url: productImageUrl,
           woo_order_id: internalId ? parseInt(internalId) : null,
           woo_order_number: displayNumber ? parseInt(displayNumber) : null,
           updated_at: new Date().toISOString(),
@@ -301,6 +347,7 @@ serve(async (req) => {
         vehicle_info: vehicleInfo,
         timeline: initialTimeline,
         files,
+        product_image_url: productImageUrl,
         woo_order_id: internalId ? parseInt(internalId) : null,
         woo_order_number: displayNumber ? parseInt(displayNumber) : null,
         approveflow_project_id: approveflowProject?.id || null,
