@@ -288,3 +288,115 @@ export function buildCustomerTimeline(order: any) {
 
   return timeline;
 }
+
+// ============================================
+// INTERNAL PRODUCTION STAGE ENGINE (Option 3)
+// ============================================
+
+export const PRODUCTION_STAGES = [
+  "prepress_done",
+  "printing",
+  "laminating",
+  "cutting",
+  "qc",
+  "ready",
+  "shipped"
+];
+
+export const WOO_TO_PRODUCTION: Record<string, string> = {
+  "design-complete": "prepress_done",
+  "work-order-printed": "prepress_done",
+  "ready-for-print": "prepress_done",
+  "pre-press": "prepress_done",
+  "print-production": "printing",
+  "lamination": "laminating",
+  "finishing": "cutting",
+  "ready-for-pickup": "ready",
+  "shipped": "shipped",
+  "file-error": "file_error",
+  "missing-file": "missing_file",
+  "refunded": "refunded",
+  "failed": "failed"
+};
+
+export function getProductionStage(wooStatus: string): string {
+  return WOO_TO_PRODUCTION[wooStatus] || "prepress";
+}
+
+export function isProductionReady(wooStatus: string): boolean {
+  return WOO_TO_PRODUCTION.hasOwnProperty(wooStatus);
+}
+
+export function getProductionStageDescription(stage: string): string {
+  const descriptions: Record<string, string> = {
+    prepress_done: "Design has been approved and is ready for production queue.",
+    printing: "Job is currently being printed on the press.",
+    laminating: "Print is being laminated for protection and durability.",
+    cutting: "Laminated print is being cut and finished.",
+    qc: "Final quality check before packaging.",
+    ready: "Job is complete and ready for customer pickup.",
+    shipped: "Job has been shipped to customer.",
+    file_error: "⚠️ File has errors that must be corrected before production.",
+    missing_file: "⚠️ Required files are missing from this order.",
+    prepress: "Job is still in pre-production (design/approval phase).",
+    refunded: "Order has been refunded.",
+    failed: "Order failed and requires attention."
+  };
+  return descriptions[stage] || "Status unknown";
+}
+
+export function buildProductionTimeline(order: any) {
+  const timeline: any[] = [];
+  const status = order.status;
+  
+  // Only show production stages
+  if (status === "design-complete" || status === "work-order-printed" || status === "ready-for-print" || status === "pre-press") {
+    timeline.push({
+      stage: "prepress_done",
+      label: "Ready for Print",
+      timestamp: order.updated_at?.slice(0, 10)
+    });
+  }
+
+  if (status === "print-production") {
+    timeline.push({
+      stage: "printing",
+      label: "Print Production",
+      timestamp: order.updated_at?.slice(0, 10)
+    });
+  }
+
+  if (status === "lamination") {
+    timeline.push({
+      stage: "laminating",
+      label: "Lamination",
+      timestamp: order.updated_at?.slice(0, 10)
+    });
+  }
+
+  if (status === "finishing") {
+    timeline.push({
+      stage: "cutting",
+      label: "Cutting / Finishing",
+      timestamp: order.updated_at?.slice(0, 10)
+    });
+  }
+
+  if (status === "ready-for-pickup") {
+    timeline.push({
+      stage: "ready",
+      label: "Ready for Pickup",
+      timestamp: order.updated_at?.slice(0, 10)
+    });
+  }
+
+  if (status === "shipped") {
+    timeline.push({
+      stage: "shipped",
+      label: "Shipped",
+      timestamp: order.shipped_at || order.updated_at?.slice(0, 10)
+    });
+  }
+
+  return timeline;
+}
