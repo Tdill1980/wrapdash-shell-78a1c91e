@@ -23,6 +23,7 @@ const navigationItems = [
   { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
   { name: "Design Market", path: "/design-market", icon: Store },
   { name: "ShopFlow", path: "/shopflow", icon: ShoppingCart },
+  { name: "ShopFlow Internal", path: "/shopflow-internal", icon: ShoppingCart },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
