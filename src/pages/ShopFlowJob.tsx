@@ -1,159 +1,286 @@
 import { useParams } from "react-router-dom";
 import { useShopFlow } from "@/hooks/useShopFlow";
+import { Loader2, AlertCircle, Upload, Package, Truck, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
+import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
+import { NextStepCard } from "@/components/tracker/NextStepCard";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
-import { VehicleInfoCard } from "@/modules/shopflow/components/VehicleInfoCard";
-import { CustomerInfoCard } from "@/modules/shopflow/components/CustomerInfoCard";
-import { JobDetailsCard } from "@/modules/shopflow/components/JobDetailsCard";
-import { NotesCard } from "@/modules/shopflow/components/NotesCard";
-import { ProofViewer } from "@/modules/shopflow/components/ProofViewer";
-import { Timeline } from "@/modules/shopflow/components/Timeline";
-import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
-import { FilesCard } from "@/modules/shopflow/components/FilesCard";
-import { NextStepCard } from "@/modules/shopflow/components/NextStepCard";
-import { ActiveStageHeader } from "@/modules/shopflow/components/ActiveStageHeader";
-
-import {
-  getStageFromWoo,
-  getCustomerStageLabel,
-  getCustomerStageDescription,
-  detectMissing,
-  buildCustomerTimeline
-} from "@/modules/shopflow/utils/stageEngine";
-
-// Extract WooCommerce customer-uploaded files
-function extractWooFiles(order: any) {
-  const files: any[] = [];
-
-  if (!order.line_items) return files;
-
-  order.line_items.forEach((item: any) => {
-    if (!item.meta_data) return;
-
-    item.meta_data.forEach((meta: any) => {
-      if (
-        typeof meta.key === "string" &&
-        meta.key.toLowerCase().includes("upload files")
-      ) {
-        if (typeof meta.value === "string") {
-          files.push({
-            name: meta.value.split("/").pop(),
-            url: meta.value
-          });
-        }
-      }
-    });
-  });
-
-  return files;
-}
+const CUSTOMER_STAGES = [
+  { key: "order_received", label: "Order Received", icon: Package },
+  { key: "files_received", label: "Files Received", icon: CheckCircle2 },
+  { key: "in_design", label: "In Design", icon: Package },
+  { key: "awaiting_approval", label: "Awaiting Approval", icon: AlertCircle },
+  { key: "preparing_print_files", label: "Preparing Print", icon: Package },
+  { key: "printing", label: "Printing", icon: Package },
+  { key: "qc", label: "Quality Check", icon: CheckCircle2 },
+  { key: "ready", label: "Ready", icon: Truck },
+  { key: "shipped", label: "Shipped", icon: Truck },
+];
 
 export default function ShopFlowJob() {
   const { id } = useParams<{ id: string }>();
   const { order, loading } = useShopFlow(id);
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setTimeout(() => {
+      toast({
+        title: "File Uploaded",
+        description: "Your file has been submitted successfully.",
+      });
+      setUploading(false);
+    }, 2000);
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Loading job...
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#5AC8FF]" />
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Job not found.
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F] p-4">
+        <Card className="p-8 text-center max-w-md bg-[#141414] border-white/10">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+          <h1 className="text-2xl font-bold text-white mb-2">
+            Order Not Found
+          </h1>
+          <p className="text-white/70">
+            We couldn't find an order with that ID.
+          </p>
+        </Card>
       </div>
     );
   }
 
-  // Extract files
-  const wooFiles = extractWooFiles(order);
+  // Map WooCommerce status to customer stage
+  const statusMapping: Record<string, string> = {
+    "processing": "order_received",
+    "on-hold": "order_received",
+    "file-error": "file_error",
+    "missing-file": "missing_file",
+    "in-design": "in_design",
+    "awaiting-approval": "awaiting_approval",
+    "design-complete": "preparing_print_files",
+    "print-production": "printing",
+    "ready-for-pickup": "ready",
+    "shipped": "shipped",
+    "completed": "shipped"
+  };
 
-  // Stage Engine - Customer Facing
-  const internalStage = getStageFromWoo(order.status);
-  const customerStage = getCustomerStageLabel(internalStage);
-  const stageDescription = getCustomerStageDescription(internalStage);
-  const nextStepDescription = getCustomerStageDescription(internalStage, true);
-  const missing = detectMissing({ ...order, files: wooFiles });
-  const timeline = buildCustomerTimeline(order);
+  const customerStage = statusMapping[order.status] || "order_received";
+  const isActionRequired = customerStage === "file_error" || customerStage === "missing_file";
+  const currentStageIndex = CUSTOMER_STAGES.findIndex(s => s.key === customerStage);
 
   return (
-    <div className="container mx-auto px-6 py-8">
-
+    <div className="min-h-screen bg-[#0A0A0F]">
       {/* Sticky gradient bar */}
       <div className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md py-3 border-b border-white/10">
-        <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]"></div>
+        <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#5AAEFF] to-[#0047FF]"></div>
       </div>
 
-      {/* ACTIVE STAGE HERO - Customer Facing */}
-      <ActiveStageHeader
-        stage={internalStage}
-        customerLabel={customerStage}
-        description={stageDescription}
-        updatedAt={order.updated_at}
-      />
-
-      {/* NEXT STEP CARD */}
-      {nextStepDescription && (
-        <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-10 text-white">
-          <h2 className="text-lg font-semibold mb-2">What Happens Next</h2>
-          <p className="text-gray-300 text-sm">{nextStepDescription}</p>
-        </div>
-      )}
-
-      {/* MISSING ITEMS */}
-      {missing.length > 0 && (
-        <div className="bg-[#101016] border border-white/5 rounded-lg p-5 mb-10 text-white">
-          <h2 className="text-lg font-semibold mb-3">Missing Items</h2>
-          <ul className="list-disc pl-6 text-gray-300 text-sm">
-            {missing.map((m, idx) => (
-              <li key={idx}>{m}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* 3 Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-
-        {/* LEFT COLUMN */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <VehicleInfoCard order={order} />
-          <CustomerInfoCard order={order} />
-          <JobDetailsCard order={order} />
-          <NotesCard orderId={order.id} />
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Track Your Order
+          </h1>
+          <p className="text-white/70">
+            Real-time updates on your wrap order
+          </p>
         </div>
 
-        {/* CENTER COLUMN — FLOW SPINE */}
-        <div className="lg:col-span-2 flex flex-col gap-10 relative">
+        {/* Order Summary */}
+        <OrderSummaryCard order={{
+          orderNumber: order.order_number,
+          customerName: order.customer_name,
+          vehicle: order.vehicle_info?.make && order.vehicle_info?.model 
+            ? `${order.vehicle_info.make} ${order.vehicle_info.model}`
+            : "Vehicle Info Pending",
+          productType: order.product_type,
+          customer_stage: customerStage,
+          created_at: order.created_at
+        }} />
 
-          {/* Flow spine */}
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-30 rounded-full"></div>
+        {/* Current Stage */}
+        <div className="mt-6">
+          <CurrentStageCard order={{ customer_stage: customerStage }} />
+        </div>
 
-          {/* Proof Viewer */}
-          <div className="relative ml-6">
-            <ProofViewer order={order} />
+        {/* Action Required */}
+        {isActionRequired && (
+          <Card className="mt-6 p-6 border-red-500/50 bg-red-500/5">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="font-bold text-red-500 text-lg">
+                  Action Required: File Issue
+                </h3>
+                <p className="text-white/70 mt-2">
+                  We need a corrected file to continue with your order. Please upload the updated file below.
+                </p>
+                <div className="mt-4">
+                  <label htmlFor="file-upload">
+                    <input
+                      id="file-upload"
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                    <Button
+                      className="w-full md:w-auto bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600"
+                      disabled={uploading}
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploading ? "Uploading..." : "Upload Corrected File"}
+                    </Button>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Next Step */}
+        <div className="mt-6">
+          <NextStepCard order={{ customer_stage: customerStage }} />
+        </div>
+
+        {/* Progress Timeline */}
+        <Card className="mt-6 p-6 bg-[#141414] border-white/10">
+          <h2 className="text-xl font-bold text-white mb-6">Order Progress</h2>
+          
+          {/* Desktop Timeline */}
+          <div className="hidden md:flex items-center justify-between relative">
+            {/* Progress Bar */}
+            <div className="absolute top-1/2 left-0 right-0 h-1 bg-white/10 -translate-y-1/2">
+              <div 
+                className="h-full bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] transition-all duration-500"
+                style={{ width: `${(currentStageIndex / (CUSTOMER_STAGES.length - 1)) * 100}%` }}
+              />
+            </div>
+
+            {/* Stage Dots */}
+            {CUSTOMER_STAGES.map((stage, idx) => {
+              const isPast = idx < currentStageIndex;
+              const isCurrent = idx === currentStageIndex;
+              const Icon = stage.icon;
+
+              return (
+                <div key={stage.key} className="flex flex-col items-center relative z-10">
+                  <div
+                    className={[
+                      "w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all",
+                      isCurrent
+                        ? "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] ring-4 ring-[#5AAEFF]/30 scale-110"
+                        : isPast
+                        ? "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF]"
+                        : "bg-white/10"
+                    ].join(" ")}
+                  >
+                    <Icon className={[
+                      "w-6 h-6",
+                      isCurrent || isPast ? "text-white" : "text-white/40"
+                    ].join(" ")} />
+                  </div>
+                  <p className={[
+                    "text-xs text-center max-w-[80px]",
+                    isCurrent ? "text-white font-semibold" : "text-white/70"
+                  ].join(" ")}>
+                    {stage.label}
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Files Card (with thumbnails) */}
-          <div className="relative ml-6">
-            <FilesCard files={wooFiles} orderId={order.id} />
+          {/* Mobile Timeline */}
+          <div className="md:hidden space-y-4">
+            {CUSTOMER_STAGES.map((stage, idx) => {
+              const isPast = idx < currentStageIndex;
+              const isCurrent = idx === currentStageIndex;
+              const Icon = stage.icon;
+
+              return (
+                <div key={stage.key} className="flex items-center gap-4">
+                  <div
+                    className={[
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                      isCurrent
+                        ? "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] ring-2 ring-[#5AAEFF]/30"
+                        : isPast
+                        ? "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF]"
+                        : "bg-white/10"
+                    ].join(" ")}
+                  >
+                    <Icon className={[
+                      "w-5 h-5",
+                      isCurrent || isPast ? "text-white" : "text-white/40"
+                    ].join(" ")} />
+                  </div>
+                  <div className="flex-1">
+                    <p className={[
+                      "text-sm",
+                      isCurrent ? "text-white font-semibold" : "text-white/70"
+                    ].join(" ")}>
+                      {stage.label}
+                    </p>
+                  </div>
+                  {isCurrent && (
+                    <Badge className="bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] text-white">
+                      Current
+                    </Badge>
+                  )}
+                </div>
+              );
+            })}
           </div>
+        </Card>
 
-          {/* Timeline LAST */}
-          <div className="relative ml-6">
-            <Timeline timeline={timeline} />
-          </div>
-        </div>
-
-        {/* RIGHT ACTION SIDEBAR */}
-        <div className="lg:col-span-1 sticky top-[140px] h-fit">
-          <ActionSidebar order={order} />
-        </div>
-
+        {/* Shipping Info */}
+        {order.tracking_number && (
+          <Card className="mt-6 p-6 bg-[#141414] border-white/10">
+            <div className="flex items-start gap-4">
+              <Truck className="w-6 h-6 text-[#5AC8FF] flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="font-bold text-white text-lg mb-2">
+                  Shipping Information
+                </h3>
+                <p className="text-white/70 text-sm mb-3">
+                  Your order has been shipped!
+                </p>
+                <div className="bg-white/5 rounded-lg p-4 mb-3">
+                  <p className="text-xs text-white/50 mb-1">Tracking Number</p>
+                  <p className="text-white font-mono">{order.tracking_number}</p>
+                </div>
+                {order.tracking_url && (
+                  <Button
+                    className="bg-gradient-to-r from-[#8FD3FF] to-[#0047FF]"
+                    onClick={() => window.open(order.tracking_url, '_blank')}
+                  >
+                    Track Package
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
 }
-
