@@ -25,7 +25,7 @@ export function ActionRequiredCard({ order }: ActionRequiredCardProps) {
         </div>
         
         <div className="flex-1">
-          <h2 className="text-[22px] font-semibold font-poppins text-white mb-2">
+          <h2 className="card-header mb-2">
             {isFileError ? "Action Required: File Error" : "Action Required: Missing File"}
           </h2>
           

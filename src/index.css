@@ -73,6 +73,15 @@ All colors MUST be HSL.
   }
 }
 
+/* Card Header Styling - Enlarge card titles only */
+.card-header {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 0.3px;
+}
+
 @layer utilities {
   /* Teal Blue to Dark Blue gradient */
   .bg-gradient-primary {

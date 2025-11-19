@@ -13,7 +13,7 @@ export const TimelineCard = ({ timeline }: TimelineCardProps) => {
 
   return (
     <div className="bg-[#111317] border border-white/10 rounded-xl p-5">
-      <h3 className="text-lg font-semibold text-white mb-4">Timeline</h3>
+      <h3 className="card-header mb-4">Timeline</h3>
 
       <div className="space-y-4">
         {timeline.map((event, i) => (

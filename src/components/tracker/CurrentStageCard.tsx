@@ -67,7 +67,7 @@ export function CurrentStageCard({ order }: CurrentStageCardProps) {
           <Activity className="w-6 h-6 text-white" />
         </div>
         <div className="flex-1">
-          <h2 className="text-[22px] font-semibold font-poppins text-white mb-2">
+          <h2 className="card-header mb-2">
             {stage.title}
           </h2>
           <p className="text-white/80 text-[14px] font-inter leading-relaxed">

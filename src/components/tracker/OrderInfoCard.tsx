@@ -31,7 +31,7 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
       )}
 
       <div className="flex flex-col gap-3 text-white flex-1">
-        <h2 className="text-xl font-bold">
+        <h2 className="card-header">
           Order #{order.woo_order_number ?? order.order_number}
         </h2>
 
