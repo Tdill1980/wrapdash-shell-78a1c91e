@@ -57,6 +57,63 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Track quote conversion when WooCommerce order is created
+ */
+async function trackQuoteConversion(supabase: any, customerEmail: string, orderNumber: string, orderTotal: number) {
+  try {
+    // Find matching quote by email
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("id, customer_email, quote_number")
+      .eq("customer_email", customerEmail)
+      .eq("converted_to_order", false)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (quote) {
+      // Mark quote as converted
+      await supabase
+        .from("quotes")
+        .update({
+          converted_to_order: true,
+          conversion_date: new Date().toISOString(),
+          woo_order_id: orderNumber,
+          conversion_revenue: orderTotal,
+          status: "completed",
+        })
+        .eq("id", quote.id);
+
+      // Get customer ID for tracking
+      const { data: customer } = await supabase
+        .from("email_retarget_customers")
+        .select("id")
+        .eq("email", customerEmail)
+        .maybeSingle();
+
+      // Track conversion event in UTIM
+      await supabase.from("email_events").insert({
+        event_type: "converted",
+        customer_id: customer?.id || null,
+        quote_id: quote.id,
+        utim_data: {
+          woo_order_id: orderNumber,
+          revenue: orderTotal,
+        },
+        metadata: {
+          quote_number: quote.quote_number,
+          order_total: orderTotal,
+        },
+      });
+
+      console.log(`✅ UTIM: Quote ${quote.id} converted to order ${orderNumber} - Revenue: $${orderTotal}`);
+    }
+  } catch (error) {
+    console.error("Error tracking quote conversion:", error);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -256,6 +313,16 @@ serve(async (req) => {
         parseFloat(payload.total || '0'),
         productType,
         supabase
+      );
+    }
+
+    // Track quote conversion to order (UTIM)
+    if (customerEmail && newOrder) {
+      await trackQuoteConversion(
+        supabase,
+        customerEmail,
+        orderNumber,
+        parseFloat(payload.total || '0')
       );
     }
     
