@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MainLayout } from "@/layouts/MainLayout";
 
 const statusConfig = {
   order_received: { label: "Order Received", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
@@ -57,26 +58,29 @@ export default function ShopFlowInternalList() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight font-poppins">
-            <span className="text-foreground">ShopFlow </span>
-            <span className="text-gradient">Internal</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Internal production tracking and workflow management
-          </p>
+      <MainLayout userName="Trish">
+        <div className="space-y-6 max-w-7xl">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight font-poppins">
+              <span className="text-foreground">ShopFlow </span>
+              <span className="text-gradient">Internal</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Internal production tracking and workflow management
+            </p>
+          </div>
+          <Card className="p-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Loading last 48 hours of orders...</p>
+          </Card>
         </div>
-        <Card className="p-12 text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading last 48 hours of orders...</p>
-        </Card>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <MainLayout userName="Trish">
+      <div className="space-y-6 max-w-7xl">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-poppins">
@@ -245,5 +249,6 @@ export default function ShopFlowInternalList() {
         Showing {orders.length} order{orders.length !== 1 ? 's' : ''} from the last 48 hours
       </div>
     </div>
+    </MainLayout>
   );
 }

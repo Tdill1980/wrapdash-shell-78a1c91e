@@ -15,6 +15,7 @@ import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
 import { TimelineCard } from "@/components/tracker/TimelineCard";
 import { toast } from "@/hooks/use-toast";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function TrackJob() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
@@ -105,8 +106,25 @@ export default function TrackJob() {
     }
   };
 
-  if (loading) return (<div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>);
-  if (error || !order) return (<div className="min-h-screen flex items-center justify-center bg-[#0A0A0F] p-4"><Card className="p-8 text-center max-w-md bg-[#111118] border-white/5"><AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" /><h1 className="text-2xl font-bold text-white mb-2">Order Not Found</h1><p className="text-[#B7B7C5]">{error || "We couldn't find an order with that number."}</p></Card></div>);
+  if (loading) return (
+    <MainLayout userName="Customer">
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    </MainLayout>
+  );
+  
+  if (error || !order) return (
+    <MainLayout userName="Customer">
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F] p-4">
+        <Card className="p-8 text-center max-w-md bg-[#111118] border-white/5">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+          <h1 className="text-2xl font-bold text-white mb-2">Order Not Found</h1>
+          <p className="text-[#B7B7C5]">{error || "We couldn't find an order with that number."}</p>
+        </Card>
+      </div>
+    </MainLayout>
+  );
 
   const internalStatus = wooToInternalStatus[order.status] || "order_received";
   const files = (order.files as any[]) || [];
@@ -122,7 +140,8 @@ export default function TrackJob() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] text-white">
+    <MainLayout userName="Customer">
+      <div className="min-h-screen bg-[#0A0A0F] text-white">
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         <ShopFlowBrandHeader />
         <CustomerProgressBar currentStatus={internalStatus} />
@@ -143,5 +162,6 @@ export default function TrackJob() {
         <div className="text-center py-8 text-white/40 text-sm">Powered by <span className="text-[#15D1FF]">WrapCommand™</span> — Real-time wrap order tracking for peace of mind.</div>
       </div>
     </div>
+    </MainLayout>
   );
 }

@@ -9,6 +9,7 @@ import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
 import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { MainLayout } from "@/layouts/MainLayout";
 
 const CUSTOMER_STAGES = [
   { key: "order_received", label: "Order Received", icon: Package },
@@ -44,25 +45,29 @@ export default function ShopFlowJob() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]">
-        <Loader2 className="w-8 h-8 animate-spin text-[#5AC8FF]" />
-      </div>
+      <MainLayout userName="Trish">
+        <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]">
+          <Loader2 className="w-8 h-8 animate-spin text-[#5AC8FF]" />
+        </div>
+      </MainLayout>
     );
   }
 
   if (!order) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F] p-4">
-        <Card className="p-8 text-center max-w-md bg-[#141414] border-white/10">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-          <h1 className="text-2xl font-bold text-white mb-2">
-            Order Not Found
-          </h1>
-          <p className="text-white/70">
-            We couldn't find an order with that ID.
-          </p>
-        </Card>
-      </div>
+      <MainLayout userName="Trish">
+        <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F] p-4">
+          <Card className="p-8 text-center max-w-md bg-[#141414] border-white/10">
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+            <h1 className="text-2xl font-bold text-white mb-2">
+              Order Not Found
+            </h1>
+            <p className="text-white/70">
+              We couldn't find an order with that ID.
+            </p>
+          </Card>
+        </div>
+      </MainLayout>
     );
   }
 
@@ -86,7 +91,8 @@ export default function ShopFlowJob() {
   const currentStageIndex = CUSTOMER_STAGES.findIndex(s => s.key === customerStage);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F]">
+    <MainLayout userName="Trish">
+      <div className="min-h-screen bg-[#0A0A0F]">
       {/* Sticky gradient bar */}
       <div className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md py-3 border-b border-white/10">
         <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#5AAEFF] to-[#0047FF]"></div>
@@ -282,5 +288,6 @@ export default function ShopFlowJob() {
         )}
       </div>
     </div>
+    </MainLayout>
   );
 }
