@@ -69,9 +69,10 @@ export const UploadedFilesCard = ({
               </h4>
               <p className="text-white/70 text-sm mb-4">
                 We haven't received your print files yet. Please upload them below or email them to{" "}
-                <a href="mailto:artwork@weprintwraps.com" className="text-[#15D1FF] hover:underline">
-                  artwork@weprintwraps.com
+                <a href={`mailto:Design@WePrintWraps.com?subject=Files for Order ${orderId || ''}`} className="text-[#15D1FF] hover:underline">
+                  Design@WePrintWraps.com
                 </a>
+                {" "}(please include your order number)
               </p>
             </div>
           </div>
@@ -108,7 +109,7 @@ export const UploadedFilesCard = ({
                 asChild
                 className="flex-1"
               >
-                <a href="mailto:artwork@weprintwraps.com?subject=Files for Order">
+                <a href={`mailto:Design@WePrintWraps.com?subject=Files for Order ${orderId || ''}`}>
                   Email Files Instead
                 </a>
               </Button>
