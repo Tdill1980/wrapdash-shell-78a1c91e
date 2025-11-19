@@ -15,7 +15,7 @@ import {
   Settings,
   Mail,
 } from "lucide-react";
-import logo from "@/assets/wrapcommand-logo.png";
+import logo from "@/assets/wrapcommand-logo-car.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
