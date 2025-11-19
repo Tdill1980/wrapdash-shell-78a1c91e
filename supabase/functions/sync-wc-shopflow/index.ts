@@ -99,6 +99,20 @@ async function fetchWooProductImage(productId: number | string): Promise<string 
 }
 
 /**
+ * Normalize WooCommerce status strings to handle variations
+ * Converts "Dropbox Link Sent" to "dropbox-link-sent", etc.
+ */
+function normalizeStatus(value: any): string {
+  if (!value) return "";
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+/**
  * Track quote conversion when WooCommerce order is created
  */
 async function trackQuoteConversion(supabase: any, customerEmail: string, orderNumber: string, orderTotal: number) {
@@ -207,8 +221,10 @@ serve(async (req) => {
     const customerEmail = payload.billing?.email || '';
     const productType = extractProductType(payload.line_items);
     const wooStatus = payload.status;
+    console.log(`📊 Raw Woo Status: "${wooStatus}"`);
     const status = mapWooStatusToShopFlow(wooStatus);
     const customerStage = mapWooStatusToCustomerStage(wooStatus);
+    console.log(`✅ Normalized Status - Internal: "${status}", Customer: "${customerStage}"`);
     
     // Extract vehicle info from line items meta data
     const vehicleInfo = extractVehicleInfo(payload.line_items);
@@ -439,11 +455,13 @@ function extractProductType(lineItems: any[]): string {
 }
 
 function mapWooStatusToShopFlow(wooStatus: string): string {
-  return wooToInternalStatus[wooStatus] || 'order_received';
+  const normalized = normalizeStatus(wooStatus);
+  return wooToInternalStatus[normalized] || 'order_received';
 }
 
 function mapWooStatusToCustomerStage(wooStatus: string): string {
-  return wooToCustomerStage[wooStatus] || 'order_received';
+  const normalized = normalizeStatus(wooStatus);
+  return wooToCustomerStage[normalized] || 'order_received';
 }
 
 function extractVehicleInfo(lineItems: any[]): any {
