@@ -20,7 +20,7 @@ export const UploadedFilesCard = ({
     <div className="bg-[#111317] border border-white/10 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
         <Upload className="w-5 h-5 text-[#2F81F7]" />
-        <h3 className="text-lg font-semibold text-white">
+        <h3 className="card-header">
           {internalMode ? "Uploaded Files (Technical)" : "Files You Uploaded"}
         </h3>
       </div>

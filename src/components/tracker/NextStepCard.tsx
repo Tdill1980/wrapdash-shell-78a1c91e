@@ -31,7 +31,7 @@ export function NextStepCard({ order }: NextStepCardProps) {
           <ArrowRight className="w-5 h-5 text-[#5AC8FF]" />
         </div>
         <div>
-          <h3 className="text-white font-semibold font-poppins text-[16px] mb-1">
+          <h3 className="card-header mb-1">
             What's Next
           </h3>
           <p className="text-white/70 text-[14px] font-inter">
