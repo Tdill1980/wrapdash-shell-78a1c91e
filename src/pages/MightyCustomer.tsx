@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,10 @@ import VoiceCommand from "@/components/VoiceCommand";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
-  FileImage,
   Palette,
   Grid3x3,
   Shield,
   Sun,
-  Wallpaper,
   Package,
   Car,
   Plus,
@@ -21,60 +19,119 @@ import {
 } from "lucide-react";
 
 const serviceTypes = [
-  { id: "printed-vinyl", name: "Printed Vinyl", icon: FileImage },
-  { id: "color-change", name: "Color Change", icon: Palette },
-  { id: "window-perf", name: "Window Perf", icon: Grid3x3 },
+  { id: "full-wraps", name: "Full Wraps", icon: Car },
+  { id: "partial-wraps", name: "Partial Wraps", icon: Palette },
+  { id: "chrome-delete", name: "Chrome Delete", icon: Grid3x3 },
   { id: "ppf", name: "PPF", icon: Shield },
-  { id: "tint", name: "Tint", icon: Sun },
-  { id: "wall-wrap", name: "Wall Wrap", icon: Wallpaper },
-  { id: "wpw-products", name: "WPW Products", icon: Package },
+  { id: "window-tint", name: "Window Tint", icon: Sun },
+  { id: "all-products", name: "All Products", icon: Package },
 ];
 
 const productsByService = {
-  "printed-vinyl": [
-    "WPW Printed Wrap (Avery)",
-    "WPW Printed Wrap (3M)",
-    "Fade Wraps™",
-    "Pattern Wraps",
-    "Metallic Print",
-    "Clear Wrap Film",
-    "Reflective Print",
-    "Cut Contour (Avery)",
-    "Cut Contour (3M)",
+  "full-wraps": [
+    "Avery Dennison SW900 (Gloss)",
+    "Avery Dennison SW900 (Satin)",
+    "Avery Dennison SW900 (Matte)",
+    "3M 2080 (Gloss)",
+    "3M 2080 (Satin)",
+    "3M 2080 (Matte)",
+    "Arlon 6100X RP",
+    "Printable Wrap - WPW Printed Vinyl (Gloss)",
+    "Printable Wrap - WPW Printed Vinyl (Satin)",
+    "Printable Wrap - WPW Printed Vinyl (Matte)",
+    "InkFusion Printed PPF (Gloss PPF)",
+    "InkFusion Printed PPF (Matte PPF)",
   ],
-  "color-change": [
-    "Avery SW900",
-    "3M 2080",
-    "KPMF",
-    "APA",
+  "partial-wraps": [
+    "Hood Only",
+    "Roof Only",
+    "Pillars",
+    "Chrome Delete",
+    "Accent Panels (Custom SQFT)",
+  ],
+  "chrome-delete": [
+    "Chrome Delete - Full Vehicle",
+    "Chrome Delete - Window Trim",
+    "Chrome Delete - Door Handles",
+    "Chrome Delete - Custom Areas",
   ],
   "ppf": [
-    "Gloss PPF",
-    "Matte PPF",
-    "Smoked PPF",
+    "STEK (Gloss)",
+    "STEK (Matte)",
+    "GSWF (Gloss)",
+    "GSWF (Matte)",
+    "GSWF (Color PPF)",
+    "SunTek (Gloss)",
+    "SunTek (Matte)",
+    "XPEL (Gloss)",
+    "XPEL (Matte)",
+    "Avery PPF (Gloss)",
+    "Avery PPF (Matte)",
+    "WPW InkFusion Printable PPF (Gloss)",
+    "WPW InkFusion Printable PPF (Matte)",
   ],
-  "window-perf": [
-    "70/30 Perf",
-    "60/40 Perf",
-    "WPW Perf Options",
-  ],
-  "tint": [
+  "window-tint": [
+    "Carbon Tint",
     "Ceramic Tint",
-    "IR Tint",
-    "Dyed Tint",
+    "IR Ceramic Tint",
+    "Windshield Only",
+    "Front 2 Windows",
+    "Full SUV Tint",
     "5% Limo",
     "20% Dark",
     "35% Medium",
     "50% Light",
   ],
-  "wall-wrap": [
-    "Cast Wall Wrap",
-    "Calendared Vinyl",
-    "Textured Wall Vinyl",
-  ],
-  "wpw-products": [
-    "WPW Catalog Item",
-    "Custom WPW Product",
+  "all-products": [
+    // Full Wraps
+    "Avery Dennison SW900 (Gloss)",
+    "Avery Dennison SW900 (Satin)",
+    "Avery Dennison SW900 (Matte)",
+    "3M 2080 (Gloss)",
+    "3M 2080 (Satin)",
+    "3M 2080 (Matte)",
+    "Arlon 6100X RP",
+    "Printable Wrap - WPW Printed Vinyl (Gloss)",
+    "Printable Wrap - WPW Printed Vinyl (Satin)",
+    "Printable Wrap - WPW Printed Vinyl (Matte)",
+    "InkFusion Printed PPF (Gloss PPF)",
+    "InkFusion Printed PPF (Matte PPF)",
+    // Partial Wraps
+    "Hood Only",
+    "Roof Only",
+    "Pillars",
+    "Chrome Delete",
+    "Accent Panels (Custom SQFT)",
+    // PPF
+    "STEK (Gloss)",
+    "STEK (Matte)",
+    "GSWF (Gloss)",
+    "GSWF (Matte)",
+    "GSWF (Color PPF)",
+    "SunTek (Gloss)",
+    "SunTek (Matte)",
+    "XPEL (Gloss)",
+    "XPEL (Matte)",
+    "Avery PPF (Gloss)",
+    "Avery PPF (Matte)",
+    "WPW InkFusion Printable PPF (Gloss)",
+    "WPW InkFusion Printable PPF (Matte)",
+    // Window Tint
+    "Carbon Tint",
+    "Ceramic Tint",
+    "IR Ceramic Tint",
+    "Windshield Only",
+    "Front 2 Windows",
+    "Full SUV Tint",
+    "5% Limo",
+    "20% Dark",
+    "35% Medium",
+    "50% Light",
+    // Chrome Delete
+    "Chrome Delete - Full Vehicle",
+    "Chrome Delete - Window Trim",
+    "Chrome Delete - Door Handles",
+    "Chrome Delete - Custom Areas",
   ],
 };
 
@@ -220,38 +277,28 @@ export default function MightyCustomer() {
 
         <Card className="bg-[#121218]/90 border-border/40 backdrop-blur-sm rounded-md">
           <div className="p-5 space-y-5">
-            {/* Service Type Selection */}
-            <div>
-              <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                Service Type
+            {/* Category Menu - Horizontal Scroll */}
+            <div className="relative">
+              <Label className="text-xs font-semibold text-muted-foreground mb-3 block uppercase tracking-wide">
+                Product Categories
               </Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-                {serviceTypes.map((service) => {
-                  const Icon = service.icon;
-                  return (
-                    <button
-                      key={service.id}
-                      onClick={() => {
-                        setSelectedService(service.id);
-                        setSelectedProduct("");
-                      }}
-                      className={`p-3 rounded-md border transition-all duration-200 ${
-                        selectedService === service.id
-                          ? "bg-[#1A1A24] border-primary/60 shadow-[0_0_12px_rgba(168,85,247,0.15)]"
-                          : "bg-[#0F0F14] border-border/40 hover:border-primary/40 hover:bg-[#141419]"
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 mx-auto mb-1.5 ${
-                        selectedService === service.id ? "text-primary" : "text-muted-foreground"
-                      }`} />
-                      <span className={`text-[10px] font-medium block ${
-                        selectedService === service.id ? "text-foreground" : "text-muted-foreground"
-                      }`}>
-                        {service.name}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                {serviceTypes.map((service) => (
+                  <Button
+                    key={service.id}
+                    onClick={() => {
+                      setSelectedService(service.id);
+                      setSelectedProduct("");
+                    }}
+                    className={`whitespace-nowrap rounded-full px-6 py-2 text-sm font-medium transition-all ${
+                      selectedService === service.id
+                        ? "bg-gradient-primary text-white shadow-[0_0_16px_rgba(0,175,255,0.3)]"
+                        : "bg-[#16161E] text-foreground border border-border/40 hover:border-primary/60 hover:bg-[#1A1A24]"
+                    }`}
+                  >
+                    {service.name}
+                  </Button>
+                ))}
               </div>
             </div>
 
@@ -259,88 +306,89 @@ export default function MightyCustomer() {
             {selectedService && (
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Product
+                  Select Product
                 </Label>
-                <select
-                  value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
-                  className="w-full bg-[#0F0F14] border border-border/40 rounded-md px-3 py-2 text-sm text-foreground focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
-                >
-                  <option value="">Choose a Product</option>
-                  {productsByService[selectedService as keyof typeof productsByService]?.map(
-                    (product) => (
-                      <option key={product} value={product}>
-                        {product}
-                      </option>
-                    )
-                  )}
-                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                  {productsByService[selectedService as keyof typeof productsByService]?.map((product) => (
+                    <button
+                      key={product}
+                      onClick={() => setSelectedProduct(product)}
+                      className={`p-3 rounded-md text-left text-sm transition-all ${
+                        selectedProduct === product
+                          ? "bg-gradient-primary text-white shadow-[0_0_12px_rgba(0,175,255,0.2)]"
+                          : "bg-[#16161E] text-foreground border border-border/40 hover:border-primary/40 hover:bg-[#1A1A24]"
+                      }`}
+                    >
+                      {product}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Vehicle Information */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
                   Year
                 </Label>
                 <Input
+                  placeholder="2024"
                   value={customerData.year}
                   onChange={(e) => setCustomerData({ ...customerData, year: e.target.value })}
-                  placeholder="2024"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
               </div>
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
                   Make
                 </Label>
                 <Input
+                  placeholder="Tesla"
                   value={customerData.make}
                   onChange={(e) => setCustomerData({ ...customerData, make: e.target.value })}
-                  placeholder="Chevrolet"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
               </div>
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
                   Model
                 </Label>
                 <Input
+                  placeholder="Model 3"
                   value={customerData.model}
                   onChange={(e) => setCustomerData({ ...customerData, model: e.target.value })}
-                  placeholder="Tahoe"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
               </div>
             </div>
 
-            {/* Quantity & Finish */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Quantity, Finish */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
                   Quantity
                 </Label>
                 <Input
                   type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
                   min="1"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
               </div>
               <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
                   Finish
                 </Label>
                 <select
                   value={finish}
                   onChange={(e) => setFinish(e.target.value)}
-                  className="w-full bg-[#0F0F14] border border-border/40 rounded-md px-3 py-2 text-sm text-foreground h-9 focus:border-primary/60 focus:ring-1 focus:ring-primary/20 transition-all"
+                  className="w-full p-3 rounded-md bg-[#0F0F14] border border-border/40 text-foreground focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-colors"
                 >
-                  <option>Gloss</option>
-                  <option>Matte</option>
-                  <option>Satin</option>
+                  <option value="Gloss">Gloss</option>
+                  <option value="Satin">Satin</option>
+                  <option value="Matte">Matte</option>
                 </select>
               </div>
             </div>
@@ -350,95 +398,103 @@ export default function MightyCustomer() {
               <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
                 Add-Ons
               </Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {addOnOptions.map((addOn) => (
                   <button
                     key={addOn}
                     onClick={() => toggleAddOn(addOn)}
-                    className={`px-2.5 py-1.5 rounded-md border transition-all duration-200 text-[11px] ${
+                    className={`p-2.5 rounded-md text-xs transition-all ${
                       selectedAddOns.includes(addOn)
-                        ? "bg-primary/15 border-primary/50 text-foreground"
-                        : "bg-[#0F0F14] border-border/40 text-muted-foreground hover:border-primary/40 hover:bg-[#141419]"
+                        ? "bg-gradient-primary text-white shadow-[0_0_8px_rgba(0,175,255,0.2)]"
+                        : "bg-[#16161E] text-foreground border border-border/40 hover:border-primary/40"
                     }`}
                   >
-                    <Plus className="w-2.5 h-2.5 inline mr-1" />
                     {addOn}
                   </button>
                 ))}
               </div>
             </div>
 
-
             {/* Margin Slider */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Margin</Label>
-                <span className="text-xs font-bold text-primary">{margin}%</span>
-              </div>
+              <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
+                Margin: {margin}%
+              </Label>
               <input
                 type="range"
-                value={margin}
-                onChange={(e) => setMargin(Number(e.target.value))}
                 min="0"
                 max="100"
-                className="w-full accent-primary h-1.5"
+                value={margin}
+                onChange={(e) => setMargin(parseInt(e.target.value))}
+                className="w-full h-2 bg-[#16161E] rounded-lg appearance-none cursor-pointer accent-primary"
               />
             </div>
 
             {/* Customer Information */}
-            <div className="border-t border-border/30 pt-4">
-              <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                Customer Information
-              </Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
+                  Customer Name
+                </Label>
                 <Input
+                  placeholder="John Smith"
                   value={customerData.name}
                   onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
-                  placeholder="Customer Name"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
+                  Company
+                </Label>
                 <Input
+                  placeholder="Company Name"
                   value={customerData.company}
                   onChange={(e) => setCustomerData({ ...customerData, company: e.target.value })}
-                  placeholder="Company Name"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
+                  Phone
+                </Label>
                 <Input
+                  placeholder="(555) 123-4567"
                   value={customerData.phone}
                   onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                  placeholder="Phone Number"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
+                  Email
+                </Label>
                 <Input
+                  type="email"
+                  placeholder="john@example.com"
                   value={customerData.email}
                   onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                  placeholder="Email Address"
-                  type="email"
-                  className="bg-[#0F0F14] border-border/40 rounded-md h-9 text-sm"
+                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
                 />
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 sticky bottom-0 pt-3 bg-[#121218]/95 backdrop-blur-sm">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-white h-9 text-sm rounded-md">
-                <Car className="w-3.5 h-3.5 mr-1.5" />
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1 border-primary/40 hover:bg-primary/10"
+              >
+                <Plus className="mr-2 h-4 w-4" />
                 Add to Quote
               </Button>
-              <Button 
+              <Button
                 onClick={handleSendToApproveFlow}
                 disabled={sending}
-                variant="outline" 
-                className="w-full bg-[#0F0F14] border-border/40 hover:bg-[#141419] h-9 text-sm rounded-md"
+                className="flex-1 bg-gradient-primary hover:opacity-90"
               >
-                {sending ? (
-                  "Sending..."
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5 mr-1.5" />
-                    Send to ApproveFlow
-                  </>
-                )}
+                <Send className="mr-2 h-4 w-4" />
+                {sending ? "Sending..." : "Send to ApproveFlow"}
               </Button>
             </div>
           </div>
