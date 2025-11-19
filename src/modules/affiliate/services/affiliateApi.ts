@@ -116,8 +116,19 @@ export const affiliateApi = {
     return data;
   },
 
-  // Get founder stats
-  async getFounderStats(founderId: string): Promise<AffiliateStats> {
+  // Get founder stats with product breakdowns
+  async getFounderStats(founderId: string): Promise<AffiliateStats & {
+    wrapcommandEarned: number;
+    designproEarned: number;
+    closerEarned: number;
+    ieEarned: number;
+    wpwEarned: number;
+    wrapcommandReferrals: number;
+    designproReferrals: number;
+    closerReferrals: number;
+    ieReferrals: number;
+    wpwReferrals: number;
+  }> {
     const [referrals, commissions, views] = await Promise.all([
       supabase
         .from('affiliate_referrals')
@@ -125,7 +136,7 @@ export const affiliateApi = {
         .eq('founder_id', founderId),
       supabase
         .from('affiliate_commissions')
-        .select('commission_amount')
+        .select('*')
         .eq('founder_id', founderId),
       supabase
         .from('affiliate_card_views')
@@ -136,13 +147,31 @@ export const affiliateApi = {
     const totalReferrals = referrals.count || 0;
     const totalEarnings = commissions.data?.reduce((sum, c) => sum + Number(c.commission_amount), 0) || 0;
     const cardViews = views.count || 0;
+    
+    // Calculate per-product stats
+    const productEarnings = (productName: string) => 
+      commissions.data?.filter(c => c.product_name === productName)
+        .reduce((sum, c) => sum + Number(c.commission_amount), 0) || 0;
+    
+    const productReferrals = (productName: string) => 
+      commissions.data?.filter(c => c.product_name === productName).length || 0;
     const conversionRate = cardViews > 0 ? (totalReferrals / cardViews) * 100 : 0;
 
     return {
       totalReferrals,
       totalEarnings,
-      conversionRate,
       cardViews,
+      conversionRate,
+      wrapcommandEarned: productEarnings('WrapCommand AI'),
+      designproEarned: productEarnings('DesignProAI'),
+      closerEarned: productEarnings('The Closer by DesignProAI'),
+      ieEarned: productEarnings('Ink & Edge Magazine'),
+      wpwEarned: productEarnings('WePrintWraps.com'),
+      wrapcommandReferrals: productReferrals('WrapCommand AI'),
+      designproReferrals: productReferrals('DesignProAI'),
+      closerReferrals: productReferrals('The Closer by DesignProAI'),
+      ieReferrals: productReferrals('Ink & Edge Magazine'),
+      wpwReferrals: productReferrals('WePrintWraps.com'),
     };
   },
 
@@ -232,6 +261,43 @@ export const affiliateApi = {
     const { data, error } = await supabase
       .from('affiliate_founders')
       .update({ commission_rate: commissionRate })
+      .eq('id', founderId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get founder by email
+  async getFounderByEmail(email: string) {
+    const { data, error } = await supabase
+      .from('affiliate_founders')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get founder by ID
+  async getFounderById(id: string) {
+    const { data, error } = await supabase
+      .from('affiliate_founders')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Admin: Toggle founder active status
+  async toggleFounderStatus(founderId: string, currentStatus: boolean) {
+    const { data, error } = await supabase
+      .from('affiliate_founders')
+      .update({ is_active: !currentStatus })
       .eq('id', founderId)
       .select()
       .single();
