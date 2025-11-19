@@ -173,7 +173,7 @@ export default function InkFusion() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Configuration Panel */}
           <div className="space-y-6">
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Vehicle Details</h2>
               <VehicleSelector
                 vehicleMake={vehicleMake}
@@ -187,7 +187,7 @@ export default function InkFusion() {
               />
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">InkFusion™ Color Library</h2>
               <ColorDropdown
                 selectedColorId={selectedColorId}
@@ -195,7 +195,7 @@ export default function InkFusion() {
               />
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Finish Options</h2>
               <FinishSelector
                 finishType={finishType}
@@ -208,7 +208,7 @@ export default function InkFusion() {
             <Button
               onClick={handleGenerateRender}
               disabled={isGenerating}
-              className="w-full h-12 text-lg bg-gradient-to-r from-primary to-primary/80"
+              className="w-full h-12 text-lg bg-gradient-primary hover:opacity-90 transition-opacity"
             >
               {isGenerating ? (
                 <>

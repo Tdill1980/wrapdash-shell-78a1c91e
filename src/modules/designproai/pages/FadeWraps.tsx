@@ -111,7 +111,7 @@ export default function FadeWraps() {
 
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Vehicle Details</h2>
               <VehicleSelector
                 vehicleMake={vehicleMake}
@@ -125,7 +125,7 @@ export default function FadeWraps() {
               />
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Fade Configuration</h2>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -147,10 +147,10 @@ export default function FadeWraps() {
                 <div className="space-y-2">
                   <Label>Fade Direction</Label>
                   <Select value={fadeDirection} onValueChange={setFadeDirection}>
-                    <SelectTrigger className="bg-surface border-border">
+                    <SelectTrigger className="bg-card border">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-surface border-border">
+                    <SelectContent className="bg-card border">
                       {FADE_DIRECTIONS.map((dir) => (
                         <SelectItem key={dir.value} value={dir.value}>
                           {dir.label}
@@ -162,7 +162,7 @@ export default function FadeWraps() {
               </div>
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Finish Options</h2>
               <FinishSelector
                 finishType={finishType}
@@ -175,7 +175,7 @@ export default function FadeWraps() {
             <Button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="w-full h-12 text-lg bg-gradient-to-r from-primary to-primary/80"
+              className="w-full h-12 text-lg bg-gradient-primary hover:opacity-90 transition-opacity"
             >
               {isGenerating ? (
                 <>
@@ -192,7 +192,7 @@ export default function FadeWraps() {
           </div>
 
           <div>
-            <Card className="p-6 bg-surface border-border h-full">
+            <Card className="p-6 bg-card border h-full">
               <h2 className="text-xl font-semibold mb-4">Preview</h2>
               {resultImage ? (
                 <img
@@ -201,7 +201,7 @@ export default function FadeWraps() {
                   className="w-full rounded-lg"
                 />
               ) : (
-                <div className="flex items-center justify-center h-[400px] border-2 border-dashed border-border rounded-lg">
+                <div className="flex items-center justify-center h-[400px] border-2 border-dashed border rounded-lg">
                   <p className="text-muted-foreground">
                     Configure your fade and generate to see preview
                   </p>
