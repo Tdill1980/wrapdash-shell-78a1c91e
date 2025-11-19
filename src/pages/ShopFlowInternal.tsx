@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Package, Car, User, Activity, ArrowRight, CheckCircle, Palette, AlertCircle, FileText, Printer, Truck } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 import { VehicleInfoCard } from "@/modules/shopflow/components/VehicleInfoCard";
 import { CustomerInfoCard } from "@/modules/shopflow/components/CustomerInfoCard";
@@ -10,7 +12,7 @@ import { ProofViewer } from "@/modules/shopflow/components/ProofViewer";
 import { Timeline } from "@/modules/shopflow/components/Timeline";
 import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
 import { FilesCard } from "@/modules/shopflow/components/FilesCard";
-import { ShopFlowHeader } from "@/components/ShopFlowHeader";
+import { CustomerProgressBar } from "@/components/CustomerProgressBar";
 import { InternalProductionTracker } from "@/components/InternalProductionTracker";
 
 import {
@@ -71,22 +73,152 @@ export default function ShopFlowInternal() {
   const missing = detectMissing({ ...order, files: artworkFiles });
   const timeline = buildProductionTimeline(order);
 
+  const vehicleInfo = order.vehicle_info as any;
+  const vehicleDisplay = vehicleInfo 
+    ? `${vehicleInfo.year || ''} ${vehicleInfo.make || ''} ${vehicleInfo.model || ''}`.trim()
+    : 'Vehicle Info Pending';
+
   return (
-    <div className={`container mx-auto text-white ${isMobile ? 'px-4 py-6' : 'px-6 py-10'}`}>
+    <div className="min-h-screen bg-[#0A0A0F]">
+      <div className="container mx-auto py-8 px-4 max-w-6xl">
+        {/* ShopFlow™ Gradient Header */}
+        <div 
+          className="w-full rounded-xl p-8 text-white mb-6"
+          style={{
+            background: "linear-gradient(90deg, #2F81F7 0%, #15D1FF 100%)"
+          }}
+        >
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold tracking-wide mb-1">
+                SHOP<span className="text-white/90">FLOW</span>™
+              </h1>
+              <p className="text-sm opacity-90">Real-Time Wrap Production Tracking for WePrintWraps.com</p>
+            </div>
+            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
+              TRACKING
+            </button>
+          </div>
 
-      {/* ShopFlow™ Header */}
-      <ShopFlowHeader
-        orderNumber={order.woo_order_number ?? order.order_number}
-        productName={order.product_type}
-        customerName={order.customer_name}
-        vehicle={order.vehicle_info}
-      />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-start gap-3">
+              <Package className="w-5 h-5 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-xs opacity-80 mb-1">Product</p>
+                <p className="font-medium">{order.product_type}</p>
+              </div>
+            </div>
 
-      {/* Internal Production Tracker */}
-      <InternalProductionTracker internalStatus={internalStage} />
+            <div className="flex items-start gap-3">
+              <Car className="w-5 h-5 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-xs opacity-80 mb-1">Vehicle</p>
+                <p className="font-medium">{vehicleDisplay}</p>
+              </div>
+            </div>
 
-      {/* Job Status Info */}
-      <div className={`flex gap-4 ${isMobile ? 'flex-col mb-6' : 'mb-10'}`}>
+            <div className="flex items-start gap-3">
+              <User className="w-5 h-5 mt-1 flex-shrink-0" />
+              <div>
+                <p className="text-xs opacity-80 mb-1">Customer</p>
+                <p className="font-medium">{order.customer_name}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-white/20">
+            <p className="text-2xl font-bold">Order #{order.woo_order_number ?? order.order_number}</p>
+          </div>
+        </div>
+
+        {/* Customer Progress Bar */}
+        <CustomerProgressBar currentStatus={order.status} />
+
+        {/* Current Stage Card */}
+        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2F81F7] to-[#15D1FF] flex items-center justify-center flex-shrink-0">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-white mb-2">
+                {internalStage}
+              </h2>
+              <p className="text-[#B7B7C5] text-sm">
+                {stageDescription}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* What's Next Card */}
+        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-[#1a1a1f] flex items-center justify-center flex-shrink-0">
+              <ArrowRight className="w-6 h-6 text-[#2F81F7]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-white mb-2">
+                What's Next
+              </h3>
+              <p className="text-[#B7B7C5] text-sm">
+                {missing.length > 0 
+                  ? `Missing files: ${missing.join(", ")}`
+                  : "Files will be received and logged."
+                }
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Order Progress Timeline */}
+        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
+          <h3 className="text-lg font-bold text-white mb-6">Order Progress</h3>
+          
+          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-4">
+            {[
+              { label: "Order\nReceived", icon: Package, stage: "order_received" },
+              { label: "Files\nReceived", icon: CheckCircle, stage: "files_received" },
+              { label: "In Design", icon: Palette, stage: "in_design" },
+              { label: "Awaiting\nApproval", icon: AlertCircle, stage: "awaiting_approval" },
+              { label: "Preparing\nPrint", icon: FileText, stage: "preparing_for_print" },
+              { label: "Printing", icon: Printer, stage: "in_production" },
+              { label: "Quality\nCheck", icon: CheckCircle, stage: "ready_or_shipped" },
+              { label: "Ready", icon: Package, stage: "ready_for_pickup" },
+              { label: "Shipped", icon: Truck, stage: "shipped" }
+            ].map((step, i) => {
+              const Icon = step.icon;
+              const active = i <= timeline.findIndex((t: any) => t.label === internalStage);
+              
+              return (
+                <div key={i} className="flex flex-col items-center min-w-[80px]">
+                  <div 
+                    className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                      active 
+                        ? "bg-gradient-to-br from-[#2F81F7] to-[#15D1FF]" 
+                        : "bg-[#1a1a1f] border border-white/10"
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 ${active ? "text-white" : "text-[#B7B7C5]"}`} />
+                  </div>
+                  <p className={`text-xs text-center whitespace-pre-line ${
+                    active ? "text-white font-medium" : "text-[#B7B7C5]"
+                  }`}>
+                    {step.label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Internal Production Tracker */}
+        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
+          <InternalProductionTracker internalStatus={internalStage} />
+        </Card>
+
+        {/* Job Status Info */}
+        <div className={`flex gap-4 ${isMobile ? 'flex-col mb-6' : 'mb-10'}`}>
         <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
           <span className="text-gray-400">Internal Stage:</span>{" "}
           <span className="text-white">{internalStage}</span>
@@ -172,6 +304,7 @@ export default function ShopFlowInternal() {
           </div>
 
         </div>
+      </div>
       </div>
     </div>
   );
