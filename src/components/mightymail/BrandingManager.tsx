@@ -6,12 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Upload, Image as ImageIcon } from "lucide-react";
 
 export default function BrandingManager() {
   const [primaryColor, setPrimaryColor] = useState("#00AFFF");
   const [footerText, setFooterText] = useState("");
   const [senderName, setSenderName] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -30,6 +33,80 @@ export default function BrandingManager() {
       setFooterText(data.footer_text || "");
       setSenderName(data.sender_name || "");
       setSenderEmail(data.sender_email || "");
+      setLogoUrl(data.logo_url || "");
+    }
+  }
+
+  async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file (PNG, JPG, or SVG).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Logo must be under 2MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      const filePath = `email-logos/${fileName}`;
+
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from("design-vault")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("design-vault")
+        .getPublicUrl(filePath);
+
+      setLogoUrl(publicUrl);
+
+      // Auto-save logo URL
+      const { data: existing } = await supabase
+        .from("email_branding")
+        .select("id")
+        .single();
+
+      if (existing) {
+        await supabase
+          .from("email_branding")
+          .update({ logo_url: publicUrl })
+          .eq("id", existing.id);
+      } else {
+        await supabase.from("email_branding").insert({ logo_url: publicUrl });
+      }
+
+      toast({
+        title: "Logo Uploaded",
+        description: "Your logo has been saved successfully.",
+      });
+    } catch (error: any) {
+      console.error("Error uploading logo:", error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Error uploading logo.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -47,6 +124,7 @@ export default function BrandingManager() {
         footer_text: footerText,
         sender_name: senderName,
         sender_email: senderEmail,
+        logo_url: logoUrl,
       };
 
       if (existing) {
@@ -82,6 +160,42 @@ export default function BrandingManager() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="logo-upload">Company Logo</Label>
+          <div className="flex gap-4 items-center">
+            {logoUrl ? (
+              <div className="relative w-32 h-32 rounded-lg border-2 border-[rgba(255,255,255,0.06)] bg-background flex items-center justify-center overflow-hidden">
+                <img src={logoUrl} alt="Company Logo" className="max-w-full max-h-full object-contain" />
+              </div>
+            ) : (
+              <div className="w-32 h-32 rounded-lg border-2 border-dashed border-[rgba(255,255,255,0.2)] bg-background flex items-center justify-center">
+                <ImageIcon className="w-8 h-8 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 space-y-2">
+              <input
+                type="file"
+                id="logo-upload"
+                accept="image/*"
+                onChange={handleLogoUpload}
+                className="hidden"
+              />
+              <Button
+                onClick={() => document.getElementById("logo-upload")?.click()}
+                disabled={uploading}
+                variant="outline"
+                className="w-full"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {uploading ? "Uploading..." : logoUrl ? "Change Logo" : "Upload Logo"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                PNG, JPG, or SVG • Max 2MB • Recommended: 400x100px
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="primary-color">Primary Brand Color</Label>
           <div className="flex gap-3 items-center">
