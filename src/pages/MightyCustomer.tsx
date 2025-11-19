@@ -4,200 +4,90 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import VoiceCommand from "@/components/VoiceCommand";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Palette,
-  Grid3x3,
-  Shield,
-  Sun,
-  Package,
-  Car,
-  Plus,
-  Send,
-} from "lucide-react";
+import VoiceCommand from "@/components/VoiceCommand";
+import { Plus, ShoppingCart, Lock } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
 
-const serviceTypes = [
-  { id: "full-wraps", name: "Full Wraps", icon: Car },
-  { id: "partial-wraps", name: "Partial Wraps", icon: Palette },
-  { id: "chrome-delete", name: "Chrome Delete", icon: Grid3x3 },
-  { id: "ppf", name: "PPF", icon: Shield },
-  { id: "window-tint", name: "Window Tint", icon: Sun },
-  { id: "all-products", name: "All Products", icon: Package },
-];
-
-const productsByService = {
-  "full-wraps": [
-    "Avery Dennison SW900 (Gloss)",
-    "Avery Dennison SW900 (Satin)",
-    "Avery Dennison SW900 (Matte)",
-    "3M 2080 (Gloss)",
-    "3M 2080 (Satin)",
-    "3M 2080 (Matte)",
-    "Arlon 6100X RP",
-    "Printable Wrap - WPW Printed Vinyl (Gloss)",
-    "Printable Wrap - WPW Printed Vinyl (Satin)",
-    "Printable Wrap - WPW Printed Vinyl (Matte)",
-    "InkFusion Printed PPF (Gloss PPF)",
-    "InkFusion Printed PPF (Matte PPF)",
-  ],
-  "partial-wraps": [
-    "Hood Only",
-    "Roof Only",
-    "Pillars",
-    "Chrome Delete",
-    "Accent Panels (Custom SQFT)",
-  ],
-  "chrome-delete": [
-    "Chrome Delete - Full Vehicle",
-    "Chrome Delete - Window Trim",
-    "Chrome Delete - Door Handles",
-    "Chrome Delete - Custom Areas",
-  ],
-  "ppf": [
-    "STEK (Gloss)",
-    "STEK (Matte)",
-    "GSWF (Gloss)",
-    "GSWF (Matte)",
-    "GSWF (Color PPF)",
-    "SunTek (Gloss)",
-    "SunTek (Matte)",
-    "XPEL (Gloss)",
-    "XPEL (Matte)",
-    "Avery PPF (Gloss)",
-    "Avery PPF (Matte)",
-    "WPW InkFusion Printable PPF (Gloss)",
-    "WPW InkFusion Printable PPF (Matte)",
-  ],
-  "window-tint": [
-    "Carbon Tint",
-    "Ceramic Tint",
-    "IR Ceramic Tint",
-    "Windshield Only",
-    "Front 2 Windows",
-    "Full SUV Tint",
-    "5% Limo",
-    "20% Dark",
-    "35% Medium",
-    "50% Light",
-  ],
-  "all-products": [
-    // Full Wraps
-    "Avery Dennison SW900 (Gloss)",
-    "Avery Dennison SW900 (Satin)",
-    "Avery Dennison SW900 (Matte)",
-    "3M 2080 (Gloss)",
-    "3M 2080 (Satin)",
-    "3M 2080 (Matte)",
-    "Arlon 6100X RP",
-    "Printable Wrap - WPW Printed Vinyl (Gloss)",
-    "Printable Wrap - WPW Printed Vinyl (Satin)",
-    "Printable Wrap - WPW Printed Vinyl (Matte)",
-    "InkFusion Printed PPF (Gloss PPF)",
-    "InkFusion Printed PPF (Matte PPF)",
-    // Partial Wraps
-    "Hood Only",
-    "Roof Only",
-    "Pillars",
-    "Chrome Delete",
-    "Accent Panels (Custom SQFT)",
-    // PPF
-    "STEK (Gloss)",
-    "STEK (Matte)",
-    "GSWF (Gloss)",
-    "GSWF (Matte)",
-    "GSWF (Color PPF)",
-    "SunTek (Gloss)",
-    "SunTek (Matte)",
-    "XPEL (Gloss)",
-    "XPEL (Matte)",
-    "Avery PPF (Gloss)",
-    "Avery PPF (Matte)",
-    "WPW InkFusion Printable PPF (Gloss)",
-    "WPW InkFusion Printable PPF (Matte)",
-    // Window Tint
-    "Carbon Tint",
-    "Ceramic Tint",
-    "IR Ceramic Tint",
-    "Windshield Only",
-    "Front 2 Windows",
-    "Full SUV Tint",
-    "5% Limo",
-    "20% Dark",
-    "35% Medium",
-    "50% Light",
-    // Chrome Delete
-    "Chrome Delete - Full Vehicle",
-    "Chrome Delete - Window Trim",
-    "Chrome Delete - Door Handles",
-    "Chrome Delete - Custom Areas",
-  ],
-};
+const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
 const addOnOptions = [
   "PPF Hood Only",
   "Roof Wrap",
-  "Window Perf Rear",
   "Chrome Delete",
-  "Tint Front Windows",
-  "Design Service",
-  "Pre-Install Wash",
-  "Installation",
-  "Custom Add-On",
+  "Window Tint",
+  "Custom Graphics",
 ];
+
+const finishTypes = ["Gloss", "Satin", "Matte", "Gloss PPF", "Matte PPF"];
 
 export default function MightyCustomer() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { products: allProducts, loading: productsLoading } = useProducts();
+
   const [selectedService, setSelectedService] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [addOns, setAddOns] = useState<string[]>([]);
   const [customerData, setCustomerData] = useState({
     name: "",
     company: "",
     phone: "",
     email: "",
-    year: "",
-    make: "",
-    model: "",
-    vehicleType: "",
+    vehicleYear: "",
+    vehicleMake: "",
+    vehicleModel: "",
   });
-  const [margin, setMargin] = useState(40);
+  const [margin, setMargin] = useState(65);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
-  const [sending, setSending] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const handleVoiceTranscript = (_transcript: string, parsedData: any) => {
-    setCustomerData({
-      name: parsedData.customerName || customerData.name,
-      company: parsedData.companyName || customerData.company,
-      phone: parsedData.phone || customerData.phone,
-      email: parsedData.email || customerData.email,
-      year: parsedData.year || customerData.year,
-      make: parsedData.make || customerData.make,
-      model: parsedData.model || customerData.model,
-      vehicleType: customerData.vehicleType,
-    });
-
-    if (parsedData.serviceType) {
-      const serviceId = serviceTypes.find(s => 
-        s.name.toLowerCase() === parsedData.serviceType.toLowerCase()
-      )?.id;
-      if (serviceId) setSelectedService(serviceId);
+  const handleVoiceTranscript = (transcript: string) => {
+    const lower = transcript.toLowerCase();
+    
+    if (lower.includes("tahoe") || lower.includes("silverado") || lower.includes("f-150")) {
+      const vehicleMatch = transcript.match(/(\d{4})\s+(\w+)\s+(\w+)/i);
+      if (vehicleMatch) {
+        setCustomerData(prev => ({
+          ...prev,
+          vehicleYear: vehicleMatch[1],
+          vehicleMake: vehicleMatch[2],
+          vehicleModel: vehicleMatch[3],
+        }));
+      }
     }
-
-    if (parsedData.productType) {
-      setSelectedProduct(parsedData.productType);
+    
+    if (lower.includes("full wrap")) {
+      setSelectedService("Full Wraps");
+    } else if (lower.includes("ppf")) {
+      setSelectedService("PPF");
     }
-
-    if (parsedData.addOns && parsedData.addOns.length > 0) {
-      setSelectedAddOns(parsedData.addOns);
+    
+    if (lower.includes("name") || lower.includes("customer")) {
+      const nameMatch = transcript.match(/(?:name|customer)\s+(\w+(?:\s+\w+)?)/i);
+      if (nameMatch) {
+        setCustomerData(prev => ({ ...prev, name: nameMatch[1] }));
+      }
     }
+    
+    if (lower.includes("phone")) {
+      const phoneMatch = transcript.match(/(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/);
+      if (phoneMatch) {
+        setCustomerData(prev => ({ ...prev, phone: phoneMatch[1] }));
+      }
+    }
+    
+    if (lower.includes("gloss")) setFinish("Gloss");
+    if (lower.includes("matte")) setFinish("Matte");
+    if (lower.includes("satin")) setFinish("Satin");
   };
 
   const toggleAddOn = (addOn: string) => {
-    setSelectedAddOns(prev =>
+    setAddOns(prev => 
       prev.includes(addOn)
         ? prev.filter(a => a !== addOn)
         : [...prev, addOn]
@@ -205,36 +95,31 @@ export default function MightyCustomer() {
   };
 
   const handleSendToApproveFlow = async () => {
-    if (!customerData.name || !selectedService) {
+    if (!selectedProduct || !customerData.name) {
       toast({
-        title: "Missing information",
-        description: "Please fill in customer name and select a service type",
+        title: "Missing Information",
+        description: "Please select a product and enter customer name",
         variant: "destructive",
       });
       return;
     }
 
-    setSending(true);
-    try {
-      const orderNumber = `MQ-${Date.now()}`;
-      const productType = selectedProduct || serviceTypes.find(s => s.id === selectedService)?.name || 'Custom Wrap';
-      
-      // Calculate order total (basic calculation)
-      const basePrice = 2500;
-      const addOnPrice = selectedAddOns.length * 250;
-      const orderTotal = (basePrice + addOnPrice) * (1 + margin / 100);
+    setIsSending(true);
 
-      // Create ApproveFlow project
-      const { data: newProject, error } = await supabase
-        .from('approveflow_projects')
+    try {
+      const orderTotal = 5000; // Placeholder calculation
+      const orderNumber = `QUOTE-${Date.now()}`;
+
+      const { data, error } = await supabase
+        .from("approveflow_projects")
         .insert({
           order_number: orderNumber,
           customer_name: customerData.name,
-          customer_email: customerData.email,
-          product_type: productType,
-          design_instructions: `Vehicle: ${customerData.year} ${customerData.make} ${customerData.model}\nService: ${productType}\nAdd-ons: ${selectedAddOns.join(', ')}\nFinish: ${finish}\nQuantity: ${quantity}`,
+          customer_email: customerData.email || null,
+          product_type: selectedProduct,
+          status: "design_requested",
           order_total: orderTotal,
-          status: 'design_requested',
+          design_instructions: `Vehicle: ${customerData.vehicleYear} ${customerData.vehicleMake} ${customerData.vehicleModel}\nFinish: ${finish}\nAdd-ons: ${addOns.join(", ")}`,
         })
         .select()
         .single();
@@ -242,261 +127,279 @@ export default function MightyCustomer() {
       if (error) throw error;
 
       toast({
-        title: "Sent to ApproveFlow",
-        description: `Project ${orderNumber} created successfully`,
+        title: "Success",
+        description: `Project sent to ApproveFlow`,
       });
 
-      navigate(`/approveflow/${newProject.id}`);
+      navigate(`/approveflow/${data.id}`);
     } catch (error) {
-      console.error('Error creating ApproveFlow project:', error);
+      console.error("Error creating project:", error);
       toast({
-        title: "Failed to send",
-        description: "Unable to create ApproveFlow project",
+        title: "Error",
+        description: "Failed to send to ApproveFlow",
         variant: "destructive",
       });
     } finally {
-      setSending(false);
+      setIsSending(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A0A0F] via-[#121218] to-[#16161E]">
-      <VoiceCommand onTranscript={handleVoiceTranscript} />
-
-      <div className="max-w-5xl mx-auto p-4 space-y-4">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold tracking-tight font-poppins">
-            <span className="text-foreground">Mighty</span>
-            <span className="text-gradient">Customer</span>
-            <span className="text-muted-foreground text-sm align-super">™</span>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4">
+      <div className="max-w-5xl mx-auto space-y-6">
+        <VoiceCommand onTranscript={handleVoiceTranscript} />
+        
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            MightyCustomer™
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Quote & Order Builder
-          </p>
+          <p className="text-muted-foreground">Quote Builder & Order Management</p>
         </div>
 
-        <Card className="bg-[#121218]/90 border-border/40 backdrop-blur-sm rounded-md">
-          <div className="p-5 space-y-5">
-            {/* Category Menu - Horizontal Scroll */}
-            <div className="relative">
-              <Label className="text-xs font-semibold text-muted-foreground mb-3 block uppercase tracking-wide">
-                Product Categories
-              </Label>
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-                {serviceTypes.map((service) => (
-                  <Button
-                    key={service.id}
-                    onClick={() => {
-                      setSelectedService(service.id);
-                      setSelectedProduct("");
-                    }}
-                    className={`whitespace-nowrap rounded-full px-6 py-2 text-sm font-medium transition-all ${
-                      selectedService === service.id
-                        ? "bg-gradient-primary text-white shadow-[0_0_16px_rgba(0,175,255,0.3)]"
-                        : "bg-[#16161E] text-foreground border border-border/40 hover:border-primary/60 hover:bg-[#1A1A24]"
-                    }`}
-                  >
-                    {service.name}
-                  </Button>
-                ))}
-              </div>
+        <Card className="p-6 space-y-6">
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Select Category</Label>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {categories.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedService === category ? "default" : "outline"}
+                  onClick={() => {
+                    setSelectedService(category);
+                    setSelectedProduct("");
+                  }}
+                  className="whitespace-nowrap px-6"
+                >
+                  {category}
+                </Button>
+              ))}
+              <Button
+                variant={selectedService === "All Products" ? "default" : "outline"}
+                onClick={() => {
+                  setSelectedService("All Products");
+                  setSelectedProduct("");
+                }}
+                className="whitespace-nowrap px-6"
+              >
+                All Products
+              </Button>
             </div>
+          </div>
 
-            {/* Product Selection */}
-            {selectedService && (
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Select Product
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-                  {productsByService[selectedService as keyof typeof productsByService]?.map((product) => (
-                    <button
-                      key={product}
-                      onClick={() => setSelectedProduct(product)}
-                      className={`p-3 rounded-md text-left text-sm transition-all ${
-                        selectedProduct === product
-                          ? "bg-gradient-primary text-white shadow-[0_0_12px_rgba(0,175,255,0.2)]"
-                          : "bg-[#16161E] text-foreground border border-border/40 hover:border-primary/40 hover:bg-[#1A1A24]"
-                      }`}
-                    >
-                      {product}
-                    </button>
+          {selectedService && !productsLoading && (() => {
+            const categoryMap: Record<string, string> = {
+              "Full Wraps": "full-wraps",
+              "Partial Wraps": "partial-wraps",
+              "Chrome Delete": "chrome-delete",
+              "PPF": "ppf",
+              "Window Tint": "window-tint",
+              "All Products": "all"
+            };
+            
+            const categoryKey = categoryMap[selectedService] || "";
+            const filteredProducts = categoryKey === "all" 
+              ? allProducts 
+              : allProducts.filter(p => p.category === categoryKey);
+
+            return (
+              <div className="space-y-4">
+                <Label className="text-lg font-semibold">Select Product</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {filteredProducts.map((product) => (
+                    <div key={product.id} className="relative">
+                      <button
+                        onClick={() => setSelectedProduct(product.product_name)}
+                        className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                          selectedProduct === product.product_name
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{product.product_name}</span>
+                          {product.product_type === 'quote-only' && (
+                            <Lock className="h-3 w-3 ml-2 text-muted-foreground" />
+                          )}
+                        </div>
+                        {product.product_type === 'quote-only' && (
+                          <span className="text-xs text-muted-foreground mt-1 block">
+                            Quote Only — Cannot Add to Cart
+                          </span>
+                        )}
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
-            )}
+            );
+          })()}
 
-            {/* Vehicle Information */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Year
-                </Label>
-                <Input
-                  placeholder="2024"
-                  value={customerData.year}
-                  onChange={(e) => setCustomerData({ ...customerData, year: e.target.value })}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Make
-                </Label>
-                <Input
-                  placeholder="Tesla"
-                  value={customerData.make}
-                  onChange={(e) => setCustomerData({ ...customerData, make: e.target.value })}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Model
-                </Label>
-                <Input
-                  placeholder="Model 3"
-                  value={customerData.model}
-                  onChange={(e) => setCustomerData({ ...customerData, model: e.target.value })}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
-                />
-              </div>
-            </div>
-
-            {/* Quantity, Finish */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Quantity
-                </Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Finish
-                </Label>
-                <select
-                  value={finish}
-                  onChange={(e) => setFinish(e.target.value)}
-                  className="w-full p-3 rounded-md bg-[#0F0F14] border border-border/40 text-foreground focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-colors"
-                >
-                  <option value="Gloss">Gloss</option>
-                  <option value="Satin">Satin</option>
-                  <option value="Matte">Matte</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Add-Ons */}
-            <div>
-              <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                Add-Ons
-              </Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {addOnOptions.map((addOn) => (
-                  <button
-                    key={addOn}
-                    onClick={() => toggleAddOn(addOn)}
-                    className={`p-2.5 rounded-md text-xs transition-all ${
-                      selectedAddOns.includes(addOn)
-                        ? "bg-gradient-primary text-white shadow-[0_0_8px_rgba(0,175,255,0.2)]"
-                        : "bg-[#16161E] text-foreground border border-border/40 hover:border-primary/40"
-                    }`}
-                  >
-                    {addOn}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Margin Slider */}
-            <div>
-              <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                Margin: {margin}%
-              </Label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={margin}
-                onChange={(e) => setMargin(parseInt(e.target.value))}
-                className="w-full h-2 bg-[#16161E] rounded-lg appearance-none cursor-pointer accent-primary"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Vehicle Year</Label>
+              <Input
+                type="text"
+                placeholder="2024"
+                value={customerData.vehicleYear}
+                onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }))}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Vehicle Make</Label>
+              <Input
+                type="text"
+                placeholder="Chevrolet"
+                value={customerData.vehicleMake}
+                onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Vehicle Model</Label>
+              <Input
+                type="text"
+                placeholder="Tahoe"
+                value={customerData.vehicleModel}
+                onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }))}
+              />
+            </div>
+          </div>
 
-            {/* Customer Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Customer Name
-                </Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Finish Type</Label>
+              <Select value={finish} onValueChange={setFinish}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {finishTypes.map(finishType => (
+                    <SelectItem key={finishType} value={finishType}>
+                      {finishType}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Add-Ons</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {addOnOptions.map(addOn => (
+                <Button
+                  key={addOn}
+                  variant={addOns.includes(addOn) ? "default" : "outline"}
+                  onClick={() => toggleAddOn(addOn)}
+                  className="text-xs"
+                >
+                  {addOn}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <Label>Margin: {margin}%</Label>
+            </div>
+            <Slider
+              value={[margin]}
+              onValueChange={([value]) => setMargin(value)}
+              min={0}
+              max={100}
+              step={5}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-4 pt-4 border-t">
+            <Label className="text-lg font-semibold">Customer Information</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Customer Name *</Label>
                 <Input
+                  type="text"
                   placeholder="John Smith"
                   value={customerData.name}
-                  onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
+                  onChange={(e) => setCustomerData(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Company
-                </Label>
+              <div className="space-y-2">
+                <Label>Company Name</Label>
                 <Input
-                  placeholder="Company Name"
+                  type="text"
+                  placeholder="ABC Company"
                   value={customerData.company}
-                  onChange={(e) => setCustomerData({ ...customerData, company: e.target.value })}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
+                  onChange={(e) => setCustomerData(prev => ({ ...prev, company: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Phone
-                </Label>
+              <div className="space-y-2">
+                <Label>Phone</Label>
                 <Input
+                  type="tel"
                   placeholder="(555) 123-4567"
                   value={customerData.phone}
-                  onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
+                  onChange={(e) => setCustomerData(prev => ({ ...prev, phone: e.target.value }))}
                 />
               </div>
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground mb-2 block uppercase tracking-wide">
-                  Email
-                </Label>
+              <div className="space-y-2">
+                <Label>Email</Label>
                 <Input
                   type="email"
                   placeholder="john@example.com"
                   value={customerData.email}
-                  onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                  className="bg-[#0F0F14] border-border/40 focus:border-primary/60"
+                  onChange={(e) => setCustomerData(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
             </div>
+          </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                className="flex-1 border-primary/40 hover:bg-primary/10"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add to Quote
-              </Button>
-              <Button
-                onClick={handleSendToApproveFlow}
-                disabled={sending}
-                className="flex-1 bg-gradient-primary hover:opacity-90"
-              >
-                <Send className="mr-2 h-4 w-4" />
-                {sending ? "Sending..." : "Send to ApproveFlow"}
-              </Button>
-            </div>
+          <div className="flex gap-3 pt-4">
+            <Button
+              onClick={() => toast({ title: "Quote Saved", description: "Quote has been saved locally" })}
+              variant="outline"
+              className="flex-1 border-primary/40 hover:bg-primary/10"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Save Quote
+            </Button>
+            {(() => {
+              const product = allProducts.find(p => p.product_name === selectedProduct);
+              const isWPW = product?.product_type === 'wpw';
+              
+              return isWPW ? (
+                <Button
+                  onClick={() => {
+                    toast({
+                      title: "Added to Cart",
+                      description: `${selectedProduct} added to WooCommerce cart`,
+                    });
+                  }}
+                  disabled={!selectedProduct}
+                  className="flex-1 bg-gradient-primary hover:opacity-90"
+                >
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Add to Cart
+                </Button>
+              ) : (
+                <Button
+                  disabled
+                  className="flex-1 bg-gray-600 cursor-not-allowed"
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  Quote Only – Not Available for Cart
+                </Button>
+              );
+            })()}
           </div>
         </Card>
       </div>

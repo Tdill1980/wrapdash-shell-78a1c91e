@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface Product {
   id: string;
-  woo_product_id: number;
+  woo_product_id: number | null;
   product_name: string;
   price_per_sqft: number | null;
   flat_price: number | null;
@@ -13,6 +13,8 @@ export interface Product {
   description: string | null;
   is_active: boolean;
   display_order: number;
+  product_type: 'wpw' | 'quote-only';
+  is_locked: boolean;
 }
 
 export interface QuoteSettings {
@@ -71,6 +73,16 @@ export function useProducts() {
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     try {
+      const product = products.find(p => p.id === id);
+      if (product?.is_locked) {
+        toast({
+          title: "Cannot Edit",
+          description: "This product is locked and cannot be modified",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("products")
         .update(updates)
@@ -118,6 +130,16 @@ export function useProducts() {
 
   const deleteProduct = async (id: string) => {
     try {
+      const product = products.find(p => p.id === id);
+      if (product?.is_locked) {
+        toast({
+          title: "Cannot Delete",
+          description: "This product is locked and cannot be deleted",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("products")
         .update({ is_active: false })

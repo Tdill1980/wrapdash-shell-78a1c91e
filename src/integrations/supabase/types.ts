@@ -606,11 +606,13 @@ export type Database = {
           flat_price: number | null
           id: string
           is_active: boolean
+          is_locked: boolean
           price_per_sqft: number | null
           pricing_type: string
           product_name: string
+          product_type: string
           updated_at: string
-          woo_product_id: number
+          woo_product_id: number | null
         }
         Insert: {
           category: string
@@ -620,11 +622,13 @@ export type Database = {
           flat_price?: number | null
           id?: string
           is_active?: boolean
+          is_locked?: boolean
           price_per_sqft?: number | null
           pricing_type: string
           product_name: string
+          product_type?: string
           updated_at?: string
-          woo_product_id: number
+          woo_product_id?: number | null
         }
         Update: {
           category?: string
@@ -634,11 +638,13 @@ export type Database = {
           flat_price?: number | null
           id?: string
           is_active?: boolean
+          is_locked?: boolean
           price_per_sqft?: number | null
           pricing_type?: string
           product_name?: string
+          product_type?: string
           updated_at?: string
-          woo_product_id?: number
+          woo_product_id?: number | null
         }
         Relationships: []
       }
