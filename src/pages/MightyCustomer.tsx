@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { MainLayout } from "@/layouts/MainLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -302,9 +303,10 @@ export default function MightyCustomer() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <VoiceCommand onTranscript={handleVoiceTranscript} />
+    <MainLayout userName="Trish">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <VoiceCommand onTranscript={handleVoiceTranscript} />
         
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
@@ -724,6 +726,7 @@ export default function MightyCustomer() {
           design={emailDesign}
         />
       </div>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
