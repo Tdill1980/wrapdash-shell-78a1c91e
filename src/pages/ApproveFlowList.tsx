@@ -97,34 +97,37 @@ export default function ApproveFlowList() {
 
   return (
     <MainLayout userName="Trish">
-      <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold font-poppins">
-            <span className="text-foreground">Approve</span>
-            <span className="text-gradient">Flow</span>
-            <span className="text-muted-foreground text-sm align-super">™</span>
-          </h1>
-          <p className="text-muted-foreground mt-1">Manage all design approval workflows</p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={syncFromWooCommerce} 
-          disabled={syncing || loading}
-        >
-          {syncing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Syncing...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Sync from WooCommerce
-            </>
-          )}
-        </Button>
-      </div>
+      <div className="space-y-6 w-full">
+        {/* Header Card */}
+        <Card className="p-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold font-poppins">
+                <span className="text-foreground">Approve</span>
+                <span className="text-gradient">Flow</span>
+                <span className="text-muted-foreground text-sm align-super">™</span>
+              </h1>
+              <p className="text-muted-foreground mt-1">Manage all design approval workflows</p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={syncFromWooCommerce} 
+              disabled={syncing || loading}
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Sync from WooCommerce
+                </>
+              )}
+            </Button>
+          </div>
+        </Card>
 
       <Card className="bg-card border-border">
         <div className="overflow-x-auto">

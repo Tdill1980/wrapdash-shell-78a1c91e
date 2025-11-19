@@ -282,7 +282,7 @@ export default function Dashboard() {
 
   return (
     <MainLayout userName="Trish">
-      <div className="space-y-4 max-w-[1600px]">
+      <div className="space-y-4 w-full">
 
       {/* Product Type Chips */}
       <div className="flex flex-wrap gap-2">
