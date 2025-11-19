@@ -5,6 +5,88 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Normalize WooCommerce status strings to handle variations
+ */
+function normalizeStatus(value: any): string {
+  if (!value) return "";
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+/**
+ * Fetch product thumbnail from WooCommerce
+ */
+async function fetchWooProductImage(productId: number | null, wooKey: string, wooSecret: string): Promise<string | null> {
+  if (!productId) return null;
+  try {
+    const credentials = `${wooKey}:${wooSecret}`;
+    const base64Credentials = btoa(credentials);
+    const authHeader = `Basic ${base64Credentials}`;
+    const url = `https://weprintwraps.com/wp-json/wc/v3/products/${productId}`;
+    const response = await fetch(url, {
+      headers: { 
+        'Authorization': authHeader,
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) return null;
+    const product = await response.json();
+    return product?.images?.[0]?.src ?? null;
+  } catch (err) {
+    console.error("❌ Failed to fetch Woo product image:", err);
+    return null;
+  }
+}
+
+/**
+ * WOO → INTERNAL STATUS MAPPING (matches sync-wc-shopflow)
+ */
+const wooToInternalStatus: Record<string, string> = {
+  "pending": "order_received",
+  "pending-payment": "order_received",
+  "on-hold": "order_received",
+  "waiting-to-place-order": "order_received",
+  "waiting-on-email-response": "order_received",
+  "add-on": "order_received",
+  "dropbox-link-sent": "order_received",
+  "in-design": "in_design",
+  "lance": "in_design",
+  "manny": "in_design",
+  "file-error": "action_required",
+  "missing-file": "action_required",
+  "design-complete": "awaiting_approval",
+  "work-order-printed": "awaiting_approval",
+  "ready-for-print": "preparing_for_print",
+  "pre-press": "preparing_for_print",
+  "print-production": "in_production",
+  "lamination": "in_production",
+  "finishing": "in_production",
+  "processing": "in_production",
+  "ready-for-pickup": "ready_or_shipped",
+  "shipping-cost": "ready_or_shipped",
+  "shipped": "ready_or_shipped",
+  "completed": "completed"
+};
+
+/**
+ * INTERNAL → CUSTOMER STAGE MAPPING
+ */
+const internalToCustomerStatus: Record<string, string> = {
+  order_received: "Order Received",
+  in_design: "In Design",
+  action_required: "Action Needed (File Issue)",
+  awaiting_approval: "Awaiting Your Approval",
+  preparing_for_print: "Preparing for Print",
+  in_production: "In Production",
+  ready_or_shipped: "Ready / Shipped",
+  completed: "Completed"
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -34,7 +116,7 @@ Deno.serve(async (req) => {
     const credentials = `${wooKey}:${wooSecret}`;
     const base64Credentials = btoa(credentials);
     const authHeader = `Basic ${base64Credentials}`;
-    const wooUrl = `https://weprintwraps.com/wp-json/wc/v3/orders?per_page=50&orderby=date&order=desc&after=${afterISO}`;
+    const wooUrl = `https://weprintwraps.com/wp-json/wc/v3/orders?per_page=100&orderby=date&order=desc&after=${afterISO}`;
     
     console.log('Fetching from WooCommerce...');
     console.log('Using auth with key ending in:', wooKey.slice(-4));
@@ -58,34 +140,31 @@ Deno.serve(async (req) => {
     let skipped = 0;
     const errors: string[] = [];
 
-    // Status mapping for ShopFlow
-    const shopflowStatusMap: Record<string, string> = {
-      'in-design': 'design_requested',
-      'lance': 'design_requested',
-      'manny': 'design_requested',
-      'design-complete': 'ready_for_print',
-      'print-production': 'in_production',
-      'processing': 'in_production',
-      'work-order-printed': 'in_production',
-      'add-on': 'in_production',
-      'file-error': 'awaiting_feedback',
-      'missing-file': 'awaiting_feedback',
-      'waiting-on-email-response': 'awaiting_feedback',
-      'dropbox-link-sent': 'awaiting_feedback',
-    };
-
-    const excludedStatuses = ['on-hold', 'shipped', 'refunded', 'failed', 'pending-payment', 'shipping-cost', 'credit'];
 
     for (const order of orders) {
       try {
         const orderNumber = order.number.toString();
         const customerName = `${order.billing.first_name} ${order.billing.last_name}`.trim() || 'Unknown Customer';
         const productType = order.line_items?.[0]?.name || 'Unknown Product';
-        const wooStatus = order.status;
+        const productId = order.line_items?.[0]?.product_id || null;
+        const wooStatusRaw = order.status;
+        const wooStatus = normalizeStatus(wooStatusRaw);
+        
+        console.log(`📊 Order ${orderNumber} - Raw: "${wooStatusRaw}", Normalized: "${wooStatus}"`);
+
+        // Map to internal status and customer stage
+        const internalStatus = wooToInternalStatus[wooStatus] || 'order_received';
+        const customerStage = internalToCustomerStatus[internalStatus] || 'Order Received';
+        
+        console.log(`✅ Mapped to - Internal: "${internalStatus}", Customer: "${customerStage}"`);
 
         // Sync to ShopFlow
-        if ((target === 'shopflow' || target === 'both') && !excludedStatuses.includes(wooStatus)) {
-          const mappedStatus = shopflowStatusMap[wooStatus] || 'design_requested';
+        if (target === 'shopflow' || target === 'both') {
+          // Fetch product image
+          const productImageUrl = await fetchWooProductImage(productId, wooKey, wooSecret);
+          
+          // Build customer address
+          const address = `${order.billing?.address_1 || ""} ${order.billing?.address_2 || ""}, ${order.billing?.city || ""}, ${order.billing?.state || ""} ${order.billing?.postcode || ""}`.trim();
 
           // Check if order already exists
           const { data: existing } = await supabase
@@ -95,35 +174,47 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (!existing) {
-            // Insert new order
+            // Insert new order with all fields
             const { error: insertError } = await supabase
               .from('shopflow_orders')
               .insert({
                 order_number: orderNumber,
-                customer_name: customerName,
-                product_type: productType,
-                status: mappedStatus,
-                priority: mappedStatus === 'awaiting_feedback' ? 'high' : 'normal',
                 woo_order_id: order.id,
                 woo_order_number: order.number,
+                customer_name: customerName,
+                customer_email: order.billing?.email || null,
+                customer_phone: order.billing?.phone || null,
+                customer_address: address || null,
+                product_type: productType,
+                product_image_url: productImageUrl,
+                status: internalStatus,
+                customer_stage: customerStage,
+                priority: internalStatus === 'action_required' ? 'high' : 'normal',
                 created_at: order.date_created,
+                updated_at: new Date().toISOString(),
               });
 
             if (insertError) {
               errors.push(`ShopFlow - Order ${orderNumber}: ${insertError.message}`);
             } else {
               syncedShopFlow++;
-              console.log(`Synced order ${orderNumber} to ShopFlow`);
+              console.log(`✅ Synced order ${orderNumber} to ShopFlow`);
             }
           } else {
-            // Update existing order with Woo fields (backfill)
+            // Update existing order with all fields
             const { error: updateError } = await supabase
               .from('shopflow_orders')
               .update({
                 woo_order_id: order.id,
                 woo_order_number: order.number,
                 customer_name: customerName,
-                status: mappedStatus,
+                customer_email: order.billing?.email || null,
+                customer_phone: order.billing?.phone || null,
+                customer_address: address || null,
+                product_type: productType,
+                product_image_url: productImageUrl,
+                status: internalStatus,
+                customer_stage: customerStage,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existing.id);
@@ -132,7 +223,7 @@ Deno.serve(async (req) => {
               errors.push(`ShopFlow - Order ${orderNumber} update: ${updateError.message}`);
             } else {
               syncedShopFlow++;
-              console.log(`Updated order ${orderNumber} with Woo fields`);
+              console.log(`✅ Updated order ${orderNumber} in ShopFlow`);
             }
           }
         }
@@ -166,7 +257,7 @@ Deno.serve(async (req) => {
                 errors.push(`ApproveFlow - Order ${orderNumber}: ${projectError.message}`);
               } else {
                 syncedApproveFlow++;
-                console.log(`Synced order ${orderNumber} to ApproveFlow`);
+                console.log(`✅ Synced order ${orderNumber} to ApproveFlow`);
               }
             } else {
               skipped++;

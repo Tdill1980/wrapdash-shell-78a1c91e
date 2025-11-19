@@ -5,6 +5,16 @@ import { useShopFlow } from "@/hooks/useShopFlow";
 import { useNavigate } from "react-router-dom";
 import { ClipboardList, Clock, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -24,8 +34,44 @@ const statusConfig = {
 };
 
 export default function ShopFlowList() {
-  const { orders, loading, syncFromWooCommerce } = useShopFlow();
+  const { orders, loading, refetch } = useShopFlow();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [syncing, setSyncing] = useState(false);
+  const [selectedDays, setSelectedDays] = useState("1");
+
+  const handleManualSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+        body: { target: 'shopflow', days: parseInt(selectedDays) }
+      });
+
+      if (error) {
+        console.error('Sync error:', error);
+        toast({
+          title: "Sync Failed",
+          description: error.message || "Failed to sync orders from WooCommerce",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Sync Complete",
+          description: `Synced ${data.syncedShopFlow} orders from last ${selectedDays} ${parseInt(selectedDays) === 1 ? 'day' : 'days'}`,
+        });
+        refetch();
+      }
+    } catch (err) {
+      console.error('Sync error:', err);
+      toast({
+        title: "Sync Failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -73,23 +119,35 @@ export default function ShopFlowList() {
             Production workflow and shop management
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={() => syncFromWooCommerce(2)} 
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Syncing...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Sync Last 48 Hours
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Select value={selectedDays} onValueChange={setSelectedDays}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Last 24 Hours</SelectItem>
+              <SelectItem value="7">Last 7 Days</SelectItem>
+              <SelectItem value="30">Last 30 Days</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button 
+            variant="outline" 
+            onClick={handleManualSync} 
+            disabled={syncing || loading}
+          >
+            {syncing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync Now
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {orders.length === 0 ? (
