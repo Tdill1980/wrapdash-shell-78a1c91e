@@ -101,7 +101,7 @@ export default function ShopFlowInternal() {
   return (
     <MainLayout userName="Trish">
       <div className="min-h-screen bg-[#0A0A0F]">
-      <div className="w-full px-10 py-8 space-y-10">
+      <div className="container mx-auto py-8 px-4 max-w-6xl">
         <ShopFlowBrandHeader />
         <CustomerProgressBar currentStatus={internalStatus} />
         <div className="mb-6"><UploadedFilesCard files={files} missingFiles={missingFiles} fileErrors={fileErrors} internalMode={true} orderId={order.id} /></div>

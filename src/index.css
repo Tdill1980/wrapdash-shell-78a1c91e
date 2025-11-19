@@ -73,11 +73,13 @@ All colors MUST be HSL.
   }
 }
 
-/* Restore normal H1/H2/H3 titles (prevent unwanted global scaling) */
-h1, h2, h3, h4 {
-  font-size: revert !important;
-  font-weight: revert !important;
-  text-align: revert !important;
+/* Card Header Styling - Enlarge card titles only */
+.card-header {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: 0.3px;
 }
 
 @layer utilities {
@@ -108,7 +110,7 @@ h1, h2, h3, h4 {
     border-radius: 16px !important;
     border: 1px solid rgba(255,255,255,0.14) !important;
     box-shadow:
-      0 0 14px rgba(255,255,255,0.10),
+      0 0 18px rgba(255,255,255,0.10),
       0 0 26px rgba(255,255,255,0.05),
       0 8px 22px rgba(0,0,0,0.55) !important;
   }
@@ -116,17 +118,6 @@ h1, h2, h3, h4 {
   /* CARD BODY SPACING */
   .card-body {
     padding: 1.25rem !important;
-  }
-
-  /* CARD HEADER */
-  .card-header {
-    font-family: 'Poppins', sans-serif !important;
-    font-size: 1.35rem !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-    text-align: left !important;
-    margin-bottom: 0.75rem !important;
-    line-height: 1.3 !important;
   }
 
   /* THUMBNAILS POP */

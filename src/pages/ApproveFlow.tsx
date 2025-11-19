@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { MainLayout } from "@/layouts/MainLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -215,40 +214,32 @@ export default function ApproveFlow() {
 
   if (loading) {
     return (
-      <MainLayout userName="Trish">
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </MainLayout>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   if (!project) {
     return (
-      <MainLayout userName="Trish">
-        <div className="flex flex-col items-center justify-center h-96 space-y-4">
-          <p className="text-muted-foreground">No project found</p>
-          <Button onClick={() => window.location.reload()}>Refresh</Button>
-        </div>
-      </MainLayout>
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <p className="text-muted-foreground">No project found</p>
+        <Button onClick={() => window.location.reload()}>Refresh</Button>
+      </div>
     );
   }
 
   const progressSteps = getProgressSteps();
 
   return (
-    <MainLayout userName="Trish">
-      <div className="space-y-6 w-full">
-      {/* Header Card */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              <span className="text-white">Approve</span>
-              <span className="text-gradient">Flow™</span>
-            </h1>
-            <p className="text-muted-foreground mt-1">Design approval workflow</p>
-          </div>
+    <div className="space-y-6 max-w-[1600px]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold tracking-tight">
+            <span className="text-white">Approve</span>
+            <span className="text-gradient">Flow™</span>
+          </h1>
           
           <div className="flex items-center gap-2">
             <Button
@@ -266,8 +257,12 @@ export default function ApproveFlow() {
               CUSTOMER
             </Button>
           </div>
+
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+            🔄 LIVE SYNC
+          </Badge>
         </div>
-      </Card>
+      </div>
 
       {/* Progress Bar */}
       <div className="py-3 px-4 bg-card border border-border rounded-lg">
@@ -638,7 +633,6 @@ export default function ApproveFlow() {
           )}
         </div>
       </div>
-      </div>
-    </MainLayout>
+    </div>
   );
 }

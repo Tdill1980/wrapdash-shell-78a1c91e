@@ -98,7 +98,7 @@ export default function ShopFlowJob() {
         <div className="w-full h-[6px] rounded-md bg-gradient-to-r from-[#8FD3FF] via-[#5AAEFF] to-[#0047FF]"></div>
       </div>
 
-      <div className="w-full px-10 py-8 space-y-10">
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">

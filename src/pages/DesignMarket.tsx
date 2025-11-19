@@ -3,7 +3,7 @@ import { ShoppingBag } from "lucide-react";
 
 export default function DesignMarket() {
   return (
-    <div className="w-full space-y-10">
+    <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight font-poppins">
           <span className="text-foreground">Design</span>
@@ -16,7 +16,7 @@ export default function DesignMarket() {
       </div>
 
       <Card className="p-12 bg-card border-border text-center">
-        <div className="w-full space-y-5">
+        <div className="max-w-lg mx-auto space-y-5">
           <div className="flex justify-center">
             <div className="p-3 bg-primary/10 rounded-lg">
               <ShoppingBag className="w-8 h-8 text-primary" strokeWidth={1.5} />

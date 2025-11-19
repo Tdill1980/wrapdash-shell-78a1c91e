@@ -53,7 +53,7 @@ export default function CustomerOrder() {
   });
 
   return (
-    <div className="w-full px-10 py-8 space-y-10">
+    <div className="container mx-auto px-6 py-10">
 
       {/* Sticky Top Bar */}
       <div className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md py-4 border-b border-white/10">

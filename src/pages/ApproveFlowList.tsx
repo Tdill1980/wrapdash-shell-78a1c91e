@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MainLayout } from "@/layouts/MainLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,47 +86,41 @@ export default function ApproveFlowList() {
 
   if (loading) {
     return (
-      <MainLayout userName="Trish">
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </MainLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <MainLayout userName="Trish">
-      <div className="space-y-6 w-full">
-        {/* Header Card */}
-        <Card className="p-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold font-poppins">
-                <span className="text-foreground">Approve</span>
-                <span className="text-gradient">Flow</span>
-                <span className="text-muted-foreground text-sm align-super">™</span>
-              </h1>
-              <p className="text-muted-foreground mt-1">Manage all design approval workflows</p>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={syncFromWooCommerce} 
-              disabled={syncing || loading}
-            >
-              {syncing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Syncing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Sync from WooCommerce
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold font-poppins">
+            <span className="text-foreground">Approve</span>
+            <span className="text-gradient">Flow</span>
+            <span className="text-muted-foreground text-sm align-super">™</span>
+          </h1>
+          <p className="text-muted-foreground mt-1">Manage all design approval workflows</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={syncFromWooCommerce} 
+          disabled={syncing || loading}
+        >
+          {syncing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Syncing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync from WooCommerce
+            </>
+          )}
+        </Button>
+      </div>
 
       <Card className="bg-card border-border">
         <div className="overflow-x-auto">
@@ -181,6 +174,5 @@ export default function ApproveFlowList() {
         </div>
       </Card>
     </div>
-    </MainLayout>
   );
 }

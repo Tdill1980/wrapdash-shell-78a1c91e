@@ -121,7 +121,7 @@ export default function ShopFlow() {
 
       {filteredOrders.length === 0 ? (
         <Card className="p-6 md:p-12 text-center">
-          <div className="w-full space-y-5">
+          <div className="max-w-lg mx-auto space-y-5">
             <h2 className="text-lg md:text-xl font-semibold">
               {orders.length === 0 ? "No Orders Yet" : "No Orders Found"}
             </h2>
