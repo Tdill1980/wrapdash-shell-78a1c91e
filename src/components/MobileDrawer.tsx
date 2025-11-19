@@ -16,6 +16,7 @@ import {
   Users,
   CheckCircle,
   Briefcase,
+  Mail,
 } from "lucide-react";
 
 const navigationItems = [
@@ -29,6 +30,7 @@ const navigationItems = [
   { name: "ShopFlow Internal", path: "/shopflow-internal/3a4c250d-a66b-4f13-a524-99b4bf2bb0b9", icon: ShoppingCart },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
+  { name: "MightyMail", path: "/admin/mightymail", icon: Mail },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
 ];
 

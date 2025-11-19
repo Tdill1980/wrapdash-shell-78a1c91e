@@ -13,6 +13,7 @@ import {
   Award,
   DollarSign,
   Settings,
+  Mail,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo.png";
 
@@ -40,6 +41,18 @@ const navigationItems = [
     )
   },
   { name: "Affiliate Payments", path: "/affiliate/payments", icon: DollarSign },
+  { 
+    name: "MightyMail", 
+    path: "/admin/mightymail", 
+    icon: Mail,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Mighty</span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Mail</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
   { name: "Product Admin", path: "/admin/products", icon: Settings },
 ];
 
