@@ -146,7 +146,7 @@ export default function Auth() {
               )}
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-2">
             <Button
               variant="link"
               onClick={() => setIsLogin(!isLogin)}
@@ -156,6 +156,18 @@ export default function Auth() {
                 ? "Don't have an account? Sign up"
                 : "Already have an account? Sign in"}
             </Button>
+            {isLogin && (
+              <div>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm text-primary hover:underline p-0"
+                  onClick={() => navigate("/signup")}
+                >
+                  Want your own wrap shop? Create an organization →
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

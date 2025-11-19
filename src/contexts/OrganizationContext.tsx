@@ -1,9 +1,21 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
+
+interface OrganizationBranding {
+  logo_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  company_name?: string;
+  tagline?: string;
+}
 
 interface OrganizationSettings {
   name: string;
-  logo?: string;
-  theme?: string;
+  subdomain: string;
+  branding: OrganizationBranding;
+  subscriptionTier: "free" | "pro" | "enterprise";
+  affiliateFounderId?: string;
 }
 
 interface OrganizationContextType {
@@ -11,23 +23,108 @@ interface OrganizationContextType {
   subscriptionTier: "free" | "pro" | "enterprise";
   organizationSettings: OrganizationSettings;
   updateOrganization: (settings: Partial<OrganizationSettings>) => void;
+  loading: boolean;
+  user: User | null;
 }
 
 const OrganizationContext = createContext<OrganizationContextType | undefined>(
   undefined
 );
 
+const getSubdomain = () => {
+  const hostname = window.location.hostname;
+  const parts = hostname.split('.');
+  // vinylvixen.wrapcommand.ai -> 'vinylvixen'
+  // wrapcommand.ai or localhost -> 'main'
+  if (hostname === 'localhost' || parts.length <= 2) {
+    return 'main';
+  }
+  return parts[0];
+};
+
 export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
-  const [organizationId] = useState<string | null>("org-placeholder");
-  const [subscriptionTier] = useState<"free" | "pro" | "enterprise">("pro");
-  const [organizationSettings, setOrganizationSettings] =
-    useState<OrganizationSettings>({
-      name: "WrapCommand",
-      theme: "dark",
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [subscriptionTier, setSubscriptionTier] = useState<"free" | "pro" | "enterprise">("pro");
+  const [organizationSettings, setOrganizationSettings] = useState<OrganizationSettings>({
+    name: "WrapCommand",
+    subdomain: "main",
+    branding: {},
+    subscriptionTier: "pro",
+  });
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
     });
 
-  const updateOrganization = (settings: Partial<OrganizationSettings>) => {
-    setOrganizationSettings((prev) => ({ ...prev, ...settings }));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const loadOrganization = async () => {
+      try {
+        const subdomain = getSubdomain();
+        
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('subdomain', subdomain)
+          .single();
+
+        if (error) {
+          console.error('Error loading organization:', error);
+          return;
+        }
+
+        if (data) {
+          setOrganizationId(data.id);
+          setSubscriptionTier(data.subscription_tier as "free" | "pro" | "enterprise");
+          setOrganizationSettings({
+            name: data.name,
+            subdomain: data.subdomain,
+            branding: data.branding as OrganizationBranding,
+            subscriptionTier: data.subscription_tier as "free" | "pro" | "enterprise",
+            affiliateFounderId: data.affiliate_founder_id,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load organization:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrganization();
+  }, []);
+
+  const updateOrganization = async (settings: Partial<OrganizationSettings>) => {
+    if (!organizationId) return;
+
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({
+          name: settings.name,
+          branding: settings.branding as any,
+        })
+        .eq('id', organizationId);
+
+      if (error) throw error;
+
+      setOrganizationSettings((prev) => ({ ...prev, ...settings }));
+    } catch (error) {
+      console.error('Failed to update organization:', error);
+    }
   };
 
   return (
@@ -37,6 +134,8 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
         subscriptionTier,
         organizationSettings,
         updateOrganization,
+        loading,
+        user,
       }}
     >
       {children}
