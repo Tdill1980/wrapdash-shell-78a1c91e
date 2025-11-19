@@ -10,6 +10,7 @@ import {
   Users,
   CheckCircle,
   Briefcase,
+  Award,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo.png";
 
@@ -25,6 +26,7 @@ const navigationItems = [
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
+  { name: "MightyAffiliate", path: "/affiliate/admin", icon: Award },
 ];
 
 export const Sidebar = () => {
