@@ -1,27 +1,16 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Check } from "lucide-react";
+import { emailTones } from "@/lib/mightymail-tones";
 
-const tones = [
-  {
-    id: "installer",
-    label: "Pro Installer Tone",
-    description: "Direct, technical, and professional",
-    sample: "Your wrap is engineered using premium film with maximum adhesion and durability. We'll have your vehicle completed within 3-5 business days.",
-  },
-  {
-    id: "luxury",
-    label: "Luxury Auto Spa Tone",
-    description: "Smooth, elevated, and refined",
-    sample: "Experience the elevated finish your vehicle deserves. Our master craftsmen will transform your ride with precision and artistry.",
-  },
-  {
-    id: "hype",
-    label: "Hype Restyler Tone",
-    description: "Aggressive, energetic, high-conviction",
-    sample: "🔥 Your ride is about to break necks. Let's lock this in and get you flexing on the streets. We're talking full send, zero compromise.",
-  },
-];
+const tones = Object.values(emailTones).map(tone => ({
+  id: tone.id,
+  label: tone.label,
+  description: tone.description,
+  sample: tone.bodyParagraphs[0],
+  fullBody: tone.bodyParagraphs.join(" "),
+  closing: tone.closing,
+}));
 
 export default function ToneStyles() {
   const [selected, setSelected] = useState("installer");
