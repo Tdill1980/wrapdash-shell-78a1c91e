@@ -26,6 +26,7 @@ import CustomerPortal from "./pages/CustomerPortal";
 import MightyMail from "./pages/MightyMail";
 import Portfolio from "./pages/Portfolio";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
+import ProductAdmin from "./pages/ProductAdmin";
 import DesignVaultAdmin from "./pages/DesignVaultAdmin";
 import Auth from "./pages/Auth";
 import UserManagement from "./pages/UserManagement";
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/email-campaigns" element={<AppLayout><MightyMail /></AppLayout>} />
             <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
             <Route path="/admin/pricing" element={<AppLayout><ProductPricingAdmin /></AppLayout>} />
+            <Route path="/admin/products" element={<AppLayout><ProductAdmin /></AppLayout>} />
             <Route path="/admin/designvault" element={<AppLayout><DesignVaultAdmin /></AppLayout>} />
             <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
           <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
