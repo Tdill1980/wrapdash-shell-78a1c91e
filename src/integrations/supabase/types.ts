@@ -597,6 +597,171 @@ export type Database = {
         }
         Relationships: []
       }
+      email_branding: {
+        Row: {
+          created_at: string | null
+          footer_text: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          sender_email: string | null
+          sender_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      email_retarget_customers: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          last_quote_amount: number | null
+          last_quote_date: string | null
+          name: string
+          phone: string | null
+          status: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          last_quote_amount?: number | null
+          last_quote_date?: string | null
+          name: string
+          phone?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          last_quote_amount?: number | null
+          last_quote_date?: string | null
+          name?: string
+          phone?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      email_sequences: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          design_style: string | null
+          emails: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          send_delay_days: number | null
+          updated_at: string | null
+          writing_tone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          design_style?: string | null
+          emails?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          send_delay_days?: number | null
+          updated_at?: string | null
+          writing_tone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          design_style?: string | null
+          emails?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          send_delay_days?: number | null
+          updated_at?: string | null
+          writing_tone?: string | null
+        }
+        Relationships: []
+      }
+      email_tracking: {
+        Row: {
+          clicked_at: string | null
+          customer_id: string | null
+          email_subject: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          sent_at: string | null
+          sequence_id: string | null
+          status: string | null
+        }
+        Insert: {
+          clicked_at?: string | null
+          customer_id?: string | null
+          email_subject?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          clicked_at?: string | null
+          customer_id?: string | null
+          email_subject?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_tracking_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "email_retarget_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_tracking_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "email_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
