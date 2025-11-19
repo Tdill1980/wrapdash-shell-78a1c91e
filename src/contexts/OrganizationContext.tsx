@@ -79,7 +79,7 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
           .from('organizations')
           .select('*')
           .eq('subdomain', subdomain)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error loading organization:', error);
