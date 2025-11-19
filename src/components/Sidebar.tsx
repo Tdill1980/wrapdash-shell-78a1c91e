@@ -83,14 +83,13 @@ const navigationItems = [
     )
   },
   { 
-    name: "ShopFlow Tracker", 
-    path: "/track/demo", 
+    name: "Your ShopFlow", 
+    path: "/track/33219", 
     icon: ShoppingCart,
     customRender: (
       <span className="font-medium">
-        <span className="text-white">Shop</span>
-        <span className="text-gradient">Flow</span>
-        <span className="text-white"> Tracker</span>
+        <span className="text-white">Your </span>
+        <span className="text-gradient">ShopFlow</span>
       </span>
     )
   },
