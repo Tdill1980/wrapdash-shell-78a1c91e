@@ -17,28 +17,13 @@ const STAGE_COLORS: any = {
   failed: "from-red-600 to-red-800",
 };
 
-export const ActiveStageHeader = ({ stage, description, updatedAt }: any) => {
+export const ActiveStageHeader = ({ stage, customerLabel, description, updatedAt }: any) => {
   const gradient = STAGE_COLORS[stage] || "from-[#8FD3FF] to-[#0047FF]";
-
-  const STAGE_LABELS: any = {
-    order_received: "Order Received",
-    files_received: "Files Received",
-    file_error: "File Error",
-    missing_file: "Missing File",
-    in_design: "In Design",
-    awaiting_approval: "Awaiting Approval",
-    design_complete: "Design Complete",
-    print_production: "Print Production",
-    ready_for_pickup: "Ready For Pickup",
-    shipped: "Shipped",
-    refunded: "Refunded",
-    failed: "Failed",
-  };
 
   return (
     <div className="mb-10 p-7 rounded-xl border border-white/10 bg-[#0D0D12] shadow-xl">
       <div className={`text-white text-2xl font-bold mb-2 bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
-        {STAGE_LABELS[stage] || "In Progress"}
+        {customerLabel || "In Progress"}
       </div>
 
       <p className="text-gray-400 text-sm max-w-2xl">{description}</p>
