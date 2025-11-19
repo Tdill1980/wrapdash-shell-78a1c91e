@@ -40,7 +40,7 @@ interface MobileDrawerProps {
 export const MobileDrawer = ({ open, onOpenChange }: MobileDrawerProps) => {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-64 bg-sidebar p-0">
+      <SheetContent side="left" className="flex flex-col h-full w-64 bg-sidebar p-0">
         <SheetHeader className="p-6 border-b border-sidebar-border">
           <SheetTitle className="text-2xl font-bold bg-gradient-purple bg-clip-text text-transparent">
             WrapCommand
