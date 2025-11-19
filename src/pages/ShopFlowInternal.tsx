@@ -3,6 +3,7 @@ import { useShopFlow } from "@/hooks/useShopFlow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Package, Car, User, Activity, ArrowRight, CheckCircle, Palette, AlertCircle, FileText, Printer, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { ShopFlowHeader } from "@/components/ShopFlowHeader";
 
 import { VehicleInfoCard } from "@/modules/shopflow/components/VehicleInfoCard";
 import { CustomerInfoCard } from "@/modules/shopflow/components/CustomerInfoCard";
@@ -82,54 +83,12 @@ export default function ShopFlowInternal() {
     <div className="min-h-screen bg-[#0A0A0F]">
       <div className="container mx-auto py-8 px-4 max-w-6xl">
         {/* ShopFlow™ Gradient Header */}
-        <div 
-          className="w-full rounded-xl p-8 text-white mb-6"
-          style={{
-            background: "linear-gradient(90deg, #2F81F7 0%, #15D1FF 100%)"
-          }}
-        >
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-wide mb-1">
-                SHOP<span className="text-white/90">FLOW</span>™
-              </h1>
-              <p className="text-sm opacity-90">Real-Time Wrap Production Tracking for WePrintWraps.com</p>
-            </div>
-            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
-              TRACKING
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-3">
-              <Package className="w-5 h-5 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-xs opacity-80 mb-1">Product</p>
-                <p className="font-medium">{order.product_type}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Car className="w-5 h-5 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-xs opacity-80 mb-1">Vehicle</p>
-                <p className="font-medium">{vehicleDisplay}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <User className="w-5 h-5 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-xs opacity-80 mb-1">Customer</p>
-                <p className="font-medium">{order.customer_name}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-white/20">
-            <p className="text-2xl font-bold">Order #{order.woo_order_number ?? order.order_number}</p>
-          </div>
-        </div>
+        <ShopFlowHeader
+          orderNumber={order.woo_order_number ?? order.order_number}
+          productName={order.product_type}
+          customerName={order.customer_name}
+          vehicle={vehicleDisplay}
+        />
 
         {/* Customer Progress Bar */}
         <CustomerProgressBar currentStatus={order.status} />
