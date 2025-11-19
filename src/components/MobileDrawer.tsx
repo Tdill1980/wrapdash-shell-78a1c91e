@@ -47,7 +47,7 @@ export const MobileDrawer = ({ open, onOpenChange }: MobileDrawerProps) => {
           </SheetTitle>
         </SheetHeader>
         
-        <nav className="p-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             return (

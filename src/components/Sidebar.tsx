@@ -52,7 +52,7 @@ export const Sidebar = () => {
         />
       </div>
       
-      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {navigationItems.map((item) => {
           const Icon = item.icon;
           return (
