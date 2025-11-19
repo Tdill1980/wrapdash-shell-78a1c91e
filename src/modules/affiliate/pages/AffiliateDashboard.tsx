@@ -5,11 +5,14 @@ import { useAffiliateStats } from '../hooks/useAffiliateStats';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { StatsCards } from '../components/StatsCards';
 import { CommissionTable } from '../components/CommissionTable';
 import { BusinessCardEditor } from '../components/BusinessCardEditor';
 import { UTMLinkGenerator } from '../components/UTMLinkGenerator';
 import { QRCodeGenerator } from '../components/QRCodeGenerator';
+import { SalesChart } from '../components/SalesChart';
+import { SalesBreakdown } from '../components/SalesBreakdown';
 import { LogOut } from 'lucide-react';
 
 export const AffiliateDashboard = () => {
@@ -18,6 +21,7 @@ export const AffiliateDashboard = () => {
   const token = searchParams.get('token');
   const [email, setEmail] = useState('');
   const [showLogin, setShowLogin] = useState(!token);
+  const [timePeriod, setTimePeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
 
   const { founder, loading: authLoading, requestLogin, updateProfile, logout } = useAffiliate(token || undefined);
   const { stats, commissions, loading: statsLoading } = useAffiliateStats(founder?.id);
@@ -104,6 +108,28 @@ export const AffiliateDashboard = () => {
 
         {/* Stats Cards */}
         <StatsCards stats={stats} loading={statsLoading} />
+
+        {/* Time Period Selector & Charts */}
+        <div className="mt-8 space-y-6">
+          <Tabs value={timePeriod} onValueChange={(v) => setTimePeriod(v as 'daily' | 'weekly' | 'monthly')}>
+            <TabsList className="bg-card border border-border">
+              <TabsTrigger value="daily" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00AFFF] data-[state=active]:to-[#0047FF]">
+                Daily
+              </TabsTrigger>
+              <TabsTrigger value="weekly" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00AFFF] data-[state=active]:to-[#0047FF]">
+                Weekly
+              </TabsTrigger>
+              <TabsTrigger value="monthly" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#00AFFF] data-[state=active]:to-[#0047FF]">
+                Monthly
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={timePeriod} className="mt-6 space-y-6">
+              <SalesBreakdown commissions={commissions} timePeriod={timePeriod} />
+              <SalesChart commissions={commissions} timePeriod={timePeriod} />
+            </TabsContent>
+          </Tabs>
+        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
