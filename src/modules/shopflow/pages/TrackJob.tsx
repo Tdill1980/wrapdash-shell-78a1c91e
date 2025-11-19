@@ -57,8 +57,8 @@ export default function TrackJob() {
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         <ShopFlowBrandHeader />
         <CustomerProgressBar currentStatus={internalStatus} />
-        <UploadedFilesCard files={files} missingFiles={missingFiles} fileErrors={fileErrors} orderId={order.id} />
         <OrderInfoCard order={order} />
+        <UploadedFilesCard files={files} missingFiles={missingFiles} fileErrors={fileErrors} orderId={order.id} />
         <CurrentStageCard order={{ customer_stage: internalStatus }} />
         <NextStepCard order={{ customer_stage: internalStatus }} />
         <ActionRequiredCard order={{ customer_stage: internalStatus, file_error_details: fileErrors, missing_file_list: missingFiles }} />

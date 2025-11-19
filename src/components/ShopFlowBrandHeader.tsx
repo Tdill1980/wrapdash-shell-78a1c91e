@@ -17,10 +17,7 @@ export const ShopFlowBrandHeader = () => {
 
       {/* Gradient Bar for 'for WePrintWraps.com' */}
       <div 
-        className="w-full py-2 px-4 text-white font-semibold tracking-wide text-sm mt-2"
-        style={{
-          background: "linear-gradient(90deg, #2F81F7 0%, #15D1FF 100%)"
-        }}
+        className="w-full py-2 px-4 text-white font-semibold tracking-wide text-sm mt-2 bg-gradient-primary"
       >
         for WePrintWraps.com
       </div>
