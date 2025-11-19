@@ -122,7 +122,7 @@ export default function ApproveFlowList() {
         </Button>
       </div>
 
-      <Card className="bg-card border-border">
+      <Card className="dashboard-card">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

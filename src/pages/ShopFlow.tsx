@@ -43,7 +43,7 @@ export default function ShopFlow() {
               Production workflow and shop management
             </p>
           </div>
-          <Card className="p-12 text-center">
+          <Card className="dashboard-card p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
             <p className="text-muted-foreground mt-4">Loading orders...</p>
           </Card>
@@ -120,7 +120,7 @@ export default function ShopFlow() {
       </div>
 
       {filteredOrders.length === 0 ? (
-        <Card className="p-6 md:p-12 text-center">
+        <Card className="dashboard-card p-6 md:p-12 text-center">
           <div className="max-w-lg mx-auto space-y-5">
             <h2 className="text-lg md:text-xl font-semibold">
               {orders.length === 0 ? "No Orders Yet" : "No Orders Found"}

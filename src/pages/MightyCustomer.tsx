@@ -313,7 +313,7 @@ export default function MightyCustomer() {
           <p className="text-muted-foreground">Quote Builder & Order Management</p>
         </div>
 
-        <Card className="p-6 space-y-6">
+        <Card className="dashboard-card p-6 space-y-6">
           <div className="space-y-4">
             <Label className="text-lg font-semibold">Select Category</Label>
             <div className="flex gap-2 overflow-x-auto pb-2">

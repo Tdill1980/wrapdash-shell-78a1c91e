@@ -42,7 +42,7 @@ All colors MUST be HSL.
       --gradient-mid-blue: 207 100% 45%;       /* Mid Blue */
       --gradient-dark: 215 100% 35%;           /* #0066B3 Dark Blue (end) */
       
-      /* Sidebar - charcoal */
+      /* Sidebar - pure black with card-colored hover */
       --sidebar-background: 240 50% 3%;
       --sidebar-foreground: 240 10% 98%;
       --sidebar-primary: 198 100% 50%;
