@@ -12,9 +12,10 @@ import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
 import {
   getStageFromWoo,
   getNextStage,
+  getStageDescription,
   detectMissing,
   buildTimeline
-} from "@/modules/shopflow/utils/stageMap";
+} from "@/modules/shopflow/utils/stageEngine";
 
 // Extract WooCommerce file uploads from line_items → meta_data
 function extractFilesFromWoo(order: any) {
@@ -66,9 +67,11 @@ export default function ShopFlowInternal() {
   // Extract WooCommerce artwork files
   const artworkFiles = extractFilesFromWoo(order);
 
-  // Internal Flow Logic
+  // Internal Flow Logic (Staff View)
   const internalStage = getStageFromWoo(order.status);
   const nextStage = getNextStage(internalStage);
+  const stageDescription = getStageDescription(internalStage);
+  const nextStepDescription = getStageDescription(nextStage);
   const missingItems = detectMissing({ ...order, files: artworkFiles });
   const timelineData = buildTimeline(order);
 
@@ -81,17 +84,40 @@ export default function ShopFlowInternal() {
       </div>
 
       {/* Sticky Job Header */}
-      <div className="sticky top-[54px] z-40 bg-[#101016]/90 backdrop-blur-xl border border-white/5 rounded-lg p-5 mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl text-white font-semibold">{order.product_type}</h1>
-          <p className="text-sm text-gray-400">
-            {order.customer_name} — Order #{order.order_number}
+      <div className="sticky top-[54px] z-40 bg-[#101016]/90 backdrop-blur-xl border border-white/5 rounded-lg p-5 mb-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h1 className="text-xl text-white font-semibold">{order.product_type}</h1>
+            <p className="text-sm text-gray-400">
+              {order.customer_name} — Order #{order.order_number}
+            </p>
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            <span className="px-3 py-1 rounded-md text-xs text-white bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]">
+              Internal: {internalStage}
+            </span>
+            <span className="px-2 py-0.5 rounded text-xs text-gray-400 bg-[#16161E] border border-white/5">
+              WooCommerce: {order.status}
+            </span>
+          </div>
+        </div>
+
+        {/* Current Stage Description */}
+        <div className="bg-[#0D0D12] border border-white/5 rounded-lg p-4 mb-3">
+          <p className="text-sm text-gray-300 mb-1">
+            <span className="text-[#8FD3FF] font-semibold">Current:</span> {stageDescription}
           </p>
         </div>
 
-        <span className="px-3 py-1 rounded-md text-xs text-white bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF]">
-          {order.status}
-        </span>
+        {/* Next Step Description */}
+        {nextStage && nextStepDescription && (
+          <div className="bg-[#0D0D12] border border-[#0047FF]/20 rounded-lg p-4">
+            <p className="text-sm text-gray-300">
+              <span className="text-[#6AB9FF] font-semibold">Next:</span> {nextStepDescription}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Quick Summary */}
