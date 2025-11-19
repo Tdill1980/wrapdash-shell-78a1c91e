@@ -70,8 +70,42 @@ const navigationItems = [
   { name: "WrapBox", path: "/wrapbox", icon: Package },
   { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
   { name: "Design Market", path: "/design-market", icon: Store },
-  { name: "ShopFlow", path: "/shopflow", icon: ShoppingCart },
-  { name: "ShopFlow Internal", path: "/shopflow-internal", icon: ShoppingCart },
+  { 
+    name: "ShopFlow™", 
+    path: "/shopflow", 
+    icon: ShoppingCart,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Shop</span>
+        <span className="text-gradient">Flow</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "ShopFlow External", 
+    path: "/track/12345", 
+    icon: ShoppingCart,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Shop</span>
+        <span className="text-gradient">Flow</span>
+        <span className="text-white"> External</span>
+      </span>
+    )
+  },
+  { 
+    name: "ShopFlow Internal", 
+    path: "/shopflow-internal", 
+    icon: ShoppingCart,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Shop</span>
+        <span className="text-gradient">Flow</span>
+        <span className="text-white"> Internal</span>
+      </span>
+    )
+  },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
   { 

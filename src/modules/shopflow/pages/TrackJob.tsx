@@ -99,6 +99,11 @@ export default function TrackJob() {
   const internalStatus = wooToInternalStatus[order.status] || "order_received";
   const customerStatus = internalToCustomerStatus[internalStatus];
   const isActionRequired = internalStatus === "action_required";
+  
+  const vehicleInfo = order.vehicle_info as any;
+  const vehicleDisplay = vehicleInfo 
+    ? `${vehicleInfo.year || ''} ${vehicleInfo.make || ''} ${vehicleInfo.model || ''}`.trim()
+    : 'No vehicle information';
 
   // Define progress stages for customer view
   const progressStages = [
@@ -117,58 +122,12 @@ export default function TrackJob() {
     <div className="min-h-screen bg-[#0A0A0F]">
       <div className="container mx-auto py-8 px-4 max-w-4xl">
         {/* ShopFlow™ Gradient Header */}
-        <div 
-          className="w-full rounded-xl p-8 text-white mb-6"
-          style={{
-            background: "linear-gradient(90deg, #2F81F7 0%, #15D1FF 100%)"
-          }}
-        >
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-wide mb-1">
-                SHOP<span className="text-[#15D1FF]">FLOW</span>™
-              </h1>
-              <p className="text-sm opacity-90">Real-Time Wrap Tracking for WePrintWraps.com</p>
-            </div>
-            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
-              TRACKING
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-3">
-              <Package className="w-5 h-5 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-xs opacity-80 mb-1">Product</p>
-                <p className="font-medium">{order.product_type}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Upload className="w-5 h-5 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-xs opacity-80 mb-1">Vehicle</p>
-                <p className="font-medium">
-                  {order.vehicle_info 
-                    ? `${order.vehicle_info.year || ''} ${order.vehicle_info.make || ''} ${order.vehicle_info.model || ''}`.trim()
-                    : 'Vehicle Info Pending'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-xs opacity-80 mb-1">Customer</p>
-                <p className="font-medium">{order.customer_name}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-white/20">
-            <p className="text-2xl font-bold">Order #{order.woo_order_number ?? order.order_number}</p>
-          </div>
-        </div>
+        <ShopFlowHeader
+          orderNumber={order.woo_order_number ?? order.order_number}
+          productName={order.product_type}
+          customerName={order.customer_name}
+          vehicle={vehicleDisplay}
+        />
 
         {/* Customer Progress Bar */}
         <CustomerProgressBar currentStatus={internalStatus} />

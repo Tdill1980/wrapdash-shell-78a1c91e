@@ -13,12 +13,13 @@ export const ShopFlowHeader = ({ orderNumber, productName, customerName, vehicle
 
   return (
     <div 
-      className="w-full rounded-xl p-8 text-white mb-6"
-      style={{
-        background: "linear-gradient(90deg, #2F81F7 0%, #15D1FF 100%)"
-      }}
+      className="w-full rounded-xl p-8 text-white mb-6 bg-gradient-primary"
     >
-      <h1 className="text-2xl font-bold tracking-wide mb-1">SHOPFLOW™</h1>
+      <h1 className="text-2xl font-bold tracking-wide mb-1">
+        <span className="text-white">SHOP</span>
+        <span className="text-gradient">FLOW</span>
+        <span className="text-[10px] align-super opacity-70">™</span>
+      </h1>
       <p className="text-sm opacity-80 mb-4">Real-Time Wrap Production Tracking</p>
 
       <div className="space-y-1">
