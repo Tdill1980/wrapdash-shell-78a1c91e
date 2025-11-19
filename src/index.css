@@ -157,4 +157,10 @@ All colors MUST be HSL.
     font-weight: 700 !important;
     letter-spacing: 0.025em !important;
   }
+
+  /* SIDEBAR HOVER GRADIENT */
+  [data-sidebar="menu-button"]:hover,
+  [data-sidebar="menu-item"]:hover [data-sidebar="menu-button"] {
+    background: linear-gradient(135deg, hsl(var(--gradient-teal)), hsl(var(--gradient-mid-blue))) !important;
+  }
 }
