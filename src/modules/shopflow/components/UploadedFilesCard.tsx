@@ -1,5 +1,7 @@
-import { Upload } from "lucide-react";
+import { Upload, AlertTriangle } from "lucide-react";
 import { FileThumbnail } from "./FileThumbnail";
+import { Button } from "@/components/ui/button";
+import { useRef } from "react";
 
 interface UploadedFilesCardProps {
   files?: any[];
@@ -7,6 +9,8 @@ interface UploadedFilesCardProps {
   fileErrors?: any[];
   internalMode?: boolean;
   orderId?: string;
+  onFileUpload?: (files: FileList) => void;
+  uploading?: boolean;
 }
 
 export const UploadedFilesCard = ({ 
@@ -14,8 +18,21 @@ export const UploadedFilesCard = ({
   missingFiles = [], 
   fileErrors = [],
   internalMode = false,
-  orderId
+  orderId,
+  onFileUpload,
+  uploading = false
 }: UploadedFilesCardProps) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0 && onFileUpload) {
+      onFileUpload(selectedFiles);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
   return (
     <div className="bg-[#111317] border border-white/10 rounded-xl p-5">
       <div className="flex items-center gap-2 mb-4">
@@ -25,7 +42,7 @@ export const UploadedFilesCard = ({
         </h3>
       </div>
 
-      {/* File Thumbnails */}
+      {/* File Thumbnails or Upload UI */}
       {files.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {files.map((file, index) => (
@@ -43,7 +60,61 @@ export const UploadedFilesCard = ({
           ))}
         </div>
       ) : (
-        <p className="text-white/60 text-sm">No files uploaded yet.</p>
+        <div className="p-6 bg-orange-500/10 border-2 border-orange-500/30 rounded-xl">
+          <div className="flex items-start gap-3 mb-4">
+            <AlertTriangle className="w-6 h-6 text-orange-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-orange-400 font-semibold text-lg mb-2">
+                Missing Artwork Files
+              </h4>
+              <p className="text-white/70 text-sm mb-4">
+                We haven't received your print files yet. Please upload them below or email them to{" "}
+                <a href="mailto:artwork@weprintwraps.com" className="text-[#15D1FF] hover:underline">
+                  artwork@weprintwraps.com
+                </a>
+              </p>
+            </div>
+          </div>
+          
+          {!internalMode && onFileUpload && (
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.ai,.eps,.psd,.png,.jpg,.jpeg,.svg"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex-1"
+              >
+                {uploading ? (
+                  <>
+                    <Upload className="animate-pulse" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload />
+                    Upload Files
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                asChild
+                className="flex-1"
+              >
+                <a href="mailto:artwork@weprintwraps.com?subject=Files for Order">
+                  Email Files Instead
+                </a>
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Missing Files */}
