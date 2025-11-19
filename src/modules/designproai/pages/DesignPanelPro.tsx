@@ -122,7 +122,7 @@ export default function DesignPanelPro() {
 
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Vehicle Details</h2>
               <VehicleSelector
                 vehicleMake={vehicleMake}
@@ -136,7 +136,7 @@ export default function DesignPanelPro() {
               />
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Select Panels to Wrap</h2>
               <div className="grid grid-cols-2 gap-3">
                 {VEHICLE_PANELS.map((panel) => (
@@ -157,7 +157,7 @@ export default function DesignPanelPro() {
               </p>
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Color Selection</h2>
               <ColorDropdown
                 selectedColorId={selectedColorId}
@@ -165,7 +165,7 @@ export default function DesignPanelPro() {
               />
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Finish Options</h2>
               <FinishSelector
                 finishType={finishType}
@@ -178,7 +178,7 @@ export default function DesignPanelPro() {
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || selectedPanels.length === 0}
-              className="w-full h-12 text-lg bg-gradient-to-r from-primary to-primary/80"
+              className="w-full h-12 text-lg bg-gradient-primary hover:opacity-90 transition-opacity"
             >
               {isGenerating ? (
                 <>
@@ -195,7 +195,7 @@ export default function DesignPanelPro() {
           </div>
 
           <div>
-            <Card className="p-6 bg-surface border-border h-full">
+            <Card className="p-6 bg-card border h-full">
               <h2 className="text-xl font-semibold mb-4">Preview</h2>
               {resultImage ? (
                 <img
@@ -204,7 +204,7 @@ export default function DesignPanelPro() {
                   className="w-full rounded-lg"
                 />
               ) : (
-                <div className="flex items-center justify-center h-[400px] border-2 border-dashed border-border rounded-lg">
+                <div className="flex items-center justify-center h-[400px] border-2 border-dashed border rounded-lg">
                   <p className="text-muted-foreground">
                     Select panels and generate to see preview
                   </p>

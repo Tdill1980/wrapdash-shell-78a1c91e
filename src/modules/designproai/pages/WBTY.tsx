@@ -101,7 +101,7 @@ export default function WBTY() {
 
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="space-y-6">
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Vehicle Details</h2>
               <VehicleSelector
                 vehicleMake={vehicleMake}
@@ -115,7 +115,7 @@ export default function WBTY() {
               />
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Upload Design File</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 Upload your flattened 2D wrap design (PNG, JPG, or AI file)
@@ -131,7 +131,7 @@ export default function WBTY() {
               )}
             </Card>
 
-            <Card className="p-6 bg-surface border-border">
+            <Card className="p-6 bg-card border">
               <h2 className="text-xl font-semibold mb-4">Finish Options</h2>
               <FinishSelector
                 finishType={finishType}
@@ -144,7 +144,7 @@ export default function WBTY() {
             <Button
               onClick={handleGenerate}
               disabled={isGenerating || !customDesignUrl}
-              className="w-full h-12 text-lg bg-gradient-to-r from-primary to-primary/80"
+              className="w-full h-12 text-lg bg-gradient-primary hover:opacity-90 transition-opacity"
             >
               {isGenerating ? (
                 <>
@@ -161,7 +161,7 @@ export default function WBTY() {
           </div>
 
           <div>
-            <Card className="p-6 bg-surface border-border h-full">
+            <Card className="p-6 bg-card border h-full">
               <h2 className="text-xl font-semibold mb-4">Pre-Approval Proof</h2>
               {resultImage ? (
                 <div className="space-y-4">
@@ -175,7 +175,7 @@ export default function WBTY() {
                   </p>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[400px] border-2 border-dashed border-border rounded-lg">
+                <div className="flex items-center justify-center h-[400px] border-2 border-dashed border rounded-lg">
                   <p className="text-muted-foreground">
                     Upload your design and generate to see proof
                   </p>
