@@ -24,7 +24,7 @@ export const MainLayout = ({ children, userName = "User" }: MainLayoutProps) => 
 
         {/* PAGE BODY */}
         <div className="flex-1 px-10 py-8 bg-[#0D0F12]">
-          <div className="max-w-[1600px] mx-auto space-y-10">
+          <div className="max-w-[1600px] mr-auto space-y-10">
             {children}
           </div>
         </div>
