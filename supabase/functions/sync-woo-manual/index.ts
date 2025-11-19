@@ -30,13 +30,20 @@ Deno.serve(async (req) => {
     afterDate.setDate(afterDate.getDate() - days);
     const afterISO = afterDate.toISOString();
 
-    // Fetch orders from WooCommerce
-    const authHeader = `Basic ${btoa(`${wooKey}:${wooSecret}`)}`;
+    // Fetch orders from WooCommerce using proper base64 encoding for Deno
+    const credentials = `${wooKey}:${wooSecret}`;
+    const base64Credentials = btoa(credentials);
+    const authHeader = `Basic ${base64Credentials}`;
     const wooUrl = `https://weprintwraps.com/wp-json/wc/v3/orders?per_page=50&orderby=date&order=desc&after=${afterISO}`;
     
     console.log('Fetching from WooCommerce...');
+    console.log('Using auth with key ending in:', wooKey.slice(-4));
+    
     const wooResponse = await fetch(wooUrl, {
-      headers: { 'Authorization': authHeader }
+      headers: { 
+        'Authorization': authHeader,
+        'Content-Type': 'application/json'
+      }
     });
 
     if (!wooResponse.ok) {
