@@ -49,6 +49,9 @@ export default function MightyCustomer() {
   const [finish, setFinish] = useState("Gloss");
   const [isSending, setIsSending] = useState(false);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [emailTone, setEmailTone] = useState("installer");
+  const [emailDesign, setEmailDesign] = useState("clean");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -108,6 +111,65 @@ export default function MightyCustomer() {
     if (lower.includes("gloss")) setFinish("Gloss");
     if (lower.includes("matte")) setFinish("Matte");
     if (lower.includes("satin")) setFinish("Satin");
+  };
+
+  const handleSendQuoteEmail = async () => {
+    if (!customerData.email || !customerData.name) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter customer name and email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedProduct || !total) {
+      toast({
+        title: "Incomplete Quote",
+        description: "Please complete the quote before sending",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-mightymail-quote", {
+        body: {
+          customerEmail: customerData.email,
+          customerName: customerData.name,
+          quoteData: {
+            vehicle_year: customerData.vehicleYear,
+            vehicle_make: customerData.vehicleMake,
+            vehicle_model: customerData.vehicleModel,
+            product_name: selectedProduct.product_name,
+            sqft: sqft,
+            material_cost: materialCost,
+            labor_cost: laborCost,
+            quote_total: total,
+            portal_url: window.location.origin + "/mighty-customer",
+          },
+          tone: emailTone,
+          design: emailDesign,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email Sent!",
+        description: `Quote email sent successfully to ${customerData.email}`,
+      });
+    } catch (error: any) {
+      console.error("Error sending quote email:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send quote email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const toggleAddOn = (addOn: string) => {
@@ -467,6 +529,38 @@ export default function MightyCustomer() {
             </div>
           </div>
 
+          <div className="space-y-4 pt-4 border-t">
+            <Label className="text-lg font-semibold">Email Settings</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Email Tone</Label>
+                <Select value={emailTone} onValueChange={setEmailTone}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="installer">Pro Installer</SelectItem>
+                    <SelectItem value="luxury">Luxury Auto Spa</SelectItem>
+                    <SelectItem value="hype">Hype Restyler</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Email Design</Label>
+                <Select value={emailDesign} onValueChange={setEmailDesign}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clean">Clean</SelectItem>
+                    <SelectItem value="luxury">Luxury</SelectItem>
+                    <SelectItem value="performance">Performance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <Button
               onClick={() => toast({ title: "Quote Saved", description: "Quote has been saved locally" })}
@@ -485,6 +579,15 @@ export default function MightyCustomer() {
             >
               <Mail className="mr-2 h-4 w-4" />
               Preview Email
+            </Button>
+
+            <Button
+              onClick={handleSendQuoteEmail}
+              disabled={isSendingEmail || !selectedProduct || !total || !customerData.email || !customerData.name}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              {isSendingEmail ? "Sending..." : "Send Quote Email"}
             </Button>
             
             {(() => {
@@ -541,6 +644,8 @@ export default function MightyCustomer() {
             total: total,
             portalUrl: window.location.origin + "/mighty-customer",
           }}
+          tone={emailTone}
+          design={emailDesign}
         />
       </div>
     </div>

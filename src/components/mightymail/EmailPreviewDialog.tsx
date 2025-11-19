@@ -9,13 +9,20 @@ interface EmailPreviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quoteData: any;
+  tone?: string;
+  design?: string;
 }
 
-export function EmailPreviewDialog({ open, onOpenChange, quoteData }: EmailPreviewDialogProps) {
-  const [tone, setTone] = useState("installer");
-  const [design, setDesign] = useState("performance");
+export function EmailPreviewDialog({ open, onOpenChange, quoteData, tone: initialTone = "installer", design: initialDesign = "performance" }: EmailPreviewDialogProps) {
+  const [tone, setTone] = useState(initialTone);
+  const [design, setDesign] = useState(initialDesign);
   const [previewHTML, setPreviewHTML] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setTone(initialTone);
+    setDesign(initialDesign);
+  }, [initialTone, initialDesign]);
 
   useEffect(() => {
     if (open && quoteData) {
