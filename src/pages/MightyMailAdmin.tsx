@@ -5,8 +5,13 @@ import BrandingManager from "@/components/mightymail/BrandingManager";
 import CSVUploader from "@/components/mightymail/CSVUploader";
 import EmailStyles from "@/components/mightymail/EmailStyles";
 import ToneStyles from "@/components/mightymail/ToneStyles";
+import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
+import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
+import { useNavigate } from "react-router-dom";
 
 export default function MightyMailAdmin() {
+  const navigate = useNavigate();
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -26,9 +31,13 @@ export default function MightyMailAdmin() {
       </div>
 
       <Tabs defaultValue="quotes" className="w-full">
-        <TabsList className="grid grid-cols-6 w-full bg-[#16161E]">
-          <TabsTrigger value="quotes">
+        <TabsList className="grid grid-cols-7 w-full bg-[#16161E]">
+          <TabsTrigger value="quotes" onClick={() => navigate("/admin/mightymail/quotes")}>
             <Mail size={16} className="mr-2" /> Quotes
+          </TabsTrigger>
+
+          <TabsTrigger value="performance">
+            <Mail size={16} className="mr-2" /> Performance
           </TabsTrigger>
           
           <TabsTrigger value="sequences">
@@ -53,8 +62,21 @@ export default function MightyMailAdmin() {
         </TabsList>
 
         <TabsContent value="quotes">
-          <div className="text-muted-foreground">
-            <p>View the Quotes tab in the navigation to access the full Quote Management interface.</p>
+          <div className="text-muted-foreground space-y-4">
+            <p>View the Quotes tab to access the full Quote Management interface.</p>
+            <button
+              onClick={() => navigate("/admin/mightymail/quotes")}
+              className="px-4 py-2 bg-gradient-to-r from-[#00AFFF] via-[#008CFF] to-[#4EEAFF] text-white rounded-lg hover:opacity-90"
+            >
+              Go to Quotes →
+            </button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="performance">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <UTIMAnalyticsDashboard />
+            <ToneDesignPerformance />
           </div>
         </TabsContent>
 
