@@ -31,9 +31,12 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
       )}
 
       <div className="flex flex-col gap-3 text-white flex-1">
-        <h2 className="card-header">
-          Order #{order.woo_order_number ?? order.order_number}
-        </h2>
+        <div>
+          <h2 className="card-header">
+            Order #{order.woo_order_number ?? order.order_number}
+          </h2>
+          <p className="text-white/70 mt-1">{order.customer_name}</p>
+        </div>
 
         <div className="flex flex-wrap gap-8 text-white/70">
           <div>
@@ -50,14 +53,6 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
               <p className="text-xs uppercase opacity-50">Vehicle</p>
             </div>
             <p className="font-medium text-white">{vehicleDisplay}</p>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <User className="w-4 h-4 text-[#2F81F7]" />
-              <p className="text-xs uppercase opacity-50">Customer</p>
-            </div>
-            <p className="font-medium text-white">{order.customer_name}</p>
           </div>
         </div>
       </div>
