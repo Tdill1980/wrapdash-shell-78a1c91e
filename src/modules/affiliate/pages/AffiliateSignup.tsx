@@ -7,8 +7,10 @@ export const AffiliateSignup = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent mb-3">
-            MightyAffiliate OS™
+          <h1 className="text-4xl font-bold font-poppins mb-3">
+            <span className="text-white">Mighty</span>
+            <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Affiliate</span>
+            <span className="text-white"> OS™</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-2">
             Join Our Partner Network

@@ -27,7 +27,17 @@ const navigationItems = [
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
-  { name: "MightyAffiliate", path: "/affiliate/admin", icon: Award },
+  { 
+    name: "MightyAffiliate", 
+    path: "/affiliate/admin", 
+    icon: Award,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Mighty</span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Affiliate</span>
+      </span>
+    )
+  },
   { name: "Affiliate Payments", path: "/affiliate/payments", icon: DollarSign },
 ];
 
@@ -53,7 +63,7 @@ export const Sidebar = () => {
               activeClassName="text-foreground bg-white/5 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-gradient-primary before:rounded-r"
             >
               <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} />
-              <span className="font-medium">{item.name}</span>
+              {(item as any).customRender || <span className="font-medium">{item.name}</span>}
             </NavLink>
           );
         })}

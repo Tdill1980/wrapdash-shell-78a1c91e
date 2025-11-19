@@ -61,7 +61,11 @@ export const AffiliateDashboard = () => {
     return (
       <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center px-4">
         <Card className="w-full max-w-md p-8 bg-[#16161E] border-[#ffffff0f]">
-          <h1 className="text-2xl font-bold text-white mb-2 text-center">Affiliate Dashboard</h1>
+          <h1 className="text-2xl font-bold font-poppins mb-2 text-center">
+            <span className="text-white">Mighty</span>
+            <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Affiliate</span>
+            <span className="text-white"> Dashboard</span>
+          </h1>
           <p className="text-[#B8B8C7] text-center mb-6">Enter your email to receive a magic login link</p>
           
           <form onSubmit={handleLogin} className="space-y-4">
