@@ -298,11 +298,11 @@ export default function Dashboard() {
       {/* Two-Column Hero Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* LEFT: Quote Builder Card */}
-        <Card className="bg-card border-border">
+        <Card className="dashboard-card">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg font-bold font-poppins">
+                <CardTitle className="dashboard-card-title text-lg font-bold font-poppins">
                   <span className="text-foreground">Mighty</span>
                   <span className="text-gradient">Customer</span>
                   <span className="text-muted-foreground text-sm align-super">™</span>
@@ -602,11 +602,11 @@ export default function Dashboard() {
 
         {/* RIGHT: DesignVault Premium Card & UTIM Analytics */}
         <div className="space-y-4">
-          <Card className="bg-card border-0" style={{ boxShadow: '0 0 0 1px black' }}>
+          <Card className="dashboard-card">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-bold font-poppins">
+                  <CardTitle className="dashboard-card-title text-lg font-bold font-poppins">
                     <span className="text-foreground">Design</span>
                     <span className="text-gradient">Vault</span>
                     <span className="text-muted-foreground text-sm align-super">™</span>
@@ -792,11 +792,11 @@ export default function Dashboard() {
     </div>
 
       {/* ShopFlow Production Hub Card */}
-      <Card className="bg-card border-border">
+      <Card className="dashboard-card">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-bold font-poppins">
+              <CardTitle className="dashboard-card-title text-lg font-bold font-poppins">
                 <span className="text-foreground">Shop</span>
                 <span className="text-gradient">Flow</span>
                 <span className="text-muted-foreground text-sm align-super">™</span>
@@ -901,13 +901,13 @@ export default function Dashboard() {
           return (
             <Card
               key={metric.title}
-              className="bg-card border-border p-3 hover:border-primary/30 transition-all"
+              className="dashboard-card p-3 hover:border-primary/30 transition-all"
             >
               <div className="flex items-start justify-between mb-2">
                 <Icon className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs text-green-400 font-medium">{metric.change}</span>
               </div>
-              <div className="text-xs text-muted-foreground mb-1">{metric.title}</div>
+              <div className="dashboard-card-title text-xs text-muted-foreground mb-1">{metric.title}</div>
               <div className="text-xl font-bold text-foreground">{metric.value}</div>
             </Card>
           );
@@ -927,10 +927,10 @@ export default function Dashboard() {
               <Card
                 key={module.name}
                 onClick={() => navigate(module.route)}
-                className="bg-card border-border p-4 hover:border-primary/30 transition-all cursor-pointer group"
+                className="dashboard-card p-4 hover:border-primary/30 transition-all cursor-pointer group"
               >
                 <Icon className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
-                <div className="text-sm font-semibold text-foreground mb-1">{module.name}</div>
+                <div className="dashboard-card-title text-sm font-semibold text-foreground mb-1">{module.name}</div>
                 <div className="text-xs text-muted-foreground">{module.subtitle}</div>
               </Card>
             );
@@ -939,7 +939,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Activity */}
-      <Card className="bg-card border-border">
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
             <span className="w-1 h-4 bg-gradient-primary rounded-full"></span>
