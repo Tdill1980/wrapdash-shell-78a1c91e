@@ -1,170 +1,288 @@
-// WrapCommand ShopFlow Stage Engine
-// Maps WooCommerce statuses to internal stages and provides stage logic
+// ⚙️ SHARED STAGE ENGINE — INTERNAL + EXTERNAL
 
-export type InternalStage =
-  | 'order_received'
-  | 'files_received'
-  | 'file_error'
-  | 'in_design'
-  | 'awaiting_approval'
-  | 'ready_to_print'
-  | 'printing'
-  | 'laminating'
-  | 'cutting'
-  | 'qc'
-  | 'shipped'
-  | 'completed';
+export const INTERNAL_STAGES = [
+  "order_received",
+  "files_received",
+  "file_error",
+  "missing_file",
+  "in_design",
+  "awaiting_approval",
+  "design_complete",
+  "print_production",
+  "ready_for_pickup",
+  "shipped",
+  "refunded",
+  "failed"
+];
 
-// Map WooCommerce status to internal stage
-export function getStageFromWoo(wooStatus: string): InternalStage {
-  const statusMap: Record<string, InternalStage> = {
-    'pending': 'order_received',
-    'processing': 'order_received',
-    'on-hold': 'files_received',
-    'file-error': 'file_error',
-    'files-received': 'files_received',
-    'in-design': 'in_design',
-    'awaiting-approval': 'awaiting_approval',
-    'ready-to-print': 'ready_to_print',
-    'printing': 'printing',
-    'laminating': 'laminating',
-    'cutting': 'cutting',
-    'qc': 'qc',
-    'shipped': 'shipped',
-    'completed': 'completed',
-  };
+export const WOO_TO_STAGE: any = {
+  "pending_payment": "order_received",
+  "processing": "files_received",
 
-  return statusMap[wooStatus] || 'order_received';
+  "file-error": "file_error",
+  "missing-file": "missing_file",
+
+  "in-design": "in_design",
+
+  "waiting-on-email-response": "awaiting_approval",
+
+  "design-complete": "design_complete",
+
+  "print-production": "print_production",
+  "work-order-printed": "print_production",
+
+  "ready-for-pickup": "ready_for_pickup",
+  "shipped": "shipped",
+
+  "refunded": "refunded",
+  "failed": "failed"
+};
+
+export function getStageFromWoo(status: string) {
+  return WOO_TO_STAGE[status] || "order_received";
 }
 
-// Get the next logical stage
-export function getNextStage(currentStage: InternalStage): InternalStage | null {
-  const stageFlow: Record<InternalStage, InternalStage | null> = {
-    'order_received': 'files_received',
-    'files_received': 'in_design',
-    'file_error': 'files_received',
-    'in_design': 'awaiting_approval',
-    'awaiting_approval': 'ready_to_print',
-    'ready_to_print': 'printing',
-    'printing': 'laminating',
-    'laminating': 'cutting',
-    'cutting': 'qc',
-    'qc': 'shipped',
-    'shipped': 'completed',
-    'completed': null,
-  };
-
-  return stageFlow[currentStage];
+export function getNextStage(stage: string) {
+  const idx = INTERNAL_STAGES.indexOf(stage);
+  if (idx === -1 || idx === INTERNAL_STAGES.length - 1) return null;
+  return INTERNAL_STAGES[idx + 1];
 }
 
-// Get human-readable stage description
-export function getStageDescription(stage: InternalStage): string {
-  const descriptions: Record<InternalStage, string> = {
-    'order_received': 'Order has been received and is awaiting file upload from customer.',
-    'files_received': 'Customer files have been received and are being reviewed for print readiness.',
-    'file_error': 'There is an issue with the uploaded files. Customer action required.',
-    'in_design': 'Design team is working on preparing the artwork for production.',
-    'awaiting_approval': 'Proof has been sent to customer for approval before printing.',
-    'ready_to_print': 'Artwork is approved and ready to enter production.',
-    'printing': 'Currently being printed on vinyl material.',
-    'laminating': 'Print is being laminated for durability and protection.',
-    'cutting': 'Laminated vinyl is being precision cut to specifications.',
-    'qc': 'Final quality control inspection before packaging.',
-    'shipped': 'Order has been shipped to customer with tracking information.',
-    'completed': 'Order is complete and delivered.',
+export function getStageDescription(stage: string) {
+  const DESC: any = {
+    order_received: "Your order was received and is awaiting review.",
+    files_received: "All submitted files have been received.",
+    file_error: "There is an issue with one or more uploaded files.",
+    missing_file: "Files are missing for this job.",
+    in_design: "Designer is preparing your artwork.",
+    awaiting_approval: "Waiting for customer approval.",
+    design_complete: "Design has been approved and finalized.",
+    print_production: "Job is moving through print production.",
+    ready_for_pickup: "Job is ready to pick up.",
+    shipped: "Job has been shipped.",
+    refunded: "Order was refunded.",
+    failed: "Order failed processing."
   };
 
-  return descriptions[stage] || 'Status unknown';
+  return DESC[stage] || "Job is in progress.";
 }
 
-// Detect missing items based on current stage
-export function detectMissing(order: any): string[] {
-  const missing: string[] = [];
-  const stage = getStageFromWoo(order.status);
+export function detectMissing(order: any) {
+  const missing = [];
 
-  // Check for missing files
-  if (stage === 'order_received' || stage === 'file_error') {
-    if (!order.files || order.files.length === 0) {
-      missing.push('Customer artwork files not uploaded');
-    }
+  if (!order.files || order.files.length === 0) {
+    missing.push("No files uploaded");
   }
 
-  // Check for missing proof approval
-  if (stage === 'awaiting_approval') {
-    // Could check for proof approval metadata here
-    const hasApproval = order.meta_data?.some((m: any) => 
-      m.key === '_proof_approved' && m.value === 'yes'
-    );
-    if (!hasApproval) {
-      missing.push('Waiting for customer proof approval');
-    }
+  if (order.status === "in-design" && !order.proof_url) {
+    missing.push("Designer has not uploaded a proof");
   }
 
-  // Check for missing vehicle info
-  if (!order.vehicle_info || Object.keys(order.vehicle_info).length === 0) {
-    missing.push('Vehicle information not provided');
+  if (order.status === "waiting-on-email-response") {
+    missing.push("Customer must approve the design");
   }
 
   return missing;
 }
 
-// Build timeline from order events/metadata
-export function buildTimeline(order: any): Array<{
-  stage: string;
-  timestamp: string;
-  description: string;
-  active: boolean;
-}> {
-  const timeline: Array<{
-    stage: string;
-    timestamp: string;
-    description: string;
-    active: boolean;
-  }> = [];
+export function buildTimeline(order: any) {
+  const t = [];
 
-  const currentStage = getStageFromWoo(order.status);
-
-  // Always add order received
-  timeline.push({
-    stage: 'Order Received',
-    timestamp: order.created_at || new Date().toISOString(),
-    description: 'Order placed by customer',
-    active: currentStage === 'order_received',
+  t.push({
+    label: "Order Received",
+    timestamp: order.created_at
   });
 
-  // Check for files received
-  if (order.files && order.files.length > 0) {
-    timeline.push({
-      stage: 'Files Received',
-      timestamp: order.updated_at || new Date().toISOString(),
-      description: `${order.files.length} file(s) uploaded`,
-      active: currentStage === 'files_received',
+  if (order.files?.length > 0) {
+    t.push({
+      label: "Files Uploaded",
+      timestamp: order.updated_at
     });
   }
 
-  // Add current stage if not already in timeline
-  const stageLabels: Record<InternalStage, string> = {
-    'order_received': 'Order Received',
-    'files_received': 'Files Received',
-    'file_error': 'File Issue',
-    'in_design': 'In Design',
-    'awaiting_approval': 'Awaiting Approval',
-    'ready_to_print': 'Ready to Print',
-    'printing': 'Printing',
-    'laminating': 'Laminating',
-    'cutting': 'Cutting',
-    'qc': 'Quality Control',
-    'shipped': 'Shipped',
-    'completed': 'Completed',
+  if (order.status === "in-design") {
+    t.push({
+      label: "In Design",
+      timestamp: order.updated_at
+    });
+  }
+
+  if (order.status === "design-complete") {
+    t.push({
+      label: "Design Complete",
+      timestamp: order.updated_at
+    });
+  }
+
+  if (order.status === "print-production") {
+    t.push({
+      label: "Print Production Started",
+      timestamp: order.updated_at
+    });
+  }
+
+  if (order.status === "ready-for-pickup") {
+    t.push({
+      label: "Ready For Pickup",
+      timestamp: order.updated_at
+    });
+  }
+
+  if (order.status === "shipped") {
+    t.push({
+      label: "Shipped",
+      timestamp: order.updated_at
+    });
+  }
+
+  return t;
+}
+
+// ✨ CUSTOMER-SAFE STAGE ENGINE
+// This keeps customers SAFE from internal statuses + exposes a clean, friendly journey.
+
+//
+// CUSTOMER-SAFE LABELS
+// (NO internal language, no confusion)
+//
+
+export const CUSTOMER_LABELS: Record<string, string> = {
+  order_received: "Order Received",
+  files_received: "Files Received",
+  file_error: "Action Required",
+  missing_file: "Files Needed",
+  in_design: "In Design",
+  awaiting_approval: "Awaiting Your Approval",
+  design_complete: "Design Approved",
+  print_production: "In Production",
+  ready_for_pickup: "Ready for Pickup",
+  shipped: "Shipped",
+  refunded: "Refunded",
+  failed: "Order Issue",
+};
+
+export function getCustomerStageLabel(stage: string) {
+  return CUSTOMER_LABELS[stage] || "In Progress";
+}
+
+//
+// CUSTOMER-SAFE DESCRIPTIONS
+// (Clear, friendly, not technical)
+//
+
+export const CUSTOMER_DESCRIPTIONS: Record<string, string> = {
+  order_received: "We've received your order and will begin reviewing it shortly.",
+  files_received: "Your files have been received. Our team is reviewing them.",
+  file_error: "One or more files may need an update. We will contact you if required.",
+  missing_file: "We need additional files before we can begin your design.",
+  in_design: "Our design team is working on your artwork.",
+  awaiting_approval: "Your proof is ready. Please review and approve.",
+  design_complete: "Your design is approved and will now move to production.",
+  print_production: "Your wrap is being printed and prepared.",
+  ready_for_pickup: "Your order is ready for pickup.",
+  shipped: "Your order has shipped and is on the way.",
+  refunded: "This order has been refunded.",
+  failed: "There was an issue processing your order.",
+};
+
+export function getCustomerStageDescription(stage: string, next = false) {
+  if (!next) return CUSTOMER_DESCRIPTIONS[stage] || "";
+
+  const NEXT: Record<string, string> = {
+    order_received: "Next: Our team will begin reviewing your order.",
+    files_received: "Next: Your designer will begin your layout.",
+    file_error: "Next: Please upload corrected artwork.",
+    missing_file: "Next: Please upload the missing files.",
+    in_design: "Next: You will receive a proof to approve.",
+    awaiting_approval: "Next: Please approve or request changes.",
+    design_complete: "Next: Your wrap will move to production.",
+    print_production: "Next: We will package and prepare your wrap.",
+    ready_for_pickup: "Next: Pick up your wrap or await shipment.",
+    shipped: "Next: Delivery is on the way.",
+    refunded: "",
+    failed: "",
   };
 
-  const currentStageLabel = stageLabels[currentStage];
-  if (!timeline.some(t => t.stage === currentStageLabel)) {
+  return NEXT[stage] || "Next update coming soon.";
+}
+
+//
+// CUSTOMER TIMELINE
+// Clean & SAFE — no internal production milestones.
+//
+
+export function buildCustomerTimeline(order: any) {
+  const internal = getStageFromWoo(order.status);
+
+  const timeline: any[] = [
+    {
+      label: "Order Received",
+      stage: "order_received",
+      active: ["order_received", "files_received", "in_design", "awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
+      timestamp: order.created_at,
+    },
+  ];
+
+  if (["files_received", "in_design", "awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal)) {
     timeline.push({
-      stage: currentStageLabel,
-      timestamp: order.updated_at || new Date().toISOString(),
-      description: getStageDescription(currentStage),
+      label: "Files Received",
+      stage: "files_received",
+      active: ["files_received", "in_design", "awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
+      timestamp: order.updated_at,
+    });
+  }
+
+  if (["in_design", "awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal)) {
+    timeline.push({
+      label: "Design In Progress",
+      stage: "in_design",
+      active: ["in_design", "awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
+      timestamp: order.updated_at,
+    });
+  }
+
+  if (["awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal)) {
+    timeline.push({
+      label: "Proof Sent",
+      stage: "awaiting_approval",
+      active: ["awaiting_approval", "design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
+      timestamp: order.updated_at,
+    });
+  }
+
+  if (["design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal)) {
+    timeline.push({
+      label: "Design Approved",
+      stage: "design_complete",
+      active: ["design_complete", "print_production", "ready_for_pickup", "shipped"].includes(internal),
+      timestamp: order.updated_at,
+    });
+  }
+
+  if (["print_production", "ready_for_pickup", "shipped"].includes(internal)) {
+    timeline.push({
+      label: "In Production",
+      stage: "print_production",
+      active: ["print_production", "ready_for_pickup", "shipped"].includes(internal),
+      timestamp: order.updated_at,
+    });
+  }
+
+  if (["ready_for_pickup", "shipped"].includes(internal)) {
+    timeline.push({
+      label: "Ready for Pickup",
+      stage: "ready_for_pickup",
+      active: ["ready_for_pickup", "shipped"].includes(internal),
+      timestamp: order.updated_at,
+    });
+  }
+
+  if (["shipped"].includes(internal)) {
+    timeline.push({
+      label: "Shipped",
+      stage: "shipped",
       active: true,
+      timestamp: order.updated_at,
     });
   }
 
