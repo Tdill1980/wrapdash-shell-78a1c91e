@@ -15,9 +15,9 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
       <Sidebar />
       <MobileDrawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen} />
       
-      <div className="flex-1 flex flex-col w-full">
+      <div className="flex-1 flex flex-col w-full min-w-0">
         <TopBar onMenuClick={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
+        <main className="flex-1 p-4 lg:p-6 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>
