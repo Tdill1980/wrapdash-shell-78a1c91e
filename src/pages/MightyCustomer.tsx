@@ -9,10 +9,11 @@ import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
-import { Plus, ShoppingCart, Lock } from "lucide-react";
+import { Plus, ShoppingCart, Lock, Mail } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
+import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 
 const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -47,6 +48,7 @@ export default function MightyCustomer() {
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
   const [isSending, setIsSending] = useState(false);
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -474,6 +476,17 @@ export default function MightyCustomer() {
               <Plus className="mr-2 h-4 w-4" />
               Save Quote
             </Button>
+            
+            <Button
+              onClick={() => setEmailPreviewOpen(true)}
+              variant="outline"
+              disabled={!selectedProduct || !total}
+              className="flex-1 border-primary/40 hover:bg-primary/10"
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Preview Email
+            </Button>
+            
             {(() => {
               if (!selectedProduct) {
                 return (
@@ -512,6 +525,23 @@ export default function MightyCustomer() {
             })()}
           </div>
         </Card>
+        
+        <EmailPreviewDialog
+          open={emailPreviewOpen}
+          onOpenChange={setEmailPreviewOpen}
+          quoteData={{
+            customerName: customerData.name,
+            vehicleYear: customerData.vehicleYear,
+            vehicleMake: customerData.vehicleMake,
+            vehicleModel: customerData.vehicleModel,
+            productName: selectedProduct?.product_name,
+            sqft: sqft,
+            materialCost: materialCost,
+            laborCost: laborCost,
+            total: total,
+            portalUrl: window.location.origin + "/mighty-customer",
+          }}
+        />
       </div>
     </div>
   );
