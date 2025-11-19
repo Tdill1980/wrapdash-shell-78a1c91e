@@ -1,33 +1,51 @@
-import { format } from 'date-fns';
-import { Clock } from 'lucide-react';
+// 🔵 ACTIVE STAGE HEADER (Style A — bold premium block)
 
-interface ActiveStageHeaderProps {
-  stage: string;
-  description: string;
-  updatedAt: string;
-}
+import React from "react";
 
-export const ActiveStageHeader = ({ stage, description, updatedAt }: ActiveStageHeaderProps) => {
+const STAGE_COLORS: any = {
+  order_received: "from-[#8FD3FF] to-[#4EA8FF]",
+  files_received: "from-[#4EA8FF] to-[#2979FF]",
+  file_error: "from-red-500 to-red-700",
+  missing_file: "from-red-500 to-red-700",
+  in_design: "from-purple-400 to-purple-600",
+  awaiting_approval: "from-yellow-400 to-yellow-600",
+  design_complete: "from-green-400 to-green-600",
+  print_production: "from-blue-400 to-blue-700",
+  ready_for_pickup: "from-emerald-400 to-emerald-600",
+  shipped: "from-indigo-400 to-indigo-700",
+  refunded: "from-slate-400 to-slate-600",
+  failed: "from-red-600 to-red-800",
+};
+
+export const ActiveStageHeader = ({ stage, description, updatedAt }: any) => {
+  const gradient = STAGE_COLORS[stage] || "from-[#8FD3FF] to-[#0047FF]";
+
+  const STAGE_LABELS: any = {
+    order_received: "Order Received",
+    files_received: "Files Received",
+    file_error: "File Error",
+    missing_file: "Missing File",
+    in_design: "In Design",
+    awaiting_approval: "Awaiting Approval",
+    design_complete: "Design Complete",
+    print_production: "Print Production",
+    ready_for_pickup: "Ready For Pickup",
+    shipped: "Shipped",
+    refunded: "Refunded",
+    failed: "Failed",
+  };
+
   return (
-    <div className="bg-gradient-to-r from-[#101016] to-[#16161E] border border-white/10 rounded-2xl p-8 mb-10">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="inline-block px-4 py-2 rounded-lg bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] text-white text-sm font-semibold mb-4">
-            CURRENT STAGE
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-3">
-            {stage.replace(/_/g, ' ').toUpperCase()}
-          </h1>
-          <p className="text-[#B8B8C7] text-lg max-w-2xl">
-            {description}
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-2 text-[#B8B8C7] text-sm">
-          <Clock className="w-4 h-4" />
-          <span>Updated {format(new Date(updatedAt), 'MMM dd, yyyy')}</span>
-        </div>
+    <div className="mb-10 p-7 rounded-xl border border-white/10 bg-[#0D0D12] shadow-xl">
+      <div className={`text-white text-2xl font-bold mb-2 bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+        {STAGE_LABELS[stage] || "In Progress"}
       </div>
+
+      <p className="text-gray-400 text-sm max-w-2xl">{description}</p>
+
+      <p className="text-gray-600 text-xs mt-3">
+        Last updated: {updatedAt?.slice(0, 10)}
+      </p>
     </div>
   );
 };
