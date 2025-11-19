@@ -131,7 +131,7 @@ export default function DesignVaultUpload() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="w-full px-10 py-8 space-y-10">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2 font-poppins">
           <span className="text-foreground">Upload to Design</span>
