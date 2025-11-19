@@ -2,12 +2,14 @@ import { useWrapBoxKits } from "../hooks/useWrapBoxKits";
 import { KitCard } from "../components/KitCard";
 import { Card } from "@/components/ui/card";
 import { Package, Loader2 } from "lucide-react";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function WrapBox() {
   const { data: kits, isLoading } = useWrapBoxKits();
 
   return (
-    <div className="space-y-6">
+    <MainLayout>
+      <div className="space-y-6 w-full">
       <div>
           <h1 className="text-3xl font-bold font-poppins">
             <span className="text-foreground">Wrap</span>
@@ -49,6 +51,7 @@ export default function WrapBox() {
           </div>
         </Card>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }

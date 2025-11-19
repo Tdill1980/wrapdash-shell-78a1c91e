@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function ApproveFlow() {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
@@ -232,7 +233,8 @@ export default function ApproveFlow() {
   const progressSteps = getProgressSteps();
 
   return (
-    <div className="space-y-6 max-w-[1600px]">
+    <MainLayout>
+      <div className="space-y-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -633,6 +635,7 @@ export default function ApproveFlow() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

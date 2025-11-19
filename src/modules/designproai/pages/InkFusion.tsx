@@ -12,6 +12,7 @@ import { RenderResults } from "../components/RenderResults";
 import { useRenderPolling } from "../hooks/useRenderPolling";
 import { getColorById } from "../lib/infusion-colors";
 import { generateVisualizationTags } from "../lib/tag-engine";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function InkFusion() {
   const { organizationId, subscriptionTier } = useOrganization();
@@ -156,8 +157,10 @@ export default function InkFusion() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <MainLayout>
+      <div className="space-y-6 w-full">
+        <div className="min-h-screen bg-background p-6">
+          <div className="space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold">
@@ -236,7 +239,9 @@ export default function InkFusion() {
             />
           </div>
         </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

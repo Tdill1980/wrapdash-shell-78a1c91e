@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Mail, Send, Settings, Users, TrendingUp, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function MightyMail() {
   const { toast } = useToast();
@@ -95,7 +96,8 @@ export default function MightyMail() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
+    <MainLayout>
+      <div className="space-y-6 w-full">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-poppins">
@@ -307,6 +309,7 @@ export default function MightyMail() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
