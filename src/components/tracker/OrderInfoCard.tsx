@@ -1,4 +1,5 @@
 import { Package, Car, Mail, Phone } from "lucide-react";
+import { format } from "date-fns";
 
 interface OrderInfoCardProps {
   order: {
@@ -10,6 +11,8 @@ interface OrderInfoCardProps {
     customer_name: string;
     customer_email?: string | null;
     customer_phone?: string | null;
+    created_at: string;
+    files?: any[];
   };
 }
 
@@ -73,6 +76,33 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
               <p className="text-xs uppercase opacity-50">Vehicle</p>
             </div>
             <p className="font-medium text-white">{vehicleDisplay}</p>
+          </div>
+        </div>
+
+        {/* Date/Time Stamps */}
+        <div className="border-t border-white/10 pt-3 mt-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs uppercase opacity-50 mb-1">Order Received</p>
+              <p className="text-sm text-white font-medium">
+                {format(new Date(order.created_at), 'MMM d, yyyy')}
+              </p>
+              <p className="text-xs text-white/50">
+                {format(new Date(order.created_at), 'h:mm a')}
+              </p>
+            </div>
+            
+            {order.files && order.files.length > 0 && order.files[0].uploaded_at && (
+              <div>
+                <p className="text-xs uppercase opacity-50 mb-1">Art Received</p>
+                <p className="text-sm text-white font-medium">
+                  {format(new Date(order.files[0].uploaded_at), 'MMM d, yyyy')}
+                </p>
+                <p className="text-xs text-white/50">
+                  {format(new Date(order.files[0].uploaded_at), 'h:mm a')}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

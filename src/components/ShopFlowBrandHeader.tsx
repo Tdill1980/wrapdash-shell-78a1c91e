@@ -1,6 +1,6 @@
 export const ShopFlowBrandHeader = () => {
   return (
-    <div className="w-full mb-6">
+    <div className="w-full mb-6 bg-[#1a1a24] rounded-xl border border-white/5 overflow-hidden">
       {/* Small WrapCommandAI Logo - top left */}
       <div className="w-full flex items-center px-4 pt-4">
         <img 
@@ -10,11 +10,11 @@ export const ShopFlowBrandHeader = () => {
         />
       </div>
 
-      {/* ShopFlow Title with Gradient */}
+      {/* ShopFlow Title with Two-Tone Gradient */}
       <h1 className="text-4xl font-extrabold tracking-wide px-4 mt-3 font-['Poppins']">
-        <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">
-          ShopFlow™
-        </span>
+        <span className="text-white">Shop</span>
+        <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">Flow</span>
+        <span className="text-[10px] align-super opacity-70 text-white">™</span>
       </h1>
 
       {/* Description */}
