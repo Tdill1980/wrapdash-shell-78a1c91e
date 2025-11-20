@@ -330,6 +330,43 @@ export default function ApproveFlow() {
                 <span className="text-muted-foreground">Status:</span>
                 <Badge className="ml-2 text-[10px]" variant="outline">{project.status}</Badge>
               </div>
+              {project.vehicle_info && (
+                <div className="pt-2 mt-2 border-t border-border">
+                  <span className="text-muted-foreground block mb-1">Vehicle:</span>
+                  <div className="pl-2 text-xs">
+                    {project.vehicle_info.year && <span>{project.vehicle_info.year} </span>}
+                    {project.vehicle_info.make && <span>{project.vehicle_info.make} </span>}
+                    {project.vehicle_info.model && <span>{project.vehicle_info.model}</span>}
+                    {project.vehicle_info.type && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        Type: {project.vehicle_info.type}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {project.color_info && (
+                <div className="pt-2 mt-2 border-t border-border">
+                  <span className="text-muted-foreground block mb-1">Color:</span>
+                  <div className="pl-2 text-xs space-y-0.5">
+                    {project.color_info.color && <div>{project.color_info.color}</div>}
+                    {project.color_info.color_hex && (
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded border border-white/20" 
+                          style={{ backgroundColor: project.color_info.color_hex }}
+                        />
+                        <span className="font-mono text-[10px]">{project.color_info.color_hex}</span>
+                      </div>
+                    )}
+                    {project.color_info.finish && (
+                      <div className="text-[10px] text-muted-foreground">
+                        Finish: {project.color_info.finish}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {trackingInfo?.tracking_number && (
                 <div className="pt-2 mt-2 border-t border-border">
                   <div className="flex items-center gap-2 mb-2">

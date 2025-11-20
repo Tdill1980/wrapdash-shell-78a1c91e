@@ -16,7 +16,7 @@ import {
   Mail,
   TrendingUp,
 } from "lucide-react";
-import logo from "@/assets/wrapcommand-logo-car.png";
+import logo from "@/assets/wrapcommand-logo-new.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
