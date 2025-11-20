@@ -152,6 +152,7 @@ export default function TrackJob() {
           orderId={order.id}
           onFileUpload={handleFileUpload}
           uploading={uploading}
+          orderStatus={order.status}
         />
         <CurrentStageCard order={{ customer_stage: internalStatus }} />
         <NextStepCard order={{ customer_stage: internalStatus }} />
