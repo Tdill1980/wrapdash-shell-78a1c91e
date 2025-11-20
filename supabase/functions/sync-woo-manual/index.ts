@@ -101,7 +101,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { target = 'both', days = 7 } = await req.json();
+    // Parse request body with error handling
+    let target = 'both';
+    let days = 7;
+    
+    try {
+      const contentType = req.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const body = await req.json();
+        target = body.target || 'both';
+        days = body.days || 7;
+      }
+    } catch (parseError) {
+      console.warn('Failed to parse request body, using defaults:', parseError);
+      // Use defaults if parsing fails
+    }
+    
     console.log(`Manual sync requested for: ${target}, last ${days} days`);
 
     const wooKey = Deno.env.get('WOO_CONSUMER_KEY');
