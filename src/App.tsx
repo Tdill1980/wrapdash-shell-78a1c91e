@@ -12,12 +12,9 @@ import { WrapBox } from "./modules/wrapbox";
 import MonthlyDrops from "./pages/MonthlyDrops";
 import DesignMarket from "./pages/DesignMarket";
 import ShopFlow from "./pages/ShopFlow";
-
-import ShopFlowJob from "./pages/ShopFlowJob";
 import ShopFlowInternal from "./pages/ShopFlowInternal";
 import ShopFlowInternalList from "./pages/ShopFlowInternalList";
 import { TrackJob } from "./modules/shopflow";
-import TrackOrder from "./pages/TrackOrder";
 import MightyCustomer from "./pages/MightyCustomer";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
@@ -62,11 +59,9 @@ const App = () => (
             <Route path="/monthly-drops" element={<MonthlyDrops />} />
             <Route path="/design-market" element={<DesignMarket />} />
             <Route path="/shopflow" element={<ShopFlow />} />
-            <Route path="/shopflow/:id" element={<ShopFlowJob />} />
             <Route path="/shopflow-internal" element={<ShopFlowInternalList />} />
             <Route path="/shopflow-internal/:id" element={<ShopFlowInternal />} />
             <Route path="/track/:orderNumber" element={<TrackJob />} />
-            <Route path="/track-order/:orderNumber" element={<TrackOrder />} />
             <Route path="/mighty-customer" element={<MightyCustomer />} />
             <Route path="/approveflow" element={<ApproveFlowList />} />
             <Route path="/approveflow/:projectId" element={<ApproveFlow />} />
