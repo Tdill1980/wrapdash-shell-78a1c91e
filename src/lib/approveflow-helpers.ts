@@ -30,6 +30,24 @@ export async function createApproveFlowProjectFromQuote(
 
     if (error) throw error;
 
+    // Create automatic welcome chat message
+    let welcomeMessage = `👋 Welcome to ApproveFlow! Your order #${quoteData.orderNumber} has been received.\n\n`;
+    welcomeMessage += `⚠️ **Artwork Missing:** Please upload your design files to get started.\n\n`;
+    
+    if (quoteData.designInstructions && quoteData.designInstructions.trim()) {
+      welcomeMessage += `📋 **Design Requirements:**\n${quoteData.designInstructions}\n\n`;
+    } else {
+      welcomeMessage += `📋 **Design Requirements:** No specific requirements provided.\n\n`;
+    }
+    
+    welcomeMessage += `Our design team will review your order and get started as soon as we receive your artwork!`;
+    
+    await supabase.from('approveflow_chat').insert({
+      project_id: project.id,
+      sender: 'designer',
+      message: welcomeMessage,
+    });
+
     // Trigger event for Klaviyo notification
     await supabase.functions.invoke('approveflow-event', {
       body: {
