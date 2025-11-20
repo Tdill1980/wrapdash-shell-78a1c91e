@@ -13,6 +13,17 @@ export interface ApproveFlowProject {
   status: string;
   product_type: string;
   design_instructions?: string;
+  vehicle_info?: {
+    year?: string;
+    make?: string;
+    model?: string;
+    type?: string;
+  };
+  color_info?: {
+    color?: string;
+    color_hex?: string;
+    finish?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -64,7 +75,7 @@ export const useApproveFlow = (projectId?: string) => {
         .single();
 
       if (error) throw error;
-      setProject(data);
+      setProject(data as ApproveFlowProject);
     } catch (error: any) {
       toast({
         title: 'Error loading project',

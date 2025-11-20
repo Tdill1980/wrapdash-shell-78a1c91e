@@ -65,6 +65,35 @@ serve(async (req) => {
     // Extract design instructions from customer note
     const designInstructions = webhook.customer_note || '';
 
+    // Extract vehicle info from meta_data
+    let vehicleInfo = null;
+    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
+      const vehicleFields = {
+        year: webhook.meta_data.find((m: any) => m.key?.toLowerCase().includes('year'))?.value,
+        make: webhook.meta_data.find((m: any) => m.key?.toLowerCase().includes('make'))?.value,
+        model: webhook.meta_data.find((m: any) => m.key?.toLowerCase().includes('model'))?.value,
+        type: webhook.meta_data.find((m: any) => m.key?.toLowerCase().includes('type') || m.key?.toLowerCase().includes('vehicle_type'))?.value,
+      };
+      
+      if (vehicleFields.make || vehicleFields.model) {
+        vehicleInfo = vehicleFields;
+      }
+    }
+
+    // Extract color info from meta_data
+    let colorInfo = null;
+    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
+      const colorFields = {
+        color: webhook.meta_data.find((m: any) => m.key?.toLowerCase().includes('color') && !m.key?.toLowerCase().includes('type'))?.value,
+        color_hex: webhook.meta_data.find((m: any) => m.key?.toLowerCase().includes('hex'))?.value,
+        finish: webhook.meta_data.find((m: any) => m.key?.toLowerCase().includes('finish'))?.value,
+      };
+      
+      if (colorFields.color || colorFields.color_hex) {
+        colorInfo = colorFields;
+      }
+    }
+
     // Check if project already exists
     const { data: existingProject } = await supabase
       .from('approveflow_projects')
@@ -91,6 +120,8 @@ serve(async (req) => {
         design_instructions: designInstructions,
         order_total: orderTotal,
         status: 'design_requested',
+        vehicle_info: vehicleInfo,
+        color_info: colorInfo,
       })
       .select()
       .single();

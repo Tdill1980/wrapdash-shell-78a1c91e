@@ -441,6 +441,7 @@ export type Database = {
       }
       approveflow_projects: {
         Row: {
+          color_info: Json | null
           created_at: string | null
           customer_email: string | null
           customer_id: string | null
@@ -454,8 +455,10 @@ export type Database = {
           product_type: string
           status: string
           updated_at: string | null
+          vehicle_info: Json | null
         }
         Insert: {
+          color_info?: Json | null
           created_at?: string | null
           customer_email?: string | null
           customer_id?: string | null
@@ -469,8 +472,10 @@ export type Database = {
           product_type: string
           status?: string
           updated_at?: string | null
+          vehicle_info?: Json | null
         }
         Update: {
+          color_info?: Json | null
           created_at?: string | null
           customer_email?: string | null
           customer_id?: string | null
@@ -484,6 +489,7 @@ export type Database = {
           product_type?: string
           status?: string
           updated_at?: string | null
+          vehicle_info?: Json | null
         }
         Relationships: [
           {
