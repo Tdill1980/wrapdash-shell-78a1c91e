@@ -143,7 +143,10 @@ export default function TrackJob() {
     <MainLayout userName="Customer">
       <div className="w-full space-y-6">
         <ShopFlowBrandHeader />
-        <CustomerProgressBar currentStatus={internalStatus} />
+        <CustomerProgressBar 
+          currentStatus={internalStatus} 
+          hasApproveFlowProject={!!order.approveflow_project_id}
+        />
         <OrderInfoCard order={order} />
         <UploadedFilesCard 
           files={files} 
