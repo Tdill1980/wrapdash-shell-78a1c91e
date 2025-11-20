@@ -8,12 +8,14 @@ import ToneStyles from "@/components/mightymail/ToneStyles";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { useNavigate } from "react-router-dom";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function MightyMailAdmin() {
   const navigate = useNavigate();
 
   return (
-    <div className="p-6 space-y-6">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">
           <span className="text-white">Mighty</span>
@@ -100,6 +102,7 @@ export default function MightyMailAdmin() {
           <CSVUploader />
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

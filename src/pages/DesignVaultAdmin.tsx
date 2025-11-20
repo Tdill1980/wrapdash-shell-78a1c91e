@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 import { DesignUploadForm } from "@/modules/designvault/components/DesignUploadForm";
+import { MainLayout } from "@/layouts/MainLayout";
 
 interface Design {
   id: string;
@@ -179,14 +180,17 @@ export default function DesignVaultAdmin() {
 
   if (adminLoading || !isAdmin) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <MainLayout userName="Admin">
+        <div className="w-full space-y-6">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-poppins">
@@ -406,6 +410,7 @@ export default function DesignVaultAdmin() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }

@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function ProductPricingAdmin() {
   const { products, settings, loading, updateProduct, addProduct, deleteProduct, updateSettings } = useProducts();
@@ -82,14 +83,17 @@ export default function ProductPricingAdmin() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading products...</p>
-      </div>
+      <MainLayout userName="Admin">
+        <div className="w-full space-y-6">
+          <p className="text-muted-foreground">Loading products...</p>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-[1200px] mx-auto p-6">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-poppins">
@@ -258,6 +262,7 @@ export default function ProductPricingAdmin() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
