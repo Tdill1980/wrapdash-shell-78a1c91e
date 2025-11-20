@@ -13,6 +13,12 @@ export interface VehicleSQFTOptions {
   withRoof: number;      // Corrected Sq Foot
   withoutRoof: number;   // Total Sq Foot
   roofOnly: number;      // Roof Squ Ft
+  panels: {
+    sides: number;       // Side Sq Ft
+    back: number;        // Back Sq Ft
+    hood: number;        // Hood Sq Ft
+    roof: number;        // Roof Squ Ft
+  };
 }
 
 /**
@@ -41,6 +47,12 @@ export function getVehicleSQFTOptions(year: string, make: string, model: string)
     withRoof: vehicle["Corrected Sq Foot"] || 0,
     withoutRoof: vehicle["Total Sq Foot"] || 0,
     roofOnly: vehicle["Roof Squ Ft"] || 0,
+    panels: {
+      sides: vehicle["Side Sq Ft"] || 0,
+      back: vehicle["Back Sq Ft"] || 0,
+      hood: vehicle["Hood Sq Ft"] || 0,
+      roof: vehicle["Roof Squ Ft"] || 0,
+    },
   };
 }
 
