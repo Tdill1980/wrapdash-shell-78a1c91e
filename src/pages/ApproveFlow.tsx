@@ -452,6 +452,348 @@ export default function ApproveFlow() {
             </div>
           </Card>
 
+          {/* Design Requirements */}
+          <Card className="p-3 bg-card border-border">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-gradient">Design Requirements</h3>
+              <span className="text-[9px] text-muted-foreground">
+                {format(new Date(project.created_at), 'MMM d, h:mm a')}
+              </span>
+            </div>
+            {project.design_instructions ? (
+              <p className="text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.design_instructions}</p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground/60 italic">No specific design requirements provided</p>
+            )}
+          </Card>
+
+          {/* Customer Uploaded Files */}
+          {assets.length > 0 && (
+            <Card className="p-3 bg-card border-border">
+              <h3 className="text-xs font-semibold mb-2 text-gradient">Customer Uploaded Files</h3>
+              <div className="space-y-1">
+                {assets.map((asset) => (
+                  <Dialog key={asset.id}>
+                    <div className="flex items-center justify-between p-1.5 rounded hover:bg-white/5 transition-colors">
+                      <DialogTrigger asChild>
+                        <button className="flex items-center gap-2 text-[11px] group flex-1 text-left">
+                          <ImageIcon className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
+                          <span className="flex-1 truncate group-hover:text-primary">
+                            {asset.file_type || 'File'}
+                          </span>
+                          <ZoomIn className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
+                        </button>
+                      </DialogTrigger>
+                      <span className="text-[9px] text-muted-foreground ml-2">
+                        {format(new Date(asset.created_at), 'MMM d, h:mm a')}
+                      </span>
+                    </div>
+                    <DialogContent className="max-w-4xl">
+                      <img src={asset.file_url} alt="Customer file" className="w-full h-auto" />
+                    </DialogContent>
+                  </Dialog>
+                ))}
+              </div>
+            </Card>
+          )}
+
+        </div>
+
+        {/* CENTER: Design Proof Viewer */}
+        <div className="lg:col-span-2">
+          <Card className="p-4 bg-card border-border">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Design Proof
+              </h3>
+              {versions.length > 0 && (
+                <Select value={selectedVersion} onValueChange={setSelectedVersion}>
+                  <SelectTrigger className="w-32 h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest">Latest</SelectItem>
+                    {versions.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        v{v.version_number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <Tabs defaultValue={latestRenderUrls && activeRole === "designer" ? "compare" : "2d"} className="w-full">
+              <TabsList className={`grid w-full ${latestRenderUrls && activeRole === "designer" ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
+                <TabsTrigger value="2d">
+                  2D Draft
+                  {displayVersion?.version_number === latestVersion?.version_number && (
+                    <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest</Badge>
+                  )}
+                </TabsTrigger>
+                {latestRenderUrls && activeRole === "designer" && <TabsTrigger value="compare">Compare</TabsTrigger>}
+                <TabsTrigger value="3d">
+                  3D Render
+                  {latestRenderUrls && (
+                    <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest</Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="2d" className="space-y-3">
+                {displayVersion ? (
+                  <div className="space-y-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative">
+                          <img 
+                            src={displayVersion.file_url} 
+                            alt={`Version ${displayVersion.version_number}`}
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                        <img 
+                          src={displayVersion.file_url} 
+                          alt={`Version ${displayVersion.version_number}`}
+                          className="w-full h-full object-contain"
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    <div className="text-xs space-y-1">
+                      <p className="text-muted-foreground">
+                        Version {displayVersion.version_number} • 
+                        Submitted by {displayVersion.submitted_by} • 
+                        {format(new Date(displayVersion.created_at), 'MMM d, yyyy h:mm a')}
+                      </p>
+                      {displayVersion.notes && (
+                        <p className="text-foreground">{displayVersion.notes}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">No design uploaded yet</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {latestRenderUrls && activeRole === "designer" && (
+                <TabsContent value="compare" className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-semibold mb-2 text-blue-400">2D Draft</p>
+                      {displayVersion ? (
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                          <img 
+                            src={displayVersion.file_url} 
+                            alt="2D Draft"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                          <p className="text-xs text-muted-foreground">No 2D draft</p>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold mb-2 text-cyan-400">3D Render</p>
+                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                        <img 
+                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                          alt="3D Render"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              )}
+              
+              <TabsContent value="3d" className="space-y-3">
+                {latestRenderUrls ? (
+                  <div className="space-y-3">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative">
+                          <img 
+                            src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                            alt="3D Render"
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                        <img 
+                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                          alt="3D Render"
+                          className="w-full h-full object-contain"
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    <div className="grid grid-cols-4 gap-2">
+                      {Object.entries(latestRenderUrls).map(([angle, url]: [string, any]) => (
+                        <Dialog key={angle}>
+                          <DialogTrigger asChild>
+                            <div className="aspect-square bg-muted rounded overflow-hidden border border-border hover:border-primary cursor-pointer transition-colors">
+                              <img 
+                                src={url as string} 
+                                alt={`${angle} view`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                            <img 
+                              src={url as string} 
+                              alt={`${angle} view`}
+                              className="w-full h-full object-contain"
+                            />
+                          </DialogContent>
+                        </Dialog>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                      <Box className="w-12 h-12 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">No 3D renders yet</p>
+                      <p className="text-xs text-muted-foreground">Click "Generate 3D Render" to create one</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+
+            {/* Version History with timestamps and enlarge */}
+            {versions.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <h4 className="text-xs font-semibold mb-3">Version History</h4>
+                <div className="space-y-2">
+                  {versions.map((v, index) => (
+                    <Dialog key={v.id}>
+                      <div className={`p-2 rounded text-xs transition-colors ${
+                        selectedVersion === v.id || (selectedVersion === 'latest' && index === 0)
+                          ? 'bg-primary/20 border border-primary/50'
+                          : 'hover:bg-white/5'
+                      }`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">v{v.version_number}</span>
+                            {index === 0 && (
+                              <Badge className="bg-blue-500 text-white text-[9px] px-1.5 py-0">Latest</Badge>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(new Date(v.created_at), 'MMM d, h:mm a')}
+                          </span>
+                        </div>
+                        {v.notes && (
+                          <p className="text-[10px] text-muted-foreground mb-2">{v.notes}</p>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={() => setSelectedVersion(v.id)}
+                          >
+                            View
+                          </Button>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-[10px]"
+                            >
+                              <ZoomIn className="w-3 h-3 mr-1" />
+                              Enlarge
+                            </Button>
+                          </DialogTrigger>
+                        </div>
+                      </div>
+                      <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                        <div className="space-y-2">
+                          <p className="text-sm text-muted-foreground">
+                            Version {v.version_number} • {format(new Date(v.created_at), 'MMM d, yyyy h:mm a')}
+                          </p>
+                          <img 
+                            src={v.file_url} 
+                            alt={`Version ${v.version_number}`}
+                            className="w-full h-auto"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* RIGHT: Chat + Upload + Actions */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Chat Panel */}
+          <Card className="p-4 bg-card border-border">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Chat with {activeRole === "designer" ? "Customer" : "Design Team"}
+            </h3>
+            
+            <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
+              {chatMessages.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-8">
+                  No messages yet. Start the conversation!
+                </p>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.sender === activeRole ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] p-2 rounded-lg text-xs ${
+                        msg.sender === activeRole
+                          ? 'bg-primary/20 text-foreground'
+                          : 'bg-muted text-foreground'
+                      }`}
+                    >
+                      <p className="text-[10px] text-muted-foreground mb-1 uppercase">{msg.sender}</p>
+                      <p>{msg.message}</p>
+                      <p className="text-[9px] text-muted-foreground mt-1">
+                        {format(new Date(msg.created_at), 'h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Type a message..."
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                className="text-xs"
+              />
+              <Button size="sm" onClick={handleSendMessage}>
+                <Send className="w-3 h-3" />
+              </Button>
+            </div>
+          </Card>
+
           {/* Upload Section - Designer Only */}
           {activeRole === "designer" && (
             <Card className="p-4 bg-card border-border">
@@ -555,386 +897,6 @@ export default function ApproveFlow() {
               </div>
             </Card>
           )}
-
-          {/* Design Requirements */}
-          <Card className="p-4 bg-card border-border">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-gradient">Design Requirements</h3>
-              <span className="text-[10px] text-muted-foreground">
-                {format(new Date(project.created_at), 'MMM d, yyyy h:mm a')}
-              </span>
-            </div>
-            {project.design_instructions ? (
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.design_instructions}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground/60 italic">No specific design requirements provided</p>
-            )}
-          </Card>
-
-          {/* Customer Uploaded Files */}
-          {assets.length > 0 && (
-            <Card className="p-4 bg-card border-border">
-              <h3 className="text-sm font-semibold mb-3 text-gradient">Customer Uploaded Files</h3>
-              <div className="space-y-2">
-                {assets.map((asset) => (
-                  <Dialog key={asset.id}>
-                    <div className="flex items-center justify-between p-2 rounded hover:bg-white/5 transition-colors">
-                      <DialogTrigger asChild>
-                        <button className="flex items-center gap-2 text-xs group flex-1 text-left">
-                          <ImageIcon className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                          <span className="flex-1 truncate group-hover:text-primary">
-                            {asset.file_type || 'Customer File'}
-                          </span>
-                          <ZoomIn className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
-                        </button>
-                      </DialogTrigger>
-                      <span className="text-[10px] text-muted-foreground ml-2">
-                        {format(new Date(asset.created_at), 'MMM d, h:mm a')}
-                      </span>
-                    </div>
-                    <DialogContent className="max-w-4xl">
-                      <img src={asset.file_url} alt="Customer file" className="w-full h-auto" />
-                    </DialogContent>
-                  </Dialog>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Version History - Always Visible */}
-          <Card className="p-4 bg-card border-border">
-            <h3 className="text-sm font-semibold mb-3 text-gradient">Version History</h3>
-            {versions.length > 0 ? (
-              <div className="space-y-2">
-                {versions.map((v, index) => (
-                  <Dialog key={v.id}>
-                    <div className={`w-full text-left p-2 rounded text-xs transition-colors ${
-                      selectedVersion === v.id || (selectedVersion === 'latest' && index === 0)
-                        ? 'bg-primary/20 border border-primary/50'
-                        : 'hover:bg-white/5 border border-transparent'
-                    }`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold">
-                          Version {v.version_number}
-                          {index === 0 && (
-                            <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest</Badge>
-                          )}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {format(new Date(v.created_at), 'MMM d, h:mm a')}
-                        </span>
-                      </div>
-                      {v.notes && (
-                        <p className="text-[10px] text-muted-foreground mb-2 truncate">{v.notes}</p>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-[10px]"
-                          onClick={() => setSelectedVersion(v.id)}
-                        >
-                          Switch to View
-                        </Button>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-[10px]"
-                          >
-                            <ZoomIn className="w-3 h-3 mr-1" />
-                            Enlarge
-                          </Button>
-                        </DialogTrigger>
-                      </div>
-                    </div>
-                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
-                          Version {v.version_number} • {format(new Date(v.created_at), 'MMM d, yyyy h:mm a')}
-                        </p>
-                        <img 
-                          src={v.file_url} 
-                          alt={`Version ${v.version_number}`}
-                          className="w-full h-auto"
-                        />
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground/60 italic">No versions uploaded yet</p>
-            )}
-          </Card>
-
-          {/* Timeline */}
-          <Card className="p-4 bg-card border-border">
-            <h3 className="text-sm font-semibold mb-3 text-gradient">Project Timeline</h3>
-            <ApproveFlowTimeline
-              projectCreatedAt={project.created_at}
-              versions={versions}
-              actions={actions}
-              chatMessages={chatMessages}
-              emailLogs={emailLogs}
-              hasMissingFiles={!versions.length}
-            />
-          </Card>
-        </div>
-
-        {/* CENTER: Design Proof Viewer */}
-        <div className="lg:col-span-2">
-          <Card className="p-4 bg-card border-border h-full">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Eye className="w-4 h-4" />
-                Design Proof
-              </h3>
-              {versions.length > 0 && (
-                <Select value={selectedVersion} onValueChange={setSelectedVersion}>
-                  <SelectTrigger className="w-32 h-7 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="latest">Latest</SelectItem>
-                    {versions.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        v{v.version_number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <Tabs defaultValue={latestRenderUrls && activeRole === "designer" ? "compare" : "2d"} className="w-full">
-              <TabsList className={`grid w-full ${latestRenderUrls && activeRole === "designer" ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
-                <TabsTrigger value="2d">
-                  2D Draft
-                  {displayVersion?.version_number === latestVersion?.version_number && (
-                    <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest Design</Badge>
-                  )}
-                </TabsTrigger>
-                {latestRenderUrls && activeRole === "designer" && <TabsTrigger value="compare">Compare</TabsTrigger>}
-                <TabsTrigger value="3d">
-                  3D Render
-                  {latestRenderUrls && (
-                    <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest Design</Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="2d" className="space-y-4">
-                {displayVersion ? (
-                  <div className="space-y-3">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative">
-                          <img 
-                            src={displayVersion.file_url} 
-                            alt={`Version ${displayVersion.version_number}`}
-                            className="w-full h-full object-contain"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
-                        <img 
-                          src={displayVersion.file_url} 
-                          alt={`Version ${displayVersion.version_number}`}
-                          className="w-full h-full object-contain"
-                        />
-                      </DialogContent>
-                    </Dialog>
-                    <div className="text-xs space-y-1">
-                      <p className="text-muted-foreground">
-                        Version {displayVersion.version_number} • 
-                        Submitted by {displayVersion.submitted_by} • 
-                        {format(new Date(displayVersion.created_at), 'MMM d, yyyy h:mm a')}
-                      </p>
-                      {displayVersion.notes && (
-                        <p className="text-foreground">{displayVersion.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-sm text-muted-foreground">No design uploaded yet</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              {latestRenderUrls && (
-                <TabsContent value="compare" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs font-semibold mb-2 text-blue-400">2D Draft</p>
-                      {displayVersion ? (
-                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                          <img 
-                            src={displayVersion.file_url} 
-                            alt="2D Draft"
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                          <p className="text-xs text-muted-foreground">No 2D draft</p>
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold mb-2 text-cyan-400">3D Render</p>
-                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                        <img 
-                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
-                          alt="3D Render"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              )}
-              
-              <TabsContent value="3d">
-                {latestRenderUrls ? (
-                  <div className="space-y-4">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative">
-                          <img 
-                            src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
-                            alt="3D Render"
-                            className="w-full h-full object-contain"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </div>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
-                        <img 
-                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
-                          alt="3D Render"
-                          className="w-full h-full object-contain"
-                        />
-                      </DialogContent>
-                    </Dialog>
-                    <div className="grid grid-cols-4 gap-2">
-                      {Object.entries(latestRenderUrls).map(([angle, url]: [string, any]) => (
-                        <Dialog key={angle}>
-                          <DialogTrigger asChild>
-                            <div className="aspect-square bg-muted rounded overflow-hidden border border-border hover:border-primary cursor-pointer transition-colors">
-                              <img 
-                                src={url as string} 
-                                alt={`${angle} view`}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
-                            <img 
-                              src={url as string} 
-                              alt={`${angle} view`}
-                              className="w-full h-full object-contain"
-                            />
-                          </DialogContent>
-                        </Dialog>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <div className="text-center space-y-2">
-                      <Box className="w-12 h-12 mx-auto text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">No 3D renders yet</p>
-                      <p className="text-xs text-muted-foreground">Click "Generate 3D Render" to create one</p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-
-            {/* Version History */}
-            {versions.length > 1 && (
-              <div className="mt-4 pt-4 border-t border-border">
-                <h4 className="text-xs font-semibold mb-2">Version History</h4>
-                <div className="space-y-1">
-                  {versions.map((v) => (
-                    <div key={v.id} className="text-xs flex items-center justify-between py-1">
-                      <span className="text-muted-foreground">
-                        v{v.version_number} • {format(new Date(v.created_at), 'MMM d')}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs"
-                        onClick={() => setSelectedVersion(v.id)}
-                      >
-                        View
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Card>
-        </div>
-
-        {/* RIGHT: Chat + Actions */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Chat Panel */}
-          <Card className="p-4 bg-card border-border">
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Chat with {activeRole === "designer" ? "Customer" : "Design Team"}
-            </h3>
-            
-            <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
-              {chatMessages.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-8">
-                  No messages yet. Start the conversation!
-                </p>
-              ) : (
-                chatMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender === activeRole ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] p-2 rounded-lg text-xs ${
-                        msg.sender === activeRole
-                          ? 'bg-primary/20 text-foreground'
-                          : 'bg-muted text-foreground'
-                      }`}
-                    >
-                      <p className="text-[10px] text-muted-foreground mb-1 uppercase">{msg.sender}</p>
-                      <p>{msg.message}</p>
-                      <p className="text-[9px] text-muted-foreground mt-1">
-                        {format(new Date(msg.created_at), 'h:mm a')}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="Type a message..."
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="text-xs"
-              />
-              <Button size="sm" onClick={handleSendMessage}>
-                <Send className="w-3 h-3" />
-              </Button>
-            </div>
-          </Card>
 
           {/* Action Buttons */}
           {activeRole === "customer" && (
