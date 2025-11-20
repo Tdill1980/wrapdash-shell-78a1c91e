@@ -44,7 +44,7 @@ export function DashboardHeroHeader({
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-black/60 via-black/30 to-transparent">
+    <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-r from-black/60 via-black/30 to-transparent">
       {/* Background Image Layer */}
       <div 
         className="absolute inset-0 bg-cover bg-right-center opacity-80"
@@ -58,20 +58,20 @@ export function DashboardHeroHeader({
       <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-30% via-background/30 to-60% to-transparent" />
       
       {/* Content Layer */}
-      <div className="relative z-10 px-8 py-10">
+      <div className="relative z-10 px-4 sm:px-8 py-6 sm:py-10">
         {/* Top Section - Title & Subtitle */}
-        <div className="mb-6">
-          <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-4 py-3 rounded-lg mb-2">
-            <h1 className="font-poppins text-4xl font-bold leading-tight mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+        <div className="mb-4 sm:mb-6">
+          <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2">
+            <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
               <span className="text-foreground">WrapCentral </span>
               <span className="text-gradient">Dashboard</span>
-              <span className="text-muted-foreground text-2xl align-super">™</span>
+              <span className="text-muted-foreground text-lg sm:text-2xl align-super">™</span>
             </h1>
-            <p className="text-muted-foreground text-sm" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
+            <p className="text-muted-foreground text-xs sm:text-sm" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
               Your Command Center for Wrap Operations
             </p>
           </div>
-          <p className="text-muted-foreground/60 text-xs" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
+          <p className="text-muted-foreground/60 text-xs hidden sm:block" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
             {format(new Date(), "EEEE, MMMM d, yyyy 'at' h:mm a")}
           </p>
         </div>
@@ -84,12 +84,12 @@ export function DashboardHeroHeader({
               <button
                 key={item.label}
                 onClick={() => navigate(item.route)}
-                className={`group relative overflow-hidden rounded-xl border p-4 transition-all duration-300 hover:scale-105 ${getVariantStyles(item.variant)}`}
+                className={`group relative overflow-hidden rounded-xl border p-3 sm:p-4 transition-all duration-300 hover:scale-105 ${getVariantStyles(item.variant)}`}
               >
                 <div className="flex flex-col items-start gap-2">
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                   <div className="text-left">
-                    <div className="text-2xl font-bold font-poppins">
+                    <div className="text-xl sm:text-2xl font-bold font-poppins">
                       {item.count}
                     </div>
                     <div className="text-xs font-medium opacity-80">

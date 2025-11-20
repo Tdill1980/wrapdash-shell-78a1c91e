@@ -10,13 +10,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface GlobalHeaderProps {
   userName?: string;
+  onMobileMenuToggle?: () => void;
+  isMobileMenuOpen?: boolean;
 }
 
-export const GlobalHeader = ({ userName = "User" }: GlobalHeaderProps) => {
+export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMenuOpen }: GlobalHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -39,9 +42,19 @@ export const GlobalHeader = ({ userName = "User" }: GlobalHeaderProps) => {
 
   return (
     <>
-      <header className="w-full bg-[#0D0F12] px-8 py-4 flex items-center justify-between border-b border-white/10">
+      <header className="w-full bg-[#0D0F12] px-4 sm:px-8 py-4 flex items-center justify-between border-b border-white/10">
+        {/* Mobile Menu Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden text-white hover:bg-white/10"
+          onClick={onMobileMenuToggle}
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </Button>
+
         {/* WrapCommandAI™ Wordmark */}
-        <h1 className="text-xl font-extrabold font-['Poppins'] tracking-wide">
+        <h1 className="text-base sm:text-xl font-extrabold font-['Poppins'] tracking-wide">
           <span className="text-white">Wrap</span>
           <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">
             Command

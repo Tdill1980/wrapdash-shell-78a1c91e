@@ -309,12 +309,12 @@ export default function Dashboard() {
         />
 
       {/* Product Type Chips */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
         {productTypes.map((product) => (
           <button
             key={product.name}
             onClick={() => product.name === "Full Wraps" ? navigate("/visualize") : null}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg ${product.gradient} text-white hover:opacity-90 transition-opacity`}
+            className={`px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap ${product.gradient} text-white hover:opacity-90 transition-opacity`}
           >
             {product.name}
           </button>
@@ -348,7 +348,7 @@ export default function Dashboard() {
               {/* Category Filter Buttons */}
               <div>
                 <label className="text-xs text-muted-foreground mb-2 block">Product Category</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <Button
                     type="button"
                     size="sm"
@@ -842,31 +842,31 @@ export default function Dashboard() {
         <CardContent>
           <div className="space-y-3">
             {/* Active Orders Stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-background rounded-lg border border-border">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 bg-background rounded-lg border border-border">
                 <div className="flex items-center gap-2 mb-1">
-                  <AlertCircle className="w-4 h-4 text-yellow-500" />
+                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
                   <span className="text-xs text-muted-foreground">Pending</span>
                 </div>
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-xl sm:text-2xl font-bold text-foreground">
                   {shopflowLoading ? "..." : shopflowOrders.filter(o => o.status === 'design_requested').length}
                 </div>
               </div>
-              <div className="p-3 bg-background rounded-lg border border-border">
+              <div className="p-2 sm:p-3 bg-background rounded-lg border border-border">
                 <div className="flex items-center gap-2 mb-1">
-                  <Clock className="w-4 h-4 text-blue-500" />
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
                   <span className="text-xs text-muted-foreground">In Progress</span>
                 </div>
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-xl sm:text-2xl font-bold text-foreground">
                   {shopflowLoading ? "..." : shopflowOrders.filter(o => o.status === 'awaiting_feedback' || o.status === 'revision_sent').length}
                 </div>
               </div>
-              <div className="p-3 bg-background rounded-lg border border-border">
+              <div className="p-2 sm:p-3 bg-background rounded-lg border border-border col-span-2 sm:col-span-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                   <span className="text-xs text-muted-foreground">Ready</span>
                 </div>
-                <div className="text-2xl font-bold text-foreground">
+                <div className="text-xl sm:text-2xl font-bold text-foreground">
                   {shopflowLoading ? "..." : shopflowOrders.filter(o => o.status === 'ready_for_print').length}
                 </div>
               </div>

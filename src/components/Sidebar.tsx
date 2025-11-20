@@ -138,9 +138,9 @@ const navigationItems = [
   { name: "Product Admin", path: "/admin/products", icon: Settings },
 ];
 
-export const Sidebar = () => {
+export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
   return (
-    <aside className="hidden lg:flex lg:flex-col w-60 bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
+    <aside className="flex flex-col w-full h-full bg-sidebar border-r border-sidebar-border">
       <div className="px-3 py-8 border-b border-sidebar-border">
         <img 
           src={logo} 
@@ -156,6 +156,7 @@ export const Sidebar = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={() => onMobileClose?.()}
               className="flex items-center gap-3 px-3 py-2.5 text-sm text-sidebar-foreground hover:text-foreground hover:bg-white/5 transition-all rounded-lg relative"
               activeClassName="text-foreground bg-white/5 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-gradient-primary before:rounded-r"
             >
