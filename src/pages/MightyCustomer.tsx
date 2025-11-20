@@ -18,7 +18,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
+const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint", "WePrintWraps.com products"];
 
 const addOnOptions = [
   "PPF Hood Only",
@@ -348,24 +348,33 @@ export default function MightyCustomer() {
           <div className="space-y-4">
             <Label className="text-lg font-semibold">Select Category</Label>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedService === category ? "default" : "outline"}
-                onClick={() => {
-                  setSelectedService(category);
-                  setSelectedProduct(null);
-                }}
-                  className="whitespace-nowrap px-6"
-                >
-                  {category}
-                </Button>
-              ))}
+              {categories.map((category) => {
+                const isWPWCategory = category === "WePrintWraps.com products";
+                return (
+                  <Button
+                    key={category}
+                    variant={selectedService === category ? "default" : "outline"}
+                    onClick={() => {
+                      setSelectedService(category);
+                      setSelectedProduct(null);
+                      setActiveProductTab("regular");
+                    }}
+                    className={`whitespace-nowrap px-6 ${
+                      isWPWCategory
+                        ? "bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0"
+                        : ""
+                    }`}
+                  >
+                    {category}
+                  </Button>
+                );
+              })}
               <Button
                 variant={selectedService === "All Products" ? "default" : "outline"}
               onClick={() => {
                 setSelectedService("All Products");
                 setSelectedProduct(null);
+                setActiveProductTab("regular");
               }}
                 className="whitespace-nowrap px-6"
               >
@@ -381,127 +390,87 @@ export default function MightyCustomer() {
               "Chrome Delete": "chrome-delete",
               "PPF": "ppf",
               "Window Tint": "window-tint",
-              "All Products": "all"
+              "All Products": "all",
+              "WePrintWraps.com products": "wpw"
             };
             
             const categoryKey = categoryMap[selectedService] || "";
-            const categoryFiltered = categoryKey === "all" 
-              ? allProducts 
-              : allProducts.filter(p => p.category === categoryKey);
+            
+            // Filter products based on category
+            let categoryFiltered;
+            if (categoryKey === "all") {
+              categoryFiltered = allProducts;
+            } else if (categoryKey === "wpw") {
+              // Show only WePrintWraps products
+              categoryFiltered = allProducts.filter(p => p.woo_product_id && isWPW(p.woo_product_id));
+            } else {
+              categoryFiltered = allProducts.filter(p => p.category === categoryKey);
+            }
 
             return (
               <div className="space-y-4">
                 <Label className="text-lg font-semibold">Select Product</Label>
-                <Tabs value={activeProductTab} onValueChange={setActiveProductTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="regular">Regular Products</TabsTrigger>
-                    <TabsTrigger value="wpw">WePrintWraps</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="regular">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {categoryFiltered
-                        .filter(p => !p.woo_product_id || !isWPW(p.woo_product_id))
-                        .map((product) => {
-                          const isSelected = selectedProduct?.id === product.id;
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {categoryFiltered.map((product) => {
+                    const productIsWPW = product.woo_product_id && isWPW(product.woo_product_id);
+                    const isSelected = selectedProduct?.id === product.id;
                     
-                          return (
-                            <div key={product.id} className="relative">
-                              <button
-                                onClick={() => handleProductSelect(product)}
-                                className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                                  isSelected
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium">{product.product_name}</span>
-                                  {product.is_locked && (
-                                    <Lock className="h-3 w-3 ml-2 text-muted-foreground" />
-                                  )}
-                                </div>
-                                {product.description && (
-                                  <p className="text-xs text-muted-foreground mt-1">{product.description}</p>
-                                )}
-                                <p className="text-xs font-semibold mt-2">
-                                  {product.pricing_type === 'per_sqft' 
-                                    ? `$${product.price_per_sqft}/sqft`
-                                    : `$${product.flat_price} flat`}
-                                </p>
-                                {product.product_type === 'quote-only' && (
-                                  <span className="text-xs text-muted-foreground mt-1 block">
-                                    Quote Only
-                                  </span>
-                                )}
-                              </button>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="wpw">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {categoryFiltered
-                        .filter(p => p.woo_product_id && isWPW(p.woo_product_id))
-                        .map((product) => {
-                          const isSelected = selectedProduct?.id === product.id;
-                          
-                          return (
-                            <div key={product.id} className="relative">
-                              <button
-                                onClick={() => handleProductSelect(product)}
-                                className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                                  isSelected
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium">{product.product_name}</span>
-                                  {product.is_locked && (
-                                    <Lock className="h-3 w-3 ml-2 text-muted-foreground" />
-                                  )}
-                                </div>
-                                {product.description && (
-                                  <p className="text-xs text-muted-foreground mt-1">{product.description}</p>
-                                )}
-                                <p className="text-xs font-semibold mt-2">
-                                  {product.pricing_type === 'per_sqft' 
-                                    ? `$${product.price_per_sqft}/sqft`
-                                    : `$${product.flat_price} flat`}
-                                </p>
-                                {product.product_type === 'quote-only' && (
-                                  <span className="text-xs text-muted-foreground mt-1 block">
-                                    Quote Only
-                                  </span>
-                                )}
-                                <span className="text-xs text-blue-400 mt-1 block font-medium">
-                                  WPW Product
-                                </span>
-                              </button>
-                              
-                              <div className="absolute top-1 right-1">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-6 text-xs px-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAddToCart(product);
-                                  }}
-                                >
-                                  <ShoppingCart className="h-3 w-3 mr-1" />
-                                  Add to Cart
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                    return (
+                      <div key={product.id} className="relative">
+                        <button
+                          onClick={() => handleProductSelect(product)}
+                          className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                            isSelected
+                              ? "border-primary bg-primary/10"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{product.product_name}</span>
+                            {product.is_locked && (
+                              <Lock className="h-3 w-3 ml-2 text-muted-foreground" />
+                            )}
+                          </div>
+                          {product.description && (
+                            <p className="text-xs text-muted-foreground mt-1">{product.description}</p>
+                          )}
+                          <p className="text-xs font-semibold mt-2">
+                            {product.pricing_type === 'per_sqft' 
+                              ? `$${product.price_per_sqft}/sqft`
+                              : `$${product.flat_price} flat`}
+                          </p>
+                          {product.product_type === 'quote-only' && (
+                            <span className="text-xs text-muted-foreground mt-1 block">
+                              Quote Only
+                            </span>
+                          )}
+                          {productIsWPW && (
+                            <span className="text-xs text-blue-400 mt-1 block font-medium">
+                              WPW Product
+                            </span>
+                          )}
+                        </button>
+                        
+                        {productIsWPW && (
+                          <div className="absolute top-1 right-1">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="h-6 text-xs px-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(product);
+                              }}
+                            >
+                              <ShoppingCart className="h-3 w-3 mr-1" />
+                              Add to Cart
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })()}
