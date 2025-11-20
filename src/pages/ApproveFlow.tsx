@@ -41,6 +41,8 @@ export default function ApproveFlow() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<{tracking_number?: string; tracking_url?: string; shipped_at?: string} | null>(null);
+  const [renders3D, setRenders3D] = useState<any>(null);
+  const [assets, setAssets] = useState<any[]>([]);
 
   const { toast } = useToast();
 
@@ -155,34 +157,73 @@ export default function ApproveFlow() {
 
     setGenerating3D(true);
     try {
+      // Extract vehicle and color info from project
+      const vehicleInfo = project?.vehicle_info as any;
+      const colorInfo = project?.color_info as any;
+
       const { data, error } = await supabase.functions.invoke('generate-color-render', {
         body: {
           designUrl: latestVersion.file_url,
-          vehicleType: project?.product_type || 'sedan',
-          colorName: 'Custom Design',
+          vehicleMake: vehicleInfo?.make,
+          vehicleModel: vehicleInfo?.model,
+          vehicleYear: vehicleInfo?.year,
+          vehicleType: vehicleInfo?.type || project?.product_type || 'sedan',
+          colorHex: colorInfo?.color_hex,
+          colorName: colorInfo?.color || 'Custom Design',
+          finishType: colorInfo?.finish || 'gloss',
+          angle: 'hero'
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
-      // Store 3D renders and trigger Klaviyo + WooCommerce events
-      if (data?.renders && urlProjectId) {
+      if (!data?.imageUrl) {
+        throw new Error('No image URL returned from render');
+      }
+
+      // Store 3D renders in database
+      if (urlProjectId) {
+        const renderUrls = {
+          hero: data.imageUrl,
+          angle: data.angle || 'hero'
+        };
+
+        const { error: dbError } = await supabase
+          .from('approveflow_3d')
+          .insert({
+            project_id: urlProjectId,
+            version_id: latestVersion.id,
+            render_urls: renderUrls
+          });
+
+        if (dbError) {
+          console.error('Database error:', dbError);
+          throw dbError;
+        }
+
+        // Trigger events
         await save3DRendersToApproveFlow(
           urlProjectId,
           latestVersion.id,
-          data.renders
+          renderUrls
         );
       }
 
       toast({
-        title: "3D renders generated",
-        description: "View them in the 3D View tab",
+        title: "3D render generated",
+        description: "View it in the 3D View tab",
       });
-    } catch (error) {
+
+      // Refresh to show the new render
+      window.location.reload();
+    } catch (error: any) {
       console.error('Error generating 3D:', error);
       toast({
         title: "Generation failed",
-        description: "Unable to generate 3D renders",
+        description: error.message || "Unable to generate 3D render",
         variant: "destructive",
       });
     } finally {
@@ -462,10 +503,36 @@ export default function ApproveFlow() {
           )}
 
           {/* Design Instructions */}
-          {project.design_instructions && (
+          <Card className="p-4 bg-card border-border">
+            <h3 className="text-sm font-semibold mb-2 text-gradient">Design Requirements</h3>
+            {project.design_instructions ? (
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{project.design_instructions}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground/60 italic">No specific design requirements provided</p>
+            )}
+          </Card>
+
+          {/* Uploaded Assets */}
+          {assets.length > 0 && (
             <Card className="p-4 bg-card border-border">
-              <h3 className="text-sm font-semibold mb-2 text-gradient">Design Instructions</h3>
-              <p className="text-xs text-muted-foreground">{project.design_instructions}</p>
+              <h3 className="text-sm font-semibold mb-3 text-gradient">Customer Files</h3>
+              <div className="space-y-2">
+                {assets.map((asset) => (
+                  <a
+                    key={asset.id}
+                    href={asset.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-2 rounded hover:bg-white/5 transition-colors text-xs group"
+                  >
+                    <ImageIcon className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                    <span className="flex-1 truncate group-hover:text-primary">
+                      {asset.file_type || 'File'}
+                    </span>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
+                  </a>
+                ))}
+              </div>
             </Card>
           )}
         </div>
@@ -530,12 +597,36 @@ export default function ApproveFlow() {
               </TabsContent>
               
               <TabsContent value="3d">
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <div className="text-center space-y-2">
-                    <Box className="w-12 h-12 mx-auto text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">3D rendering coming soon</p>
+                {renders3D ? (
+                  <div className="space-y-4">
+                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={renders3D.hero || renders3D.side || Object.values(renders3D)[0]} 
+                        alt="3D Render"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {Object.entries(renders3D).map(([angle, url]: [string, any]) => (
+                        <div key={angle} className="aspect-square bg-muted rounded overflow-hidden border border-border hover:border-primary cursor-pointer transition-colors">
+                          <img 
+                            src={url} 
+                            alt={`${angle} view`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                      <Box className="w-12 h-12 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">No 3D renders yet</p>
+                      <p className="text-xs text-muted-foreground">Click "Generate 3D Render" to create one</p>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 
