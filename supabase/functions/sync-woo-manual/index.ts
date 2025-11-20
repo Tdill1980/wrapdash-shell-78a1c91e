@@ -143,20 +143,63 @@ Deno.serve(async (req) => {
     
     console.log('Fetching from WooCommerce...');
     console.log('Using auth with key ending in:', wooKey.slice(-4));
+    console.log('Request URL:', wooUrl);
     
-    const wooResponse = await fetch(wooUrl, {
-      headers: { 
-        'Authorization': authHeader,
-        'Content-Type': 'application/json'
+    // Create an AbortController with 30-second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    let wooResponse;
+    try {
+      wooResponse = await fetch(wooUrl, {
+        headers: { 
+          'Authorization': authHeader,
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('WooCommerce API request timed out after 30 seconds');
       }
-    });
-
-    if (!wooResponse.ok) {
-      throw new Error(`WooCommerce API error: ${wooResponse.statusText}`);
+      console.error('Fetch error:', fetchError);
+      throw new Error(`Failed to fetch from WooCommerce: ${fetchError.message}`);
     }
 
-    const orders = await wooResponse.json();
-    console.log(`Fetched ${orders.length} orders from WooCommerce`);
+    console.log(`WooCommerce API Response Status: ${wooResponse.status} ${wooResponse.statusText}`);
+    console.log(`WooCommerce API Response Headers:`, Object.fromEntries(wooResponse.headers.entries()));
+
+    if (!wooResponse.ok) {
+      let errorText = '';
+      try {
+        errorText = await wooResponse.text();
+        console.error(`WooCommerce API error response:`, errorText.substring(0, 500));
+      } catch (textError) {
+        console.error('Could not read error response body:', textError);
+      }
+      throw new Error(`WooCommerce API error: ${wooResponse.status} ${wooResponse.statusText} - ${errorText.substring(0, 200)}`);
+    }
+
+    // Clone the response so we can read it twice if needed
+    const responseClone = wooResponse.clone();
+
+    let orders;
+    try {
+      orders = await wooResponse.json();
+      console.log(`✅ Successfully parsed ${orders.length} orders from WooCommerce`);
+    } catch (jsonError: any) {
+      console.error('❌ Failed to parse WooCommerce response as JSON:', jsonError);
+      try {
+        const responseText = await responseClone.text();
+        console.error('Raw response body (first 500 chars):', responseText.substring(0, 500));
+        console.error('Response body length:', responseText.length);
+      } catch (textError) {
+        console.error('Could not read response as text either:', textError);
+      }
+      throw new Error(`Failed to parse WooCommerce API response as JSON: ${jsonError.message}`);
+    }
 
     let syncedShopFlow = 0;
     let syncedApproveFlow = 0;
