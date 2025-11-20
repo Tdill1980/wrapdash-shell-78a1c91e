@@ -13,6 +13,14 @@ export const useAdmin = () => {
 
   const checkAdminStatus = async () => {
     try {
+      // Check for demo mode via URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('demo') === 'true') {
+        setIsAdmin(true);
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
