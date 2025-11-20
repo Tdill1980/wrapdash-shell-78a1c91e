@@ -15,7 +15,7 @@ const path = require('path');
 console.log('🚗 Converting vehicle data to JSON...\n');
 
 // Read the parsed Excel content from tool-results
-const parsedFilePath = path.join(__dirname, '../tool-results/document--parse_document/20251120-062907-830673');
+const parsedFilePath = path.join(__dirname, '../tool-results/document--parse_document/20251120-151033-316258');
 
 if (!fs.existsSync(parsedFilePath)) {
   console.error('❌ Error: Parsed Excel file not found at:', parsedFilePath);
