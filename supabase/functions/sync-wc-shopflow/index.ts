@@ -485,16 +485,59 @@ function extractVehicleInfo(lineItems: any[]): any {
 function extractFiles(payload: any): any[] {
   const files: any[] = [];
   
+  console.log('🔍 Extracting files from WooCommerce payload...');
+  console.log('Meta data available:', payload.meta_data ? payload.meta_data.length : 0);
+  console.log('Line items:', payload.line_items ? payload.line_items.length : 0);
+  
   // Check meta_data for file URLs
   if (payload.meta_data) {
     for (const meta of payload.meta_data) {
       const key = meta.key?.toLowerCase();
-      if (key?.includes('file') || key?.includes('artwork') || key?.includes('design')) {
+      console.log(`  - Checking meta key: ${meta.key}`);
+      
+      // Check for various file-related keys
+      if (
+        key?.includes('file') || 
+        key?.includes('artwork') || 
+        key?.includes('design') ||
+        key?.includes('upload') ||
+        key?.includes('attachment') ||
+        key?.includes('document')
+      ) {
+        console.log(`    ✓ Found potential file key: ${meta.key}, value type: ${typeof meta.value}`);
+        
+        // Handle string URLs
         if (typeof meta.value === 'string' && (meta.value.startsWith('http') || meta.value.includes('dropbox'))) {
+          console.log(`    ✅ Adding file: ${meta.value}`);
           files.push({
             name: meta.key,
             url: meta.value,
-            status: 'print_ready'
+            status: 'print_ready',
+            uploaded_at: new Date().toISOString()
+          });
+        }
+        // Handle array of URLs
+        else if (Array.isArray(meta.value)) {
+          console.log(`    ✅ Adding ${meta.value.length} files from array`);
+          meta.value.forEach((url: string) => {
+            if (typeof url === 'string' && url.startsWith('http')) {
+              files.push({
+                name: `${meta.key}`,
+                url: url,
+                status: 'print_ready',
+                uploaded_at: new Date().toISOString()
+              });
+            }
+          });
+        }
+        // Handle object with file URL
+        else if (typeof meta.value === 'object' && meta.value?.url) {
+          console.log(`    ✅ Adding file from object: ${meta.value.url}`);
+          files.push({
+            name: meta.value.name || meta.key,
+            url: meta.value.url,
+            status: 'print_ready',
+            uploaded_at: new Date().toISOString()
           });
         }
       }
@@ -505,20 +548,58 @@ function extractFiles(payload: any): any[] {
   if (payload.line_items) {
     for (const item of payload.line_items) {
       if (item.meta_data) {
+        console.log(`  - Checking line item: ${item.name}`);
         for (const meta of item.meta_data) {
           const key = meta.key?.toLowerCase();
-          if (key?.includes('file') || key?.includes('artwork') || key?.includes('upload')) {
+          console.log(`    - Line item meta key: ${meta.key}`);
+          
+          if (
+            key?.includes('file') || 
+            key?.includes('artwork') || 
+            key?.includes('upload') ||
+            key?.includes('attachment') ||
+            key?.includes('document') ||
+            key?.includes('design')
+          ) {
+            console.log(`      ✓ Found file-related key in line item: ${meta.key}`);
+            
+            // Handle string URLs
             if (typeof meta.value === 'string' && meta.value.startsWith('http')) {
+              console.log(`      ✅ Adding file: ${meta.value}`);
               files.push({
                 name: `${item.name} - ${meta.key}`,
                 url: meta.value,
-                status: 'print_ready'
+                status: 'print_ready',
+                uploaded_at: new Date().toISOString()
+              });
+            }
+            // Handle array of URLs
+            else if (Array.isArray(meta.value)) {
+              console.log(`      ✅ Adding ${meta.value.length} files from line item array`);
+              meta.value.forEach((url: string) => {
+                if (typeof url === 'string' && url.startsWith('http')) {
+                  files.push({
+                    name: `${item.name} - ${meta.key}`,
+                    url: url,
+                    status: 'print_ready',
+                    uploaded_at: new Date().toISOString()
+                  });
+                }
               });
             }
           }
         }
       }
     }
+  }
+  
+  console.log(`📁 Total files extracted: ${files.length}`);
+  if (files.length === 0) {
+    console.log('⚠️ No files found in WooCommerce order data');
+    console.log('This likely means:');
+    console.log('  1. Customer has not uploaded files yet');
+    console.log('  2. Files are in a different location/format in WooCommerce');
+    console.log('  3. Files were emailed separately instead of uploaded');
   }
   
   return files;

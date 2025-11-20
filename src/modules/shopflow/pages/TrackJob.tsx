@@ -147,6 +147,10 @@ export default function TrackJob() {
           hasApproveFlowProject={!!order.approveflow_project_id}
         />
         <OrderInfoCard order={order} />
+        
+        {/* Timeline moved above NextStep */}
+        <TimelineCard timeline={timeline} />
+        
         <UploadedFilesCard 
           files={files} 
           missingFiles={missingFiles} 
@@ -160,7 +164,6 @@ export default function TrackJob() {
         <NextStepCard order={{ customer_stage: internalStatus }} />
         <ActionRequiredCard order={{ customer_stage: internalStatus, file_error_details: fileErrors, missing_file_list: missingFiles }} />
         <OrderSummaryCard order={order} />
-        <TimelineCard timeline={timeline} />
         <div className="text-center py-8 text-muted-foreground text-sm">
           Powered by <span className="text-primary">WrapCommand™</span> — Real-time wrap order tracking for peace of mind.
         </div>
