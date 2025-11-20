@@ -27,14 +27,15 @@ import {
   History,
   Package,
   Car,
-  User
+  User,
+  ArrowLeft
 } from "lucide-react";
 import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
 
@@ -56,6 +57,7 @@ export default function ApproveFlow() {
     shipped_at?: string;
     order_number?: string;
     woo_order_number?: number | string;
+    id?: string;
   } | null>(null);
   const [assets, setAssets] = useState<any[]>([]);
 
@@ -89,7 +91,7 @@ export default function ApproveFlow() {
       // Fetch tracking info
       const { data: trackingData, error: trackingError } = await supabase
         .from('shopflow_orders')
-        .select('tracking_number, tracking_url, shipped_at, order_number, woo_order_number')
+        .select('id, tracking_number, tracking_url, shipped_at, order_number, woo_order_number')
         .eq('order_number', project.order_number)
         .maybeSingle();
 
@@ -405,6 +407,17 @@ export default function ApproveFlow() {
           >
             🔄 LIVE SYNC
           </Badge>
+
+          {trackingInfo?.id && (
+            <Link 
+              to={`/shopflow-internal/${trackingInfo.id}`}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              View in ShopFlow
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          )}
         </div>
       </div>
 

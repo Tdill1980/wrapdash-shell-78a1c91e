@@ -1,8 +1,8 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWooCommerceData } from "@/hooks/useWooCommerceData";
-import { Package, Car, User, Activity, ArrowRight, CheckCircle, Palette, AlertCircle, FileText, Printer, Truck } from "lucide-react";
+import { Package, Car, User, Activity, ArrowRight, CheckCircle, Palette, AlertCircle, FileText, Printer, Truck, ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShopFlowBrandHeader } from "@/components/ShopFlowBrandHeader";
@@ -132,9 +132,21 @@ export default function ShopFlowInternal() {
       
       {/* Internal View Badge & Sync Button */}
       <div className="flex items-center justify-between mb-4">
-        <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
-          Internal Staff View
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+            Internal Staff View
+          </Badge>
+          {order.approveflow_project_id && (
+            <Link 
+              to={`/approveflow/${order.approveflow_project_id}`}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <CheckCircle className="w-4 h-4" />
+              View in ApproveFlow
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          )}
+        </div>
         <ManualSyncButton 
           orderNumber={order.order_number} 
           onSyncComplete={refetch}
