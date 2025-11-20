@@ -133,7 +133,6 @@ export default function TrackJob() {
   const timeline = [
     { label: "Order Received", timestamp: order.created_at, completed: true },
     { label: "Files Received", timestamp: "", completed: internalStatus !== "order_received" },
-    { label: "Preflight", timestamp: "", completed: ["awaiting_approval", "preparing_for_print", "in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
     { label: "Awaiting Approval", timestamp: "", completed: ["preparing_for_print", "in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
     { label: "Print Production", timestamp: "", completed: ["in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
     { label: "Ready/Shipped", timestamp: order.shipped_at || "", completed: ["ready_or_shipped", "completed"].includes(internalStatus) },
@@ -144,7 +143,7 @@ export default function TrackJob() {
       <div className="w-full space-y-6">
         <ShopFlowBrandHeader />
         <CustomerProgressBar 
-          currentStatus={internalStatus} 
+          currentStatus={order.status}
           hasApproveFlowProject={!!order.approveflow_project_id}
         />
         <OrderInfoCard order={order} />

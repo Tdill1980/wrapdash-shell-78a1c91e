@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { ShopFlowBrandHeader } from "@/components/ShopFlowBrandHeader";
 import { UploadedFilesCard } from "@/modules/shopflow/components/UploadedFilesCard";
 import { OrderInfoCard } from "@/components/tracker/OrderInfoCard";
-import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
-import { NextStepCard } from "@/components/tracker/NextStepCard";
+import { CurrentStageCard } from "@/modules/shopflow/components/CurrentStageCard";
+import { NextStepCard } from "@/modules/shopflow/components/NextStepCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
 import { TimelineCard } from "@/components/tracker/TimelineCard";
 import { VehicleInfoCard } from "@/modules/shopflow/components/VehicleInfoCard";
@@ -20,8 +20,7 @@ import { ProofViewer } from "@/modules/shopflow/components/ProofViewer";
 import { Timeline } from "@/modules/shopflow/components/Timeline";
 import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
 import { FilesCard } from "@/modules/shopflow/components/FilesCard";
-import { CustomerProgressBar } from "@/components/CustomerProgressBar";
-import { InternalProductionTracker } from "@/components/InternalProductionTracker";
+import { WooCommerceStatusBar } from "@/components/shopflow/WooCommerceStatusBar";
 import { ManualSyncButton } from "@/modules/shopflow/components/ManualSyncButton";
 import { MainLayout } from "@/layouts/MainLayout";
 
@@ -116,7 +115,6 @@ export default function ShopFlowInternal() {
   const sharedTimeline = [
     { label: "Order Received", timestamp: order.created_at, completed: true },
     { label: "Files Received", timestamp: "", completed: internalStatus !== "order_received" },
-    { label: "Preflight", timestamp: "", completed: ["awaiting_approval", "preparing_for_print", "in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
     { label: "Awaiting Approval", timestamp: "", completed: ["preparing_for_print", "in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
     { label: "Print Production", timestamp: "", completed: ["in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
     { label: "Ready/Shipped", timestamp: order.shipped_at || "", completed: ["ready_or_shipped", "completed"].includes(internalStatus) },
@@ -127,7 +125,7 @@ export default function ShopFlowInternal() {
 
   return (
     <MainLayout userName="Trish">
-      {/* ShopFlow Header - Customer View */}
+      {/* ShopFlow Header */}
       <ShopFlowBrandHeader />
       
       {/* Internal View Badge & Sync Button */}
@@ -147,25 +145,14 @@ export default function ShopFlowInternal() {
             </Link>
           )}
         </div>
-        <ManualSyncButton 
+        <ManualSyncButton
           orderNumber={order.order_number} 
           onSyncComplete={refetch}
         />
       </div>
       
-      {/* Customer Progress Bar - What Customer Sees */}
-      <CustomerProgressBar 
-        currentStatus={internalStatus} 
-        hasApproveFlowProject={!!order.approveflow_project_id}
-      />
-
-      {/* Internal Production Tracker */}
-      <div className="mb-6">
-        <Card className="p-4 bg-primary/5 border-primary/20">
-          <h3 className="text-sm font-semibold text-primary mb-2">Internal Production Status</h3>
-          <InternalProductionTracker internalStatus={internalStatus} />
-        </Card>
-      </div>
+      {/* WooCommerce Status Progress Bar - Internal View */}
+      <WooCommerceStatusBar currentStatus={order.status} />
 
       {/* Main content area - Customer View Layout */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -183,7 +170,7 @@ export default function ShopFlowInternal() {
           </div>
           
           <div className={isDifferent('status', order.status) ? 'ring-2 ring-yellow-500/50 rounded-lg' : ''}>
-            <CurrentStageCard order={{ customer_stage: customerStage }} />
+            <CurrentStageCard status={order.status} />
             {isDifferent('status', order.status) && (
               <div className="px-4 pb-4">
                 <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs">
@@ -200,7 +187,7 @@ export default function ShopFlowInternal() {
 
         {/* Middle column: Customer-facing cards */}
         <div className="space-y-6">
-          <NextStepCard order={{ customer_stage: customerStage }} />
+          <NextStepCard currentStatus={order.status} />
           
           <UploadedFilesCard 
             files={files}

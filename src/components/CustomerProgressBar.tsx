@@ -4,7 +4,6 @@ const CUSTOMER_STEPS = [
   { label: "Order Received", icon: Package },
   { label: "Dropbox Link Sent", icon: Mail },
   { label: "Files Received", icon: Upload },
-  { label: "Preflight", icon: CheckCircle },
   { label: "Awaiting Approval", icon: Eye },
   { label: "Print Production", icon: Printer },
   { label: "Being Quality Checked", icon: CheckCircle },
@@ -17,17 +16,41 @@ interface CustomerProgressBarProps {
 }
 
 export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = false }: CustomerProgressBarProps) => {
-  // Map internal status to simplified customer stages
+  // Map WooCommerce status to simplified customer stages
   const statusMap: Record<string, string> = {
-    "order_received": "Order Received",
-    "awaiting_payment": "Order Received",
+    // Order stages
+    "pending": "Order Received",
+    "processing": "Order Received",
+    "on-hold": "Order Received",
+    "waiting-to-place-order": "Order Received",
+    "waiting-on-email-response": "Order Received",
+    "add-on": "Order Received",
+    
+    // Dropbox stage
     "dropbox-link-sent": "Dropbox Link Sent",
-    "in_design": "Files Received",
-    "action_required": "Files Received",
-    "awaiting_approval": hasApproveFlowProject ? "Awaiting Approval" : "Files Sent to Print",
-    "preparing_for_print": "Print Production",
-    "in_production": "Being Quality Checked",
-    "ready_or_shipped": "Ready/Shipped",
+    
+    // Files received stages
+    "in-design": "Files Received",
+    "file-error": "Files Received",
+    "missing-file": "Files Received",
+    
+    // Approval stages
+    "design-complete": hasApproveFlowProject ? "Awaiting Approval" : "Print Production",
+    "work-order-printed": hasApproveFlowProject ? "Awaiting Approval" : "Print Production",
+    
+    // Production stages
+    "ready-for-print": "Print Production",
+    "pre-press": "Print Production",
+    "print-production": "Print Production",
+    "lamination": "Print Production",
+    "finishing": "Print Production",
+    
+    // Quality check - ONLY when shipped
+    "shipped": "Being Quality Checked",
+    
+    // Final stages
+    "ready-for-pickup": "Ready/Shipped",
+    "shipping-cost": "Ready/Shipped",
     "completed": "Ready/Shipped"
   };
 
