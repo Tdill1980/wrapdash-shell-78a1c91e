@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAffiliatePayments } from '../hooks/useAffiliatePayments';
+import { useAffiliateInvoices } from '../hooks/useAffiliateInvoices';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,12 +30,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { DollarSign, Users, TrendingUp, Calendar, CheckCircle2, XCircle } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, Calendar, CheckCircle2, XCircle, FileText, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 
 export default function AffiliatePayments() {
   const { commissions, stats, isLoading, approveCommissions, markAsPaid, cancelCommissions, updateNotes } = useAffiliatePayments();
+  const { generateInvoice, isGenerating } = useAffiliateInvoices();
   
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +87,28 @@ export default function AffiliatePayments() {
     setSelectedIds([]);
     setShowCancelDialog(false);
     setCancelReason('');
+  };
+
+  const handleGenerateInvoice = () => {
+    if (selectedIds.length === 0) return;
+    
+    const selectedCommissions = filteredCommissions.filter(c => selectedIds.includes(c.id));
+    const founderId = selectedCommissions[0]?.founder_id;
+    
+    if (!founderId) return;
+    
+    // Get date range from selected commissions
+    const dates = selectedCommissions.map(c => new Date(c.created_at));
+    const periodStart = new Date(Math.min(...dates.map(d => d.getTime()))).toISOString();
+    const periodEnd = new Date(Math.max(...dates.map(d => d.getTime()))).toISOString();
+    
+    generateInvoice({
+      founderId,
+      commissionIds: selectedIds,
+      periodStart,
+      periodEnd,
+    });
+    setSelectedIds([]);
   };
 
   const getStatusBadge = (status: string) => {
@@ -214,6 +238,20 @@ export default function AffiliatePayments() {
               >
                 <DollarSign className="h-4 w-4 mr-2" />
                 Mark Paid ({selectedIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateInvoice}
+                disabled={isGenerating}
+                className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border-purple-500/20"
+              >
+                {isGenerating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                Generate Invoice ({selectedIds.length})
               </Button>
               <Button
                 variant="outline"

@@ -188,6 +188,68 @@ export type Database = {
           },
         ]
       }
+      affiliate_payout_invoices: {
+        Row: {
+          commission_ids: string[]
+          created_at: string | null
+          founder_id: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          notes: string | null
+          pdf_url: string | null
+          period_end: string
+          period_start: string
+          sent_at: string | null
+          sent_to_email: string | null
+          status: string
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          commission_ids: string[]
+          created_at?: string | null
+          founder_id: string
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          notes?: string | null
+          pdf_url?: string | null
+          period_end: string
+          period_start: string
+          sent_at?: string | null
+          sent_to_email?: string | null
+          status?: string
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          commission_ids?: string[]
+          created_at?: string | null
+          founder_id?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          notes?: string | null
+          pdf_url?: string | null
+          period_end?: string
+          period_start?: string
+          sent_at?: string | null
+          sent_to_email?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payout_invoices_founder_id_fkey"
+            columns: ["founder_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_founders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_products: {
         Row: {
           commission_rate: number
