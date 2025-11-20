@@ -506,103 +506,8 @@ export default function ApproveFlow() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT: Order Info + Upload */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Order Info */}
-          <Card className="p-4 bg-card border-border">
-            <h3 className="text-sm font-semibold mb-3 text-gradient">Order Information</h3>
-            <div className="space-y-2 text-xs">
-              <div>
-                <span className="text-muted-foreground">Job:</span>
-                <span className="ml-2 font-mono">
-                  {trackingInfo?.order_number || trackingInfo?.woo_order_number || project.order_number}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Customer:</span>
-                <span className="ml-2">{project.customer_name}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Product:</span>
-                <span className="ml-2">{project.product_type}</span>
-              </div>
-              {project.order_total && (
-                <div>
-                  <span className="text-muted-foreground">Total:</span>
-                  <span className="ml-2">${project.order_total.toFixed(2)}</span>
-                </div>
-              )}
-              <div>
-                <span className="text-muted-foreground">Status:</span>
-                <Badge className="ml-2 text-[10px]" variant="outline">{project.status}</Badge>
-              </div>
-              {project.vehicle_info && (
-                <div className="pt-2 mt-2 border-t border-border">
-                  <span className="text-muted-foreground block mb-1">Vehicle:</span>
-                  <div className="pl-2 text-xs">
-                    {project.vehicle_info.year && <span>{project.vehicle_info.year} </span>}
-                    {project.vehicle_info.make && <span>{project.vehicle_info.make} </span>}
-                    {project.vehicle_info.model && <span>{project.vehicle_info.model}</span>}
-                    {project.vehicle_info.type && (
-                      <div className="text-[10px] text-muted-foreground mt-0.5">
-                        Type: {project.vehicle_info.type}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {project.color_info && (
-                <div className="pt-2 mt-2 border-t border-border">
-                  <span className="text-muted-foreground block mb-1">Color:</span>
-                  <div className="pl-2 text-xs space-y-0.5">
-                    {project.color_info.color && <div>{project.color_info.color}</div>}
-                    {project.color_info.color_hex && (
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-4 h-4 rounded border border-white/20" 
-                          style={{ backgroundColor: project.color_info.color_hex }}
-                        />
-                        <span className="font-mono text-[10px]">{project.color_info.color_hex}</span>
-                      </div>
-                    )}
-                    {project.color_info.finish && (
-                      <div className="text-[10px] text-muted-foreground">
-                        Finish: {project.color_info.finish}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {trackingInfo?.tracking_number && (
-                <div className="pt-2 mt-2 border-t border-border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Truck className="h-3 w-3 text-green-500" />
-                    <span className="text-muted-foreground">Tracking:</span>
-                  </div>
-                  <div className="pl-5 space-y-1">
-                    <p className="font-mono text-[10px]">{trackingInfo.tracking_number}</p>
-                    {trackingInfo.shipped_at && (
-                      <p className="text-[10px] text-muted-foreground">
-                        Shipped {format(new Date(trackingInfo.shipped_at), 'MMM d, yyyy')}
-                      </p>
-                    )}
-                    {trackingInfo.tracking_url && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-[10px]"
-                        onClick={() => window.open(trackingInfo.tracking_url, '_blank')}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Track Package
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
-
+        {/* LEFT: Design Requirements & Files */}
+        <div className="space-y-6">
           {/* Design Requirements */}
           <Card className="p-3 bg-card border-border">
             <div className="flex items-center justify-between mb-2">
@@ -647,7 +552,6 @@ export default function ApproveFlow() {
               </div>
             </Card>
           )}
-
         </div>
 
         {/* CENTER: Design Proof Viewer */}
