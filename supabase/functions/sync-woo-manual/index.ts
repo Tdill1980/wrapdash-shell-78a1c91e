@@ -5,6 +5,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Design product IDs that should go to ApproveFlow
+const DESIGN_PRODUCT_IDS = [234, 58160]; // "Custom Vehicle Wrap Design" products
+
 /**
  * Normalize WooCommerce status strings to handle variations
  */
@@ -228,17 +231,25 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Sync to ApproveFlow (only for design orders)
+        // Sync to ApproveFlow (only for design product orders)
         if (target === 'approveflow' || target === 'both') {
-          const isDesignOrder = ['in-design', 'lance', 'manny', 'design-complete'].includes(wooStatus);
+          // Check if order contains design products
+          let hasDesignProduct = false;
+          if (order.line_items && Array.isArray(order.line_items)) {
+            hasDesignProduct = order.line_items.some((item: any) => 
+              DESIGN_PRODUCT_IDS.includes(item.product_id)
+            );
+          }
 
-          if (isDesignOrder) {
+          if (hasDesignProduct) {
+            console.log(`✅ Design product found in order ${orderNumber} - syncing to ApproveFlow`);
+            
             // Check if project already exists
             const { data: existingProject } = await supabase
               .from('approveflow_projects')
               .select('id')
               .eq('order_number', orderNumber)
-              .single();
+              .maybeSingle();
 
             if (!existingProject) {
               const { error: projectError } = await supabase
@@ -262,6 +273,8 @@ Deno.serve(async (req) => {
             } else {
               skipped++;
             }
+          } else {
+            console.log(`⚠️ Order ${orderNumber} does not contain design products - skipping ApproveFlow sync`);
           }
         }
       } catch (orderError: any) {

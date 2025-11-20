@@ -9,6 +9,9 @@ const corsHeaders = {
 // Email kill switch - set to true when ready for production
 const SEND_CUSTOMER_EMAILS = false;
 
+// Design product IDs that should go to ApproveFlow
+const DESIGN_PRODUCT_IDS = [234, 58160]; // "Custom Vehicle Wrap Design" products
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -59,11 +62,35 @@ serve(async (req) => {
     const orderTotal = parseFloat(webhook.total || '0');
     const customerEmail = webhook.billing?.email;
     
-    // Extract product type from line items
+    // Check if order contains design products
+    let hasDesignProduct = false;
     let productType = 'Custom Wrap';
+    
     if (webhook.line_items && webhook.line_items.length > 0) {
-      productType = webhook.line_items[0].name || 'Custom Wrap';
+      for (const item of webhook.line_items) {
+        const productId = item.product_id;
+        if (DESIGN_PRODUCT_IDS.includes(productId)) {
+          hasDesignProduct = true;
+          productType = item.name || 'Custom Vehicle Wrap Design';
+          break;
+        }
+      }
     }
+    
+    // Only process design product orders
+    if (!hasDesignProduct) {
+      console.log('⚠️ Order does not contain design products - skipping ApproveFlow sync for order:', orderNumber);
+      return new Response(
+        JSON.stringify({ 
+          message: 'Order does not contain design products', 
+          orderNumber: orderNumber,
+          skipped: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log('✅ Design product found in order:', orderNumber, '- Product:', productType);
 
     // Extract design requirements from meta_data (more flexible search)
     let designRequirements = webhook.customer_note || '';
