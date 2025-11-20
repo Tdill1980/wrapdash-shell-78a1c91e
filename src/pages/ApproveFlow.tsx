@@ -354,6 +354,16 @@ export default function ApproveFlow() {
         </div>
       </div>
 
+      {/* Project Timeline - Source of Truth */}
+      <ApproveFlowTimeline 
+        projectCreatedAt={project.created_at}
+        versions={versions}
+        actions={actions}
+        chatMessages={chatMessages}
+        emailLogs={emailLogs}
+        hasMissingFiles={assets.length === 0}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* LEFT: Order Info + Upload */}
         <div className="lg:col-span-1 space-y-6">
