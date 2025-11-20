@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Upload, 
   MessageSquare, 
@@ -17,7 +18,9 @@ import {
   Image as ImageIcon,
   Loader2,
   Truck,
-  ExternalLink
+  ExternalLink,
+  ZoomIn,
+  Mail
 } from "lucide-react";
 import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
@@ -72,23 +75,37 @@ export default function ApproveFlow() {
     requestRevision,
   } = useApproveFlow(urlProjectId);
 
-  // Fetch tracking info from shopflow_orders
+  // Fetch tracking info and assets
   useEffect(() => {
-    const fetchTrackingInfo = async () => {
+    const fetchData = async () => {
       if (!project?.order_number) return;
       
-      const { data, error } = await supabase
+      // Fetch tracking info
+      const { data: trackingData, error: trackingError } = await supabase
         .from('shopflow_orders')
         .select('tracking_number, tracking_url, shipped_at, order_number, woo_order_number')
         .eq('order_number', project.order_number)
         .maybeSingle();
 
-      if (!error && data) {
-        setTrackingInfo(data);
+      if (!trackingError && trackingData) {
+        setTrackingInfo(trackingData);
+      }
+
+      // Fetch uploaded assets
+      if (urlProjectId) {
+        const { data: assetsData, error: assetsError } = await supabase
+          .from('approveflow_assets')
+          .select('*')
+          .eq('project_id', urlProjectId)
+          .order('created_at', { ascending: false });
+
+        if (!assetsError && assetsData) {
+          setAssets(assetsData);
+        }
       }
     };
 
-    fetchTrackingInfo();
+    fetchData();
 
     // Subscribe to changes
     if (project?.order_number) {
@@ -293,7 +310,10 @@ export default function ApproveFlow() {
             </Button>
           </div>
 
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+          <Badge 
+            variant="outline" 
+            className="bg-primary/20 text-primary border-primary/50 px-3 py-1.5 text-sm font-semibold animate-pulse"
+          >
             🔄 LIVE SYNC
           </Badge>
         </div>
@@ -333,16 +353,6 @@ export default function ApproveFlow() {
           </div>
         </div>
       </div>
-
-      {/* Comprehensive Timeline */}
-      <ApproveFlowTimeline
-        projectCreatedAt={project.created_at}
-        versions={versions}
-        actions={actions}
-        chatMessages={chatMessages}
-        emailLogs={emailLogs}
-        hasMissingFiles={!versions.length}
-      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* LEFT: Order Info + Upload */}
@@ -482,59 +492,121 @@ export default function ApproveFlow() {
                   )}
                 </Button>
                 {latestVersion && (
-                  <Button
-                    onClick={handleGenerate3D}
-                    disabled={generating3D}
-                    size="sm"
-                    variant="outline"
-                    className="w-full gap-2"
-                  >
-                    {generating3D ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Generating 3D...
-                      </>
-                    ) : (
-                      <>
-                        <Box className="w-3 h-3" />
-                        Generate 3D Render
-                      </>
-                    )}
-                  </Button>
+                  <>
+                    <Button
+                      onClick={handleGenerate3D}
+                      disabled={generating3D}
+                      size="sm"
+                      variant="outline"
+                      className="w-full gap-2"
+                    >
+                      {generating3D ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Generating 3D...
+                        </>
+                      ) : (
+                        <>
+                          <Box className="w-3 h-3" />
+                          Generate 3D Render
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full gap-2 border-primary/50 hover:bg-primary/10"
+                      onClick={() => {
+                        toast({
+                          title: "Email Proof Feature",
+                          description: "This feature will be enabled soon",
+                        });
+                      }}
+                    >
+                      <Mail className="w-3 h-3" />
+                      Email Proof to Customer
+                    </Button>
+                  </>
                 )}
               </div>
             </Card>
           )}
 
-          {/* Design Instructions */}
+          {/* Design Requirements */}
           <Card className="p-4 bg-card border-border">
             <h3 className="text-sm font-semibold mb-2 text-gradient">Design Requirements</h3>
             {project.design_instructions ? (
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{project.design_instructions}</p>
+              <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.design_instructions}</p>
             ) : (
               <p className="text-xs text-muted-foreground/60 italic">No specific design requirements provided</p>
             )}
           </Card>
 
-          {/* Uploaded Assets */}
+          {/* Version History - Always Visible */}
+          <Card className="p-4 bg-card border-border">
+            <h3 className="text-sm font-semibold mb-3 text-gradient">Version History</h3>
+            {versions.length > 0 ? (
+              <div className="space-y-2">
+                {versions.map((v, index) => (
+                  <button
+                    key={v.id}
+                    onClick={() => setSelectedVersion(v.id)}
+                    className={`w-full text-left p-2 rounded text-xs transition-colors ${
+                      selectedVersion === v.id || (selectedVersion === 'latest' && index === 0)
+                        ? 'bg-primary/20 border border-primary/50'
+                        : 'hover:bg-white/5 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">Version {v.version_number}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {format(new Date(v.created_at), 'MMM d, h:mm a')}
+                      </span>
+                    </div>
+                    {v.notes && (
+                      <p className="text-[10px] text-muted-foreground mt-1 truncate">{v.notes}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/60 italic">No versions uploaded yet</p>
+            )}
+          </Card>
+
+          {/* Timeline */}
+          <Card className="p-4 bg-card border-border">
+            <h3 className="text-sm font-semibold mb-3 text-gradient">Project Timeline</h3>
+            <ApproveFlowTimeline
+              projectCreatedAt={project.created_at}
+              versions={versions}
+              actions={actions}
+              chatMessages={chatMessages}
+              emailLogs={emailLogs}
+              hasMissingFiles={!versions.length}
+            />
+          </Card>
+
+          {/* Customer Uploaded Files */}
           {assets.length > 0 && (
             <Card className="p-4 bg-card border-border">
               <h3 className="text-sm font-semibold mb-3 text-gradient">Customer Files</h3>
               <div className="space-y-2">
                 {assets.map((asset) => (
-                  <a
-                    key={asset.id}
-                    href={asset.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded hover:bg-white/5 transition-colors text-xs group"
-                  >
-                    <ImageIcon className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                    <span className="flex-1 truncate group-hover:text-primary">
-                      {asset.file_type || 'File'}
-                    </span>
-                    <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
-                  </a>
+                  <Dialog key={asset.id}>
+                    <DialogTrigger asChild>
+                      <button className="w-full flex items-center gap-2 p-2 rounded hover:bg-white/5 transition-colors text-xs group">
+                        <ImageIcon className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                        <span className="flex-1 truncate text-left group-hover:text-primary">
+                          {asset.file_type || 'Customer File'}
+                        </span>
+                        <ZoomIn className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl">
+                      <img src={asset.file_url} alt="Customer file" className="w-full h-auto" />
+                    </DialogContent>
+                  </Dialog>
                 ))}
               </div>
             </Card>
@@ -576,13 +648,27 @@ export default function ApproveFlow() {
               <TabsContent value="2d" className="space-y-4">
                 {displayVersion ? (
                   <div className="space-y-3">
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={displayVersion.file_url} 
-                        alt={`Version ${displayVersion.version_number}`}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative">
+                          <img 
+                            src={displayVersion.file_url} 
+                            alt={`Version ${displayVersion.version_number}`}
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                        <img 
+                          src={displayVersion.file_url} 
+                          alt={`Version ${displayVersion.version_number}`}
+                          className="w-full h-full object-contain"
+                        />
+                      </DialogContent>
+                    </Dialog>
                     <div className="text-xs space-y-1">
                       <p className="text-muted-foreground">
                         Version {displayVersion.version_number} • 
@@ -637,22 +723,47 @@ export default function ApproveFlow() {
               <TabsContent value="3d">
                 {latestRenderUrls ? (
                   <div className="space-y-4">
-                    <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                      <img 
-                        src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
-                        alt="3D Render"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative">
+                          <img 
+                            src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                            alt="3D Render"
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                        <img 
+                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                          alt="3D Render"
+                          className="w-full h-full object-contain"
+                        />
+                      </DialogContent>
+                    </Dialog>
                     <div className="grid grid-cols-4 gap-2">
                       {Object.entries(latestRenderUrls).map(([angle, url]: [string, any]) => (
-                        <div key={angle} className="aspect-square bg-muted rounded overflow-hidden border border-border hover:border-primary cursor-pointer transition-colors">
-                          <img 
-                            src={url as string} 
-                            alt={`${angle} view`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                        <Dialog key={angle}>
+                          <DialogTrigger asChild>
+                            <div className="aspect-square bg-muted rounded overflow-hidden border border-border hover:border-primary cursor-pointer transition-colors">
+                              <img 
+                                src={url as string} 
+                                alt={`${angle} view`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                            <img 
+                              src={url as string} 
+                              alt={`${angle} view`}
+                              className="w-full h-full object-contain"
+                            />
+                          </DialogContent>
+                        </Dialog>
                       ))}
                     </div>
                   </div>
