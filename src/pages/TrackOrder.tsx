@@ -5,6 +5,7 @@ import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
 import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OtherOrdersCarousel } from "@/components/tracker/OtherOrdersCarousel";
+import { MainLayout } from "@/layouts/MainLayout";
 
 // Mock data for development
 const mockOrder = {
@@ -59,10 +60,10 @@ const mockOrder = {
 
 export default function TrackOrder() {
   return (
-    <div className="min-h-screen bg-[#0B0B0B] p-4 md:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <MainLayout userName="Customer">
+      <div className="w-full space-y-6">
         {/* Page Header */}
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold font-poppins text-white mb-2">
             Track Your Wrap
           </h1>
@@ -99,7 +100,7 @@ export default function TrackOrder() {
         {/* Other Orders Section */}
         <OtherOrdersCarousel orders={mockOrder.otherOrders} />
       </div>
-    </div>
+    </MainLayout>
   );
 }
 
