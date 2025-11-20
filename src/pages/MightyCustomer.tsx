@@ -48,6 +48,7 @@ export default function MightyCustomer() {
   const [margin, setMargin] = useState(65);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
+  const [includeRoof, setIncludeRoof] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const [emailTone, setEmailTone] = useState("installer");
@@ -67,13 +68,14 @@ export default function MightyCustomer() {
   const {
     sqft,
     setSqft,
+    sqftOptions,
     materialCost,
     laborCost,
     installHours,
     subtotal,
     marginAmount,
     total,
-  } = useQuoteEngine(selectedProduct, vehicle, quantity, settings.install_rate_per_hour, margin);
+  } = useQuoteEngine(selectedProduct, vehicle, quantity, settings.install_rate_per_hour, margin, includeRoof);
 
   const handleVoiceTranscript = (transcript: string) => {
     const lower = transcript.toLowerCase();
@@ -214,9 +216,16 @@ export default function MightyCustomer() {
         customer_email: customerData.email,
         customer_phone: customerData.phone,
         customer_company: customerData.company,
-        vehicle_year: customerData.vehicleYear,
-        vehicle_make: customerData.vehicleMake,
-        vehicle_model: customerData.vehicleModel,
+        vehicle_year: customerData.vehicleYear || null,
+        vehicle_make: customerData.vehicleMake || null,
+        vehicle_model: customerData.vehicleModel || null,
+        vehicle_details: JSON.stringify({
+          year: customerData.vehicleYear,
+          make: customerData.vehicleMake,
+          model: customerData.vehicleModel,
+          includeRoof: includeRoof,
+          sqftOptions: sqftOptions
+        }),
         product_name: selectedProduct.product_name,
         sqft: sqft,
         material_cost: materialCost,
@@ -443,11 +452,57 @@ export default function MightyCustomer() {
               </div>
             </div>
 
+            {/* Roof Coverage Options */}
+            {sqftOptions && (
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Roof Coverage Options</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setIncludeRoof(false)}
+                    type="button"
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      !includeRoof 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold text-foreground">No Roof Included</div>
+                    <div className="text-2xl font-bold text-primary">
+                      {sqftOptions.withoutRoof} sq. ft.
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setIncludeRoof(true)}
+                    type="button"
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      includeRoof 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold text-foreground">Roof Included</div>
+                    <div className="text-2xl font-bold text-primary">
+                      {sqftOptions.withRoof} sq. ft.
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      +{sqftOptions.roofOnly} sq. ft. roof
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Auto-calculated SQFT Display */}
             <div className="p-4 bg-gradient-to-r from-blue-950/50 to-blue-900/30 rounded-lg border border-blue-500/20">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-blue-300 text-base font-semibold">Total SQFT</Label>
+                  <Label className="text-blue-300 text-base font-semibold">
+                    {sqftOptions 
+                      ? (includeRoof ? "Total SQFT (Roof Included)" : "Total SQFT (No Roof)")
+                      : "Total SQFT"
+                    }
+                  </Label>
                   <p className="text-xs text-muted-foreground mt-1">
                     {sqft > 0 ? "✓ Auto-calculated from vehicle database" : "Enter vehicle details above"}
                   </p>
