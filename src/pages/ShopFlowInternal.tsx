@@ -57,8 +57,7 @@ function extractFiles(order: any) {
 
 export default function ShopFlowInternal() {
   const { id } = useParams<{ id: string }>();
-  const { order, loading, refetch } = useShopFlow(id);
-  const isMobile = useIsMobile();
+  const { order, loading, refetch, logs } = useShopFlow(id);
   
   // Fetch WooCommerce data for comparison
   const { wooData } = useWooCommerceData(order?.order_number || "");
@@ -108,7 +107,6 @@ export default function ShopFlowInternal() {
   const stageDescription = getProductionStageDescription(internalStage);
   const artworkFiles = extractFiles(order);
   const missing = detectMissing({ ...order, files: artworkFiles });
-  const timeline = buildProductionTimeline(order);
   const files = (order.files as any[]) || [];
   const missingFiles = ((order as any).missing_file_list as any) || [];
   const fileErrors = ((order as any).file_error_details as any) || [];
@@ -197,7 +195,7 @@ export default function ShopFlowInternal() {
             onFileUpload={() => {}}
           />
           
-          <TimelineCard timeline={timeline} />
+          <Timeline logs={logs} />
           
           <OrderSummaryCard order={order} />
         </div>
