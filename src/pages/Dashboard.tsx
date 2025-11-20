@@ -35,6 +35,7 @@ import VoiceCommand from "@/components/VoiceCommand";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
+import { MainLayout } from "@/layouts/MainLayout";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -280,7 +281,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-4 max-w-[1600px]">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
 
       {/* Product Type Chips */}
       <div className="flex flex-wrap gap-2">
@@ -969,6 +971,7 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
