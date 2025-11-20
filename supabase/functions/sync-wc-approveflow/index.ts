@@ -102,28 +102,38 @@ serve(async (req) => {
     // Extract design requirements from meta_data (more flexible search)
     let designRequirements = webhook.customer_note || '';
     
-    console.log('🔍 Extracting data from meta_data:', webhook.meta_data?.length || 0, 'fields');
+    console.log('🔍 Extracting design requirements from meta_data:', webhook.meta_data?.length || 0, 'fields');
+    console.log('🔍 Customer note:', webhook.customer_note?.substring(0, 100) || 'None');
     
     if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
       // Log all meta_data keys for debugging
       webhook.meta_data.forEach((meta: any) => {
-        console.log('  Meta key:', meta.key, '| Value length:', meta.value?.length || 0);
+        console.log('  📋 Meta key:', meta.key, '| Value:', typeof meta.value === 'string' ? meta.value.substring(0, 50) : meta.value);
       });
       
-      // Look for design requirements field (case-insensitive, flexible matching)
+      // Look for design requirements field (expanded search)
       const designField = webhook.meta_data.find((meta: any) => 
         meta.key && (
           meta.key.toLowerCase().includes('describe') ||
           meta.key.toLowerCase().includes('design') ||
           meta.key.toLowerCase().includes('project') ||
           meta.key.toLowerCase().includes('requirements') ||
-          meta.key.toLowerCase().includes('instructions')
+          meta.key.toLowerCase().includes('instructions') ||
+          meta.key.toLowerCase().includes('details') ||
+          meta.key.toLowerCase().includes('notes') ||
+          meta.key.toLowerCase().includes('description') ||
+          meta.key.toLowerCase().includes('request') ||
+          meta.key.toLowerCase().includes('specs') ||
+          meta.key.toLowerCase().includes('specifications')
         )
       );
       
       if (designField && designField.value) {
         designRequirements = designField.value;
-        console.log('✅ Found design requirements in meta_data:', designRequirements.substring(0, 100) + '...');
+        console.log('✅ Found design requirements in meta_data field:', designField.key);
+        console.log('✅ Content:', designRequirements.substring(0, 200) + '...');
+      } else {
+        console.log('⚠️ No design requirements found in meta_data');
       }
     }
 
