@@ -1,8 +1,10 @@
 import { useParams } from "react-router-dom";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWooCommerceData } from "@/hooks/useWooCommerceData";
 import { Package, Car, User, Activity, ArrowRight, CheckCircle, Palette, AlertCircle, FileText, Printer, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ShopFlowBrandHeader } from "@/components/ShopFlowBrandHeader";
 import { UploadedFilesCard } from "@/modules/shopflow/components/UploadedFilesCard";
 import { OrderInfoCard } from "@/components/tracker/OrderInfoCard";
@@ -10,7 +12,6 @@ import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
 import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
 import { TimelineCard } from "@/components/tracker/TimelineCard";
-
 import { VehicleInfoCard } from "@/modules/shopflow/components/VehicleInfoCard";
 import { CustomerInfoCard } from "@/modules/shopflow/components/CustomerInfoCard";
 import { JobDetailsCard } from "@/modules/shopflow/components/JobDetailsCard";
@@ -21,6 +22,7 @@ import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
 import { FilesCard } from "@/modules/shopflow/components/FilesCard";
 import { CustomerProgressBar } from "@/components/CustomerProgressBar";
 import { InternalProductionTracker } from "@/components/InternalProductionTracker";
+import { ManualSyncButton } from "@/modules/shopflow/components/ManualSyncButton";
 import { MainLayout } from "@/layouts/MainLayout";
 
 import {
@@ -56,8 +58,30 @@ function extractFiles(order: any) {
 
 export default function ShopFlowInternal() {
   const { id } = useParams<{ id: string }>();
-  const { order, loading } = useShopFlow(id);
+  const { order, loading, refetch } = useShopFlow(id);
   const isMobile = useIsMobile();
+  
+  // Fetch WooCommerce data for comparison
+  const { wooData } = useWooCommerceData(order?.order_number || "");
+  
+  // Helper to check if field differs from WooCommerce
+  const isDifferent = (field: string, localValue: any) => {
+    if (!wooData) return false;
+    
+    switch (field) {
+      case 'customer_name':
+        const wooName = `${wooData.billing.first_name} ${wooData.billing.last_name}`.trim();
+        return localValue !== wooName;
+      case 'customer_email':
+        return localValue !== wooData.billing.email;
+      case 'product_type':
+        return wooData.line_items[0] && localValue !== wooData.line_items[0].name;
+      case 'status':
+        return localValue !== wooData.status;
+      default:
+        return false;
+    }
+  };
 
   if (loading) {
     return (
@@ -100,185 +124,108 @@ export default function ShopFlowInternal() {
 
   return (
     <MainLayout userName="Trish">
-      <div className="w-full space-y-6">
-        <CustomerProgressBar currentStatus={internalStatus} />
-        <div className="mb-6"><UploadedFilesCard files={files} missingFiles={missingFiles} fileErrors={fileErrors} internalMode={true} orderId={order.id} /></div>
-        <div className="mb-6"><OrderInfoCard order={order} /></div>
-        <div className="mb-6"><CurrentStageCard order={{ customer_stage: internalStatus }} /></div>
-        <div className="mb-6"><NextStepCard order={{ customer_stage: internalStatus }} /></div>
-        <div className="mb-6"><OrderSummaryCard order={order} /></div>
-        <div className="mb-6"><TimelineCard timeline={sharedTimeline} /></div>
+      {/* ShopFlow Header - Customer View */}
+      <ShopFlowBrandHeader />
+      
+      {/* Internal View Badge & Sync Button */}
+      <div className="flex items-center justify-between mb-4">
+        <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+          Internal Staff View
+        </Badge>
+        <ManualSyncButton 
+          orderNumber={order.order_number} 
+          onSyncComplete={refetch}
+        />
+      </div>
+      
+      {/* Customer Progress Bar - What Customer Sees */}
+      <CustomerProgressBar 
+        currentStage={order.customer_stage || "order_received"} 
+        hasApproveFlowProject={!!order.approveflow_project_id}
+        orderStatus={order.status}
+      />
 
-        {/* Current Stage Card */}
-        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#2F81F7] to-[#15D1FF] flex items-center justify-center flex-shrink-0">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-white mb-2">
-                {internalStage}
-              </h2>
-              <p className="text-[#B7B7C5] text-sm">
-                {stageDescription}
-              </p>
-            </div>
-          </div>
+      {/* Internal Production Tracker */}
+      <div className="mb-6">
+        <Card className="p-4 bg-primary/5 border-primary/20">
+          <h3 className="text-sm font-semibold text-primary mb-2">Internal Production Status</h3>
+          <InternalProductionTracker
+            currentStage={internalStatus}
+            timeline={sharedTimeline}
+          />
         </Card>
-
-        {/* What's Next Card */}
-        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[#1a1a1f] flex items-center justify-center flex-shrink-0">
-              <ArrowRight className="w-6 h-6 text-[#2F81F7]" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-white mb-2">
-                What's Next
-              </h3>
-              <p className="text-[#B7B7C5] text-sm">
-                {missing.length > 0 
-                  ? `Missing files: ${missing.join(", ")}`
-                  : "Files will be received and logged."
-                }
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Order Progress Timeline */}
-        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
-          <h3 className="text-lg font-bold text-white mb-6">Order Progress</h3>
-          
-          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-4">
-            {[
-              { label: "Order\nReceived", icon: Package, stage: "order_received" },
-              { label: "Files\nReceived", icon: CheckCircle, stage: "files_received" },
-              { label: "In Design", icon: Palette, stage: "in_design" },
-              { label: "Awaiting\nApproval", icon: AlertCircle, stage: "awaiting_approval" },
-              { label: "Preparing\nPrint", icon: FileText, stage: "preparing_for_print" },
-              { label: "Printing", icon: Printer, stage: "in_production" },
-              { label: "Quality\nCheck", icon: CheckCircle, stage: "ready_or_shipped" },
-              { label: "Ready", icon: Package, stage: "ready_for_pickup" },
-              { label: "Shipped", icon: Truck, stage: "shipped" }
-            ].map((step, i) => {
-              const Icon = step.icon;
-              const active = i <= timeline.findIndex((t: any) => t.label === internalStage);
-              
-              return (
-                <div key={i} className="flex flex-col items-center min-w-[80px]">
-                  <div 
-                    className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
-                      active 
-                        ? "bg-gradient-to-br from-[#2F81F7] to-[#15D1FF]" 
-                        : "bg-[#1a1a1f] border border-white/10"
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 ${active ? "text-white" : "text-[#B7B7C5]"}`} />
-                  </div>
-                  <p className={`text-xs text-center whitespace-pre-line ${
-                    active ? "text-white font-medium" : "text-[#B7B7C5]"
-                  }`}>
-                    {step.label}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Internal Production Tracker */}
-        <Card className="p-6 mb-6 bg-[#111317] border border-white/10">
-          <InternalProductionTracker internalStatus={internalStage} />
-        </Card>
-
-        {/* Job Status Info */}
-        <div className={`flex gap-4 ${isMobile ? 'flex-col mb-6' : 'mb-10'}`}>
-        <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
-          <span className="text-gray-400">Internal Stage:</span>{" "}
-          <span className="text-white">{internalStage}</span>
-        </div>
-        <div className="px-4 py-2 bg-[#111118] border border-white/10 rounded-lg text-sm">
-          <span className="text-gray-400">WooCommerce:</span>{" "}
-          <span className="text-white">{order.status}</span>
-        </div>
       </div>
 
-      {/* FULL-WIDTH INTERNAL PRODUCTION TRACKER */}
-      <div className={`bg-[#111118] border border-white/10 rounded-lg mb-14 ${isMobile ? 'py-4 px-4' : 'py-6 px-6'}`}>
-        <h2 className={`font-semibold mb-4 ${isMobile ? 'text-base' : 'text-lg'}`}>Production Tracker</h2>
-        <div className="flex items-center justify-between gap-4 overflow-x-auto pb-2">
-          {timeline.map((step: any, idx: number) => (
-            <div key={idx} className="flex flex-col items-center min-w-[120px]">
-              <div
-                className={[
-                  "w-6 h-6 rounded-full mb-2",
-                  step.active
-                    ? "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] ring-2 ring-[#5AAEFF]"
-                    : "bg-white/20 border border-white/10"
-                ].join(" ")}
-              />
-              <p className="text-xs text-gray-300 text-center">{step.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* FULL WIDTH CENTER SPINE LAYOUT */}
-      <div className="relative">
-
-        {/* Thick glowing SPINE - hide on mobile */}
-        {!isMobile && (
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[5px] bg-gradient-to-b from-[#8FD3FF] to-[#0047FF] opacity-40 rounded-full"></div>
-        )}
-
-        <div className={`grid gap-10 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
-
-          {/* LEFT COLUMN — Info Cards */}
-          <div className="flex flex-col gap-6">
-            <VehicleInfoCard order={order} />
-            <CustomerInfoCard order={order} />
-            <JobDetailsCard order={order} />
-            <NotesCard orderId={order.id} />
-          </div>
-
-          {/* CENTER COLUMN — Spine Items */}
-          <div className="flex flex-col gap-12">
-
-            {/* Proof Viewer */}
-            <div className="relative px-6">
-              <ProofViewer order={order} />
-            </div>
-
-            {/* Uploaded Files */}
-            <div className="relative px-6">
-              <FilesCard files={artworkFiles} orderId={order.id} />
-            </div>
-
-            {/* Missing Items */}
-            {missing.length > 0 && (
-              <div className="relative px-6 bg-[#111118] border border-white/10 rounded-lg p-5">
-                <h2 className="text-lg font-semibold mb-3">Missing Items</h2>
-                <ul className="text-gray-300 text-sm list-disc pl-6">
-                  {missing.map((m: string, idx: number) => (
-                    <li key={idx}>{m}</li>
-                  ))}
-                </ul>
+      {/* Main content area - Customer View Layout */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left column: Order info cards with change highlights */}
+        <div className="space-y-6">
+          <div className={isDifferent('customer_name', order.customer_name) || isDifferent('customer_email', order.customer_email) ? 'ring-2 ring-yellow-500/50 rounded-lg' : ''}>
+            <OrderInfoCard order={{ ...order, created_at: order.created_at, files: order.files } as any} />
+            {(isDifferent('customer_name', order.customer_name) || isDifferent('customer_email', order.customer_email)) && (
+              <div className="px-4 pb-4">
+                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs">
+                  Modified from WooCommerce
+                </Badge>
               </div>
             )}
-
-            {/* Timeline */}
-            <div className="relative px-6">
-              <Timeline timeline={timeline} />
-            </div>
           </div>
-
-          {/* RIGHT COLUMN — Actions */}
-          <div className={isMobile ? '' : 'sticky top-[140px] h-fit'}>
-            <ActionSidebar order={order} />
+          
+          <div className={isDifferent('status', order.status) ? 'ring-2 ring-yellow-500/50 rounded-lg' : ''}>
+            <CurrentStageCard currentStage={order.customer_stage || "order_received"} />
+            {isDifferent('status', order.status) && (
+              <div className="px-4 pb-4">
+                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs">
+                  Status differs from WooCommerce
+                </Badge>
+              </div>
+            )}
           </div>
-
+          
+          <VehicleInfoCard order={order} />
+          <CustomerInfoCard order={order} />
+          <JobDetailsCard order={order} />
         </div>
+
+        {/* Middle column: Customer-facing cards */}
+        <div className="space-y-6">
+          <NextStepCard currentStage={order.customer_stage || "order_received"} />
+          
+          <UploadedFilesCard 
+            files={files}
+            missingFiles={missingFiles}
+            fileErrors={fileErrors}
+            orderStatus={order.status}
+            onFileUpload={() => {}}
+            canUpload={false}
+          />
+          
+          <TimelineCard timeline={timeline} />
+          
+          <OrderSummaryCard
+            productType={order.product_type}
+            orderDate={order.created_at}
+          />
+        </div>
+
+        {/* Right column: Internal staff actions & proofs */}
+        <div className="space-y-6">
+          <Card className="p-4 bg-primary/5 border-primary/20">
+            <h3 className="text-sm font-semibold text-primary mb-2">Staff Actions</h3>
+            <ActionSidebar order={order} />
+          </Card>
+          
+          <FilesCard
+            files={files}
+            missingFiles={missingFiles}
+            fileErrors={fileErrors}
+          />
+          
+          {order.approveflow_project_id && (
+            <ProofViewer projectId={order.approveflow_project_id} />
+          )}
+          
+          <NotesCard orderId={order.id} notes={order.notes} />
         </div>
       </div>
     </MainLayout>
