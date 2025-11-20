@@ -8,6 +8,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { ProductTableRow } from "@/components/admin/ProductTableRow";
 import { Lock, ShoppingCart, Search, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function ProductAdmin() {
   const { products, loading, updateProduct } = useProducts();
@@ -33,14 +34,17 @@ export default function ProductAdmin() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-muted-foreground">Loading products...</div>
-      </div>
+      <MainLayout userName="Admin">
+        <div className="w-full space-y-6">
+          <div className="text-muted-foreground">Loading products...</div>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
@@ -199,6 +203,7 @@ export default function ProductAdmin() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, Mail, RefreshCw, Search } from "lucide-react";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
+import { MainLayout } from "@/layouts/MainLayout";
 
 interface Quote {
   id: string;
@@ -187,7 +188,8 @@ export default function MightyMailQuotes() {
   );
 
   return (
-    <div className="p-6 space-y-6">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">
           <span className="text-white">Mighty</span>
@@ -473,6 +475,7 @@ export default function MightyMailQuotes() {
           design={selectedQuote.email_design}
         />
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }

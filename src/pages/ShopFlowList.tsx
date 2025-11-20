@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MainLayout } from "@/layouts/MainLayout";
 
 const statusConfig = {
   design_requested: { label: "Design Requested", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
@@ -88,7 +89,8 @@ export default function ShopFlowList() {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl">
+      <MainLayout userName="Admin">
+        <div className="w-full space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-poppins">
             <span className="text-foreground">Shop</span>
@@ -102,12 +104,14 @@ export default function ShopFlowList() {
         <Card className="p-12 text-center">
           <p className="text-muted-foreground">Loading orders...</p>
         </Card>
-      </div>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-poppins">
@@ -228,6 +232,7 @@ export default function ShopFlowList() {
           </Table>
         </Card>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }
