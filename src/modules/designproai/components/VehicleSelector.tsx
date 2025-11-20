@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { getVehicleMakes } from "@/lib/vehicleSqft";
 
 interface VehicleSelectorProps {
   vehicleMake: string;
@@ -13,11 +14,8 @@ interface VehicleSelectorProps {
   setVehicleType: (type: string) => void;
 }
 
-const VEHICLE_MAKES = [
-  "BMW", "Mercedes-Benz", "Audi", "Porsche", "Ferrari", "Lamborghini",
-  "McLaren", "Aston Martin", "Tesla", "Ford", "Chevrolet", "Dodge",
-  "Toyota", "Honda", "Nissan", "Mazda", "Subaru", "Lexus"
-];
+// Only show makes that have SQFT data in the database
+const VEHICLE_MAKES = getVehicleMakes();
 
 const VEHICLE_TYPES = [
   "Sedan", "SUV", "Coupe", "Convertible", "Truck", "Van", "Hatchback", "Wagon"
