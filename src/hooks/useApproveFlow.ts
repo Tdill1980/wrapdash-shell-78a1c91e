@@ -72,12 +72,21 @@ export interface ApproveFlowEmailLog {
   created_at: string;
 }
 
+export interface ApproveFlow3DRender {
+  id: string;
+  project_id: string;
+  version_id: string;
+  render_urls: Record<string, string>;
+  created_at: string;
+}
+
 export const useApproveFlow = (projectId?: string) => {
   const [project, setProject] = useState<ApproveFlowProject | null>(null);
   const [versions, setVersions] = useState<ApproveFlowVersion[]>([]);
   const [chatMessages, setChatMessages] = useState<ApproveFlowChat[]>([]);
   const [actions, setActions] = useState<ApproveFlowAction[]>([]);
   const [emailLogs, setEmailLogs] = useState<ApproveFlowEmailLog[]>([]);
+  const [renders3D, setRenders3D] = useState<ApproveFlow3DRender[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -179,6 +188,23 @@ export const useApproveFlow = (projectId?: string) => {
     }
   };
 
+  // Fetch 3D renders
+  const fetch3DRenders = async () => {
+    if (!projectId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('approveflow_3d')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRenders3D((data || []) as ApproveFlow3DRender[]);
+    } catch (error: any) {
+      console.error('Error loading 3D renders:', error);
+    }
+  };
   // Helper to trigger ApproveFlow events
   const triggerEvent = async (eventType: string, data: any = {}) => {
     try {
@@ -365,6 +391,7 @@ export const useApproveFlow = (projectId?: string) => {
         fetchChat(),
         fetchActions(),
         fetchEmailLogs(),
+        fetch3DRenders(),
       ]).finally(() => setLoading(false));
 
       // Set up realtime subscriptions
@@ -385,6 +412,9 @@ export const useApproveFlow = (projectId?: string) => {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'approveflow_email_logs', filter: `project_id=eq.${projectId}` }, () => {
           fetchEmailLogs();
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'approveflow_3d', filter: `project_id=eq.${projectId}` }, () => {
+          fetch3DRenders();
+        })
         .subscribe();
 
       return () => {
@@ -399,6 +429,7 @@ export const useApproveFlow = (projectId?: string) => {
     chatMessages,
     actions,
     emailLogs,
+    renders3D,
     loading,
     uploadVersion,
     sendMessage,
@@ -410,6 +441,7 @@ export const useApproveFlow = (projectId?: string) => {
       fetchChat();
       fetchActions();
       fetchEmailLogs();
+      fetch3DRenders();
     },
   };
 };

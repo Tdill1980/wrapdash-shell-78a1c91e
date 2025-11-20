@@ -48,7 +48,6 @@ export default function ApproveFlow() {
     order_number?: string;
     woo_order_number?: number | string;
   } | null>(null);
-  const [renders3D, setRenders3D] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
 
   const { toast } = useToast();
@@ -65,6 +64,7 @@ export default function ApproveFlow() {
     chatMessages,
     actions,
     emailLogs,
+    renders3D,
     loading,
     uploadVersion,
     sendMessage,
@@ -193,29 +193,12 @@ export default function ApproveFlow() {
         throw new Error('No image URL returned from render');
       }
 
-      // Store 3D renders in database
       if (urlProjectId) {
-        const renderUrls = {
+        const renderUrls: Record<string, string> = {
           hero: data.imageUrl,
           angle: data.angle || 'hero'
         };
 
-        const { error: dbError } = await supabase
-          .from('approveflow_3d')
-          .insert({
-            project_id: urlProjectId,
-            version_id: latestVersion.id,
-            render_urls: renderUrls
-          });
-
-        if (dbError) {
-          console.error('Database error:', dbError);
-          throw dbError;
-        }
-
-        setRenders3D(renderUrls);
-
-        // Trigger events
         await save3DRendersToApproveFlow(
           urlProjectId,
           latestVersion.id,
@@ -260,6 +243,8 @@ export default function ApproveFlow() {
   };
   const latestVersion = versions[0];
   const displayVersion = selectedVersion === "latest" ? latestVersion : versions.find(v => v.id === selectedVersion);
+  const latestRenderEntry = renders3D[0];
+  const latestRenderUrls = latestRenderEntry?.render_urls as Record<string, string> | undefined;
 
   if (loading) {
     return (
@@ -581,10 +566,10 @@ export default function ApproveFlow() {
               )}
             </div>
 
-            <Tabs defaultValue={renders3D ? "compare" : "2d"} className="w-full">
-              <TabsList className={`grid w-full ${renders3D ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
+            <Tabs defaultValue={latestRenderUrls ? "compare" : "2d"} className="w-full">
+              <TabsList className={`grid w-full ${latestRenderUrls ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
                 <TabsTrigger value="2d">2D Draft</TabsTrigger>
-                {renders3D && <TabsTrigger value="compare">Compare</TabsTrigger>}
+                {latestRenderUrls && <TabsTrigger value="compare">Compare</TabsTrigger>}
                 <TabsTrigger value="3d">3D Render</TabsTrigger>
               </TabsList>
               
@@ -616,7 +601,7 @@ export default function ApproveFlow() {
                 )}
               </TabsContent>
 
-              {renders3D && (
+              {latestRenderUrls && (
                 <TabsContent value="compare" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -639,7 +624,7 @@ export default function ApproveFlow() {
                       <p className="text-xs font-semibold mb-2 text-cyan-400">3D Render</p>
                       <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                         <img 
-                          src={renders3D.hero || renders3D.side || Object.values(renders3D)[0]} 
+                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
                           alt="3D Render"
                           className="w-full h-full object-contain"
                         />
@@ -650,20 +635,20 @@ export default function ApproveFlow() {
               )}
               
               <TabsContent value="3d">
-                {renders3D ? (
+                {latestRenderUrls ? (
                   <div className="space-y-4">
                     <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                       <img 
-                        src={renders3D.hero || renders3D.side || Object.values(renders3D)[0]} 
+                        src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
                         alt="3D Render"
                         className="w-full h-full object-contain"
                       />
                     </div>
                     <div className="grid grid-cols-4 gap-2">
-                      {Object.entries(renders3D).map(([angle, url]: [string, any]) => (
+                      {Object.entries(latestRenderUrls).map(([angle, url]: [string, any]) => (
                         <div key={angle} className="aspect-square bg-muted rounded overflow-hidden border border-border hover:border-primary cursor-pointer transition-colors">
                           <img 
-                            src={url} 
+                            src={url as string} 
                             alt={`${angle} view`}
                             className="w-full h-full object-cover"
                           />
