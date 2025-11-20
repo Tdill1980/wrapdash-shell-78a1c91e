@@ -14,7 +14,8 @@ export function useQuoteEngine(
   quantity: number = 1,
   installRatePerHour: number = 75,
   margin: number = 65,
-  includeRoof: boolean = true
+  includeRoof: boolean = true,
+  selectedPanels: { sides: boolean; back: boolean; hood: boolean; roof: boolean } | null = null
 ) {
   const [sqft, setSqft] = useState<number>(0);
   const [sqftOptions, setSqftOptions] = useState<VehicleSQFTOptions | null>(null);
@@ -41,12 +42,24 @@ export function useQuoteEngine(
 
     if (options) {
       setSqftOptions(options);
-      setSqft(includeRoof ? options.withRoof : options.withoutRoof);
+      
+      // Calculate based on selected panels if in partial wrap mode
+      if (selectedPanels) {
+        let totalSqft = 0;
+        if (selectedPanels.sides) totalSqft += options.panels.sides;
+        if (selectedPanels.back) totalSqft += options.panels.back;
+        if (selectedPanels.hood) totalSqft += options.panels.hood;
+        if (selectedPanels.roof) totalSqft += options.panels.roof;
+        setSqft(totalSqft);
+      } else {
+        // Full wrap mode
+        setSqft(includeRoof ? options.withRoof : options.withoutRoof);
+      }
     } else {
       setSqftOptions(null);
       console.log("No SQFT match found for vehicle");
     }
-  }, [vehicle, includeRoof]);
+  }, [vehicle, includeRoof, selectedPanels]);
 
   // Calculate costs when SQFT, product, or quantity changes
   useEffect(() => {

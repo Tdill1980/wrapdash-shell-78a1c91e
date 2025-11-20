@@ -49,6 +49,13 @@ export default function MightyCustomer() {
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
   const [includeRoof, setIncludeRoof] = useState(true);
+  const [wrapType, setWrapType] = useState<'full' | 'partial'>('full');
+  const [selectedPanels, setSelectedPanels] = useState({
+    sides: true,
+    back: true,
+    hood: true,
+    roof: true,
+  });
   const [isSending, setIsSending] = useState(false);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const [emailTone, setEmailTone] = useState("installer");
@@ -75,7 +82,15 @@ export default function MightyCustomer() {
     subtotal,
     marginAmount,
     total,
-  } = useQuoteEngine(selectedProduct, vehicle, quantity, settings.install_rate_per_hour, margin, includeRoof);
+  } = useQuoteEngine(
+    selectedProduct,
+    vehicle,
+    quantity,
+    settings.install_rate_per_hour,
+    margin,
+    includeRoof,
+    wrapType === 'partial' ? selectedPanels : null
+  );
 
   const handleVoiceTranscript = (transcript: string) => {
     const lower = transcript.toLowerCase();
@@ -223,7 +238,9 @@ export default function MightyCustomer() {
           year: customerData.vehicleYear,
           make: customerData.vehicleMake,
           model: customerData.vehicleModel,
+          wrapType: wrapType,
           includeRoof: includeRoof,
+          selectedPanels: wrapType === 'partial' ? selectedPanels : null,
           sqftOptions: sqftOptions
         }),
         product_name: selectedProduct.product_name,
@@ -452,44 +469,152 @@ export default function MightyCustomer() {
               </div>
             </div>
 
-            {/* Roof Coverage Options */}
+            {/* Wrap Type Selection */}
             {sqftOptions && (
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Roof Coverage Options</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setIncludeRoof(false)}
-                    type="button"
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      !includeRoof 
-                        ? 'border-primary bg-primary/10' 
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold text-foreground">No Roof Included</div>
-                    <div className="text-2xl font-bold text-primary">
-                      {sqftOptions.withoutRoof} sq. ft.
-                    </div>
-                  </button>
-                  
-                  <button
-                    onClick={() => setIncludeRoof(true)}
-                    type="button"
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      includeRoof 
-                        ? 'border-primary bg-primary/10' 
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="text-sm font-semibold text-foreground">Roof Included</div>
-                    <div className="text-2xl font-bold text-primary">
-                      {sqftOptions.withRoof} sq. ft.
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      +{sqftOptions.roofOnly} sq. ft. roof
-                    </div>
-                  </button>
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">Wrap Type</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setWrapType('full')}
+                      type="button"
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        wrapType === 'full'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-foreground">Full Wrap</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Complete vehicle coverage
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => setWrapType('partial')}
+                      type="button"
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        wrapType === 'partial'
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-foreground">Partial Wrap</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Select specific panels
+                      </div>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Full Wrap - Roof Options */}
+                {wrapType === 'full' && (
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Roof Coverage Options</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setIncludeRoof(false)}
+                        type="button"
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          !includeRoof 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold text-foreground">No Roof Included</div>
+                        <div className="text-2xl font-bold text-primary">
+                          {sqftOptions.withoutRoof} sq. ft.
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={() => setIncludeRoof(true)}
+                        type="button"
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          includeRoof 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold text-foreground">Roof Included</div>
+                        <div className="text-2xl font-bold text-primary">
+                          {sqftOptions.withRoof} sq. ft.
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          +{sqftOptions.roofOnly} sq. ft. roof
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Partial Wrap - Panel Selection */}
+                {wrapType === 'partial' && (
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Select Panels to Wrap</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
+                        type="button"
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          selectedPanels.sides
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold text-foreground">Both Sides</div>
+                        <div className="text-lg font-bold text-primary">
+                          {sqftOptions.panels.sides} sq. ft.
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
+                        type="button"
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          selectedPanels.back
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold text-foreground">Back</div>
+                        <div className="text-lg font-bold text-primary">
+                          {sqftOptions.panels.back} sq. ft.
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
+                        type="button"
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          selectedPanels.hood
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold text-foreground">Hood</div>
+                        <div className="text-lg font-bold text-primary">
+                          {sqftOptions.panels.hood} sq. ft.
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
+                        type="button"
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          selectedPanels.roof
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="text-sm font-semibold text-foreground">Roof</div>
+                        <div className="text-lg font-bold text-primary">
+                          {sqftOptions.panels.roof} sq. ft.
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -499,12 +624,19 @@ export default function MightyCustomer() {
                 <div>
                   <Label className="text-blue-300 text-base font-semibold">
                     {sqftOptions 
-                      ? (includeRoof ? "Total SQFT (Roof Included)" : "Total SQFT (No Roof)")
+                      ? wrapType === 'full'
+                        ? (includeRoof ? "Total SQFT (Roof Included)" : "Total SQFT (No Roof)")
+                        : "Total SQFT (Selected Panels)"
                       : "Total SQFT"
                     }
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {sqft > 0 ? "✓ Auto-calculated from vehicle database" : "Enter vehicle details above"}
+                    {sqft > 0 
+                      ? wrapType === 'partial'
+                        ? "✓ Calculated from selected panels"
+                        : "✓ Auto-calculated from vehicle database"
+                      : "Enter vehicle details above"
+                    }
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
