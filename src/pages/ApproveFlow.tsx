@@ -401,12 +401,14 @@ export default function ApproveFlow() {
             </Button>
           </div>
 
-          <Badge 
-            variant="outline" 
-            className="bg-primary/20 text-primary border-primary/50 px-3 py-1.5 text-sm font-semibold animate-pulse"
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.reload()}
+            className="bg-primary/20 text-primary border-primary/50 hover:bg-primary/30"
           >
             🔄 LIVE SYNC
-          </Badge>
+          </Button>
 
           {trackingInfo?.id && (
             <Link 
@@ -456,15 +458,6 @@ export default function ApproveFlow() {
         </div>
       </div>
 
-      {/* Project Timeline - Source of Truth */}
-      <ApproveFlowTimeline 
-        projectCreatedAt={project.created_at}
-        versions={versions}
-        actions={actions}
-        chatMessages={chatMessages}
-        emailLogs={emailLogs}
-        hasMissingFiles={assets.length === 0}
-      />
 
       {/* Order Info - Full Width at Top */}
       <Card className="bg-[#1a1a24] border-white/10 mb-6">
@@ -1064,6 +1057,16 @@ export default function ApproveFlow() {
           )}
         </div>
       </div>
+
+      {/* Project Timeline - Moved to Bottom */}
+      <ApproveFlowTimeline 
+        projectCreatedAt={project.created_at}
+        versions={versions}
+        actions={actions}
+        chatMessages={chatMessages}
+        emailLogs={emailLogs}
+        hasMissingFiles={assets.length === 0}
+      />
 
     </div>
     </MainLayout>
