@@ -159,34 +159,48 @@ Deno.serve(async (req) => {
         // Extract design requirements with comprehensive logging
         let designRequirements = '';
         
-        console.log(`\n🔍 ===== EXTRACTING DESIGN REQUIREMENTS FOR ORDER ${orderNumber} =====`);
-        console.log(`   Customer note: "${order.customer_note || 'EMPTY'}"`);
+        console.log(`\n========== ORDER ${orderNumber} DESIGN REQUIREMENTS EXTRACTION ==========`);
+        console.log(`Customer note present: ${!!order.customer_note}`);
+        console.log(`Customer note length: ${order.customer_note?.length || 0}`);
+        console.log(`Customer note value: "${order.customer_note || 'NONE'}"`);
         
         // First, try customer note
         if (order.customer_note && order.customer_note.trim().length > 0) {
           designRequirements = order.customer_note.trim();
-          console.log(`✅ Using customer_note as design requirements (${designRequirements.length} chars)`);
+          console.log(`✅ USING customer_note as design requirements`);
         }
+        
+        // Log meta_data structure
+        console.log(`\nmeta_data array present: ${!!order.meta_data}`);
+        console.log(`meta_data is array: ${Array.isArray(order.meta_data)}`);
+        console.log(`meta_data length: ${order.meta_data?.length || 0}`);
         
         // Then search ALL meta_data fields
         if (order.meta_data && Array.isArray(order.meta_data)) {
-          console.log(`\n   📦 Examining ${order.meta_data.length} meta_data fields:`);
+          console.log(`\n📦 EXAMINING ${order.meta_data.length} META_DATA FIELDS:`);
           
-          for (const meta of order.meta_data) {
-            if (!meta.key) continue;
+          for (let i = 0; i < order.meta_data.length; i++) {
+            const meta = order.meta_data[i];
+            
+            console.log(`\n--- META FIELD ${i + 1} ---`);
+            console.log(`  key: "${meta.key}"`);
+            console.log(`  value type: ${typeof meta.value}`);
+            
+            if (!meta.key) {
+              console.log(`  ⚠️ Skipping - no key`);
+              continue;
+            }
             
             const valueStr = typeof meta.value === 'string' 
               ? meta.value 
               : (typeof meta.value === 'object' ? JSON.stringify(meta.value) : String(meta.value));
             
-            // Log ALL fields for debugging
-            console.log(`\n   📋 Field: "${meta.key}"`);
-            console.log(`      Type: ${typeof meta.value}`);
-            console.log(`      Value: "${valueStr.substring(0, 150)}${valueStr.length > 150 ? '...' : ''}"`);
+            console.log(`  value length: ${valueStr.length}`);
+            console.log(`  value preview: "${valueStr.substring(0, 200)}${valueStr.length > 200 ? '...' : ''}"`);
             
             const keyLower = meta.key.toLowerCase();
             
-            // Comprehensive keyword search
+            // Comprehensive keyword search - looking for design requirements
             const matchesKeywords = (
               keyLower.includes('describe') ||
               keyLower.includes('design') ||
@@ -203,11 +217,16 @@ Deno.serve(async (req) => {
               keyLower.includes('extra') ||
               keyLower.includes('option') ||
               keyLower.includes('custom') ||
-              keyLower.includes('field')
+              keyLower.includes('field') ||
+              keyLower.includes('wc_') || // WooCommerce custom fields
+              keyLower.includes('_field') ||
+              keyLower.includes('product_')
             );
             
+            console.log(`  matches keywords: ${matchesKeywords}`);
+            
             if (matchesKeywords && valueStr && valueStr.trim().length > 10) {
-              console.log(`      ✅ MATCHES KEYWORDS! Using this field.`);
+              console.log(`  ✅ MATCH FOUND! Using this field for design requirements`);
               designRequirements = valueStr.trim();
               break;
             }
@@ -215,12 +234,12 @@ Deno.serve(async (req) => {
         }
         
         if (!designRequirements) {
-          console.log(`\n   ⚠️ NO DESIGN REQUIREMENTS FOUND for order ${orderNumber}`);
+          console.log(`\n⚠️ NO DESIGN REQUIREMENTS FOUND FOR ORDER ${orderNumber}`);
         } else {
-          console.log(`\n   ✅ FINAL DESIGN REQUIREMENTS (${designRequirements.length} chars):`);
-          console.log(`   "${designRequirements.substring(0, 300)}${designRequirements.length > 300 ? '...' : ''}"`);
+          console.log(`\n✅ FINAL DESIGN REQUIREMENTS (${designRequirements.length} chars):`);
+          console.log(`"${designRequirements.substring(0, 500)}${designRequirements.length > 500 ? '...' : ''}"`);
         }
-        console.log(`===== END EXTRACTION FOR ORDER ${orderNumber} =====\n`);
+        console.log(`========== END EXTRACTION FOR ORDER ${orderNumber} ==========\n`);
         
         const wooStatusRaw = order.status;
         const wooStatus = normalizeStatus(wooStatusRaw);
