@@ -44,10 +44,10 @@ export function DashboardHeroHeader({
   };
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-black/95 via-black/80 to-transparent">
+    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-black/60 via-black/30 to-transparent">
       {/* Background Image Layer */}
       <div 
-        className="absolute inset-0 bg-cover bg-right-center opacity-40"
+        className="absolute inset-0 bg-cover bg-right-center opacity-80"
         style={{
           backgroundImage: `url(${broncoImage})`,
           backgroundPosition: 'right center',
@@ -55,21 +55,21 @@ export function DashboardHeroHeader({
       />
       
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-30% via-background/30 to-60% to-transparent" />
       
       {/* Content Layer */}
       <div className="relative z-10 px-8 py-10">
         {/* Top Section - Title & Subtitle */}
         <div className="mb-6">
-          <h1 className="font-poppins text-4xl font-bold leading-tight mb-2">
+          <h1 className="font-poppins text-4xl font-bold leading-tight mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
             <span className="text-foreground">WrapCentral </span>
             <span className="text-gradient">Dashboard</span>
             <span className="text-muted-foreground text-2xl align-super">™</span>
           </h1>
-          <p className="text-muted-foreground text-sm mb-1">
+          <p className="text-muted-foreground text-sm mb-1" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
             Your Command Center for Wrap Operations
           </p>
-          <p className="text-muted-foreground/60 text-xs">
+          <p className="text-muted-foreground/60 text-xs" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
             {format(new Date(), "EEEE, MMMM d, yyyy 'at' h:mm a")}
           </p>
         </div>
