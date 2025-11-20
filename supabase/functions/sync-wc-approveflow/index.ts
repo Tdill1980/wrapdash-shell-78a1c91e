@@ -169,11 +169,39 @@ serve(async (req) => {
       }
     }
 
+    // Create automatic welcome chat message
+    const hasArtwork = uploadedFiles.length > 0;
+    
+    let welcomeMessage = `👋 Welcome to ApproveFlow! Your order #${orderNumber} has been received.\n\n`;
+    
+    // Add file status
+    if (hasArtwork) {
+      welcomeMessage += `✅ **Artwork Received:** We've received ${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''} from you. Thank you!\n\n`;
+    } else {
+      welcomeMessage += `⚠️ **Artwork Missing:** We haven't received any design files yet. Please upload your artwork or email it to us to get started.\n\n`;
+    }
+    
+    // Add design requirements
+    if (designRequirements && designRequirements.trim()) {
+      welcomeMessage += `📋 **Design Requirements:**\n${designRequirements}\n\n`;
+    } else {
+      welcomeMessage += `📋 **Design Requirements:** No specific requirements provided.\n\n`;
+    }
+    
+    welcomeMessage += `Our design team will review your order and get started right away. We'll keep you updated here on your progress!`;
+    
+    // Insert welcome message into chat
+    await supabase.from('approveflow_chat').insert({
+      project_id: newProject.id,
+      sender: 'designer',
+      message: welcomeMessage,
+    });
+    
+    console.log('Created welcome chat message for project:', newProject.id);
+
     // Send customer welcome email via Klaviyo
     if (customerEmail) {
       const customerPortalUrl = `${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://').split('.supabase.co')[0]}.lovable.app/customer/${newProject.id}`;
-      
-      const hasArtwork = uploadedFiles.length > 0;
       
       await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-klaviyo-event`, {
         method: 'POST',
