@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Loader2, Eye, RefreshCw } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { MainLayout } from "@/layouts/MainLayout";
 
 type ApproveFlowProject = Tables<"approveflow_projects">;
 
@@ -93,6 +94,7 @@ export default function ApproveFlowList() {
   }
 
   return (
+    <MainLayout>
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
@@ -174,5 +176,6 @@ export default function ApproveFlowList() {
         </div>
       </Card>
     </div>
+    </MainLayout>
   );
 }
