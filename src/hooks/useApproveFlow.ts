@@ -195,17 +195,25 @@ export const useApproveFlow = (projectId?: string) => {
 
       if (versionError) throw versionError;
 
-      // Update project status
-      await supabase
-        .from('approveflow_projects')
-        .update({ status: 'proof_delivered' })
-        .eq('id', projectId);
-
-      // Trigger event for Klaviyo + WooCommerce
-      await triggerEvent('proof_delivered', {
-        versionId: versionData.id,
-        notes,
-      });
+      // Update project status only if designer is uploading and status is design_requested
+      if (submittedBy === 'designer' && project?.status === 'design_requested') {
+        await supabase
+          .from('approveflow_projects')
+          .update({ status: 'proof_delivered' })
+          .eq('id', projectId);
+        
+        // Trigger event for Klaviyo + WooCommerce
+        await triggerEvent('proof_delivered', {
+          versionId: versionData.id,
+          notes,
+        });
+      } else if (submittedBy === 'designer') {
+        // Trigger version_uploaded event for subsequent uploads
+        await triggerEvent('version_uploaded', {
+          versionId: versionData.id,
+          notes,
+        });
+      }
 
       toast({
         title: 'Version uploaded',
