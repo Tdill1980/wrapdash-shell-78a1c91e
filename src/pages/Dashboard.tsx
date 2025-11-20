@@ -172,14 +172,36 @@ export default function Dashboard() {
   // Auto-fill sq ft when vehicle is selected
   useEffect(() => {
     if (vehicleMake && vehicleModel && vehicleYear) {
-      const match = vehicleData.data.find((v: any) => 
-        v.Make === vehicleMake && 
-        v.Model === vehicleModel && 
-        (v.Year === vehicleYear || v.Year.includes(vehicleYear))
-      );
+      console.log(`🔍 Searching for: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
+      
+      const match = vehicleData.data.find((v: any) => {
+        const vehicleYearStr = v.Year.toString();
+        const yearInput = vehicleYear.toString();
+        
+        // Handle year ranges like "2018-2022"
+        let yearMatch = false;
+        if (vehicleYearStr.includes('-')) {
+          const [startYear, endYear] = vehicleYearStr.split('-').map((y: string) => parseInt(y.trim()));
+          const inputYear = parseInt(yearInput);
+          yearMatch = inputYear >= startYear && inputYear <= endYear;
+        } else {
+          yearMatch = vehicleYearStr === yearInput;
+        }
+        
+        // Case-insensitive make/model matching
+        const makeMatch = v.Make.toLowerCase() === vehicleMake.toLowerCase();
+        const modelMatch = v.Model.toLowerCase().includes(vehicleModel.toLowerCase()) || 
+                          vehicleModel.toLowerCase().includes(v.Model.toLowerCase());
+        
+        return yearMatch && makeMatch && modelMatch;
+      });
       
       if (match) {
-        setSqFt(match["Corrected Sq Foot"] || match["Total Sq Foot"] || 0);
+        const sqftValue = match["Corrected Sq Foot"] || match["Total Sq Foot"] || 0;
+        console.log(`✓ Match found! Setting sqft to ${sqftValue}`);
+        setSqFt(sqftValue);
+      } else {
+        console.log(`✗ No match found`);
       }
     }
   }, [vehicleMake, vehicleModel, vehicleYear, vehicleData]);
