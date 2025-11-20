@@ -443,6 +443,16 @@ export default function ApproveFlow() {
         </div>
       </div>
 
+      {/* Project Timeline - Source of Truth */}
+      <ApproveFlowTimeline 
+        projectCreatedAt={project.created_at}
+        versions={versions}
+        actions={actions}
+        chatMessages={chatMessages}
+        emailLogs={emailLogs}
+        hasMissingFiles={assets.length === 0}
+      />
+
       {/* Order Info - Full Width at Top */}
       <Card className="bg-[#1a1a24] border-white/10 mb-6">
         <CardContent className="p-6">
@@ -455,7 +465,7 @@ export default function ApproveFlow() {
             </Badge>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-white/5">
                 <Package className="w-5 h-5 text-[#5AC8FF]" />
@@ -468,25 +478,14 @@ export default function ApproveFlow() {
 
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-white/5">
-                <Car className="w-5 h-5 text-[#5AC8FF]" />
-              </div>
-              <div>
-                <p className="text-white/60 text-xs font-medium mb-1">VEHICLE</p>
-                <p className="text-white text-sm font-medium">
-                  {project.vehicle_info ? 
-                    `${(project.vehicle_info as any).year || ''} ${(project.vehicle_info as any).make || ''} ${(project.vehicle_info as any).model || ''}`.trim()
-                    : 'No vehicle information'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-white/5">
                 <User className="w-5 h-5 text-[#5AC8FF]" />
               </div>
               <div>
                 <p className="text-white/60 text-xs font-medium mb-1">CUSTOMER</p>
                 <p className="text-white text-sm font-medium">{project.customer_name}</p>
+                {project.customer_email && (
+                  <p className="text-white/40 text-xs mt-1">{project.customer_email}</p>
+                )}
               </div>
             </div>
 
@@ -506,8 +505,8 @@ export default function ApproveFlow() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT: Design Requirements & Files */}
-        <div className="space-y-6">
+        {/* LEFT: Design Requirements, Chat & Upload */}
+        <div className="space-y-4">
           {/* Design Requirements */}
           <Card className="p-3 bg-card border-border">
             <div className="flex items-center justify-between mb-2">
@@ -549,6 +548,160 @@ export default function ApproveFlow() {
                     </DialogContent>
                   </Dialog>
                 ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Chat Panel */}
+          <Card className="p-4 bg-card border-border">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Chat with {activeRole === "designer" ? "Customer" : "Design Team"}
+            </h3>
+            
+            <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
+              {chatMessages.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-8">
+                  No messages yet. Start the conversation!
+                </p>
+              ) : (
+                chatMessages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.sender === activeRole ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] p-2 rounded-lg text-xs ${
+                        msg.sender === activeRole
+                          ? 'bg-primary/20 text-foreground'
+                          : 'bg-muted text-foreground'
+                      }`}
+                    >
+                      <p className="text-[10px] text-muted-foreground mb-1 uppercase">{msg.sender}</p>
+                      <p>{msg.message}</p>
+                      <p className="text-[9px] text-muted-foreground mt-1">
+                        {format(new Date(msg.created_at), 'h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Type a message..."
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                className="text-xs"
+              />
+              <Button size="sm" onClick={handleSendMessage}>
+                <Send className="w-3 h-3" />
+              </Button>
+            </div>
+          </Card>
+
+          {/* Upload Section - Designer Only */}
+          {activeRole === "designer" && (
+            <Card className="p-4 bg-card border-border">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Upload 2D Proof
+              </h3>
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="Version notes (optional)"
+                  value={uploadNotes}
+                  onChange={(e) => setUploadNotes(e.target.value)}
+                  className="text-xs h-16"
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full"
+                  size="sm"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-3 h-3 mr-2" />
+                      Select File
+                    </>
+                  )}
+                </Button>
+                {latestVersion && (
+                  <>
+                    <Button
+                      onClick={handleGenerate3D}
+                      disabled={isGenerating3D}
+                      size="sm"
+                      variant="outline"
+                      className="w-full gap-2"
+                    >
+                      {isGenerating3D ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Generating 3D...
+                        </>
+                      ) : (
+                        <>
+                          <Box className="w-3 h-3" />
+                          Generate 3D Render
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full gap-2 border-primary/50 hover:bg-primary/10"
+                      onClick={async () => {
+                        try {
+                          const portalUrl = `${window.location.origin}/approveflow/${urlProjectId}`;
+                          const { error } = await supabase.functions.invoke('send-approveflow-proof', {
+                            body: {
+                              projectId: urlProjectId,
+                              customerEmail: project.customer_email,
+                              customerName: project.customer_name,
+                              orderNumber: project.order_number,
+                              proofUrl: latestVersion.file_url,
+                              renderUrls: latestRenderUrls,
+                              portalUrl: portalUrl,
+                            }
+                          });
+                          
+                          if (error) throw error;
+                          
+                          toast({
+                            title: "Proof sent!",
+                            description: `Email sent to ${project.customer_email}`,
+                          });
+                        } catch (error: any) {
+                          console.error('Error sending proof:', error);
+                          toast({
+                            title: "Failed to send proof",
+                            description: error.message || "Please try again",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
+                      <Mail className="w-3 h-3" />
+                      Email Proof to Customer
+                    </Button>
+                  </>
+                )}
               </div>
             </Card>
           )}
@@ -836,162 +989,8 @@ export default function ApproveFlow() {
           </Card>
         </div>
 
-        {/* RIGHT: Chat + Upload + Actions */}
+        {/* RIGHT: Action Buttons */}
         <div className="lg:col-span-1 space-y-4">
-          {/* Chat Panel */}
-          <Card className="p-4 bg-card border-border">
-            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Chat with {activeRole === "designer" ? "Customer" : "Design Team"}
-            </h3>
-            
-            <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
-              {chatMessages.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-8">
-                  No messages yet. Start the conversation!
-                </p>
-              ) : (
-                chatMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender === activeRole ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] p-2 rounded-lg text-xs ${
-                        msg.sender === activeRole
-                          ? 'bg-primary/20 text-foreground'
-                          : 'bg-muted text-foreground'
-                      }`}
-                    >
-                      <p className="text-[10px] text-muted-foreground mb-1 uppercase">{msg.sender}</p>
-                      <p>{msg.message}</p>
-                      <p className="text-[9px] text-muted-foreground mt-1">
-                        {format(new Date(msg.created_at), 'h:mm a')}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="Type a message..."
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="text-xs"
-              />
-              <Button size="sm" onClick={handleSendMessage}>
-                <Send className="w-3 h-3" />
-              </Button>
-            </div>
-          </Card>
-
-          {/* Upload Section - Designer Only */}
-          {activeRole === "designer" && (
-            <Card className="p-4 bg-card border-border">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Upload 2D Proof
-              </h3>
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Version notes (optional)"
-                  value={uploadNotes}
-                  onChange={(e) => setUploadNotes(e.target.value)}
-                  className="text-xs h-16"
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="w-full"
-                  size="sm"
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-3 h-3 mr-2" />
-                      Select File
-                    </>
-                  )}
-                </Button>
-                {latestVersion && (
-                  <>
-                    <Button
-                      onClick={handleGenerate3D}
-                      disabled={isGenerating3D}
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-2"
-                    >
-                      {isGenerating3D ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Generating 3D...
-                        </>
-                      ) : (
-                        <>
-                          <Box className="w-3 h-3" />
-                          Generate 3D Render
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-2 border-primary/50 hover:bg-primary/10"
-                      onClick={async () => {
-                        try {
-                          const portalUrl = `${window.location.origin}/approveflow/${urlProjectId}`;
-                          const { error } = await supabase.functions.invoke('send-approveflow-proof', {
-                            body: {
-                              projectId: urlProjectId,
-                              customerEmail: project.customer_email,
-                              customerName: project.customer_name,
-                              orderNumber: project.order_number,
-                              proofUrl: latestVersion.file_url,
-                              renderUrls: latestRenderUrls,
-                              portalUrl: portalUrl,
-                            }
-                          });
-                          
-                          if (error) throw error;
-                          
-                          toast({
-                            title: "Proof sent!",
-                            description: `Email sent to ${project.customer_email}`,
-                          });
-                        } catch (error: any) {
-                          console.error('Error sending proof:', error);
-                          toast({
-                            title: "Failed to send proof",
-                            description: error.message || "Please try again",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                    >
-                      <Mail className="w-3 h-3" />
-                      Email Proof to Customer
-                    </Button>
-                  </>
-                )}
-              </div>
-            </Card>
-          )}
-
           {/* Action Buttons */}
           {activeRole === "customer" && (
             <Card className="p-4 bg-card border-border space-y-3">
@@ -1048,17 +1047,6 @@ export default function ApproveFlow() {
         </div>
       </div>
 
-      {/* Project Timeline - Source of Truth at Bottom */}
-      <div className="mt-8">
-        <ApproveFlowTimeline 
-          projectCreatedAt={project.created_at}
-          versions={versions}
-          actions={actions}
-          chatMessages={chatMessages}
-          emailLogs={emailLogs}
-          hasMissingFiles={assets.length === 0}
-        />
-      </div>
     </div>
     </MainLayout>
   );
