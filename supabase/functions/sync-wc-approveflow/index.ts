@@ -103,6 +103,7 @@ serve(async (req) => {
     console.log('Created ApproveFlow project:', newProject.id);
 
     // Extract uploaded files from order meta data
+    const uploadedFiles: any[] = [];
     if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
       const fileUploads = webhook.meta_data.filter((meta: any) => 
         meta.key && meta.key.includes('file') && meta.value
@@ -117,14 +118,68 @@ serve(async (req) => {
           file_url: fileUrl,
           file_type: fileType,
         });
+        
+        uploadedFiles.push({ url: fileUrl, type: fileType });
       }
+    }
+
+    // Extract design requirements from meta_data
+    let designRequirements = designInstructions;
+    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
+      const designField = webhook.meta_data.find((meta: any) => 
+        meta.key && (
+          meta.key.includes('project_description') || 
+          meta.key.includes('design') ||
+          meta.key.includes('describe')
+        )
+      );
+      if (designField && designField.value) {
+        designRequirements = designField.value;
+      }
+    }
+
+    // Send customer welcome email via Klaviyo
+    if (customerEmail) {
+      const customerPortalUrl = `${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://').split('.supabase.co')[0]}.lovable.app/customer/${newProject.id}`;
+      
+      const hasArtwork = uploadedFiles.length > 0;
+      
+      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-klaviyo-event`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({
+          eventName: 'approveflow_customer_welcome',
+          customerEmail: customerEmail,
+          properties: {
+            project_id: newProject.id,
+            order_number: orderNumber,
+            customer_name: customerName || 'Valued Customer',
+            product_type: productType,
+            portal_url: customerPortalUrl,
+            order_total: orderTotal,
+            design_requirements: designRequirements || 'No specific requirements provided',
+            has_artwork: hasArtwork,
+            artwork_count: uploadedFiles.length,
+            uploaded_files: uploadedFiles,
+            artwork_message: hasArtwork 
+              ? `Thank you for uploading ${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''}! We have received your artwork and will begin working on your design.`
+              : 'We noticed you haven\'t uploaded any artwork yet. Please upload your files through your customer portal or email them to us to get started.',
+          },
+        }),
+      });
+      
+      console.log('Customer welcome email sent to:', customerEmail);
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         projectId: newProject.id,
-        orderNumber: orderNumber 
+        orderNumber: orderNumber,
+        filesUploaded: uploadedFiles.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
