@@ -65,10 +65,35 @@ serve(async (req) => {
       productType = webhook.line_items[0].name || 'Custom Wrap';
     }
 
-    // Extract design instructions from customer note
-    const designInstructions = webhook.customer_note || '';
+    // Extract design requirements from meta_data (more flexible search)
+    let designRequirements = webhook.customer_note || '';
+    
+    console.log('🔍 Extracting data from meta_data:', webhook.meta_data?.length || 0, 'fields');
+    
+    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
+      // Log all meta_data keys for debugging
+      webhook.meta_data.forEach((meta: any) => {
+        console.log('  Meta key:', meta.key, '| Value length:', meta.value?.length || 0);
+      });
+      
+      // Look for design requirements field (case-insensitive, flexible matching)
+      const designField = webhook.meta_data.find((meta: any) => 
+        meta.key && (
+          meta.key.toLowerCase().includes('describe') ||
+          meta.key.toLowerCase().includes('design') ||
+          meta.key.toLowerCase().includes('project') ||
+          meta.key.toLowerCase().includes('requirements') ||
+          meta.key.toLowerCase().includes('instructions')
+        )
+      );
+      
+      if (designField && designField.value) {
+        designRequirements = designField.value;
+        console.log('✅ Found design requirements in meta_data:', designRequirements.substring(0, 100) + '...');
+      }
+    }
 
-    // Extract vehicle info from meta_data
+    // Extract vehicle info from meta_data OR parse from design requirements text
     let vehicleInfo = null;
     if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
       const vehicleFields = {
@@ -82,8 +107,24 @@ serve(async (req) => {
         vehicleInfo = vehicleFields;
       }
     }
+    
+    // If no vehicle info found in meta_data, try to extract from design requirements text
+    if (!vehicleInfo && designRequirements) {
+      const yearMatch = designRequirements.match(/\b(19|20)\d{2}\b/);
+      const makeModelMatch = designRequirements.match(/\b(19|20)\d{2}\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+([A-Z][A-Z0-9-]+)/i);
+      
+      if (makeModelMatch) {
+        vehicleInfo = {
+          year: makeModelMatch[1],
+          make: makeModelMatch[2],
+          model: makeModelMatch[3],
+          type: null
+        };
+        console.log('📍 Extracted vehicle from text:', vehicleInfo);
+      }
+    }
 
-    // Extract color info from meta_data
+    // Extract color info from meta_data OR parse from design requirements text
     let colorInfo = null;
     if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
       const colorFields = {
@@ -94,6 +135,22 @@ serve(async (req) => {
       
       if (colorFields.color || colorFields.color_hex) {
         colorInfo = colorFields;
+      }
+    }
+    
+    // If no color info found in meta_data, try to extract from design requirements text
+    if (!colorInfo && designRequirements) {
+      const colorMatch = designRequirements.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:is the color|color)/i);
+      const finishMatch = designRequirements.match(/(gloss|satin|matte)\s+(?:finish)?/i);
+      const codeMatch = designRequirements.match(/3M\s+([\d-]+)/i);
+      
+      if (colorMatch || finishMatch || codeMatch) {
+        colorInfo = {
+          color: colorMatch ? colorMatch[1] : null,
+          finish: finishMatch ? finishMatch[1] : null,
+          color_hex: codeMatch ? codeMatch[1] : null
+        };
+        console.log('🎨 Extracted color from text:', colorInfo);
       }
     }
 
@@ -113,6 +170,14 @@ serve(async (req) => {
     }
 
     // Create new ApproveFlow project
+    console.log('💾 Saving project with:', {
+      orderNumber,
+      customerName,
+      designRequirements: designRequirements?.substring(0, 100),
+      vehicleInfo,
+      colorInfo
+    });
+    
     const { data: newProject, error: projectError } = await supabase
       .from('approveflow_projects')
       .insert({
@@ -120,7 +185,7 @@ serve(async (req) => {
         customer_name: customerName || 'Unknown Customer',
         customer_email: customerEmail,
         product_type: productType,
-        design_instructions: designInstructions,
+        design_instructions: designRequirements,
         order_total: orderTotal,
         status: 'design_requested',
         vehicle_info: vehicleInfo,
@@ -157,20 +222,7 @@ serve(async (req) => {
       }
     }
 
-    // Extract design requirements from meta_data
-    let designRequirements = designInstructions;
-    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
-      const designField = webhook.meta_data.find((meta: any) => 
-        meta.key && (
-          meta.key.includes('project_description') || 
-          meta.key.includes('design') ||
-          meta.key.includes('describe')
-        )
-      );
-      if (designField && designField.value) {
-        designRequirements = designField.value;
-      }
-    }
+    // designRequirements already extracted above - no need to re-extract
 
     // Create automatic welcome chat message
     const hasArtwork = uploadedFiles.length > 0;
