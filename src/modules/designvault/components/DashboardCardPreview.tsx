@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ export function DashboardCardPreview() {
   const navigate = useNavigate();
   const { data: designs, isLoading } = useDesignVault({});
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   const latestDesigns = useMemo(() => {
     return designs?.slice(0, 5) || [];
@@ -24,6 +25,17 @@ export function DashboardCardPreview() {
       prev === 0 ? latestDesigns.length - 1 : prev - 1
     );
   };
+
+  // Auto-play carousel
+  useEffect(() => {
+    if (latestDesigns.length <= 1 || isHovered) return;
+
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 4000); // Change slide every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [latestDesigns.length, isHovered, carouselIndex]);
 
   return (
     <Card className="bg-card border-0" style={{ boxShadow: '0 0 0 1px black' }}>
@@ -55,7 +67,11 @@ export function DashboardCardPreview() {
       <CardContent>
         <div className="space-y-3">
           {/* Latest Designs Carousel */}
-          <div className="relative h-56 sm:h-64 md:h-72 bg-background rounded-lg border border-border overflow-hidden mb-3 group">
+          <div 
+            className="relative h-56 sm:h-64 md:h-72 bg-background rounded-lg border border-border overflow-hidden mb-3 group"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             {isLoading ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center space-y-2">

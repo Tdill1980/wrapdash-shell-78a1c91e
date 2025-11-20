@@ -124,6 +124,7 @@ export default function Dashboard() {
   const { orders: shopflowOrders, loading: shopflowLoading } = useShopFlow();
   const { products, settings, loading: productsLoading } = useProducts();
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isCarouselHovered, setIsCarouselHovered] = useState(false);
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
   // Quote Builder State
@@ -225,6 +226,17 @@ export default function Dashboard() {
       setCarouselIndex((prev) => (prev - 1 + latestDesigns.length) % latestDesigns.length);
     }
   };
+
+  // Auto-play carousel
+  useEffect(() => {
+    if (latestDesigns.length <= 1 || isCarouselHovered) return;
+
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 4000); // Change slide every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [latestDesigns.length, isCarouselHovered, carouselIndex]);
   
   const handleVoiceButtonDown = () => {
     startRecording();
@@ -642,7 +654,11 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-3">
               {/* Latest Designs Carousel */}
-              <div className="relative h-56 sm:h-64 md:h-72 bg-background rounded-lg border border-border overflow-hidden mb-3 group">
+              <div 
+                className="relative h-56 sm:h-64 md:h-72 bg-background rounded-lg border border-border overflow-hidden mb-3 group"
+                onMouseEnter={() => setIsCarouselHovered(true)}
+                onMouseLeave={() => setIsCarouselHovered(false)}
+              >
                 {isLoading ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center space-y-2">
