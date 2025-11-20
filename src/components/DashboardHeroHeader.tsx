@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, CheckCircle, Clock, FileText } from "lucide-react";
+import { Clock } from "lucide-react";
 import { format } from "date-fns";
+import broncoImage from "@/assets/rat-rod-bronco.png";
 
 interface QuickWinCard {
   icon: React.ElementType;
@@ -11,48 +12,21 @@ interface QuickWinCard {
 }
 
 interface DashboardHeroHeaderProps {
-  awaitingApprovalCount: number;
-  proofsReadyCount: number;
   activeRendersCount: number;
-  pendingActionsCount: number;
 }
 
 export function DashboardHeroHeader({
-  awaitingApprovalCount,
-  proofsReadyCount,
   activeRendersCount,
-  pendingActionsCount,
 }: DashboardHeroHeaderProps) {
   const navigate = useNavigate();
 
   const quickWins: QuickWinCard[] = [
-    {
-      icon: AlertCircle,
-      count: awaitingApprovalCount,
-      label: "Orders Awaiting Approval",
-      route: "/shopflow",
-      variant: 'warning',
-    },
-    {
-      icon: CheckCircle,
-      count: proofsReadyCount,
-      label: "Proofs Ready",
-      route: "/approveflow/projects",
-      variant: 'success',
-    },
     {
       icon: Clock,
       count: activeRendersCount,
       label: "Active Renders",
       route: "/admin/designvault",
       variant: 'info',
-    },
-    {
-      icon: FileText,
-      count: pendingActionsCount,
-      label: "Pending Actions",
-      route: "/shopflow",
-      variant: 'primary',
     },
   ];
 
@@ -75,7 +49,7 @@ export function DashboardHeroHeader({
       <div 
         className="absolute inset-0 bg-cover bg-right-center opacity-40"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1619405399517-d7fce0f13302?w=1920&h=1080&fit=crop')`,
+          backgroundImage: `url(${broncoImage})`,
           backgroundPosition: 'right center',
         }}
       />
@@ -101,7 +75,7 @@ export function DashboardHeroHeader({
         </div>
 
         {/* Quick Wins Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-4xl">
+        <div className="grid grid-cols-1 gap-3 max-w-xs">
           {quickWins.map((item) => {
             const Icon = item.icon;
             return (
