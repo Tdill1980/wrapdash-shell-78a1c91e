@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ShopFlowOrder } from "@/hooks/useShopFlow";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { wooToInternalStatus } from "@/lib/status-mapping";
 import { ShopFlowBrandHeader } from "@/components/ShopFlowBrandHeader";
@@ -174,29 +174,60 @@ export default function TrackJob() {
   return (
     <MainLayout userName="Customer">
       <div className="w-full space-y-6">
+        {/* Brand Header */}
         <ShopFlowBrandHeader />
+        
+        {/* Progress Tracker */}
         <CustomerProgressBar 
           currentStatus={order.status}
           hasApproveFlowProject={!!order.approveflow_project_id}
         />
-        <OrderInfoCard order={order} />
         
-        {/* Timeline moved above NextStep */}
-        <TimelineCard timeline={timeline} />
+        {/* Main Content Grid */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Left Column - Order Details */}
+          <div className="space-y-6">
+            <OrderInfoCard order={order} />
+            <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
+            <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
+          </div>
+          
+          {/* Middle Column - Files & Timeline */}
+          <div className="space-y-6">
+            <UploadedFilesCard 
+              files={files} 
+              missingFiles={missingFiles} 
+              fileErrors={fileErrors} 
+              orderId={order.id}
+              onFileUpload={handleFileUpload}
+              uploading={uploading}
+              orderStatus={order.status}
+            />
+            <TimelineCard timeline={timeline} />
+            {(fileErrors.length > 0 || missingFiles.length > 0) && (
+              <ActionRequiredCard order={{ customer_stage: order.customer_stage || order.status, file_error_details: fileErrors, missing_file_list: missingFiles }} />
+            )}
+          </div>
+          
+          {/* Right Column - Summary */}
+          <div className="space-y-6">
+            <OrderSummaryCard order={order} />
+            {order.approveflow_project_id && (
+              <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+                <h3 className="text-lg font-semibold text-white mb-2">Design Proof Available</h3>
+                <p className="text-white/70 text-sm mb-4">Your design proof is ready for review in ApproveFlow.</p>
+                <a 
+                  href={`/approveflow/${order.approveflow_project_id}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  View Design Proof
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </Card>
+            )}
+          </div>
+        </div>
         
-        <UploadedFilesCard 
-          files={files} 
-          missingFiles={missingFiles} 
-          fileErrors={fileErrors} 
-          orderId={order.id}
-          onFileUpload={handleFileUpload}
-          uploading={uploading}
-          orderStatus={order.status}
-        />
-        <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
-        <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
-        <ActionRequiredCard order={{ customer_stage: order.customer_stage || order.status, file_error_details: fileErrors, missing_file_list: missingFiles }} />
-        <OrderSummaryCard order={order} />
         <div className="text-center py-8 text-muted-foreground text-sm">
           Powered by <span className="text-primary">WrapCommand™</span> — Real-time wrap order tracking for peace of mind.
         </div>
