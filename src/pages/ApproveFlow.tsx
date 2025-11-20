@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Card } from "@/components/ui/card";
+import { useState, useRef, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -20,14 +20,20 @@ import {
   Truck,
   ExternalLink,
   ZoomIn,
-  Mail
+  Mail,
+  Sparkles,
+  FileText,
+  Paperclip,
+  History,
+  Package,
+  Car,
+  User
 } from "lucide-react";
 import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
-import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
@@ -41,7 +47,7 @@ export default function ApproveFlow() {
   const [uploadNotes, setUploadNotes] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<string>("latest");
   const [showRevisionForm, setShowRevisionForm] = useState(false);
-  const [generating3D, setGenerating3D] = useState(false);
+  const [isGenerating3D, setIsGenerating3D] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [trackingInfo, setTrackingInfo] = useState<{
@@ -131,7 +137,89 @@ export default function ApproveFlow() {
         supabase.removeChannel(channel);
       };
     }
-  }, [project?.order_number]);
+  }, [project?.order_number, urlProjectId]);
+
+  // Real-time subscriptions for notifications
+  useEffect(() => {
+    if (!urlProjectId) return;
+
+    const versionsChannel = supabase
+      .channel('approveflow_versions_realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'approveflow_versions',
+        filter: `project_id=eq.${urlProjectId}`
+      }, (payload) => {
+        const newVersion = payload.new as any;
+        toast({
+          title: "🎨 New Design Proof Uploaded",
+          description: `Version ${newVersion.version_number} • ${format(new Date(newVersion.created_at), 'h:mm a')}`,
+        });
+      })
+      .subscribe();
+
+    const actionsChannel = supabase
+      .channel('approveflow_actions_realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'approveflow_actions',
+        filter: `project_id=eq.${urlProjectId}`
+      }, (payload) => {
+        const newAction = payload.new as any;
+        let title = "📋 New Action";
+        if (newAction.action_type === 'approved') title = "✅ Design Approved!";
+        if (newAction.action_type === 'revision_requested') title = "📝 Revision Requested";
+        if (newAction.action_type === 'proof_delivered') title = "📧 Proof Delivered";
+        if (newAction.action_type === '3d_render_generated') title = "🎥 3D Render Ready!";
+        
+        toast({
+          title,
+          description: format(new Date(newAction.created_at), 'h:mm a'),
+        });
+      })
+      .subscribe();
+
+    const chatChannel = supabase
+      .channel('approveflow_chat_realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'approveflow_chat',
+        filter: `project_id=eq.${urlProjectId}`
+      }, (payload) => {
+        const newMessage = payload.new as any;
+        toast({
+          title: `💬 New message from ${newMessage.sender}`,
+          description: newMessage.message.substring(0, 50) + (newMessage.message.length > 50 ? '...' : ''),
+        });
+      })
+      .subscribe();
+
+    const emailChannel = supabase
+      .channel('approveflow_email_logs_realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'approveflow_email_logs',
+        filter: `project_id=eq.${urlProjectId}`
+      }, (payload) => {
+        const newEmail = payload.new as any;
+        toast({
+          title: "📧 Email Notification Sent",
+          description: newEmail.subject,
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(versionsChannel);
+      supabase.removeChannel(actionsChannel);
+      supabase.removeChannel(chatChannel);
+      supabase.removeChannel(emailChannel);
+    };
+  }, [urlProjectId, toast]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -181,15 +269,16 @@ export default function ApproveFlow() {
       return;
     }
 
-    setGenerating3D(true);
+    setIsGenerating3D(true);
     try {
-      // Extract vehicle and color info from project
+      // Always use the latest version (first in array)
+      const latestProof = versions[0];
       const vehicleInfo = project?.vehicle_info as any;
       const colorInfo = project?.color_info as any;
 
       const { data, error } = await supabase.functions.invoke('generate-color-render', {
         body: {
-          designUrl: latestVersion.file_url,
+          designUrl: latestProof.file_url,
           vehicleMake: vehicleInfo?.make,
           vehicleModel: vehicleInfo?.model,
           vehicleYear: vehicleInfo?.year,
@@ -218,7 +307,7 @@ export default function ApproveFlow() {
 
         await save3DRendersToApproveFlow(
           urlProjectId,
-          latestVersion.id,
+          latestProof.id,
           renderUrls
         );
       }
@@ -235,7 +324,7 @@ export default function ApproveFlow() {
         variant: "destructive",
       });
     } finally {
-      setGenerating3D(false);
+      setIsGenerating3D(false);
     }
   };
 
@@ -354,17 +443,69 @@ export default function ApproveFlow() {
         </div>
       </div>
 
-      {/* Project Timeline - Source of Truth */}
-      <ApproveFlowTimeline 
-        projectCreatedAt={project.created_at}
-        versions={versions}
-        actions={actions}
-        chatMessages={chatMessages}
-        emailLogs={emailLogs}
-        hasMissingFiles={assets.length === 0}
-      />
+      {/* Order Info - Full Width at Top */}
+      <Card className="bg-[#1a1a24] border-white/10 mb-6">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-white">
+              Order #{trackingInfo?.order_number || trackingInfo?.woo_order_number || project.order_number}
+            </h2>
+            <Badge className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white border-0">
+              {project.status}
+            </Badge>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-white/5">
+                <Package className="w-5 h-5 text-[#5AC8FF]" />
+              </div>
+              <div>
+                <p className="text-white/60 text-xs font-medium mb-1">PRODUCT</p>
+                <p className="text-white text-sm font-medium">{project.product_type}</p>
+              </div>
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-white/5">
+                <Car className="w-5 h-5 text-[#5AC8FF]" />
+              </div>
+              <div>
+                <p className="text-white/60 text-xs font-medium mb-1">VEHICLE</p>
+                <p className="text-white text-sm font-medium">
+                  {project.vehicle_info ? 
+                    `${(project.vehicle_info as any).year || ''} ${(project.vehicle_info as any).make || ''} ${(project.vehicle_info as any).model || ''}`.trim()
+                    : 'No vehicle information'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-white/5">
+                <User className="w-5 h-5 text-[#5AC8FF]" />
+              </div>
+              <div>
+                <p className="text-white/60 text-xs font-medium mb-1">CUSTOMER</p>
+                <p className="text-white text-sm font-medium">{project.customer_name}</p>
+              </div>
+            </div>
+
+            {project.order_total && (
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-white/5">
+                  <Package className="w-5 h-5 text-[#5AC8FF]" />
+                </div>
+                <div>
+                  <p className="text-white/60 text-xs font-medium mb-1">TOTAL</p>
+                  <p className="text-white text-sm font-medium">${project.order_total.toFixed(2)}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT: Order Info + Upload */}
         <div className="lg:col-span-1 space-y-6">
           {/* Order Info */}
@@ -674,12 +815,51 @@ export default function ApproveFlow() {
                     </div>
                   </div>
                 ) : (
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <div className="text-center space-y-2">
-                      <Box className="w-12 h-12 mx-auto text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">No 3D renders yet</p>
-                      <p className="text-xs text-muted-foreground">Click "Generate 3D Render" to create one</p>
-                    </div>
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-sm mb-4">No 3D renders yet</p>
+                    {activeRole === 'designer' && versions.length > 0 && (
+                      <Button
+                        onClick={handleGenerate3D}
+                        disabled={isGenerating3D}
+                        className="bg-gradient-to-r from-purple-500 to-blue-500"
+                      >
+                        {isGenerating3D ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generating 3D...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Generate 3D Render
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* Always show Regenerate button if we have versions and renders */}
+                {activeRole === 'designer' && versions.length > 0 && latestRenderUrls && (
+                  <div className="mt-4 text-center">
+                    <Button
+                      onClick={handleGenerate3D}
+                      disabled={isGenerating3D}
+                      variant="outline"
+                      className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                    >
+                      {isGenerating3D ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Regenerating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Regenerate 3D Render
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
               </TabsContent>
@@ -847,12 +1027,12 @@ export default function ApproveFlow() {
                   <>
                     <Button
                       onClick={handleGenerate3D}
-                      disabled={generating3D}
+                      disabled={isGenerating3D}
                       size="sm"
                       variant="outline"
                       className="w-full gap-2"
                     >
-                      {generating3D ? (
+                      {isGenerating3D ? (
                         <>
                           <Loader2 className="w-3 h-3 animate-spin" />
                           Generating 3D...
@@ -963,7 +1143,19 @@ export default function ApproveFlow() {
           )}
         </div>
       </div>
+
+      {/* Project Timeline - Source of Truth at Bottom */}
+      <div className="mt-8">
+        <ApproveFlowTimeline 
+          projectCreatedAt={project.created_at}
+          versions={versions}
+          actions={actions}
+          chatMessages={chatMessages}
+          emailLogs={emailLogs}
+          hasMissingFiles={assets.length === 0}
+        />
       </div>
+    </div>
     </MainLayout>
   );
 }
