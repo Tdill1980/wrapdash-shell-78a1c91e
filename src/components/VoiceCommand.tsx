@@ -1,5 +1,5 @@
-import { Mic } from "lucide-react";
-import { useState } from "react";
+import { Mic, X, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface VoiceCommandProps {
@@ -8,7 +8,23 @@ interface VoiceCommandProps {
 
 export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
   const [isRecording, setIsRecording] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const { toast } = useToast();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to collapse
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isExpanded]);
 
   const handleMouseDown = () => {
     setIsRecording(true);
@@ -130,57 +146,88 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
   };
 
   return (
-    <div className="sticky top-0 z-50 bg-gradient-to-r from-[#0A0A0F] via-[#121218] to-[#16161E] border-b border-border/30 backdrop-blur-sm">
-      <div className="px-4 py-4 space-y-3">
-        {/* Header with branding */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-gradient-to-r from-[#8FD3FF] to-[#0047FF]">
-              <Mic className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold bg-gradient-to-r from-[#8FD3FF] via-[#6AB9FF] to-[#0047FF] bg-clip-text text-transparent">
-                VoiceCommand AI™
-              </h3>
-              <p className="text-[10px] text-muted-foreground">Powered by MightyCustomer</p>
-            </div>
-          </div>
-          {isRecording && (
-            <span className="text-xs text-primary font-medium animate-pulse">
-              ● RECORDING
-            </span>
-          )}
-        </div>
-
-        {/* Instructions */}
-        <div className="bg-[#0F0F14] border border-border/40 rounded-lg p-3">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <span className="text-foreground font-semibold">Hold down</span> the button below and speak naturally. 
-            Include <span className="text-foreground">vehicle details, customer info, service type,</span> and any special requests. 
-            Release when finished — fields auto-populate instantly.
-          </p>
-        </div>
-
-        {/* Voice Button */}
+    <div ref={containerRef} className="fixed top-4 right-4 z-50">
+      {!isExpanded ? (
+        // Collapsed Badge
         <button
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onTouchStart={handleMouseDown}
-          onTouchEnd={handleMouseUp}
-          className={`w-full px-3 py-2.5 rounded-lg border transition-all duration-200 ${
-            isRecording
-              ? "bg-gradient-to-r from-[#8FD3FF]/10 via-[#6AB9FF]/10 to-[#0047FF]/10 border-[#0047FF] shadow-[0_0_16px_rgba(0,71,255,0.25)]"
-              : "bg-[#0F0F14] border-border/40 hover:border-[#0047FF]/60 hover:bg-[#141419]"
-          }`}
+          onClick={() => setIsExpanded(true)}
+          className="group flex items-center gap-2 px-4 py-2 rounded-full 
+                     bg-gradient-to-r from-primary/90 to-accent/90 
+                     hover:from-primary hover:to-accent
+                     shadow-lg shadow-primary/30 hover:shadow-primary/50
+                     backdrop-blur-md border border-white/10
+                     transition-all duration-300 hover:scale-105"
         >
-          <div className="flex items-center justify-center gap-2">
-            <Mic className={`w-4 h-4 ${isRecording ? "text-[#0047FF] animate-pulse" : "text-muted-foreground"}`} />
-            <span className="text-xs text-foreground font-medium">
-              {isRecording ? "Listening... Release when done" : "Hold & Speak"}
+          <Sparkles className="h-4 w-4 text-white animate-pulse" />
+          <div className="flex flex-col items-start">
+            <span className="text-sm font-semibold text-white">
+              VoiceCommand AI™
+            </span>
+            <span className="text-[10px] text-white/70">
+              Powered by MightyCustomer
             </span>
           </div>
+          <Mic className="h-4 w-4 text-white ml-1" />
         </button>
-      </div>
+      ) : (
+        // Expanded Panel
+        <div className="w-80 bg-[#232833] border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden animate-scale-in">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-primary/20 to-accent/20 border-b border-white/10 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+                  <Mic className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">VoiceCommand AI™</h3>
+                  <p className="text-[10px] text-white/60">Powered by MightyCustomer</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 
+                           flex items-center justify-center transition-colors"
+              >
+                <X className="h-4 w-4 text-white/70" />
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 space-y-3">
+            <p className="text-xs text-white/70 text-center">
+              Hold the button and speak your quote details
+            </p>
+            
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+              <p className="text-[11px] text-white/80 text-center leading-relaxed">
+                💡 Say: "2024 Chevy Tahoe full wrap customer John Smith phone 555-1234"
+              </p>
+            </div>
+
+            <button
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleMouseDown}
+              onTouchEnd={handleMouseUp}
+              className={`
+                w-full px-6 py-3 rounded-lg font-semibold text-white text-sm
+                transition-all duration-200 shadow-lg
+                ${isRecording 
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 scale-105 shadow-red-500/50 animate-pulse' 
+                  : 'bg-gradient-to-r from-primary to-accent hover:scale-105 hover:shadow-primary/50'
+                }
+              `}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Mic className="h-4 w-4" />
+                <span>{isRecording ? '🎤 Listening...' : '🎙️ Hold & Speak'}</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
