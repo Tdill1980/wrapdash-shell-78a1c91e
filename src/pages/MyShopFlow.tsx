@@ -13,34 +13,23 @@ export default function MyShopFlow() {
   const [orderNumber, setOrderNumber] = useState("");
 
   useEffect(() => {
-    // Try to get order number from URL query param first
+    // Try to get order number from URL query param
     const orderParam = searchParams.get('order');
     
     if (orderParam) {
-      // Store in sessionStorage for future visits
-      sessionStorage.setItem('customer_order_number', orderParam);
-      // Redirect to tracking page
+      // Redirect to tracking page if order is in URL
       navigate(`/track/${orderParam}`, { replace: true });
       return;
     }
 
-    // If not in URL, check sessionStorage
-    const storedOrder = sessionStorage.getItem('customer_order_number');
-    
-    if (storedOrder) {
-      // Redirect to tracking page
-      navigate(`/track/${storedOrder}`, { replace: true });
-      return;
-    }
-
-    // No order number found - show lookup form
+    // Show lookup form
     setLoading(false);
   }, [searchParams, navigate]);
 
   const handleLookup = () => {
-    if (orderNumber.trim()) {
-      sessionStorage.setItem('customer_order_number', orderNumber.trim());
-      navigate(`/track/${orderNumber.trim()}`);
+    const trimmedOrder = orderNumber.trim();
+    if (trimmedOrder) {
+      navigate(`/track/${trimmedOrder}`);
     }
   };
 
@@ -60,23 +49,32 @@ export default function MyShopFlow() {
   return (
     <MainLayout userName="Customer">
       <div className="w-full min-h-[60vh] flex items-center justify-center">
-        <Card className="p-12 text-center max-w-md">
-          <h2 className="text-2xl font-bold mb-4">Track Your Order</h2>
-          <p className="text-muted-foreground mb-6">
-            Enter your order number to view your order status
-          </p>
+        <Card className="p-12 text-center max-w-lg w-full mx-4">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold mb-2 font-['Poppins']">
+              <span className="text-white">My </span>
+              <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">ShopFlow</span>
+              <span className="text-[10px] align-super opacity-70">™</span>
+            </h1>
+            <p className="text-muted-foreground">
+              Track your wrap order in real-time
+            </p>
+          </div>
+          
           <div className="flex gap-2 mb-6">
             <Input
               type="text"
-              placeholder="Order Number (e.g., 33223)"
+              placeholder="Enter Order Number (e.g., 33223)"
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleLookup()}
+              className="text-lg h-12"
             />
-            <Button onClick={handleLookup}>
-              <Search className="w-4 h-4" />
+            <Button onClick={handleLookup} size="lg" className="px-6">
+              <Search className="w-5 h-5" />
             </Button>
           </div>
+          
           <p className="text-sm text-muted-foreground">
             Need help? <a href="mailto:support@weprintwraps.com" className="text-primary hover:underline">Contact Support</a>
           </p>
