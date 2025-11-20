@@ -1,4 +1,4 @@
-import { Upload, AlertTriangle } from "lucide-react";
+import { Upload, AlertTriangle, Mail } from "lucide-react";
 import { FileThumbnail } from "./FileThumbnail";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
@@ -11,6 +11,7 @@ interface UploadedFilesCardProps {
   orderId?: string;
   onFileUpload?: (files: FileList) => void;
   uploading?: boolean;
+  orderStatus?: string;
 }
 
 export const UploadedFilesCard = ({ 
@@ -20,7 +21,8 @@ export const UploadedFilesCard = ({
   internalMode = false,
   orderId,
   onFileUpload,
-  uploading = false
+  uploading = false,
+  orderStatus
 }: UploadedFilesCardProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +60,20 @@ export const UploadedFilesCard = ({
               </a>
             </div>
           ))}
+        </div>
+      ) : orderStatus === 'dropbox-link-sent' ? (
+        <div className="p-6 bg-blue-500/10 border-2 border-blue-400/50 rounded-xl">
+          <div className="flex items-center gap-3">
+            <Mail className="w-6 h-6 text-blue-400 flex-shrink-0" />
+            <div>
+              <h4 className="text-blue-400 font-semibold text-lg">
+                Dropbox Link Sent
+              </h4>
+              <p className="text-white/70 text-sm mt-1">
+                We've sent you a Dropbox link to upload your design files. Please check your email.
+              </p>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="p-6 bg-orange-500/10 border-2 border-orange-500/30 rounded-xl">

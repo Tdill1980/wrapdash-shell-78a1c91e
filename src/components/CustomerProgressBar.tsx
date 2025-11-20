@@ -1,12 +1,13 @@
-import { Package, Upload, CheckCircle, Eye, Printer, Scissors, Truck } from "lucide-react";
+import { Package, Upload, CheckCircle, Eye, Printer, Scissors, Truck, Mail } from "lucide-react";
 
 const CUSTOMER_STEPS = [
   { label: "Order Received", icon: Package },
+  { label: "Dropbox Link Sent", icon: Mail },
   { label: "Files Received", icon: Upload },
   { label: "Preflight", icon: CheckCircle },
   { label: "Awaiting Approval", icon: Eye },
   { label: "Print Production", icon: Printer },
-  { label: "In Production", icon: Scissors },
+  { label: "Being Quality Checked", icon: CheckCircle },
   { label: "Ready/Shipped", icon: Truck },
 ];
 
@@ -19,11 +20,12 @@ export const CustomerProgressBar = ({ currentStatus }: CustomerProgressBarProps)
   const statusMap: Record<string, string> = {
     "order_received": "Order Received",
     "awaiting_payment": "Order Received",
+    "dropbox-link-sent": "Dropbox Link Sent",
     "in_design": "Files Received",
     "action_required": "Files Received",
     "awaiting_approval": "Awaiting Approval",
     "preparing_for_print": "Print Production",
-    "in_production": "In Production",
+    "in_production": "Being Quality Checked",
     "ready_or_shipped": "Ready/Shipped",
     "completed": "Ready/Shipped"
   };
