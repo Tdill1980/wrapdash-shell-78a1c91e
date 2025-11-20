@@ -14,6 +14,7 @@ import { QRCodeGenerator } from '../components/QRCodeGenerator';
 import { SalesChart } from '../components/SalesChart';
 import { SalesBreakdown } from '../components/SalesBreakdown';
 import { ProductCard } from '../components/ProductCard';
+import { ProductCommissionCards } from '../components/ProductCommissionCards';
 import { AffiliateHeader } from '../components/AffiliateHeader';
 import { LogOut } from 'lucide-react';
 
@@ -109,6 +110,11 @@ export const AffiliateDashboard = () => {
 
         {/* Stats Cards */}
         <StatsCards stats={stats} loading={statsLoading} />
+
+        {/* Product Performance Breakdown */}
+        <div className="mt-8">
+          <ProductCommissionCards commissions={commissions} />
+        </div>
 
         {/* Product Commission Cards */}
         <div className="mt-8">
