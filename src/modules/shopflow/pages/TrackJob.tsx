@@ -126,16 +126,49 @@ export default function TrackJob() {
     </MainLayout>
   );
 
-  const internalStatus = wooToInternalStatus[order.status] || "order_received";
   const files = (order.files as any[]) || [];
   const missingFiles = ((order as any).missing_file_list as any) || [];
   const fileErrors = ((order as any).file_error_details as any) || [];
+  
+  // Build timeline from actual order timeline data
+  const orderTimeline = (order.timeline as Record<string, string>) || {};
   const timeline = [
-    { label: "Order Received", timestamp: order.created_at, completed: true },
-    { label: "Files Received", timestamp: "", completed: internalStatus !== "order_received" },
-    { label: "Awaiting Approval", timestamp: "", completed: ["preparing_for_print", "in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
-    { label: "Print Production", timestamp: "", completed: ["in_production", "ready_or_shipped", "completed"].includes(internalStatus) },
-    { label: "Ready/Shipped", timestamp: order.shipped_at || "", completed: ["ready_or_shipped", "completed"].includes(internalStatus) },
+    { 
+      label: "Order Received", 
+      timestamp: order.created_at, 
+      completed: true,
+      status: "Order created in system"
+    },
+    { 
+      label: "Dropbox Link Sent", 
+      timestamp: orderTimeline["dropbox-link-sent"] || orderTimeline["dropbox_link_sent"] || "", 
+      completed: !!orderTimeline["dropbox-link-sent"] || !!orderTimeline["dropbox_link_sent"],
+      status: "Dropbox link sent to customer"
+    },
+    { 
+      label: "Files Received", 
+      timestamp: files.length > 0 ? files[0].uploaded_at : (orderTimeline["order_received"] || orderTimeline["in-design"] || ""), 
+      completed: files.length > 0 || !!orderTimeline["in-design"],
+      status: "Customer files received"
+    },
+    { 
+      label: "In Design/Prep", 
+      timestamp: orderTimeline["in-design"] || orderTimeline["ready-for-print"] || orderTimeline["pre-press"] || "", 
+      completed: !!orderTimeline["in-design"] || !!orderTimeline["ready-for-print"] || !!orderTimeline["pre-press"],
+      status: "Files being prepared"
+    },
+    { 
+      label: "Print Production", 
+      timestamp: orderTimeline["print-production"] || orderTimeline["printing"] || orderTimeline["lamination"] || orderTimeline["finishing"] || "", 
+      completed: !!orderTimeline["print-production"] || !!orderTimeline["printing"] || !!orderTimeline["lamination"] || !!orderTimeline["finishing"],
+      status: "In production"
+    },
+    { 
+      label: "Ready/Shipped", 
+      timestamp: orderTimeline["ready-for-pickup"] || orderTimeline["shipped"] || orderTimeline["completed"] || order.shipped_at || "", 
+      completed: !!orderTimeline["ready-for-pickup"] || !!orderTimeline["shipped"] || !!orderTimeline["completed"] || !!order.shipped_at,
+      status: order.shipped_at ? "Shipped" : "Ready for pickup"
+    },
   ];
 
   return (
@@ -160,9 +193,9 @@ export default function TrackJob() {
           uploading={uploading}
           orderStatus={order.status}
         />
-        <CurrentStageCard order={{ customer_stage: internalStatus }} />
-        <NextStepCard order={{ customer_stage: internalStatus }} />
-        <ActionRequiredCard order={{ customer_stage: internalStatus, file_error_details: fileErrors, missing_file_list: missingFiles }} />
+        <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
+        <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
+        <ActionRequiredCard order={{ customer_stage: order.customer_stage || order.status, file_error_details: fileErrors, missing_file_list: missingFiles }} />
         <OrderSummaryCard order={order} />
         <div className="text-center py-8 text-muted-foreground text-sm">
           Powered by <span className="text-primary">WrapCommand™</span> — Real-time wrap order tracking for peace of mind.
