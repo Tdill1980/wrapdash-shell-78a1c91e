@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Check, ExternalLink } from "lucide-react";
 import { emailTones } from "@/lib/mightymail-tones";
+import { EmailPreviewDialog } from "./EmailPreviewDialog";
 
 const tones = Object.values(emailTones).map(tone => ({
   id: tone.id,
@@ -14,8 +16,37 @@ const tones = Object.values(emailTones).map(tone => ({
 
 export default function ToneStyles() {
   const [selected, setSelected] = useState("installer");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTone, setPreviewTone] = useState("");
+
+  const handlePreview = (toneId: string) => {
+    setPreviewTone(toneId);
+    setPreviewOpen(true);
+  };
+
+  // Sample quote data for preview
+  const sampleQuoteData = {
+    customerName: "John Smith",
+    vehicleYear: "2023",
+    vehicleMake: "Ford",
+    vehicleModel: "Bronco",
+    productName: "Full Wrap",
+    sqft: 250,
+    materialCost: 1500,
+    laborCost: 2000,
+    total: 3500,
+    portalUrl: "#",
+  };
 
   return (
+    <>
+      <EmailPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        quoteData={sampleQuoteData}
+        tone={previewTone}
+      />
+    
     <Card className="bg-[#16161E] border-[rgba(255,255,255,0.06)]">
       <CardHeader>
         <CardTitle className="text-foreground">Writing Tone Presets</CardTitle>
@@ -39,9 +70,24 @@ export default function ToneStyles() {
                 <Check className="absolute top-6 right-6 text-[#00AFFF]" size={20} />
               )}
               
-              <div className="mb-3">
-                <h3 className="text-lg font-semibold text-foreground">{tone.label}</h3>
-                <p className="text-sm text-muted-foreground">{tone.description}</p>
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">{tone.label}</h3>
+                  <p className="text-sm text-muted-foreground">{tone.description}</p>
+                </div>
+                
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePreview(tone.id);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs"
+                >
+                  <ExternalLink size={14} />
+                  View Online
+                </Button>
               </div>
               
               <div className="p-4 bg-background/50 rounded-lg border border-white/5">
@@ -52,5 +98,6 @@ export default function ToneStyles() {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
