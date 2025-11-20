@@ -22,13 +22,23 @@ serve(async (req) => {
       finishType,
       hasMetallicFlakes,
       customDesignUrl,
+      designUrl,
       angle = "hero"
     } = await req.json();
 
-    // Validate required fields
-    if (!vehicleMake || !vehicleModel || !vehicleType || !colorHex || !finishType) {
+    // For ApproveFlow projects without vehicle details, use generic vehicle rendering
+    const isApproveFlowMode = !vehicleMake && designUrl;
+    
+    if (!isApproveFlowMode && (!vehicleMake || !vehicleModel || !vehicleType || !colorHex || !finishType)) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields for standard render mode" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (isApproveFlowMode && !designUrl) {
+      return new Response(
+        JSON.stringify({ error: "Design URL required for ApproveFlow mode" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -43,29 +53,49 @@ serve(async (req) => {
     }
 
     // Build the rendering prompt
-    let prompt = `Ultra photorealistic 3D render: ${vehicleYear || ""} ${vehicleMake} ${vehicleModel} ${vehicleType} with professional automotive vinyl wrap in ${colorName || colorHex} color (hex: ${colorHex}). `;
+    let prompt;
     
-    // Add finish details
-    prompt += `${finishType.charAt(0).toUpperCase() + finishType.slice(1)} finish${hasMetallicFlakes ? " with metallic flakes that shimmer in the light" : ""}. `;
-    
-    // Add custom design if present
-    if (customDesignUrl) {
-      prompt += "The wrap features a custom printed design overlay. ";
+    if (isApproveFlowMode) {
+      // Generic vehicle rendering for ApproveFlow projects
+      const angleDetails = {
+        hero: "Front 3/4 view in a modern showroom with professional studio lighting. Dramatic shadows and highlights showcase the wrap perfectly.",
+        side: "Perfect side profile view on a reflective surface with soft studio lighting that emphasizes the wrap's design.",
+        rear: "Rear 3/4 view with backlit atmosphere, highlighting the complete wrap coverage.",
+        detail: "Close-up detail shot focusing on the wrap design, showing texture and quality under natural lighting."
+      };
+      
+      prompt = `Ultra photorealistic 3D render of a modern vehicle with the custom wrap design applied. `;
+      prompt += `The wrap should cover the entire vehicle professionally. `;
+      prompt += angleDetails[angle as keyof typeof angleDetails] || angleDetails.hero;
+      prompt += ` Professional automotive photography, 8K resolution, ray-traced reflections, highly detailed. Apply this exact wrap design to the vehicle.`;
+    } else {
+      // Standard rendering with full vehicle details
+      prompt = `Ultra photorealistic 3D render: ${vehicleYear || ""} ${vehicleMake} ${vehicleModel} ${vehicleType} with professional automotive vinyl wrap in ${colorName || colorHex} color (hex: ${colorHex}). `;
+      
+      // Add finish details
+      prompt += `${finishType.charAt(0).toUpperCase() + finishType.slice(1)} finish${hasMetallicFlakes ? " with metallic flakes that shimmer in the light" : ""}. `;
+      
+      // Add custom design if present
+      if (customDesignUrl) {
+        prompt += "The wrap features a custom printed design overlay. ";
+      }
+      
+      // Add angle-specific details
+      const angleDetails = {
+        hero: "Front 3/4 view in a modern showroom with professional studio lighting. Dramatic shadows and highlights showcase the wrap's finish perfectly.",
+        side: "Perfect side profile view on a reflective surface with soft studio lighting that emphasizes the wrap's texture and color depth.",
+        rear: "Rear 3/4 view with backlit atmosphere, highlighting the wrap coverage and color consistency across all panels.",
+        detail: "Close-up detail shot focusing on body panel with the vinyl wrap, showing texture, finish quality, and color accuracy under natural lighting."
+      };
+      
+      prompt += angleDetails[angle as keyof typeof angleDetails] || angleDetails.hero;
+      prompt += " Professional automotive photography, 8K resolution, ray-traced reflections, highly detailed.";
     }
-    
-    // Add angle-specific details
-    const angleDetails = {
-      hero: "Front 3/4 view in a modern showroom with professional studio lighting. Dramatic shadows and highlights showcase the wrap's finish perfectly.",
-      side: "Perfect side profile view on a reflective surface with soft studio lighting that emphasizes the wrap's texture and color depth.",
-      rear: "Rear 3/4 view with backlit atmosphere, highlighting the wrap coverage and color consistency across all panels.",
-      detail: "Close-up detail shot focusing on body panel with the vinyl wrap, showing texture, finish quality, and color accuracy under natural lighting."
-    };
-    
-    prompt += angleDetails[angle as keyof typeof angleDetails] || angleDetails.hero;
-    prompt += " Professional automotive photography, 8K resolution, ray-traced reflections, highly detailed.";
 
-    console.log(`Generating ${angle} render for ${vehicleMake} ${vehicleModel} in ${colorName}`);
+    const logName = isApproveFlowMode ? "ApproveFlow design" : `${vehicleMake} ${vehicleModel}`;
+    console.log(`Generating ${angle} render for ${logName}`);
 
+    const inputImageUrl = isApproveFlowMode ? designUrl : customDesignUrl;
     const messages: any[] = [
       {
         role: "system",
@@ -73,9 +103,9 @@ serve(async (req) => {
       },
       {
         role: "user",
-        content: customDesignUrl ? [
+        content: inputImageUrl ? [
           { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: customDesignUrl } }
+          { type: "image_url", image_url: { url: inputImageUrl } }
         ] : prompt
       }
     ];

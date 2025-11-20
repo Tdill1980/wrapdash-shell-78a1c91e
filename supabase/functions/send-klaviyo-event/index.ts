@@ -39,6 +39,7 @@ serve(async (req) => {
         'Authorization': `Klaviyo-API-Key ${KLAVIYO_API_KEY}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'revision': '2024-10-15',
       },
       body: JSON.stringify(payload),
     });
