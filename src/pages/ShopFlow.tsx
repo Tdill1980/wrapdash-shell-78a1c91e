@@ -6,6 +6,7 @@ import { useShopFlow } from "@/hooks/useShopFlow";
 import { ShopFlowKanban, ShopFlowTable } from "@/modules/shopflow";
 import { LayoutGrid, Table, RefreshCw, Loader2, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { MainLayout } from "@/layouts/MainLayout";
 
 type ViewMode = "kanban" | "table";
 
@@ -28,7 +29,8 @@ export default function ShopFlow() {
 
   if (loading) {
     return (
-      <div className="space-y-6 w-full">
+      <MainLayout userName="Admin">
+        <div className="w-full space-y-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight font-poppins">
               <span className="text-foreground">Shop</span>
@@ -45,12 +47,14 @@ export default function ShopFlow() {
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           <p className="text-muted-foreground mt-4">Loading orders...</p>
         </Card>
-      </div>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 w-full">
+    <MainLayout userName="Admin">
+      <div className="w-full space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight font-poppins">
@@ -135,6 +139,7 @@ export default function ShopFlow() {
       ) : (
         <ShopFlowTable orders={filteredOrders} />
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }
