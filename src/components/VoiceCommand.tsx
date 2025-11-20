@@ -146,28 +146,23 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
   };
 
   return (
-    <div ref={containerRef} className="fixed top-4 right-4 z-50">
+    <div ref={containerRef} className="absolute top-4 right-4 z-50">
       {!isExpanded ? (
         // Collapsed Badge
         <button
           onClick={() => setIsExpanded(true)}
-          className="group flex items-center gap-2 px-4 py-2 rounded-full 
+          className="group flex items-center gap-1.5 px-3 py-1.5 rounded-full 
                      bg-gradient-to-r from-primary/90 to-accent/90 
                      hover:from-primary hover:to-accent
                      shadow-lg shadow-primary/30 hover:shadow-primary/50
                      backdrop-blur-md border border-white/10
                      transition-all duration-300 hover:scale-105"
         >
-          <Sparkles className="h-4 w-4 text-white animate-pulse" />
-          <div className="flex flex-col items-start">
-            <span className="text-sm font-semibold text-white">
-              VoiceCommand AI™
-            </span>
-            <span className="text-[10px] text-white/70">
-              Powered by MightyCustomer
-            </span>
-          </div>
-          <Mic className="h-4 w-4 text-white ml-1" />
+          <Sparkles className="h-3 w-3 text-white animate-pulse" />
+          <span className="text-xs font-semibold text-white">
+            VoiceCommand AI™
+          </span>
+          <Mic className="h-3 w-3 text-white" />
         </button>
       ) : (
         // Expanded Panel
@@ -176,13 +171,10 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
           <div className="bg-gradient-to-r from-primary/20 to-accent/20 border-b border-white/10 px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
-                  <Mic className="h-4 w-4 text-white" />
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+                  <Mic className="h-3.5 w-3.5 text-white" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">VoiceCommand AI™</h3>
-                  <p className="text-[10px] text-white/60">Powered by MightyCustomer</p>
-                </div>
+                <h3 className="text-sm font-bold text-white">VoiceCommand AI™</h3>
               </div>
               <button
                 onClick={() => setIsExpanded(false)}

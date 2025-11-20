@@ -305,8 +305,6 @@ export default function MightyCustomer() {
   return (
     <MainLayout userName="Admin">
       <div className="w-full space-y-6">
-        <VoiceCommand onTranscript={handleVoiceTranscript} />
-        
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             MightyCustomer™
@@ -314,7 +312,8 @@ export default function MightyCustomer() {
           <p className="text-muted-foreground">Quote Builder & Order Management</p>
         </div>
 
-        <Card className="dashboard-card p-6 space-y-6">
+        <Card className="dashboard-card p-6 space-y-6 relative">
+          <VoiceCommand onTranscript={handleVoiceTranscript} />
           <div className="space-y-4">
             <Label className="text-lg font-semibold">Select Category</Label>
             <div className="flex gap-2 overflow-x-auto pb-2">
