@@ -101,7 +101,6 @@ export default function FadeWraps() {
       <div className="space-y-6 w-full">
         <div className="min-h-screen bg-background p-6">
           <div className="space-y-6">
-      <div className="space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold">
             <span className="text-white">Fade</span>

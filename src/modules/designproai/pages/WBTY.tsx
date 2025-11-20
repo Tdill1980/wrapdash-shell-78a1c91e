@@ -85,8 +85,10 @@ export default function WBTY() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <MainLayout>
+      <div className="space-y-6 w-full">
+        <div className="min-h-screen bg-background p-6">
+          <div className="space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold">
             <span className="text-white">WBTY</span>
@@ -185,7 +187,9 @@ export default function WBTY() {
             </Card>
           </div>
         </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

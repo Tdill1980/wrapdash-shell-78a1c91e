@@ -11,6 +11,7 @@ import { VehicleSelector } from "../components/VehicleSelector";
 import { FinishSelector } from "../components/FinishSelector";
 import { ColorDropdown } from "../components/ColorDropdown";
 import { getColorById } from "../lib/infusion-colors";
+import { MainLayout } from "@/layouts/MainLayout";
 
 const VEHICLE_PANELS = [
   { id: "hood", label: "Hood" },
@@ -107,8 +108,10 @@ export default function DesignPanelPro() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <MainLayout>
+      <div className="space-y-6 w-full">
+        <div className="min-h-screen bg-background p-6">
+          <div className="space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold">
             <span className="text-white">Design</span>
@@ -213,7 +216,9 @@ export default function DesignPanelPro() {
             </Card>
           </div>
         </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }
