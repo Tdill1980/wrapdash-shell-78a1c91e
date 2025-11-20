@@ -28,6 +28,7 @@ import Portfolio from "./pages/Portfolio";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import ProductAdmin from "./pages/ProductAdmin";
 import DesignVaultAdmin from "./pages/DesignVaultAdmin";
+import DashboardHeroAdmin from "./pages/DashboardHeroAdmin";
 import Auth from "./pages/Auth";
 import Signup from "./pages/Signup";
 import UserManagement from "./pages/UserManagement";
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />
             <Route path="/admin/designvault" element={<DesignVaultAdmin />} />
+            <Route path="/admin/dashboard-hero" element={<DashboardHeroAdmin />} />
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
