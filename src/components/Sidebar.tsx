@@ -83,7 +83,7 @@ const navigationItems = [
   },
   { 
     name: "Your ShopFlow", 
-    path: "/track/33219", 
+    path: "/my-shopflow", 
     icon: ShoppingCart,
     customRender: (
       <span className="font-medium">

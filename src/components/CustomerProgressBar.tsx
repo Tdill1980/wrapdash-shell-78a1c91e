@@ -13,9 +13,10 @@ const CUSTOMER_STEPS = [
 
 interface CustomerProgressBarProps {
   currentStatus: string;
+  hasApproveFlowProject?: boolean;
 }
 
-export const CustomerProgressBar = ({ currentStatus }: CustomerProgressBarProps) => {
+export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = false }: CustomerProgressBarProps) => {
   // Map internal status to simplified customer stages
   const statusMap: Record<string, string> = {
     "order_received": "Order Received",
@@ -23,7 +24,7 @@ export const CustomerProgressBar = ({ currentStatus }: CustomerProgressBarProps)
     "dropbox-link-sent": "Dropbox Link Sent",
     "in_design": "Files Received",
     "action_required": "Files Received",
-    "awaiting_approval": "Awaiting Approval",
+    "awaiting_approval": hasApproveFlowProject ? "Awaiting Approval" : "Files Sent to Print",
     "preparing_for_print": "Print Production",
     "in_production": "Being Quality Checked",
     "ready_or_shipped": "Ready/Shipped",
@@ -31,7 +32,16 @@ export const CustomerProgressBar = ({ currentStatus }: CustomerProgressBarProps)
   };
 
   const displayStatus = statusMap[currentStatus] || "Order Received";
-  const currentIndex = CUSTOMER_STEPS.findIndex(step => 
+  
+  // Update steps dynamically based on whether ApproveFlow is active
+  const steps = CUSTOMER_STEPS.map(step => {
+    if (step.label === "Awaiting Approval" && !hasApproveFlowProject) {
+      return { label: "Files Sent to Print", icon: step.icon };
+    }
+    return step;
+  });
+
+  const currentIndex = steps.findIndex(step => 
     step.label === displayStatus
   );
 
@@ -39,7 +49,7 @@ export const CustomerProgressBar = ({ currentStatus }: CustomerProgressBarProps)
     <div className="w-full py-6 bg-[#0A0A0F]">
       {/* Progress icons with labels */}
       <div className="flex items-center justify-between gap-2 px-4 overflow-x-auto">
-        {CUSTOMER_STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const active = i <= currentIndex;
           const Icon = step.icon;
           

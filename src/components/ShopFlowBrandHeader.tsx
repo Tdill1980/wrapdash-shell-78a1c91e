@@ -10,14 +10,21 @@ export const ShopFlowBrandHeader = () => {
         />
       </div>
 
-      {/* ShopFlow Title */}
-      <h1 className="text-3xl font-extrabold text-white tracking-wide px-4 mt-3 font-['Poppins']">
-        ShopFlow™
+      {/* ShopFlow Title with Gradient */}
+      <h1 className="text-4xl font-extrabold tracking-wide px-4 mt-3 font-['Poppins']">
+        <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">
+          ShopFlow™
+        </span>
       </h1>
+
+      {/* Description */}
+      <p className="text-white/70 text-sm px-4 mt-2 max-w-2xl">
+        Real-time order tracking from print to delivery. Watch your project move through each stage of production with complete transparency.
+      </p>
 
       {/* Gradient Bar for 'for WePrintWraps.com' */}
       <div 
-        className="w-full py-2 px-4 text-white font-semibold tracking-wide text-sm mt-2 bg-gradient-primary"
+        className="w-full py-2 px-4 text-white font-semibold tracking-wide text-sm mt-4 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF]"
       >
         for WePrintWraps.com
       </div>
