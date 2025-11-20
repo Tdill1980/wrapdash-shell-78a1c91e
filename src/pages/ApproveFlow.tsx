@@ -516,11 +516,35 @@ export default function ApproveFlow() {
                       size="sm"
                       variant="outline"
                       className="w-full gap-2 border-primary/50 hover:bg-primary/10"
-                      onClick={() => {
-                        toast({
-                          title: "Email Proof Feature",
-                          description: "This feature will be enabled soon",
-                        });
+                      onClick={async () => {
+                        try {
+                          const portalUrl = `${window.location.origin}/approveflow/${urlProjectId}`;
+                          const { error } = await supabase.functions.invoke('send-approveflow-proof', {
+                            body: {
+                              projectId: urlProjectId,
+                              customerEmail: project.customer_email,
+                              customerName: project.customer_name,
+                              orderNumber: project.order_number,
+                              proofUrl: latestVersion.file_url,
+                              renderUrls: latestRenderUrls,
+                              portalUrl: portalUrl,
+                            }
+                          });
+                          
+                          if (error) throw error;
+                          
+                          toast({
+                            title: "Proof sent!",
+                            description: `Email sent to ${project.customer_email}`,
+                          });
+                        } catch (error: any) {
+                          console.error('Error sending proof:', error);
+                          toast({
+                            title: "Failed to send proof",
+                            description: error.message || "Please try again",
+                            variant: "destructive",
+                          });
+                        }
                       }}
                     >
                       <Mail className="w-3 h-3" />
@@ -534,7 +558,12 @@ export default function ApproveFlow() {
 
           {/* Design Requirements */}
           <Card className="p-4 bg-card border-border">
-            <h3 className="text-sm font-semibold mb-2 text-gradient">Design Requirements</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-gradient">Design Requirements</h3>
+              <span className="text-[10px] text-muted-foreground">
+                {format(new Date(project.created_at), 'MMM d, yyyy h:mm a')}
+              </span>
+            </div>
             {project.design_instructions ? (
               <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.design_instructions}</p>
             ) : (
@@ -542,31 +571,96 @@ export default function ApproveFlow() {
             )}
           </Card>
 
+          {/* Customer Uploaded Files */}
+          {assets.length > 0 && (
+            <Card className="p-4 bg-card border-border">
+              <h3 className="text-sm font-semibold mb-3 text-gradient">Customer Uploaded Files</h3>
+              <div className="space-y-2">
+                {assets.map((asset) => (
+                  <Dialog key={asset.id}>
+                    <div className="flex items-center justify-between p-2 rounded hover:bg-white/5 transition-colors">
+                      <DialogTrigger asChild>
+                        <button className="flex items-center gap-2 text-xs group flex-1 text-left">
+                          <ImageIcon className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                          <span className="flex-1 truncate group-hover:text-primary">
+                            {asset.file_type || 'Customer File'}
+                          </span>
+                          <ZoomIn className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
+                        </button>
+                      </DialogTrigger>
+                      <span className="text-[10px] text-muted-foreground ml-2">
+                        {format(new Date(asset.created_at), 'MMM d, h:mm a')}
+                      </span>
+                    </div>
+                    <DialogContent className="max-w-4xl">
+                      <img src={asset.file_url} alt="Customer file" className="w-full h-auto" />
+                    </DialogContent>
+                  </Dialog>
+                ))}
+              </div>
+            </Card>
+          )}
+
           {/* Version History - Always Visible */}
           <Card className="p-4 bg-card border-border">
             <h3 className="text-sm font-semibold mb-3 text-gradient">Version History</h3>
             {versions.length > 0 ? (
               <div className="space-y-2">
                 {versions.map((v, index) => (
-                  <button
-                    key={v.id}
-                    onClick={() => setSelectedVersion(v.id)}
-                    className={`w-full text-left p-2 rounded text-xs transition-colors ${
+                  <Dialog key={v.id}>
+                    <div className={`w-full text-left p-2 rounded text-xs transition-colors ${
                       selectedVersion === v.id || (selectedVersion === 'latest' && index === 0)
                         ? 'bg-primary/20 border border-primary/50'
                         : 'hover:bg-white/5 border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">Version {v.version_number}</span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {format(new Date(v.created_at), 'MMM d, h:mm a')}
-                      </span>
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold">
+                          Version {v.version_number}
+                          {index === 0 && (
+                            <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest</Badge>
+                          )}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(new Date(v.created_at), 'MMM d, h:mm a')}
+                        </span>
+                      </div>
+                      {v.notes && (
+                        <p className="text-[10px] text-muted-foreground mb-2 truncate">{v.notes}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[10px]"
+                          onClick={() => setSelectedVersion(v.id)}
+                        >
+                          Switch to View
+                        </Button>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[10px]"
+                          >
+                            <ZoomIn className="w-3 h-3 mr-1" />
+                            Enlarge
+                          </Button>
+                        </DialogTrigger>
+                      </div>
                     </div>
-                    {v.notes && (
-                      <p className="text-[10px] text-muted-foreground mt-1 truncate">{v.notes}</p>
-                    )}
-                  </button>
+                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          Version {v.version_number} • {format(new Date(v.created_at), 'MMM d, yyyy h:mm a')}
+                        </p>
+                        <img 
+                          src={v.file_url} 
+                          alt={`Version ${v.version_number}`}
+                          className="w-full h-auto"
+                        />
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 ))}
               </div>
             ) : (
@@ -586,31 +680,6 @@ export default function ApproveFlow() {
               hasMissingFiles={!versions.length}
             />
           </Card>
-
-          {/* Customer Uploaded Files */}
-          {assets.length > 0 && (
-            <Card className="p-4 bg-card border-border">
-              <h3 className="text-sm font-semibold mb-3 text-gradient">Customer Files</h3>
-              <div className="space-y-2">
-                {assets.map((asset) => (
-                  <Dialog key={asset.id}>
-                    <DialogTrigger asChild>
-                      <button className="w-full flex items-center gap-2 p-2 rounded hover:bg-white/5 transition-colors text-xs group">
-                        <ImageIcon className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                        <span className="flex-1 truncate text-left group-hover:text-primary">
-                          {asset.file_type || 'Customer File'}
-                        </span>
-                        <ZoomIn className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
-                      <img src={asset.file_url} alt="Customer file" className="w-full h-auto" />
-                    </DialogContent>
-                  </Dialog>
-                ))}
-              </div>
-            </Card>
-          )}
         </div>
 
         {/* CENTER: Design Proof Viewer */}
@@ -638,11 +707,21 @@ export default function ApproveFlow() {
               )}
             </div>
 
-            <Tabs defaultValue={latestRenderUrls ? "compare" : "2d"} className="w-full">
-              <TabsList className={`grid w-full ${latestRenderUrls ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
-                <TabsTrigger value="2d">2D Draft</TabsTrigger>
-                {latestRenderUrls && <TabsTrigger value="compare">Compare</TabsTrigger>}
-                <TabsTrigger value="3d">3D Render</TabsTrigger>
+            <Tabs defaultValue={latestRenderUrls && activeRole === "designer" ? "compare" : "2d"} className="w-full">
+              <TabsList className={`grid w-full ${latestRenderUrls && activeRole === "designer" ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
+                <TabsTrigger value="2d">
+                  2D Draft
+                  {displayVersion?.version_number === latestVersion?.version_number && (
+                    <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest Design</Badge>
+                  )}
+                </TabsTrigger>
+                {latestRenderUrls && activeRole === "designer" && <TabsTrigger value="compare">Compare</TabsTrigger>}
+                <TabsTrigger value="3d">
+                  3D Render
+                  {latestRenderUrls && (
+                    <Badge className="ml-2 bg-blue-500 text-white text-[10px] px-1.5 py-0">Latest Design</Badge>
+                  )}
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="2d" className="space-y-4">
