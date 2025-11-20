@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
-import { AppLayout } from "@/layouts/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import { Visualize as WrapCloser, InkFusion, DesignPanelPro, FadeWraps, WBTY } from "./modules/designproai";
 import { DesignVault } from "./modules/designvault";
@@ -51,41 +50,41 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
-            <Route path="/wrapcloser" element={<AppLayout><WrapCloser /></AppLayout>} />
-            <Route path="/inkfusion" element={<AppLayout><InkFusion /></AppLayout>} />
-            <Route path="/designpanel" element={<AppLayout><DesignPanelPro /></AppLayout>} />
-            <Route path="/fadewraps" element={<AppLayout><FadeWraps /></AppLayout>} />
-            <Route path="/wbty" element={<AppLayout><WBTY /></AppLayout>} />
-            <Route path="/designvault" element={<AppLayout><DesignVault /></AppLayout>} />
-            <Route path="/designvault/upload" element={<AppLayout><DesignVaultUpload /></AppLayout>} />
-            <Route path="/wrapbox" element={<AppLayout><WrapBox /></AppLayout>} />
-            <Route path="/monthly-drops" element={<AppLayout><MonthlyDrops /></AppLayout>} />
-            <Route path="/design-market" element={<AppLayout><DesignMarket /></AppLayout>} />
-            <Route path="/shopflow" element={<AppLayout><ShopFlow /></AppLayout>} />
-            <Route path="/shopflow/:id" element={<AppLayout><ShopFlowJob /></AppLayout>} />
-            <Route path="/shopflow-internal" element={<AppLayout><ShopFlowInternalList /></AppLayout>} />
-            <Route path="/shopflow-internal/:id" element={<AppLayout><ShopFlowInternal /></AppLayout>} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/wrapcloser" element={<WrapCloser />} />
+            <Route path="/inkfusion" element={<InkFusion />} />
+            <Route path="/designpanel" element={<DesignPanelPro />} />
+            <Route path="/fadewraps" element={<FadeWraps />} />
+            <Route path="/wbty" element={<WBTY />} />
+            <Route path="/designvault" element={<DesignVault />} />
+            <Route path="/designvault/upload" element={<DesignVaultUpload />} />
+            <Route path="/wrapbox" element={<WrapBox />} />
+            <Route path="/monthly-drops" element={<MonthlyDrops />} />
+            <Route path="/design-market" element={<DesignMarket />} />
+            <Route path="/shopflow" element={<ShopFlow />} />
+            <Route path="/shopflow/:id" element={<ShopFlowJob />} />
+            <Route path="/shopflow-internal" element={<ShopFlowInternalList />} />
+            <Route path="/shopflow-internal/:id" element={<ShopFlowInternal />} />
             <Route path="/track/:orderNumber" element={<TrackJob />} />
             <Route path="/track-order/:orderNumber" element={<TrackOrder />} />
-            <Route path="/mighty-customer" element={<AppLayout><MightyCustomer /></AppLayout>} />
-            <Route path="/approveflow" element={<AppLayout><ApproveFlowList /></AppLayout>} />
-            <Route path="/approveflow/:projectId" element={<AppLayout><ApproveFlow /></AppLayout>} />
+            <Route path="/mighty-customer" element={<MightyCustomer />} />
+            <Route path="/approveflow" element={<ApproveFlowList />} />
+            <Route path="/approveflow/:projectId" element={<ApproveFlow />} />
             <Route path="/customer/:projectId" element={<CustomerPortal />} />
-            <Route path="/email-campaigns" element={<AppLayout><MightyMail /></AppLayout>} />
-            <Route path="/admin/mightymail" element={<AppLayout><MightyMailAdmin /></AppLayout>} />
-            <Route path="/admin/mightymail/quotes" element={<AppLayout><MightyMailQuotes /></AppLayout>} />
-            <Route path="/admin/mightymail/performance" element={<AppLayout><MightyMailPerformance /></AppLayout>} />
-            <Route path="/portfolio" element={<AppLayout><Portfolio /></AppLayout>} />
-            <Route path="/admin/pricing" element={<AppLayout><ProductPricingAdmin /></AppLayout>} />
-            <Route path="/admin/products" element={<AppLayout><ProductAdmin /></AppLayout>} />
-            <Route path="/admin/designvault" element={<AppLayout><DesignVaultAdmin /></AppLayout>} />
-            <Route path="/admin/users" element={<AppLayout><UserManagement /></AppLayout>} />
-          <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
-          <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
-          <Route path="/affiliate/signup" element={<AffiliateSignup />} />
-          <Route path="/affiliate/admin" element={<AppLayout><AffiliateAdmin /></AppLayout>} />
-          <Route path="/affiliate/payments" element={<AppLayout><AffiliatePayments /></AppLayout>} />
+            <Route path="/email-campaigns" element={<MightyMail />} />
+            <Route path="/admin/mightymail" element={<MightyMailAdmin />} />
+            <Route path="/admin/mightymail/quotes" element={<MightyMailQuotes />} />
+            <Route path="/admin/mightymail/performance" element={<MightyMailPerformance />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
+            <Route path="/admin/products" element={<ProductAdmin />} />
+            <Route path="/admin/designvault" element={<DesignVaultAdmin />} />
+            <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
+            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+            <Route path="/affiliate/signup" element={<AffiliateSignup />} />
+            <Route path="/affiliate/admin" element={<AffiliateAdmin />} />
+            <Route path="/affiliate/payments" element={<AffiliatePayments />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
