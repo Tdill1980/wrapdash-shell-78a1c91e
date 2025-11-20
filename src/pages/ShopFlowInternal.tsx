@@ -152,7 +152,7 @@ export default function ShopFlowInternal() {
       {/* WooCommerce Status Progress Bar - Internal View */}
       <WooCommerceStatusBar currentStatus={order.status} />
 
-      {/* Main content area - Mirrors Customer Layout */}
+      {/* Main content area - Internal Staff View */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Order & Status Details */}
         <div className="space-y-6">
@@ -167,6 +167,7 @@ export default function ShopFlowInternal() {
             )}
           </div>
           
+          {/* Raw WooCommerce Status - Internal Only */}
           <div className={isDifferent('status', order.status) ? 'ring-2 ring-yellow-500/50 rounded-lg' : ''}>
             <CurrentStageCard status={order.status} />
             {isDifferent('status', order.status) && (
@@ -178,6 +179,7 @@ export default function ShopFlowInternal() {
             )}
           </div>
           
+          {/* Internal Next Steps - Based on Raw Status */}
           <NextStepCard currentStatus={order.status} />
           
           <VehicleInfoCard order={order} />
@@ -189,7 +191,7 @@ export default function ShopFlowInternal() {
           <Card className="p-4 bg-orange-500/5 border-orange-500/20">
             <h3 className="text-sm font-semibold text-orange-500 mb-3 flex items-center gap-2">
               <Activity className="w-4 h-4" />
-              Staff Actions
+              Internal Staff Actions
             </h3>
             <ActionSidebar order={order} />
           </Card>
