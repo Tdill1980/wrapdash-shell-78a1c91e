@@ -136,6 +136,7 @@ const navigationItems = [
     icon: Mail
   },
   { name: "Product Admin", path: "/admin/products", icon: Settings },
+  { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
 ];
 
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
