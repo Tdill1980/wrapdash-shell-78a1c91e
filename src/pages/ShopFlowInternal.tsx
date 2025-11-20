@@ -62,7 +62,7 @@ export default function ShopFlowInternal() {
   if (loading) {
     return (
       <MainLayout userName="Trish">
-        <div className="flex items-center justify-center min-h-screen text-gray-400">
+        <div className="flex items-center justify-center min-h-[50vh] text-muted-foreground">
           Loading internal job…
         </div>
       </MainLayout>
@@ -72,7 +72,7 @@ export default function ShopFlowInternal() {
   if (!order) {
     return (
       <MainLayout userName="Trish">
-        <div className="flex items-center justify-center min-h-screen text-gray-400">
+        <div className="flex items-center justify-center min-h-[50vh] text-muted-foreground">
           Job not found.
         </div>
       </MainLayout>
@@ -100,9 +100,7 @@ export default function ShopFlowInternal() {
 
   return (
     <MainLayout userName="Trish">
-      <div className="min-h-screen">
-        <div className="w-full py-8 px-4">
-
+      <div className="w-full space-y-6">
         <CustomerProgressBar currentStatus={internalStatus} />
         <div className="mb-6"><UploadedFilesCard files={files} missingFiles={missingFiles} fileErrors={fileErrors} internalMode={true} orderId={order.id} /></div>
         <div className="mb-6"><OrderInfoCard order={order} /></div>
@@ -281,8 +279,7 @@ export default function ShopFlowInternal() {
           </div>
 
         </div>
-      </div>
-      </div>
+        </div>
       </div>
     </MainLayout>
   );
