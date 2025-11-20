@@ -12,6 +12,7 @@ export interface ShopFlowOrder {
   customer_name: string;
   customer_email?: string;
   product_type: string;
+  product_image_url?: string | null;
   status: string;
   priority?: string;
   estimated_completion_date?: string;
