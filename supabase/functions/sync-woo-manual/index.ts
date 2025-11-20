@@ -5,8 +5,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Design product IDs that should go to ApproveFlow
-const DESIGN_PRODUCT_IDS = [234, 58160]; // "Custom Vehicle Wrap Design" products
+// Function to check if product is a design product
+function isDesignProduct(productName: string): boolean {
+  const designKeywords = [
+    'Full Vehicle Wrap Design',
+    'Hourly Design',
+    'Custom Vehicle Wrap Design',
+    'Vehicle Wrap Design'
+  ];
+  return designKeywords.some(keyword => 
+    productName.toLowerCase().includes(keyword.toLowerCase())
+  );
+}
 
 /**
  * Normalize WooCommerce status strings to handle variations
@@ -233,16 +243,23 @@ Deno.serve(async (req) => {
 
         // Sync to ApproveFlow (only for design product orders)
         if (target === 'approveflow' || target === 'both') {
-          // Check if order contains design products
+          // Check if order contains design products (by product name)
           let hasDesignProduct = false;
+          let designProductName = '';
+          
           if (order.line_items && Array.isArray(order.line_items)) {
-            hasDesignProduct = order.line_items.some((item: any) => 
-              DESIGN_PRODUCT_IDS.includes(item.product_id)
-            );
+            for (const item of order.line_items) {
+              const itemName = item.name || '';
+              if (isDesignProduct(itemName)) {
+                hasDesignProduct = true;
+                designProductName = itemName;
+                break;
+              }
+            }
           }
 
           if (hasDesignProduct) {
-            console.log(`✅ Design product found in order ${orderNumber} - syncing to ApproveFlow`);
+            console.log(`✅ Design product found in order ${orderNumber}: "${designProductName}" - syncing to ApproveFlow`);
             
             // Check if project already exists
             const { data: existingProject } = await supabase
@@ -258,7 +275,7 @@ Deno.serve(async (req) => {
                   order_number: orderNumber,
                   customer_name: customerName,
                   customer_email: order.billing.email,
-                  product_type: productType,
+                  product_type: designProductName || productType,
                   order_total: parseFloat(order.total),
                   status: 'design_requested',
                   design_instructions: order.customer_note || null,
@@ -275,6 +292,7 @@ Deno.serve(async (req) => {
             }
           } else {
             console.log(`⚠️ Order ${orderNumber} does not contain design products - skipping ApproveFlow sync`);
+            console.log(`   Products in order: ${order.line_items?.map((i: any) => i.name).join(', ')}`);
           }
         }
       } catch (orderError: any) {
