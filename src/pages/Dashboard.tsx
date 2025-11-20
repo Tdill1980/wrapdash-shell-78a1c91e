@@ -36,6 +36,7 @@ import { DashboardCardPreview } from "@/modules/designvault/components/Dashboard
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { MainLayout } from "@/layouts/MainLayout";
+import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -280,9 +281,23 @@ export default function Dashboard() {
     if (qtyMatch) setQuantity(parseInt(qtyMatch[1]));
   };
 
+  // Calculate Quick Wins counts
+  const awaitingApprovalCount = shopflowOrders?.filter(order => order.status === 'awaiting_approval').length || 0;
+  const proofsReadyCount = shopflowOrders?.filter(order => order.approveflow_project_id).length || 0;
+  const activeRendersCount = designs?.slice(0, 5).length || 0;
+  const pendingActionsCount = shopflowOrders?.filter(order => order.status === 'pending' || order.status === 'order_received').length || 0;
+
   return (
     <MainLayout userName="Admin">
       <div className="w-full space-y-6">
+
+      {/* Dashboard Hero Header */}
+      <DashboardHeroHeader 
+        awaitingApprovalCount={awaitingApprovalCount}
+        proofsReadyCount={proofsReadyCount}
+        activeRendersCount={activeRendersCount}
+        pendingActionsCount={pendingActionsCount}
+      />
 
       {/* Product Type Chips */}
       <div className="flex flex-wrap gap-2">
@@ -301,7 +316,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* LEFT: Quote Builder Card */}
         <Card className="dashboard-card">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 relative">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="dashboard-card-title text-lg font-bold font-poppins">
@@ -313,16 +328,13 @@ export default function Dashboard() {
                   Quote & Order Builder
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
+              {/* VoiceCommand Widget - positioned in corner */}
+              <div className="absolute top-3 right-3">
+                <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {/* VoiceCommand Component */}
-            <div className="-mx-6 mb-4">
-              <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
-            </div>
             <div className="space-y-3">
               {/* Category Filter Buttons */}
               <div>

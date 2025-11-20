@@ -1,0 +1,131 @@
+import { useNavigate } from "react-router-dom";
+import { AlertCircle, CheckCircle, Clock, FileText } from "lucide-react";
+import { format } from "date-fns";
+
+interface QuickWinCard {
+  icon: React.ElementType;
+  count: number;
+  label: string;
+  route: string;
+  variant: 'primary' | 'success' | 'warning' | 'info';
+}
+
+interface DashboardHeroHeaderProps {
+  awaitingApprovalCount: number;
+  proofsReadyCount: number;
+  activeRendersCount: number;
+  pendingActionsCount: number;
+}
+
+export function DashboardHeroHeader({
+  awaitingApprovalCount,
+  proofsReadyCount,
+  activeRendersCount,
+  pendingActionsCount,
+}: DashboardHeroHeaderProps) {
+  const navigate = useNavigate();
+
+  const quickWins: QuickWinCard[] = [
+    {
+      icon: AlertCircle,
+      count: awaitingApprovalCount,
+      label: "Orders Awaiting Approval",
+      route: "/shopflow",
+      variant: 'warning',
+    },
+    {
+      icon: CheckCircle,
+      count: proofsReadyCount,
+      label: "Proofs Ready",
+      route: "/approveflow/projects",
+      variant: 'success',
+    },
+    {
+      icon: Clock,
+      count: activeRendersCount,
+      label: "Active Renders",
+      route: "/admin/designvault",
+      variant: 'info',
+    },
+    {
+      icon: FileText,
+      count: pendingActionsCount,
+      label: "Pending Actions",
+      route: "/shopflow",
+      variant: 'primary',
+    },
+  ];
+
+  const getVariantStyles = (variant: QuickWinCard['variant']) => {
+    switch (variant) {
+      case 'warning':
+        return 'bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 text-orange-400';
+      case 'success':
+        return 'bg-green-500/10 border-green-500/30 hover:bg-green-500/20 text-green-400';
+      case 'info':
+        return 'bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 text-blue-400';
+      case 'primary':
+        return 'bg-primary/10 border-primary/30 hover:bg-primary/20 text-primary';
+    }
+  };
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-black/95 via-black/80 to-transparent">
+      {/* Background Image Layer */}
+      <div 
+        className="absolute inset-0 bg-cover bg-right-center opacity-40"
+        style={{
+          backgroundImage: `url('https://images.unsplash.com/photo-1619405399517-d7fce0f13302?w=1920&h=1080&fit=crop')`,
+          backgroundPosition: 'right center',
+        }}
+      />
+      
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-transparent" />
+      
+      {/* Content Layer */}
+      <div className="relative z-10 px-8 py-10">
+        {/* Top Section - Title & Subtitle */}
+        <div className="mb-6">
+          <h1 className="font-poppins text-4xl font-bold leading-tight mb-2">
+            <span className="text-foreground">WrapCentral </span>
+            <span className="text-gradient">Dashboard</span>
+            <span className="text-muted-foreground text-2xl align-super">™</span>
+          </h1>
+          <p className="text-muted-foreground text-sm mb-1">
+            Your Command Center for Wrap Operations
+          </p>
+          <p className="text-muted-foreground/60 text-xs">
+            {format(new Date(), "EEEE, MMMM d, yyyy 'at' h:mm a")}
+          </p>
+        </div>
+
+        {/* Quick Wins Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 max-w-4xl">
+          {quickWins.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.route)}
+                className={`group relative overflow-hidden rounded-xl border p-4 transition-all duration-300 hover:scale-105 ${getVariantStyles(item.variant)}`}
+              >
+                <div className="flex flex-col items-start gap-2">
+                  <Icon className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="text-2xl font-bold font-poppins">
+                      {item.count}
+                    </div>
+                    <div className="text-xs font-medium opacity-80">
+                      {item.label}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
