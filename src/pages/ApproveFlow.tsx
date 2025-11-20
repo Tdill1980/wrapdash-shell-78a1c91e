@@ -457,9 +457,14 @@ export default function ApproveFlow() {
       <Card className="bg-[#1a1a24] border-white/10 mb-6">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">
-              Order #{trackingInfo?.order_number || trackingInfo?.woo_order_number || project.order_number}
-            </h2>
+            <div>
+              <h2 className="text-xl font-semibold text-white">
+                Order #{project.order_number}
+              </h2>
+              <p className="text-sm text-white/60 mt-1">
+                Placed {format(new Date(project.created_at), 'MMM d, yyyy • h:mm a')}
+              </p>
+            </div>
             <Badge className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white border-0">
               {project.status}
             </Badge>
