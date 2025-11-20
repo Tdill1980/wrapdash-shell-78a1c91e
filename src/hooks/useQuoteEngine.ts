@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getVehicleSQFT } from "@/lib/vehicleSqft";
+import { getVehicleSQFTOptions, type VehicleSQFTOptions } from "@/lib/vehicleSqft";
 import { type Product } from "@/hooks/useProducts";
 
 interface Vehicle {
@@ -13,9 +13,11 @@ export function useQuoteEngine(
   vehicle: Vehicle | null,
   quantity: number = 1,
   installRatePerHour: number = 75,
-  margin: number = 65
+  margin: number = 65,
+  includeRoof: boolean = true
 ) {
   const [sqft, setSqft] = useState<number>(0);
+  const [sqftOptions, setSqftOptions] = useState<VehicleSQFTOptions | null>(null);
   const [materialCost, setMaterialCost] = useState(0);
   const [laborCost, setLaborCost] = useState(0);
   const [installHours, setInstallHours] = useState(0);
@@ -23,26 +25,28 @@ export function useQuoteEngine(
   const [marginAmount, setMarginAmount] = useState(0);
   const [total, setTotal] = useState(0);
 
-  // Auto-calculate SQFT when vehicle changes
+  // Auto-calculate SQFT when vehicle or roof option changes
   useEffect(() => {
     if (!vehicle || !vehicle.year || !vehicle.make || !vehicle.model) {
       setSqft(0);
+      setSqftOptions(null);
       return;
     }
 
-    const detectedSQFT = getVehicleSQFT(
+    const options = getVehicleSQFTOptions(
       vehicle.year,
       vehicle.make,
       vehicle.model
     );
 
-    if (detectedSQFT) {
-      setSqft(detectedSQFT);
+    if (options) {
+      setSqftOptions(options);
+      setSqft(includeRoof ? options.withRoof : options.withoutRoof);
     } else {
-      // Keep existing SQFT if no match found (allows manual override)
+      setSqftOptions(null);
       console.log("No SQFT match found for vehicle");
     }
-  }, [vehicle]);
+  }, [vehicle, includeRoof]);
 
   // Calculate costs when SQFT, product, or quantity changes
   useEffect(() => {
@@ -92,6 +96,7 @@ export function useQuoteEngine(
   return {
     sqft,
     setSqft, // Allow manual override
+    sqftOptions,
     materialCost,
     laborCost,
     installHours,
