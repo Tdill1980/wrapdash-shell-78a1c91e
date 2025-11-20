@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { formatFullDateTime, formatShortDate, formatTimeOnly } from "@/lib/timezone-utils";
 import { supabase } from "@/integrations/supabase/client";
 import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -156,7 +156,7 @@ export default function ApproveFlow() {
         const newVersion = payload.new as any;
         toast({
           title: "🎨 New Design Proof Uploaded",
-          description: `Version ${newVersion.version_number} • ${format(new Date(newVersion.created_at), 'h:mm a')}`,
+          description: `Version ${newVersion.version_number} • ${formatTimeOnly(newVersion.created_at)}`,
         });
       })
       .subscribe();
@@ -178,7 +178,7 @@ export default function ApproveFlow() {
         
         toast({
           title,
-          description: format(new Date(newAction.created_at), 'h:mm a'),
+          description: formatTimeOnly(newAction.created_at),
         });
       })
       .subscribe();
@@ -468,7 +468,7 @@ export default function ApproveFlow() {
                 Order #{project.order_number}
               </h2>
               <p className="text-sm text-white/60 mt-1">
-                Placed {format(new Date(project.created_at), 'MMM d, yyyy • h:mm a')}
+                Placed {formatFullDateTime(project.created_at)}
               </p>
             </div>
             <Badge className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white border-0">
@@ -523,7 +523,7 @@ export default function ApproveFlow() {
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-semibold text-gradient">Design Requirements</h3>
               <span className="text-[9px] text-muted-foreground">
-                {format(new Date(project.created_at), 'MMM d, h:mm a')}
+                {formatTimeOnly(project.created_at)} {formatShortDate(project.created_at)}
               </span>
             </div>
             {project.design_instructions ? (
@@ -551,7 +551,7 @@ export default function ApproveFlow() {
                         </button>
                       </DialogTrigger>
                       <span className="text-[9px] text-muted-foreground ml-2">
-                        {format(new Date(asset.created_at), 'MMM d, h:mm a')}
+                        {formatTimeOnly(asset.created_at)} {formatShortDate(asset.created_at)}
                       </span>
                     </div>
                     <DialogContent className="max-w-4xl">
@@ -591,7 +591,7 @@ export default function ApproveFlow() {
                       <p className="text-[10px] text-muted-foreground mb-1 uppercase">{msg.sender}</p>
                       <p>{msg.message}</p>
                       <p className="text-[9px] text-muted-foreground mt-1">
-                        {format(new Date(msg.created_at), 'h:mm a')}
+                        {formatTimeOnly(msg.created_at)}
                       </p>
                     </div>
                   </div>
@@ -788,7 +788,7 @@ export default function ApproveFlow() {
                       <p className="text-muted-foreground">
                         Version {displayVersion.version_number} • 
                         Submitted by {displayVersion.submitted_by} • 
-                        {format(new Date(displayVersion.created_at), 'MMM d, yyyy h:mm a')}
+                        {formatFullDateTime(displayVersion.created_at)}
                       </p>
                       {displayVersion.notes && (
                         <p className="text-foreground">{displayVersion.notes}</p>
@@ -953,7 +953,7 @@ export default function ApproveFlow() {
                             )}
                           </div>
                           <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(v.created_at), 'MMM d, h:mm a')}
+                            {formatFullDateTime(v.created_at)}
                           </span>
                         </div>
                         {v.notes && (
@@ -983,7 +983,7 @@ export default function ApproveFlow() {
                       <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
                         <div className="space-y-2">
                           <p className="text-sm text-muted-foreground">
-                            Version {v.version_number} • {format(new Date(v.created_at), 'MMM d, yyyy h:mm a')}
+                            Version {v.version_number} • {formatFullDateTime(v.created_at)}
                           </p>
                           <img 
                             src={v.file_url} 
