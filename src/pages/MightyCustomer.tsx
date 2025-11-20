@@ -442,6 +442,28 @@ export default function MightyCustomer() {
           {/* Vehicle Information & Auto-SQFT */}
           <div className="space-y-4 pt-4 border-t">
             <Label className="text-lg font-semibold">Vehicle Information</Label>
+            
+            {/* Vehicle Lookup Status */}
+            {customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel && (
+              <div className={`p-3 rounded-lg border ${
+                sqftOptions 
+                  ? 'bg-green-500/10 border-green-500/50 text-green-400' 
+                  : 'bg-amber-500/10 border-amber-500/50 text-amber-400'
+              }`}>
+                {sqftOptions ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    Vehicle found: {customerData.vehicleYear} {customerData.vehicleMake} {customerData.vehicleModel}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    Vehicle not found in database. Try exact spelling (e.g., "Tahoe" not "tahoe")
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Vehicle Year</Label>
@@ -449,7 +471,10 @@ export default function MightyCustomer() {
                   type="text"
                   placeholder="2024"
                   value={customerData.vehicleYear}
-                  onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }))}
+                  onChange={(e) => {
+                    console.log('Year updated:', e.target.value);
+                    setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }));
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -458,7 +483,10 @@ export default function MightyCustomer() {
                   type="text"
                   placeholder="Chevrolet"
                   value={customerData.vehicleMake}
-                  onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }))}
+                  onChange={(e) => {
+                    console.log('Make updated:', e.target.value);
+                    setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }));
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -467,7 +495,10 @@ export default function MightyCustomer() {
                   type="text"
                   placeholder="Tahoe"
                   value={customerData.vehicleModel}
-                  onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }))}
+                  onChange={(e) => {
+                    console.log('Model updated:', e.target.value);
+                    setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }));
+                  }}
                 />
               </div>
             </div>
