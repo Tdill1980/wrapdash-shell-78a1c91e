@@ -155,6 +155,33 @@ Deno.serve(async (req) => {
         const customerName = `${order.billing.first_name} ${order.billing.last_name}`.trim() || 'Unknown Customer';
         const productType = order.line_items?.[0]?.name || 'Unknown Product';
         const productId = order.line_items?.[0]?.product_id || null;
+        
+        // Extract design requirements from order notes and meta_data
+        let designRequirements = order.customer_note || '';
+        
+        if (order.meta_data && Array.isArray(order.meta_data)) {
+          const designField = order.meta_data.find((meta: any) => 
+            meta.key && (
+              meta.key.toLowerCase().includes('describe') ||
+              meta.key.toLowerCase().includes('design') ||
+              meta.key.toLowerCase().includes('project') ||
+              meta.key.toLowerCase().includes('requirements') ||
+              meta.key.toLowerCase().includes('instructions') ||
+              meta.key.toLowerCase().includes('details') ||
+              meta.key.toLowerCase().includes('notes') ||
+              meta.key.toLowerCase().includes('description') ||
+              meta.key.toLowerCase().includes('request') ||
+              meta.key.toLowerCase().includes('specs') ||
+              meta.key.toLowerCase().includes('specifications')
+            )
+          );
+          
+          if (designField && designField.value) {
+            designRequirements = designField.value;
+            console.log(`📋 Found design requirements for order ${orderNumber} in field: ${designField.key}`);
+          }
+        }
+        
         const wooStatusRaw = order.status;
         const wooStatus = normalizeStatus(wooStatusRaw);
         
@@ -274,7 +301,7 @@ Deno.serve(async (req) => {
                   product_type: designProductName,
                   order_total: parseFloat(order.total),
                   status: 'design_requested',
-                  design_instructions: order.customer_note || null,
+                  design_instructions: designRequirements || null,
                 });
 
               if (projectError) {
