@@ -10,8 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, LogOut, Moon, Sun, User } from "lucide-react";
-import { useTheme } from "next-themes";
+import { LogOut, User } from "lucide-react";
 
 interface GlobalHeaderProps {
   userName?: string;
@@ -20,7 +19,6 @@ interface GlobalHeaderProps {
 export const GlobalHeader = ({ userName = "User" }: GlobalHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -37,10 +35,6 @@ export const GlobalHeader = ({ userName = "User" }: GlobalHeaderProps) => {
       });
       navigate("/auth");
     }
-  };
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   return (
@@ -72,17 +66,6 @@ export const GlobalHeader = ({ userName = "User" }: GlobalHeaderProps) => {
             >
               <User className="mr-2 h-4 w-4" />
               <span>Account Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={toggleTheme}
-              className="text-white/70 hover:text-white hover:bg-white/5 cursor-pointer"
-            >
-              {theme === "dark" ? (
-                <Sun className="mr-2 h-4 w-4" />
-              ) : (
-                <Moon className="mr-2 h-4 w-4" />
-              )}
-              <span>Toggle Theme</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/10" />
             <DropdownMenuItem 
