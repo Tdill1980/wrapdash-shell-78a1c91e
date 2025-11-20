@@ -9,12 +9,13 @@ import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
-import { Plus, ShoppingCart, Lock, Mail } from "lucide-react";
+import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
+import { PanelVisualization } from "@/components/PanelVisualization";
 
 const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -62,6 +63,7 @@ export default function MightyCustomer() {
   const [emailDesign, setEmailDesign] = useState("clean");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSavingQuote, setIsSavingQuote] = useState(false);
+  const [showPanelVisualization, setShowPanelVisualization] = useState(false);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -76,6 +78,7 @@ export default function MightyCustomer() {
     sqft,
     setSqft,
     sqftOptions,
+    panelCosts,
     materialCost,
     laborCost,
     installHours,
@@ -472,6 +475,19 @@ export default function MightyCustomer() {
             {/* Wrap Type Selection */}
             {sqftOptions && (
               <div className="space-y-4">
+                {/* Show Panel Visualization Button */}
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPanelVisualization(true)}
+                    className="gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Panel Diagram
+                  </Button>
+                </div>
+
                 <div className="space-y-3">
                   <Label className="text-base font-semibold">Wrap Type</Label>
                   <div className="grid grid-cols-2 gap-3">
@@ -552,69 +568,175 @@ export default function MightyCustomer() {
                 {wrapType === 'partial' && (
                   <div className="space-y-3">
                     <Label className="text-base font-semibold">Select Panels to Wrap</Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
-                        type="button"
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          selectedPanels.sides
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="text-sm font-semibold text-foreground">Both Sides</div>
-                        <div className="text-lg font-bold text-primary">
-                          {sqftOptions.panels.sides} sq. ft.
-                        </div>
-                      </button>
+                    {selectedProduct && selectedProduct.pricing_type === 'per_sqft' ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.sides
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Both Sides</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.sides} sq. ft.
+                          </div>
+                          {panelCosts.sides > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              ${panelCosts.sides.toFixed(2)}
+                            </div>
+                          )}
+                        </button>
 
-                      <button
-                        onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
-                        type="button"
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          selectedPanels.back
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="text-sm font-semibold text-foreground">Back</div>
-                        <div className="text-lg font-bold text-primary">
-                          {sqftOptions.panels.back} sq. ft.
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.back
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Back</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.back} sq. ft.
+                          </div>
+                          {panelCosts.back > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              ${panelCosts.back.toFixed(2)}
+                            </div>
+                          )}
+                        </button>
 
-                      <button
-                        onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
-                        type="button"
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          selectedPanels.hood
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="text-sm font-semibold text-foreground">Hood</div>
-                        <div className="text-lg font-bold text-primary">
-                          {sqftOptions.panels.hood} sq. ft.
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.hood
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Hood</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.hood} sq. ft.
+                          </div>
+                          {panelCosts.hood > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              ${panelCosts.hood.toFixed(2)}
+                            </div>
+                          )}
+                        </button>
 
-                      <button
-                        onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
-                        type="button"
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          selectedPanels.roof
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="text-sm font-semibold text-foreground">Roof</div>
-                        <div className="text-lg font-bold text-primary">
-                          {sqftOptions.panels.roof} sq. ft.
-                        </div>
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.roof
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Roof</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.roof} sq. ft.
+                          </div>
+                          {panelCosts.roof > 0 && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              ${panelCosts.roof.toFixed(2)}
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.sides
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Both Sides</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.sides} sq. ft.
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.back
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Back</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.back} sq. ft.
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.hood
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Hood</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.hood} sq. ft.
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
+                          type="button"
+                          className={`p-4 rounded-lg border-2 transition-all ${
+                            selectedPanels.roof
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-sm font-semibold text-foreground">Roof</div>
+                          <div className="text-lg font-bold text-primary">
+                            {sqftOptions.panels.roof} sq. ft.
+                          </div>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Validation Messages */}
+            {!vehicle && (
+              <div className="flex items-center gap-2 p-3 bg-yellow-950/30 border border-yellow-500/30 rounded-lg text-yellow-200 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>Enter vehicle details to auto-calculate square footage</span>
+              </div>
+            )}
+            
+            {vehicle && !sqftOptions && (
+              <div className="flex items-center gap-2 p-3 bg-orange-950/30 border border-orange-500/30 rounded-lg text-orange-200 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>Vehicle not in database - please enter square footage manually below</span>
+              </div>
+            )}
+
+            {wrapType === 'partial' && !selectedPanels.sides && !selectedPanels.back && !selectedPanels.hood && !selectedPanels.roof && (
+              <div className="flex items-center gap-2 p-3 bg-blue-950/30 border border-blue-500/30 rounded-lg text-blue-200 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>Select at least one panel to wrap</span>
               </div>
             )}
 
@@ -910,6 +1032,20 @@ export default function MightyCustomer() {
           tone={emailTone}
           design={emailDesign}
         />
+
+        {/* Panel Visualization Modal */}
+        {showPanelVisualization && vehicle && sqftOptions && (
+          <PanelVisualization
+            vehicle={vehicle}
+            sqftOptions={sqftOptions}
+            selectedPanels={selectedPanels}
+            onPanelClick={(panel) => {
+              setSelectedPanels(prev => ({ ...prev, [panel]: !prev[panel] }));
+            }}
+            showAsModal={true}
+            onClose={() => setShowPanelVisualization(false)}
+          />
+        )}
       </div>
     </MainLayout>
   );
