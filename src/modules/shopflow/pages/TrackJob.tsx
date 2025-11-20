@@ -108,7 +108,7 @@ export default function TrackJob() {
 
   if (loading) return (
     <MainLayout userName="Customer">
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F]">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     </MainLayout>
@@ -116,11 +116,11 @@ export default function TrackJob() {
   
   if (error || !order) return (
     <MainLayout userName="Customer">
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0F] p-4">
-        <Card className="p-8 text-center max-w-md bg-[#111118] border-white/5">
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Card className="p-8 text-center max-w-md">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-          <h1 className="text-2xl font-bold text-white mb-2">Order Not Found</h1>
-          <p className="text-[#B7B7C5]">{error || "We couldn't find an order with that number."}</p>
+          <h1 className="text-2xl font-bold mb-2">Order Not Found</h1>
+          <p className="text-muted-foreground">{error || "We couldn't find an order with that number."}</p>
         </Card>
       </div>
     </MainLayout>
@@ -141,8 +141,7 @@ export default function TrackJob() {
 
   return (
     <MainLayout userName="Customer">
-      <div className="min-h-screen bg-[#0A0A0F] text-white">
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="w-full space-y-6">
         <ShopFlowBrandHeader />
         <CustomerProgressBar currentStatus={internalStatus} />
         <OrderInfoCard order={order} />
@@ -159,9 +158,10 @@ export default function TrackJob() {
         <ActionRequiredCard order={{ customer_stage: internalStatus, file_error_details: fileErrors, missing_file_list: missingFiles }} />
         <OrderSummaryCard order={order} />
         <TimelineCard timeline={timeline} />
-        <div className="text-center py-8 text-white/40 text-sm">Powered by <span className="text-[#15D1FF]">WrapCommand™</span> — Real-time wrap order tracking for peace of mind.</div>
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          Powered by <span className="text-primary">WrapCommand™</span> — Real-time wrap order tracking for peace of mind.
+        </div>
       </div>
-    </div>
     </MainLayout>
   );
 }
