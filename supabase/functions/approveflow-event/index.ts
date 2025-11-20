@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Email kill switch - set to true when ready for production
+const SEND_CUSTOMER_EMAILS = false;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -83,22 +86,26 @@ serve(async (req) => {
 
     const klavioyEventName = eventNameMap[eventType] || `approveflow_${eventType}`;
 
-    // Send to Klaviyo
-    const klaviyoResponse = await fetch(`${supabaseUrl}/functions/v1/send-klaviyo-event`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseServiceKey}`,
-      },
-      body: JSON.stringify({
-        eventName: klavioyEventName,
-        properties: eventProperties,
-        customerEmail: project.customer_email,
-      }),
-    });
+    // Send to Klaviyo (DISABLED until production ready)
+    if (SEND_CUSTOMER_EMAILS) {
+      const klaviyoResponse = await fetch(`${supabaseUrl}/functions/v1/send-klaviyo-event`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({
+          eventName: klavioyEventName,
+          properties: eventProperties,
+          customerEmail: project.customer_email,
+        }),
+      });
 
-    if (!klaviyoResponse.ok) {
-      console.error('Failed to send Klaviyo event');
+      if (!klaviyoResponse.ok) {
+        console.error('Failed to send Klaviyo event');
+      }
+    } else {
+      console.log(`Customer emails disabled - skipping ${eventType} notification for:`, project.customer_email);
     }
 
     // Prepare WooCommerce meta data

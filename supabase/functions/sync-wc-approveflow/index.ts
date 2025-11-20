@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Email kill switch - set to true when ready for production
+const SEND_CUSTOMER_EMAILS = false;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -199,8 +202,8 @@ serve(async (req) => {
     
     console.log('Created welcome chat message for project:', newProject.id);
 
-    // Send customer welcome email via Klaviyo
-    if (customerEmail) {
+    // Send customer welcome email via Klaviyo (DISABLED until production ready)
+    if (SEND_CUSTOMER_EMAILS && customerEmail) {
       const customerPortalUrl = `${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://').split('.supabase.co')[0]}.lovable.app/customer/${newProject.id}`;
       
       await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-klaviyo-event`, {
@@ -231,6 +234,8 @@ serve(async (req) => {
       });
       
       console.log('Customer welcome email sent to:', customerEmail);
+    } else if (!SEND_CUSTOMER_EMAILS && customerEmail) {
+      console.log('Customer emails disabled - skipping welcome email for:', customerEmail);
     }
 
     return new Response(
