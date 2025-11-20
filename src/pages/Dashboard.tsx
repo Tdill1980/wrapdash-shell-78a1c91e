@@ -292,12 +292,9 @@ export default function Dashboard() {
       <div className="w-full space-y-6">
 
       {/* Dashboard Hero Header */}
-      <DashboardHeroHeader 
-        awaitingApprovalCount={awaitingApprovalCount}
-        proofsReadyCount={proofsReadyCount}
-        activeRendersCount={activeRendersCount}
-        pendingActionsCount={pendingActionsCount}
-      />
+        <DashboardHeroHeader
+          activeRendersCount={activeRendersCount}
+        />
 
       {/* Product Type Chips */}
       <div className="flex flex-wrap gap-2">
