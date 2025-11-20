@@ -65,7 +65,7 @@ const navigationItems = [
       <span className="font-medium text-gradient">WBTY™</span>
     )
   },
-  { name: "ApproveMode", path: "/approveflow", icon: CheckCircle },
+  { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
   { name: "DesignVault", path: "/designvault", icon: FolderOpen },
   { name: "WrapBox", path: "/wrapbox", icon: Package },
   { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
