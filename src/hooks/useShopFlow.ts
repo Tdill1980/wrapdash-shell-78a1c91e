@@ -11,6 +11,7 @@ export interface ShopFlowOrder {
   approveflow_project_id?: string;
   customer_name: string;
   customer_email?: string;
+  customer_stage?: string;
   product_type: string;
   product_image_url?: string | null;
   status: string;
