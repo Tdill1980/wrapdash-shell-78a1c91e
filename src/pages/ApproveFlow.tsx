@@ -204,6 +204,8 @@ export default function ApproveFlow() {
           throw dbError;
         }
 
+        setRenders3D(renderUrls);
+
         // Trigger events
         await save3DRendersToApproveFlow(
           urlProjectId,
@@ -240,17 +242,16 @@ export default function ApproveFlow() {
       'revision_sent': 3,
       'approved': 4,
     };
-    const currentStep = statusMap[status] || 0;
+    const currentStep = statusMap[status] ?? 0;
 
     return [
-      { label: "Design Requested", status: currentStep >= 0 ? "complete" : "pending" },
-      { label: "Proof Delivered", status: currentStep >= 1 ? "complete" : currentStep === 1 ? "current" : "pending" },
-      { label: "Awaiting Feedback", status: currentStep >= 2 ? "complete" : currentStep === 2 ? "current" : "pending" },
-      { label: "Revision Sent", status: currentStep >= 3 ? "complete" : currentStep === 3 ? "current" : "pending" },
-      { label: "Approved", status: currentStep >= 4 ? "complete" : currentStep === 4 ? "current" : "pending" },
+      { label: "Design Requested", status: currentStep === 0 ? "current" : currentStep > 0 ? "complete" : "pending" },
+      { label: "Proof Delivered", status: currentStep === 1 ? "current" : currentStep > 1 ? "complete" : "pending" },
+      { label: "Awaiting Feedback", status: currentStep === 2 ? "current" : currentStep > 2 ? "complete" : "pending" },
+      { label: "Revision Sent", status: currentStep === 3 ? "current" : currentStep > 3 ? "complete" : "pending" },
+      { label: "Approved", status: currentStep === 4 ? "current" : currentStep > 4 ? "complete" : "pending" },
     ];
   };
-
   const latestVersion = versions[0];
   const displayVersion = selectedVersion === "latest" ? latestVersion : versions.find(v => v.id === selectedVersion);
 
@@ -317,7 +318,7 @@ export default function ApproveFlow() {
                   step.status === "complete" 
                     ? "bg-gradient-primary" 
                     : step.status === "current"
-                    ? "bg-gradient-primary"
+                    ? "bg-primary/80"
                     : "bg-card border border-border"
                 }`}>
                   {step.status === "complete" && <CheckCircle2 className="w-3 h-3 text-white" />}
@@ -351,7 +352,7 @@ export default function ApproveFlow() {
             <div className="space-y-2 text-xs">
               <div>
                 <span className="text-muted-foreground">Order:</span>
-                <span className="ml-2 font-mono">{project.order_number}</span>
+                <span className="ml-2 font-mono">{project.order_number?.startsWith('3') ? project.order_number : `3${project.order_number}`}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Customer:</span>
