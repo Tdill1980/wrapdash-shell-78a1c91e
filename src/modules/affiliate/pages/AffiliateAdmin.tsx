@@ -29,21 +29,7 @@ export const AffiliateAdmin = () => {
   const fetchFounders = async () => {
     try {
       const data = await affiliateApi.getAllFounders();
-      setFounders(data.map((f: any) => ({
-        id: f.id,
-        fullName: f.full_name,
-        email: f.email,
-        phone: f.phone,
-        companyName: f.company_name,
-        affiliateCode: f.affiliate_code,
-        commissionRate: f.commission_rate,
-        avatarUrl: f.avatar_url,
-        bio: f.bio,
-        socialLinks: f.social_links,
-        isActive: f.is_active,
-        createdAt: f.created_at,
-        updatedAt: f.updated_at,
-      })));
+      setFounders(data);
     } catch (error) {
       console.error('Error fetching founders:', error);
       toast.error('Failed to load affiliates');

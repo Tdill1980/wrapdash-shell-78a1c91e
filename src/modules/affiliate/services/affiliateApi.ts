@@ -104,7 +104,7 @@ export const affiliateApi = {
   },
 
   // Get founder by affiliate code (public)
-  async getFounderByCode(affiliateCode: string) {
+  async getFounderByCode(affiliateCode: string): Promise<AffiliateFounder> {
     const { data, error } = await supabase
       .from('affiliate_founders')
       .select('*')
@@ -113,7 +113,21 @@ export const affiliateApi = {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Transform snake_case to camelCase
+    return {
+      id: data.id,
+      affiliateCode: data.affiliate_code,
+      fullName: data.full_name,
+      email: data.email,
+      commissionRate: data.commission_rate,
+      avatarUrl: data.avatar_url,
+      bio: data.bio,
+      companyName: data.company_name,
+      phone: data.phone,
+      socialLinks: (data.social_links || {}) as Record<string, string>,
+      isActive: data.is_active,
+    };
   },
 
   // Get founder stats with product breakdowns
@@ -223,14 +237,26 @@ export const affiliateApi = {
   },
 
   // Admin: Get all founders
-  async getAllFounders() {
+  async getAllFounders(): Promise<AffiliateFounder[]> {
     const { data, error } = await supabase
       .from('affiliate_founders')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+    return data.map(f => ({
+      id: f.id,
+      affiliateCode: f.affiliate_code,
+      fullName: f.full_name,
+      email: f.email,
+      commissionRate: f.commission_rate,
+      avatarUrl: f.avatar_url,
+      bio: f.bio,
+      companyName: f.company_name,
+      phone: f.phone,
+      socialLinks: (f.social_links || {}) as Record<string, string>,
+      isActive: f.is_active,
+    }));
   },
 
   // Admin: Create founder
@@ -270,7 +296,7 @@ export const affiliateApi = {
   },
 
   // Get founder by email
-  async getFounderByEmail(email: string) {
+  async getFounderByEmail(email: string): Promise<AffiliateFounder | null> {
     const { data, error } = await supabase
       .from('affiliate_founders')
       .select('*')
@@ -278,11 +304,25 @@ export const affiliateApi = {
       .maybeSingle();
 
     if (error) throw error;
-    return data;
+    if (!data) return null;
+    
+    return {
+      id: data.id,
+      affiliateCode: data.affiliate_code,
+      fullName: data.full_name,
+      email: data.email,
+      commissionRate: data.commission_rate,
+      avatarUrl: data.avatar_url,
+      bio: data.bio,
+      companyName: data.company_name,
+      phone: data.phone,
+      socialLinks: (data.social_links || {}) as Record<string, string>,
+      isActive: data.is_active,
+    };
   },
 
   // Get founder by ID
-  async getFounderById(id: string) {
+  async getFounderById(id: string): Promise<AffiliateFounder> {
     const { data, error } = await supabase
       .from('affiliate_founders')
       .select('*')
@@ -290,7 +330,19 @@ export const affiliateApi = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      id: data.id,
+      affiliateCode: data.affiliate_code,
+      fullName: data.full_name,
+      email: data.email,
+      commissionRate: data.commission_rate,
+      avatarUrl: data.avatar_url,
+      bio: data.bio,
+      companyName: data.company_name,
+      phone: data.phone,
+      socialLinks: (data.social_links || {}) as Record<string, string>,
+      isActive: data.is_active,
+    };
   },
 
   // Admin: Toggle founder active status

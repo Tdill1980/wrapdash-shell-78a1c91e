@@ -64,22 +64,7 @@ export const useAffiliate = (token?: string) => {
     try {
       setLoading(true);
       // Load demo founder by code for Jessica (VINYLVIXEN)
-      const rawData = await affiliateApi.getFounderByCode('VINYLVIXEN');
-      
-      // Transform snake_case DB fields to camelCase
-      const founderData: AffiliateFounder = {
-        id: rawData.id,
-        affiliateCode: rawData.affiliate_code,
-        fullName: rawData.full_name,
-        email: rawData.email,
-        commissionRate: rawData.commission_rate,
-        avatarUrl: rawData.avatar_url,
-        bio: rawData.bio,
-        companyName: rawData.company_name,
-        phone: rawData.phone,
-        socialLinks: (rawData.social_links || {}) as Record<string, string>,
-        isActive: rawData.is_active,
-      };
+      const founderData = await affiliateApi.getFounderByCode('VINYLVIXEN');
       
       setFounder(founderData);
       sessionStorage.setItem('affiliate_founder', JSON.stringify(founderData));
