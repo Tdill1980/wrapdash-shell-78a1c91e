@@ -27,21 +27,52 @@ export interface VehicleSQFTOptions {
  */
 export function getVehicleSQFTOptions(year: string, make: string, model: string): VehicleSQFTOptions | null {
   if (!vehicleDimensionsData?.vehicles || vehicleDimensionsData.vehicles.length === 0) {
+    console.log("Vehicle dimensions data not available");
     return null;
   }
 
+  // Normalize inputs
+  const normalizedYear = year.trim();
+  const normalizedMake = make.trim().toLowerCase();
+  const normalizedModel = model.trim().toLowerCase();
+
+  console.log(`Searching for vehicle: ${normalizedYear} ${normalizedMake} ${normalizedModel}`);
+
   const vehicle = vehicleDimensionsData.vehicles.find((v: any) => {
     const vehicleYear = v.Year.toString();
-    const yearMatch = vehicleYear.includes(year) || year === vehicleYear.split('-')[0] || year === vehicleYear.split('-')[1];
+    const vehicleMake = v.Make.toLowerCase();
+    const vehicleModel = v.Model.toLowerCase();
     
-    return (
-      yearMatch &&
-      v.Make.toLowerCase() === make.toLowerCase() &&
-      v.Model.toLowerCase().includes(model.toLowerCase())
-    );
+    // Improved year matching - handle ranges like "2018-2022" and single years
+    let yearMatch = false;
+    if (vehicleYear.includes('-')) {
+      const [startYear, endYear] = vehicleYear.split('-').map(y => parseInt(y.trim()));
+      const inputYear = parseInt(normalizedYear);
+      yearMatch = inputYear >= startYear && inputYear <= endYear;
+    } else {
+      yearMatch = vehicleYear === normalizedYear;
+    }
+    
+    // Case-insensitive make matching
+    const makeMatch = vehicleMake === normalizedMake;
+    
+    // Flexible model matching - partial match both ways
+    const modelMatch = 
+      vehicleModel.includes(normalizedModel) || 
+      normalizedModel.includes(vehicleModel);
+    
+    if (yearMatch && makeMatch && modelMatch) {
+      console.log(`✓ Match found: ${v.Year} ${v.Make} ${v.Model}`);
+    }
+    
+    return yearMatch && makeMatch && modelMatch;
   });
 
-  if (!vehicle) return null;
+  if (!vehicle) {
+    console.log(`✗ No match found for: ${normalizedYear} ${normalizedMake} ${normalizedModel}`);
+    console.log(`Available makes:`, [...new Set(vehicleDimensionsData.vehicles.map((v: any) => v.Make))]);
+    return null;
+  }
 
   return {
     withRoof: vehicle["Corrected Sq Foot"] || 0,
