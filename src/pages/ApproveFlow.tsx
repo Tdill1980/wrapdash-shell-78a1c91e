@@ -40,7 +40,13 @@ export default function ApproveFlow() {
   const [generating3D, setGenerating3D] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [trackingInfo, setTrackingInfo] = useState<{tracking_number?: string; tracking_url?: string; shipped_at?: string} | null>(null);
+  const [trackingInfo, setTrackingInfo] = useState<{
+    tracking_number?: string;
+    tracking_url?: string;
+    shipped_at?: string;
+    order_number?: string;
+    woo_order_number?: number | string;
+  } | null>(null);
   const [renders3D, setRenders3D] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
 
@@ -70,7 +76,7 @@ export default function ApproveFlow() {
       
       const { data, error } = await supabase
         .from('shopflow_orders')
-        .select('tracking_number, tracking_url, shipped_at')
+        .select('tracking_number, tracking_url, shipped_at, order_number, woo_order_number')
         .eq('order_number', project.order_number)
         .maybeSingle();
 
@@ -218,9 +224,6 @@ export default function ApproveFlow() {
         title: "3D render generated",
         description: "View it in the 3D View tab",
       });
-
-      // Refresh to show the new render
-      window.location.reload();
     } catch (error: any) {
       console.error('Error generating 3D:', error);
       toast({
@@ -351,8 +354,10 @@ export default function ApproveFlow() {
             <h3 className="text-sm font-semibold mb-3 text-gradient">Order Information</h3>
             <div className="space-y-2 text-xs">
               <div>
-                <span className="text-muted-foreground">Order:</span>
-                <span className="ml-2 font-mono">{project.order_number?.startsWith('3') ? project.order_number : `3${project.order_number}`}</span>
+                <span className="text-muted-foreground">Job:</span>
+                <span className="ml-2 font-mono">
+                  {trackingInfo?.order_number || trackingInfo?.woo_order_number || project.order_number}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Customer:</span>
