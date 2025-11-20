@@ -64,6 +64,7 @@ export default function ApproveFlow() {
     versions,
     chatMessages,
     actions,
+    emailLogs,
     loading,
     uploadVersion,
     sendMessage,
@@ -354,6 +355,7 @@ export default function ApproveFlow() {
         versions={versions}
         actions={actions}
         chatMessages={chatMessages}
+        emailLogs={emailLogs}
         hasMissingFiles={!versions.length}
       />
 

@@ -55,11 +55,29 @@ export interface ApproveFlowAction {
   created_at: string;
 }
 
+export interface ApproveFlowEmailLog {
+  id: string;
+  project_id: string;
+  email_type: string;
+  recipient_email: string;
+  subject: string;
+  status: string;
+  provider: string;
+  metadata?: any;
+  error_message?: string;
+  sent_at: string;
+  delivered_at?: string;
+  opened_at?: string;
+  clicked_at?: string;
+  created_at: string;
+}
+
 export const useApproveFlow = (projectId?: string) => {
   const [project, setProject] = useState<ApproveFlowProject | null>(null);
   const [versions, setVersions] = useState<ApproveFlowVersion[]>([]);
   const [chatMessages, setChatMessages] = useState<ApproveFlowChat[]>([]);
   const [actions, setActions] = useState<ApproveFlowAction[]>([]);
+  const [emailLogs, setEmailLogs] = useState<ApproveFlowEmailLog[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -140,6 +158,24 @@ export const useApproveFlow = (projectId?: string) => {
       setActions(data || []);
     } catch (error: any) {
       console.error('Error loading actions:', error);
+    }
+  };
+
+  // Fetch email logs
+  const fetchEmailLogs = async () => {
+    if (!projectId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('approveflow_email_logs')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setEmailLogs(data || []);
+    } catch (error: any) {
+      console.error('Error loading email logs:', error);
     }
   };
 
@@ -328,6 +364,7 @@ export const useApproveFlow = (projectId?: string) => {
         fetchVersions(),
         fetchChat(),
         fetchActions(),
+        fetchEmailLogs(),
       ]).finally(() => setLoading(false));
 
       // Set up realtime subscriptions
@@ -342,6 +379,12 @@ export const useApproveFlow = (projectId?: string) => {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'approveflow_projects', filter: `id=eq.${projectId}` }, () => {
           fetchProject();
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'approveflow_actions', filter: `project_id=eq.${projectId}` }, () => {
+          fetchActions();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'approveflow_email_logs', filter: `project_id=eq.${projectId}` }, () => {
+          fetchEmailLogs();
+        })
         .subscribe();
 
       return () => {
@@ -355,6 +398,7 @@ export const useApproveFlow = (projectId?: string) => {
     versions,
     chatMessages,
     actions,
+    emailLogs,
     loading,
     uploadVersion,
     sendMessage,
@@ -365,6 +409,7 @@ export const useApproveFlow = (projectId?: string) => {
       fetchVersions();
       fetchChat();
       fetchActions();
+      fetchEmailLogs();
     },
   };
 };
