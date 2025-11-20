@@ -157,29 +157,57 @@ Deno.serve(async (req) => {
         const productId = order.line_items?.[0]?.product_id || null;
         
         // Extract design requirements from order notes and meta_data
-        let designRequirements = order.customer_note || '';
+        let designRequirements = '';
         
+        console.log(`🔍 Extracting design requirements for order ${orderNumber}`);
+        console.log(`   Customer note: "${order.customer_note || 'EMPTY'}"`);
+        
+        // First, try customer note
+        if (order.customer_note && order.customer_note.trim().length > 0) {
+          designRequirements = order.customer_note.trim();
+          console.log(`✅ Using customer_note as design requirements`);
+        }
+        
+        // Then search meta_data
         if (order.meta_data && Array.isArray(order.meta_data)) {
-          const designField = order.meta_data.find((meta: any) => 
-            meta.key && (
-              meta.key.toLowerCase().includes('describe') ||
-              meta.key.toLowerCase().includes('design') ||
-              meta.key.toLowerCase().includes('project') ||
-              meta.key.toLowerCase().includes('requirements') ||
-              meta.key.toLowerCase().includes('instructions') ||
-              meta.key.toLowerCase().includes('details') ||
-              meta.key.toLowerCase().includes('notes') ||
-              meta.key.toLowerCase().includes('description') ||
-              meta.key.toLowerCase().includes('request') ||
-              meta.key.toLowerCase().includes('specs') ||
-              meta.key.toLowerCase().includes('specifications')
-            )
-          );
+          console.log(`   Searching ${order.meta_data.length} meta_data fields...`);
           
-          if (designField && designField.value) {
-            designRequirements = designField.value;
-            console.log(`📋 Found design requirements for order ${orderNumber} in field: ${designField.key}`);
+          for (const meta of order.meta_data) {
+            if (!meta.key || !meta.value) continue;
+            
+            const keyLower = meta.key.toLowerCase();
+            const valueStr = typeof meta.value === 'string' ? meta.value : JSON.stringify(meta.value);
+            
+            console.log(`   - "${meta.key}": "${valueStr.substring(0, 100)}"`);
+            
+            // Check if this field contains design requirements
+            if (
+              keyLower.includes('describe') ||
+              keyLower.includes('design') ||
+              keyLower.includes('project') ||
+              keyLower.includes('requirements') ||
+              keyLower.includes('instructions') ||
+              keyLower.includes('details') ||
+              keyLower.includes('notes') ||
+              keyLower.includes('description') ||
+              keyLower.includes('request') ||
+              keyLower.includes('specs') ||
+              keyLower.includes('specifications') ||
+              keyLower.includes('comments')
+            ) {
+              if (valueStr && valueStr.trim().length > 0) {
+                designRequirements = valueStr.trim();
+                console.log(`✅ Found design requirements in meta field: ${meta.key}`);
+                break;
+              }
+            }
           }
+        }
+        
+        if (!designRequirements) {
+          console.log(`⚠️ No design requirements found for order ${orderNumber}`);
+        } else {
+          console.log(`✅ Final design requirements: "${designRequirements.substring(0, 100)}..."`);
         }
         
         const wooStatusRaw = order.status;
