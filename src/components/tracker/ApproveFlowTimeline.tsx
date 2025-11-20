@@ -7,13 +7,17 @@ import {
   AlertCircle,
   Box,
   Mail,
-  Calendar
+  Calendar,
+  Send,
+  MailOpen,
+  MousePointerClick,
+  MailX
 } from "lucide-react";
-import { ApproveFlowVersion, ApproveFlowAction, ApproveFlowChat } from "@/hooks/useApproveFlow";
+import { ApproveFlowVersion, ApproveFlowAction, ApproveFlowChat, ApproveFlowEmailLog } from "@/hooks/useApproveFlow";
 
 interface TimelineEvent {
   id: string;
-  type: 'version' | 'action' | 'chat' | 'project_start' | 'file_missing';
+  type: 'version' | 'action' | 'chat' | 'project_start' | 'file_missing' | 'email';
   timestamp: string;
   title: string;
   description?: string;
@@ -27,6 +31,7 @@ interface ApproveFlowTimelineProps {
   versions: ApproveFlowVersion[];
   actions: ApproveFlowAction[];
   chatMessages: ApproveFlowChat[];
+  emailLogs: ApproveFlowEmailLog[];
   hasMissingFiles?: boolean;
 }
 
@@ -35,6 +40,7 @@ export function ApproveFlowTimeline({
   versions, 
   actions, 
   chatMessages,
+  emailLogs,
   hasMissingFiles 
 }: ApproveFlowTimelineProps) {
   
@@ -129,17 +135,65 @@ export function ApproveFlowTimeline({
     });
   });
 
-  // Add chat messages (only significant ones)
+  // Add chat messages
   chatMessages.forEach((chat) => {
     allEvents.push({
       id: `chat-${chat.id}`,
       type: 'chat',
       timestamp: chat.created_at,
-      title: `${chat.sender === 'designer' ? 'Designer' : 'Customer'} Message`,
+      title: `💬 ${chat.sender === 'designer' ? 'Designer' : 'Customer'} Message`,
       description: chat.message.substring(0, 100) + (chat.message.length > 100 ? '...' : ''),
       icon: MessageSquare,
       iconColor: chat.sender === 'designer' ? 'text-indigo-400' : 'text-pink-400',
       data: chat,
+    });
+  });
+
+  // Add email logs
+  emailLogs.forEach((email) => {
+    let icon = Mail;
+    let iconColor = 'text-blue-400';
+    let statusText = '';
+
+    // Determine icon and color based on status
+    switch (email.status) {
+      case 'sent':
+      case 'delivered':
+        icon = Send;
+        iconColor = 'text-green-400';
+        statusText = 'Sent';
+        break;
+      case 'opened':
+        icon = MailOpen;
+        iconColor = 'text-cyan-400';
+        statusText = 'Opened';
+        break;
+      case 'clicked':
+        icon = MousePointerClick;
+        iconColor = 'text-purple-400';
+        statusText = 'Clicked';
+        break;
+      case 'failed':
+        icon = MailX;
+        iconColor = 'text-red-400';
+        statusText = 'Failed';
+        break;
+      case 'pending':
+        icon = Clock;
+        iconColor = 'text-yellow-400';
+        statusText = 'Pending';
+        break;
+    }
+
+    allEvents.push({
+      id: `email-${email.id}`,
+      type: 'email',
+      timestamp: email.sent_at || email.created_at,
+      title: `📧 Email ${statusText}: ${email.subject}`,
+      description: `To: ${email.recipient_email} • ${email.provider.toUpperCase()}${email.error_message ? ` • Error: ${email.error_message}` : ''}`,
+      icon,
+      iconColor,
+      data: email,
     });
   });
 
@@ -196,6 +250,39 @@ export function ApproveFlowTimeline({
                       Approval Deadline: {format(new Date(event.data.payload.deadline), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
+                )}
+
+                {/* Show email delivery details */}
+                {event.type === 'email' && event.data && (
+                  <div className="mt-2 space-y-1">
+                    {event.data.delivered_at && (
+                      <p className="text-xs text-green-400">
+                        ✓ Delivered: {format(new Date(event.data.delivered_at), 'MMM d, h:mm a')}
+                      </p>
+                    )}
+                    {event.data.opened_at && (
+                      <p className="text-xs text-cyan-400">
+                        ✓ Opened: {format(new Date(event.data.opened_at), 'MMM d, h:mm a')}
+                      </p>
+                    )}
+                    {event.data.clicked_at && (
+                      <p className="text-xs text-purple-400">
+                        ✓ Clicked: {format(new Date(event.data.clicked_at), 'MMM d, h:mm a')}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Show full chat message on hover/expand */}
+                {event.type === 'chat' && event.data && event.data.message.length > 100 && (
+                  <details className="mt-2">
+                    <summary className="text-xs text-blue-400 cursor-pointer hover:text-blue-300">
+                      Show full message
+                    </summary>
+                    <p className="text-xs text-white/80 mt-2 p-2 bg-white/5 rounded">
+                      {event.data.message}
+                    </p>
+                  </details>
                 )}
               </div>
             </div>
