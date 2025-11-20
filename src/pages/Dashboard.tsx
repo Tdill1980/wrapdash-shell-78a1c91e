@@ -652,10 +652,9 @@ export default function Dashboard() {
                   </div>
                 ) : latestDesigns.length > 0 ? (
                   <>
-                    {/* Carousel Image */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {(() => {
-                        const design = latestDesigns[carouselIndex];
+                    {/* Carousel Images with Slide Animation */}
+                    <div className="absolute inset-0">
+                      {latestDesigns.map((design, idx) => {
                         const renderUrls = design?.render_urls;
                         let imageUrl = null;
 
@@ -665,8 +664,18 @@ export default function Dashboard() {
                           imageUrl = (renderUrls as any).hero_angle || (renderUrls as any).hero || (renderUrls as any).front;
                         }
 
-                        return imageUrl ? (
-                          <>
+                        // Skip rendering if no image URL
+                        if (!imageUrl) return null;
+
+                        return (
+                          <div
+                            key={design.id}
+                            className="absolute inset-0 flex items-center justify-center transition-all duration-500 ease-in-out"
+                            style={{
+                              transform: `translateX(${(idx - carouselIndex) * 100}%)`,
+                              opacity: idx === carouselIndex ? 1 : 0,
+                            }}
+                          >
                             <img
                               src={imageUrl}
                               alt={`${design.vehicle_make} ${design.vehicle_model}`}
@@ -682,14 +691,9 @@ export default function Dashboard() {
                                 {design.color_name || design.design_file_name || "Custom Design"}
                               </Badge>
                             </div>
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full gap-2">
-                            <Car className="w-12 h-12 text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">No preview available</p>
                           </div>
                         );
-                      })()}
+                      })}
                     </div>
                     
                     {/* Navigation Buttons */}
