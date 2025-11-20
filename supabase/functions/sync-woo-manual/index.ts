@@ -5,18 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to check if product is a design product
-function isDesignProduct(productName: string): boolean {
-  const designKeywords = [
-    'Full Vehicle Wrap Design',
-    'Hourly Design',
-    'Custom Vehicle Wrap Design',
-    'Vehicle Wrap Design'
-  ];
-  return designKeywords.some(keyword => 
-    productName.toLowerCase().includes(keyword.toLowerCase())
-  );
-}
+// Design product IDs that should go to ApproveFlow
+const DESIGN_PRODUCT_IDS = [
+  234,   // Custom Vehicle Wrap Design
+  58160, // Custom Vehicle Wrap Design (Copy) - Draft
+  290,   // Hourly Design
+  289    // File Output
+];
 
 /**
  * Normalize WooCommerce status strings to handle variations
@@ -243,16 +238,17 @@ Deno.serve(async (req) => {
 
         // Sync to ApproveFlow (only for design product orders)
         if (target === 'approveflow' || target === 'both') {
-          // Check if order contains design products (by product name)
+          // Check if order contains design products (by product ID)
           let hasDesignProduct = false;
           let designProductName = '';
           
           if (order.line_items && Array.isArray(order.line_items)) {
             for (const item of order.line_items) {
-              const itemName = item.name || '';
-              if (isDesignProduct(itemName)) {
+              const productId = item.product_id;
+              if (DESIGN_PRODUCT_IDS.includes(productId)) {
                 hasDesignProduct = true;
-                designProductName = itemName;
+                designProductName = item.name || 'Custom Vehicle Wrap Design';
+                console.log(`✅ Design product found - ID: ${productId}, Name: "${designProductName}"`);
                 break;
               }
             }
@@ -275,7 +271,7 @@ Deno.serve(async (req) => {
                   order_number: orderNumber,
                   customer_name: customerName,
                   customer_email: order.billing.email,
-                  product_type: designProductName || productType,
+                  product_type: designProductName,
                   order_total: parseFloat(order.total),
                   status: 'design_requested',
                   design_instructions: order.customer_note || null,
@@ -292,7 +288,9 @@ Deno.serve(async (req) => {
             }
           } else {
             console.log(`⚠️ Order ${orderNumber} does not contain design products - skipping ApproveFlow sync`);
-            console.log(`   Products in order: ${order.line_items?.map((i: any) => i.name).join(', ')}`);
+            if (order.line_items) {
+              console.log(`   Product IDs in order: ${order.line_items.map((i: any) => `${i.product_id} (${i.name})`).join(', ')}`);
+            }
           }
         }
       } catch (orderError: any) {
