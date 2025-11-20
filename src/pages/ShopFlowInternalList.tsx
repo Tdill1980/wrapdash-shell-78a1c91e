@@ -59,7 +59,7 @@ export default function ShopFlowInternalList() {
   if (loading) {
     return (
       <MainLayout userName="Trish">
-        <div className="space-y-6 max-w-7xl">
+        <div className="w-full space-y-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight font-poppins">
               <span className="text-foreground">ShopFlow </span>
@@ -80,7 +80,7 @@ export default function ShopFlowInternalList() {
 
   return (
     <MainLayout userName="Trish">
-      <div className="space-y-6 max-w-7xl">
+      <div className="w-full space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-poppins">

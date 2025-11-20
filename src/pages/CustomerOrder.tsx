@@ -12,6 +12,7 @@ import {
 } from "@/modules/shopflow/utils/stageEngine";
 
 import { FileThumbnail } from "@/modules/shopflow/components/FileThumbnail";
+import { MainLayout } from "@/layouts/MainLayout";
 
 export default function CustomerOrder() {
   const { id } = useParams<{ id: string }>();
@@ -19,16 +20,20 @@ export default function CustomerOrder() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Loading your order…
-      </div>
+      <MainLayout userName="Customer">
+        <div className="flex items-center justify-center min-h-screen text-gray-400">
+          Loading your order…
+        </div>
+      </MainLayout>
     );
 
   if (!order)
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-400">
-        Order not found.
-      </div>
+      <MainLayout userName="Customer">
+        <div className="flex items-center justify-center min-h-screen text-gray-400">
+          Order not found.
+        </div>
+      </MainLayout>
     );
 
   // Customer-safe stage translation
@@ -53,7 +58,8 @@ export default function CustomerOrder() {
   });
 
   return (
-    <div className="container mx-auto px-6 py-10">
+    <MainLayout userName="Customer">
+      <div className="w-full space-y-6">
 
       {/* Sticky Top Bar */}
       <div className="sticky top-0 z-50 bg-[#0A0A0F]/90 backdrop-blur-md py-4 border-b border-white/10">
@@ -164,6 +170,7 @@ export default function CustomerOrder() {
           Email Support
         </a>
       </div>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
