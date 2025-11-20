@@ -152,9 +152,9 @@ export default function ShopFlowInternal() {
       {/* WooCommerce Status Progress Bar - Internal View */}
       <WooCommerceStatusBar currentStatus={order.status} />
 
-      {/* Main content area - Customer View Layout */}
+      {/* Main content area - Mirrors Customer Layout */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left column: Order info cards with change highlights */}
+        {/* Left Column - Order & Status Details */}
         <div className="space-y-6">
           <div className={isDifferent('customer_name', order.customer_name) || isDifferent('customer_email', order.customer_email) ? 'ring-2 ring-yellow-500/50 rounded-lg' : ''}>
             <OrderInfoCard order={{ ...order, created_at: order.created_at, files: order.files } as any} />
@@ -178,32 +178,19 @@ export default function ShopFlowInternal() {
             )}
           </div>
           
-          <VehicleInfoCard order={order} />
-          <CustomerInfoCard order={order} />
-          <JobDetailsCard order={order} />
-        </div>
-
-        {/* Middle column: Customer-facing cards */}
-        <div className="space-y-6">
           <NextStepCard currentStatus={order.status} />
           
-          <UploadedFilesCard 
-            files={files}
-            missingFiles={missingFiles}
-            fileErrors={fileErrors}
-            orderStatus={order.status}
-            onFileUpload={() => {}}
-          />
-          
-          <Timeline logs={logs} />
-          
-          <OrderSummaryCard order={order} />
+          <VehicleInfoCard order={order} />
+          <CustomerInfoCard order={order} />
         </div>
 
-        {/* Right column: Internal staff actions & proofs */}
+        {/* Middle Column - Files, Timeline & Actions */}
         <div className="space-y-6">
-          <Card className="p-4 bg-primary/5 border-primary/20">
-            <h3 className="text-sm font-semibold text-primary mb-2">Staff Actions</h3>
+          <Card className="p-4 bg-orange-500/5 border-orange-500/20">
+            <h3 className="text-sm font-semibold text-orange-500 mb-3 flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Staff Actions
+            </h3>
             <ActionSidebar order={order} />
           </Card>
           
@@ -212,6 +199,15 @@ export default function ShopFlowInternal() {
             missingFiles={missingFiles}
             fileErrors={fileErrors}
           />
+          
+          <Timeline logs={logs} />
+        </div>
+
+        {/* Right Column - Job Details & Proofs */}
+        <div className="space-y-6">
+          <JobDetailsCard order={order} />
+          
+          <OrderSummaryCard order={order} />
           
           {order.approveflow_project_id && (
             <ProofViewer order={order} />
