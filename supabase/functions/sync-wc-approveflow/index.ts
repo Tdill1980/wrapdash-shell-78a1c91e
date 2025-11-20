@@ -9,18 +9,13 @@ const corsHeaders = {
 // Email kill switch - set to true when ready for production
 const SEND_CUSTOMER_EMAILS = false;
 
-// Function to check if product is a design product
-function isDesignProduct(productName: string): boolean {
-  const designKeywords = [
-    'Full Vehicle Wrap Design',
-    'Hourly Design',
-    'Custom Vehicle Wrap Design',
-    'Vehicle Wrap Design'
-  ];
-  return designKeywords.some(keyword => 
-    productName.toLowerCase().includes(keyword.toLowerCase())
-  );
-}
+// Design product IDs that should go to ApproveFlow
+const DESIGN_PRODUCT_IDS = [
+  234,   // Custom Vehicle Wrap Design
+  58160, // Custom Vehicle Wrap Design (Copy) - Draft
+  290,   // Hourly Design
+  289    // File Output
+];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -72,17 +67,17 @@ serve(async (req) => {
     const orderTotal = parseFloat(webhook.total || '0');
     const customerEmail = webhook.billing?.email;
     
-    // Check if order contains design products (by product name)
+    // Check if order contains design products (by product ID)
     let hasDesignProduct = false;
     let productType = 'Custom Wrap';
     
     if (webhook.line_items && webhook.line_items.length > 0) {
       for (const item of webhook.line_items) {
-        const itemName = item.name || '';
-        if (isDesignProduct(itemName)) {
+        const productId = item.product_id;
+        if (DESIGN_PRODUCT_IDS.includes(productId)) {
           hasDesignProduct = true;
-          productType = itemName;
-          console.log('✅ Design product found:', itemName);
+          productType = item.name || 'Custom Vehicle Wrap Design';
+          console.log('✅ Design product found - ID:', productId, 'Name:', productType);
           break;
         }
       }
@@ -91,7 +86,7 @@ serve(async (req) => {
     // Only process design product orders
     if (!hasDesignProduct) {
       console.log('⚠️ Order does not contain design products - skipping ApproveFlow sync for order:', orderNumber);
-      console.log('   Product types in order:', webhook.line_items?.map((i: any) => i.name).join(', '));
+      console.log('   Product IDs in order:', webhook.line_items?.map((i: any) => `${i.product_id} (${i.name})`).join(', '));
       return new Response(
         JSON.stringify({ 
           message: 'Order does not contain design products', 
