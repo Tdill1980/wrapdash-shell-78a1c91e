@@ -122,6 +122,9 @@ export default function ShopFlowInternal() {
     { label: "Ready/Shipped", timestamp: order.shipped_at || "", completed: ["ready_or_shipped", "completed"].includes(internalStatus) },
   ];
 
+  // Map internal status to customer stage for display
+  const customerStage = internalStatus;
+
   return (
     <MainLayout userName="Trish">
       {/* ShopFlow Header - Customer View */}
@@ -140,19 +143,15 @@ export default function ShopFlowInternal() {
       
       {/* Customer Progress Bar - What Customer Sees */}
       <CustomerProgressBar 
-        currentStage={order.customer_stage || "order_received"} 
+        currentStatus={internalStatus} 
         hasApproveFlowProject={!!order.approveflow_project_id}
-        orderStatus={order.status}
       />
 
       {/* Internal Production Tracker */}
       <div className="mb-6">
         <Card className="p-4 bg-primary/5 border-primary/20">
           <h3 className="text-sm font-semibold text-primary mb-2">Internal Production Status</h3>
-          <InternalProductionTracker
-            currentStage={internalStatus}
-            timeline={sharedTimeline}
-          />
+          <InternalProductionTracker internalStatus={internalStatus} />
         </Card>
       </div>
 
@@ -172,7 +171,7 @@ export default function ShopFlowInternal() {
           </div>
           
           <div className={isDifferent('status', order.status) ? 'ring-2 ring-yellow-500/50 rounded-lg' : ''}>
-            <CurrentStageCard currentStage={order.customer_stage || "order_received"} />
+            <CurrentStageCard order={{ customer_stage: customerStage }} />
             {isDifferent('status', order.status) && (
               <div className="px-4 pb-4">
                 <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs">
@@ -189,7 +188,7 @@ export default function ShopFlowInternal() {
 
         {/* Middle column: Customer-facing cards */}
         <div className="space-y-6">
-          <NextStepCard currentStage={order.customer_stage || "order_received"} />
+          <NextStepCard order={{ customer_stage: customerStage }} />
           
           <UploadedFilesCard 
             files={files}
@@ -197,15 +196,11 @@ export default function ShopFlowInternal() {
             fileErrors={fileErrors}
             orderStatus={order.status}
             onFileUpload={() => {}}
-            canUpload={false}
           />
           
           <TimelineCard timeline={timeline} />
           
-          <OrderSummaryCard
-            productType={order.product_type}
-            orderDate={order.created_at}
-          />
+          <OrderSummaryCard order={order} />
         </div>
 
         {/* Right column: Internal staff actions & proofs */}
@@ -222,10 +217,10 @@ export default function ShopFlowInternal() {
           />
           
           {order.approveflow_project_id && (
-            <ProofViewer projectId={order.approveflow_project_id} />
+            <ProofViewer order={order} />
           )}
           
-          <NotesCard orderId={order.id} notes={order.notes} />
+          <NotesCard orderId={order.id} />
         </div>
       </div>
     </MainLayout>
