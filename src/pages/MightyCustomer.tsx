@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,8 @@ export default function MightyCustomer() {
   const [isSavingQuote, setIsSavingQuote] = useState(false);
   const [showPanelVisualization, setShowPanelVisualization] = useState(false);
   const [activeProductTab, setActiveProductTab] = useState("regular");
+  const [isManualSqft, setIsManualSqft] = useState(false);
+  const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -96,6 +98,22 @@ export default function MightyCustomer() {
     includeRoof,
     wrapType === 'partial' ? selectedPanels : null
   );
+
+  // Track vehicle match status
+  useEffect(() => {
+    if (sqftOptions && vehicle) {
+      setVehicleMatchFound(true);
+      setIsManualSqft(false);
+    } else if (vehicle && !sqftOptions) {
+      setVehicleMatchFound(false);
+    }
+  }, [sqftOptions, vehicle]);
+
+  // Custom setSqft wrapper to track manual entries
+  const handleSqftChange = (value: number) => {
+    setSqft(value);
+    setIsManualSqft(true);
+  };
 
   const handleVoiceTranscript = (transcript: string) => {
     const lower = transcript.toLowerCase();
@@ -807,24 +825,58 @@ export default function MightyCustomer() {
               </div>
             )}
 
-            {/* Auto-calculated SQFT Display */}
-            <div className="p-4 bg-gradient-to-r from-blue-950/50 to-blue-900/30 rounded-lg border border-blue-500/20">
+            {/* Auto-calculated SQFT Display with Visual Feedback */}
+            <div className={`p-4 rounded-lg border-2 transition-all ${
+              vehicleMatchFound && !isManualSqft
+                ? 'bg-gradient-to-r from-green-950/50 to-green-900/30 border-green-500/40'
+                : isManualSqft
+                  ? 'bg-gradient-to-r from-purple-950/50 to-purple-900/30 border-purple-500/40'
+                  : 'bg-gradient-to-r from-blue-950/50 to-blue-900/30 border-blue-500/20'
+            }`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-blue-300 text-base font-semibold">
-                    {sqftOptions 
-                      ? wrapType === 'full'
-                        ? (includeRoof ? "Total SQFT (Roof Included)" : "Total SQFT (No Roof)")
-                        : "Total SQFT (Selected Panels)"
-                      : "Total SQFT"
-                    }
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Label className={`text-base font-semibold ${
+                      vehicleMatchFound && !isManualSqft
+                        ? 'text-green-300'
+                        : isManualSqft
+                          ? 'text-purple-300'
+                          : 'text-blue-300'
+                    }`}>
+                      {sqftOptions 
+                        ? wrapType === 'full'
+                          ? (includeRoof ? "Total SQFT (Roof Included)" : "Total SQFT (No Roof)")
+                          : "Total SQFT (Selected Panels)"
+                        : "Total SQFT"
+                      }
+                    </Label>
+                    {vehicleMatchFound && !isManualSqft && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 rounded-full border border-green-500/40">
+                        <svg className="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                        </svg>
+                        <span className="text-xs font-medium text-green-400">Auto</span>
+                      </div>
+                    )}
+                    {isManualSqft && (
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-500/20 rounded-full border border-purple-500/40">
+                        <svg className="w-3 h-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                        <span className="text-xs font-medium text-purple-400">Manual</span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {sqft > 0 
+                    {vehicleMatchFound && !isManualSqft
                       ? wrapType === 'partial'
                         ? "✓ Calculated from selected panels"
-                        : "✓ Auto-calculated from vehicle database"
-                      : "Enter vehicle details above"
+                        : "✓ Vehicle matched in database"
+                      : isManualSqft
+                        ? "✎ Manually entered value"
+                        : sqft > 0
+                          ? "Calculated from panels"
+                          : "Enter vehicle details above"
                     }
                   </p>
                 </div>
@@ -832,7 +884,7 @@ export default function MightyCustomer() {
                   <Input
                     type="number"
                     value={sqft || ""}
-                    onChange={(e) => setSqft(Number(e.target.value))}
+                    onChange={(e) => handleSqftChange(Number(e.target.value))}
                     placeholder="0"
                     className="w-28 text-xl font-bold text-right bg-background"
                   />
