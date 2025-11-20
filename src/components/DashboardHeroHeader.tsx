@@ -61,16 +61,16 @@ export function DashboardHeroHeader({
       <div className="relative z-10 px-8 py-10">
         {/* Top Section - Title & Subtitle */}
         <div className="mb-6">
-          <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-4 py-2 rounded-lg mb-2">
-            <h1 className="font-poppins text-4xl font-bold leading-tight" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+          <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-4 py-3 rounded-lg mb-2">
+            <h1 className="font-poppins text-4xl font-bold leading-tight mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
               <span className="text-foreground">WrapCentral </span>
               <span className="text-gradient">Dashboard</span>
               <span className="text-muted-foreground text-2xl align-super">™</span>
             </h1>
+            <p className="text-muted-foreground text-sm" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
+              Your Command Center for Wrap Operations
+            </p>
           </div>
-          <p className="text-muted-foreground text-sm mb-1" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
-            Your Command Center for Wrap Operations
-          </p>
           <p className="text-muted-foreground/60 text-xs" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
             {format(new Date(), "EEEE, MMMM d, yyyy 'at' h:mm a")}
           </p>
