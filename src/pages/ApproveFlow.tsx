@@ -27,6 +27,7 @@ import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
+import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
 
 export default function ApproveFlow() {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
@@ -62,6 +63,7 @@ export default function ApproveFlow() {
     project,
     versions,
     chatMessages,
+    actions,
     loading,
     uploadVersion,
     sendMessage,
@@ -346,6 +348,15 @@ export default function ApproveFlow() {
         </div>
       </div>
 
+      {/* Comprehensive Timeline */}
+      <ApproveFlowTimeline
+        projectCreatedAt={project.created_at}
+        versions={versions}
+        actions={actions}
+        chatMessages={chatMessages}
+        hasMissingFiles={!versions.length}
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* LEFT: Order Info + Upload */}
         <div className="lg:col-span-1 space-y-6">
@@ -568,10 +579,11 @@ export default function ApproveFlow() {
               )}
             </div>
 
-            <Tabs defaultValue="2d" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="2d">2D View</TabsTrigger>
-                <TabsTrigger value="3d">3D View</TabsTrigger>
+            <Tabs defaultValue={renders3D ? "compare" : "2d"} className="w-full">
+              <TabsList className={`grid w-full ${renders3D ? 'grid-cols-3' : 'grid-cols-2'} mb-4`}>
+                <TabsTrigger value="2d">2D Draft</TabsTrigger>
+                {renders3D && <TabsTrigger value="compare">Compare</TabsTrigger>}
+                <TabsTrigger value="3d">3D Render</TabsTrigger>
               </TabsList>
               
               <TabsContent value="2d" className="space-y-4">
@@ -591,7 +603,7 @@ export default function ApproveFlow() {
                         {format(new Date(displayVersion.created_at), 'MMM d, yyyy h:mm a')}
                       </p>
                       {displayVersion.notes && (
-                        <p className="text-foreground">Notes: {displayVersion.notes}</p>
+                        <p className="text-foreground">{displayVersion.notes}</p>
                       )}
                     </div>
                   </div>
@@ -601,6 +613,39 @@ export default function ApproveFlow() {
                   </div>
                 )}
               </TabsContent>
+
+              {renders3D && (
+                <TabsContent value="compare" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-semibold mb-2 text-blue-400">2D Draft</p>
+                      {displayVersion ? (
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                          <img 
+                            src={displayVersion.file_url} 
+                            alt="2D Draft"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                          <p className="text-xs text-muted-foreground">No 2D draft</p>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold mb-2 text-cyan-400">3D Render</p>
+                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                        <img 
+                          src={renders3D.hero || renders3D.side || Object.values(renders3D)[0]} 
+                          alt="3D Render"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              )}
               
               <TabsContent value="3d">
                 {renders3D ? (
