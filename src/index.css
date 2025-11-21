@@ -11,7 +11,7 @@ All colors MUST be HSL.
       /* Pure black & charcoal base - Electric Blue Brand */
       --background: 240 50% 3%;           /* #0A0A0F Pure black */
       --foreground: 240 10% 98%;          /* White text */
-      --card: 0 0% 9%;                    /* #101016 Charcoal */
+      --card: 220 15% 18%;                /* #252A35 Lighter Charcoal */
       --card-foreground: 240 10% 98%;
       --popover: 240 50% 3%;
       --popover-foreground: 240 10% 98%;
