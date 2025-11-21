@@ -8,7 +8,7 @@ serve(async (req) => {
   }
 
   try {
-    const { panelUrl, vehicleModelId } = await req.json();
+    const { panelUrl, vehicleModelId, angle = 'front', finish = 'gloss', environment = 'studio' } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
@@ -30,16 +30,45 @@ serve(async (req) => {
       throw new Error("Vehicle not found in database");
     }
 
-    console.log("Generating 3D render for:", vehicle.year, vehicle.make, vehicle.model);
+    console.log("Generating 3D render for:", vehicle.year, vehicle.make, vehicle.model, `(${angle}, ${finish}, ${environment})`);
+
+    // Determine camera angle from vehicle data
+    let cameraAngle = vehicle.angle_front || 'front 3/4 view, 45-degree angle';
+    if (angle === 'side') cameraAngle = vehicle.angle_side || 'side profile view, 90-degree angle';
+    if (angle === 'rear') cameraAngle = vehicle.angle_rear || 'rear 3/4 view, 45-degree angle';
+    if (angle === 'front-close') cameraAngle = vehicle.angle_front_close || 'front close-up view, straight on';
+
+    // Determine finish description
+    const finishMap: Record<string, string> = {
+      gloss: 'high-gloss finish with sharp reflections and mirror-like surface quality',
+      satin: 'satin finish with soft reflections and smooth matte sheen',
+      matte: 'matte finish with no reflections, deep rich color, flat surface appearance'
+    };
+    const finishDescription = finishMap[finish] || finishMap.gloss;
+
+    // Determine environment description
+    const environmentMap: Record<string, string> = {
+      studio: 'dark concrete studio, professional lighting with soft shadows, clean modern backdrop',
+      white: 'white cyclorama studio, bright even lighting, seamless white background',
+      desert: 'desert landscape, golden hour lighting, sand dunes and dramatic sky',
+      city: 'urban cityscape at night, neon lights, wet reflective pavement',
+      garage: 'industrial garage, dramatic spot lighting, tool boxes and equipment in background',
+      showroom: 'luxury showroom, spotlights, polished floor reflections, modern architecture'
+    };
+    const environmentDescription = environmentMap[environment] || environmentMap.studio;
 
     // Build prompt using vehicle data
     const prompt = `Generate a hyper-realistic 3D vehicle wrap render.
 
 Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-Studio: dark concrete studio, high-end lighting
-Camera: ${vehicle.angle_front || 'front 3/4 angle, 45-degree angle'}
+Camera angle: ${cameraAngle}
+Wrap finish: ${finishDescription}
+Environment: ${environmentDescription}
+
 Apply the wrap design from the provided panel image exactly as shown.
-Show real reflections and body lines.
+Show accurate body lines, panel gaps, and surface details.
+The wrap should look professionally installed with no bubbles or imperfections.
+Emphasize the ${finish} finish with appropriate lighting and reflections.
 No distortion, no fisheye, no cartoon style.
 
 ${vehicle.render_prompt || 'Emphasize accurate vehicle proportions and wrap adhesion on body panels.'}`;

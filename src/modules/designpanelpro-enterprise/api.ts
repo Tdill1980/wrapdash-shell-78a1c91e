@@ -11,6 +11,9 @@ interface GenerateMasterParams {
 interface Generate3DParams {
   panelUrl: string;
   vehicleModelId: string;
+  angle?: 'front' | 'side' | 'rear' | 'front-close';
+  finish?: 'gloss' | 'satin' | 'matte';
+  environment?: 'studio' | 'white' | 'desert' | 'city' | 'garage' | 'showroom';
 }
 
 interface ConvertPrintParams {
