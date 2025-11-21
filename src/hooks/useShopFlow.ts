@@ -344,9 +344,13 @@ export const useShopFlow = (orderId?: string) => {
 
       if (error) throw error;
 
+      console.log('[ShopFlow] sync-woo-manual result:', data);
+      const syncedCount = data?.syncedShopFlow ?? data?.processed ?? 0;
+      const skippedCount = data?.skipped ?? 0;
+
       toast({
         title: 'Sync Complete',
-        description: `Synced ${data.syncedShopFlow} orders, skipped ${data.skipped} existing`,
+        description: `Synced ${syncedCount} orders, skipped ${skippedCount} existing`,
       });
 
       // Refresh orders
