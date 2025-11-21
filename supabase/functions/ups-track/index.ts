@@ -1,4 +1,28 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+
+// Map UPS status to ShopFlow stage
+const mapUPSStatusToStage = (upsStatus: string): string => {
+  const statusLower = upsStatus.toLowerCase();
+  
+  if (statusLower.includes('label created') || statusLower.includes('order processed')) {
+    return 'print-production';
+  }
+  if (statusLower.includes('in transit') || statusLower.includes('on the way')) {
+    return 'shipped';
+  }
+  if (statusLower.includes('out for delivery')) {
+    return 'shipped';
+  }
+  if (statusLower.includes('delivered')) {
+    return 'completed';
+  }
+  if (statusLower.includes('exception') || statusLower.includes('delayed')) {
+    return 'on-hold';
+  }
+  
+  return 'processing'; // Default fallback
+};
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -7,7 +31,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tracking_number } = await req.json();
+    const { tracking_number, order_id } = await req.json();
 
     if (!tracking_number) {
       return new Response(
@@ -86,6 +110,56 @@ Deno.serve(async (req) => {
     };
 
     console.log('Returning normalized tracking data:', normalizedData);
+
+    // Update ShopFlow order status if order_id provided
+    if (order_id) {
+      try {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+
+        const newStage = mapUPSStatusToStage(currentStatus);
+        
+        // Get current order to check if status changed
+        const { data: currentOrder } = await supabase
+          .from('shopflow_orders')
+          .select('status')
+          .eq('id', order_id)
+          .single();
+
+        if (currentOrder && currentOrder.status !== newStage) {
+          // Update order status
+          await supabase
+            .from('shopflow_orders')
+            .update({ 
+              status: newStage,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', order_id);
+
+          // Add timeline event
+          await supabase
+            .from('shopflow_logs')
+            .insert({
+              order_id: order_id,
+              event_type: 'status_change',
+              payload: {
+                old_status: currentOrder.status,
+                new_status: newStage,
+                tracking_status: currentStatus,
+                automated: true,
+                source: 'ups_tracking'
+              }
+            });
+
+          console.log(`Updated order ${order_id} status: ${currentOrder.status} → ${newStage}`);
+        }
+      } catch (error) {
+        console.error('Error updating order status:', error);
+        // Don't fail the whole request if status update fails
+      }
+    }
 
     return new Response(
       JSON.stringify(normalizedData),

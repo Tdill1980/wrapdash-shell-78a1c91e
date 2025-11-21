@@ -14,7 +14,7 @@ export interface TrackingData {
   events: TrackingEvent[];
 }
 
-export const useUPSTracking = (trackingNumber: string | null | undefined) => {
+export const useUPSTracking = (trackingNumber: string | null | undefined, orderId?: string) => {
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,10 @@ export const useUPSTracking = (trackingNumber: string | null | undefined) => {
     
     try {
       const { data, error: fnError } = await supabase.functions.invoke('ups-track', {
-        body: { tracking_number: trackingNumber }
+        body: { 
+          tracking_number: trackingNumber,
+          order_id: orderId 
+        }
       });
       
       if (fnError) throw fnError;
@@ -57,7 +60,7 @@ export const useUPSTracking = (trackingNumber: string | null | undefined) => {
       
       return () => clearInterval(interval);
     }
-  }, [trackingNumber, fetchTracking]);
+  }, [trackingNumber, orderId, fetchTracking]);
 
   return {
     trackingData,
