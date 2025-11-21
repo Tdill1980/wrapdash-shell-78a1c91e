@@ -36,19 +36,19 @@ const STAGE_MESSAGES: Record<string, { title: string; description: string }> = {
     description: "Proof generated and ready for review. Awaiting customer approval."
   },
   printing: {
-    title: "Printing In Progress",
+    title: "Print Production",
     description: "Print production in progress on our large-format printers."
   },
   laminating: {
-    title: "Lamination In Progress",
+    title: "Print Production",
     description: "Applying protective lamination for durability and UV protection."
   },
   cutting: {
-    title: "Cutting & Finishing",
+    title: "Print Production",
     description: "Cutting and finishing in progress. Precision panel trimming."
   },
   qc: {
-    title: "Quality Inspection",
+    title: "QC",
     description: "Final quality inspection in progress. Checking color, finish, and fit."
   },
   ready: {
@@ -61,13 +61,13 @@ export function CurrentStageCard({ order }: CurrentStageCardProps) {
   const stage = STAGE_MESSAGES[order.customer_stage] || STAGE_MESSAGES.order_received;
 
   return (
-    <div className="bg-[#141414] border border-white/10 rounded-xl p-6 shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+    <div className="bg-gradient-to-r from-[#2F81F7]/10 to-[#15D1FF]/10 border-2 border-[#2F81F7]/30 rounded-xl p-6 shadow-lg shadow-[#2F81F7]/20">
       <div className="flex items-start gap-4">
-        <div className="p-3 rounded-lg bg-gradient-to-r from-[#5AC8FF] via-[#2F8CFF] to-[#1A5BFF]">
+        <div className="p-3 rounded-lg bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg">
           <Activity className="w-6 h-6 text-white" />
         </div>
         <div className="flex-1">
-          <h2 className="card-header mb-2">
+          <h2 className="text-2xl font-bold text-white mb-2">
             {stage.title}
           </h2>
           <p className="text-white/80 text-[14px] font-inter leading-relaxed">
