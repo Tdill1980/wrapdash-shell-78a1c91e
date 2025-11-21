@@ -377,9 +377,9 @@ export default function ApproveFlow() {
     <MainLayout>
       <div className="space-y-6 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold tracking-tight">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             <span className="text-white">Approve</span>
             <span className="text-gradient">Flow™</span>
           </h1>
@@ -389,6 +389,7 @@ export default function ApproveFlow() {
               variant={activeRole === "designer" ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveRole("designer")}
+              className="text-xs sm:text-sm"
             >
               DESIGNER
             </Button>
@@ -396,6 +397,7 @@ export default function ApproveFlow() {
               variant={activeRole === "customer" ? "default" : "outline"}
               size="sm"
               onClick={() => setActiveRole("customer")}
+              className="text-xs sm:text-sm"
             >
               CUSTOMER
             </Button>
@@ -405,18 +407,18 @@ export default function ApproveFlow() {
             variant="outline"
             size="sm"
             onClick={() => window.location.reload()}
-            className="bg-primary/20 text-primary border-primary/50 hover:bg-primary/30"
+            className="bg-primary/20 text-primary border-primary/50 hover:bg-primary/30 text-xs sm:text-sm"
           >
-            🔄 LIVE SYNC
+            🔄 <span className="hidden sm:inline">LIVE </span>SYNC
           </Button>
 
           {trackingInfo?.id && (
             <Link 
               to={`/shopflow-internal/${trackingInfo.id}`}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              <ArrowLeft className="w-4 h-4" />
-              View in ShopFlow
+              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">View in </span>ShopFlow
               <ExternalLink className="w-3 h-3" />
             </Link>
           )}
@@ -462,16 +464,16 @@ export default function ApproveFlow() {
       {/* Order Info - Full Width at Top */}
       <Card className="bg-[#1a1a24] border-white/10 mb-6">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2">
+            <div className="w-full sm:w-auto">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">
                 Order #{project.order_number}
               </h2>
-              <p className="text-sm text-white/60 mt-1">
+              <p className="text-xs sm:text-sm text-white/60 mt-1">
                 Placed {formatFullDateTime(project.created_at)}
               </p>
             </div>
-            <Badge className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white border-0">
+            <Badge className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white border-0 text-xs sm:text-sm">
               {project.status}
             </Badge>
           </div>
@@ -515,7 +517,7 @@ export default function ApproveFlow() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* LEFT: Design Requirements, Chat & Upload */}
         <div className="space-y-4">
           {/* Design Requirements */}

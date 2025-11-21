@@ -127,18 +127,18 @@ export default function ShopFlowInternal() {
       <ShopFlowBrandHeader />
       
       {/* Internal View Badge & Sync Button */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20 text-xs sm:text-sm">
             Internal Staff View
           </Badge>
           {order.approveflow_project_id && (
             <Link 
               to={`/approveflow/${order.approveflow_project_id}`}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+              className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white rounded-lg text-xs sm:text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              <CheckCircle className="w-4 h-4" />
-              View in ApproveFlow
+              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">View in </span>ApproveFlow
               <ExternalLink className="w-3 h-3" />
             </Link>
           )}
@@ -153,7 +153,7 @@ export default function ShopFlowInternal() {
       <WooCommerceStatusBar currentStatus={order.status} />
 
       {/* Main content area - Internal Staff View */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Left Column - Order & Status Details */}
         <div className="space-y-6">
           <div className={isDifferent('customer_name', order.customer_name) || isDifferent('customer_email', order.customer_email) ? 'ring-2 ring-yellow-500/50 rounded-lg' : ''}>
