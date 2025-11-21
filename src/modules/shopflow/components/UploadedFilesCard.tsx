@@ -76,6 +76,17 @@ export const UploadedFilesCard = ({
             </div>
           </div>
         </div>
+      ) : ['in-production', 'in_production', 'print-production', 'lamination', 'finishing', 'ready-for-print', 'shipped', 'completed'].includes(orderStatus || '') ? (
+        <div className="p-4 bg-green-500/10 border border-green-400/30 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Upload className="w-5 h-5 text-green-400 flex-shrink-0" />
+            <div>
+              <p className="text-white/70 text-sm">
+                Files received and in production
+              </p>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
           <div className="flex items-start gap-2 mb-3">

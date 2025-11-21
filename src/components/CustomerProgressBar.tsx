@@ -42,6 +42,8 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
     "ready-for-print": "Print Production",
     "pre-press": "Print Production",
     "print-production": "Print Production",
+    "in-production": "Print Production",
+    "in_production": "Print Production",
     "lamination": "Print Production",
     "finishing": "Print Production",
     
