@@ -13,6 +13,7 @@ import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
 import { ManualSyncButton } from "@/modules/shopflow/components/ManualSyncButton";
+import { TrackingCard } from "@/modules/shopflow/components/TrackingCard";
 import { toast } from "@/hooks/use-toast";
 import { MainLayout } from "@/layouts/MainLayout";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -170,6 +171,13 @@ export default function TrackJob() {
           <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
         </div>
         
+        {/* Tracking Card - Only show if tracking number exists */}
+        {order.tracking_number && (
+          <TrackingCard 
+            trackingNumber={order.tracking_number}
+            trackingUrl={order.tracking_url}
+          />
+        )}
         
         {/* Additional Cards */}
         <div className="flex flex-wrap gap-4">
