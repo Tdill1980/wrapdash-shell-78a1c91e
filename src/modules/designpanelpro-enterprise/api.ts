@@ -10,7 +10,7 @@ interface GenerateMasterParams {
 
 interface Generate3DParams {
   panelUrl: string;
-  vehicleModel: string;
+  vehicleModelId: string;
 }
 
 interface ConvertPrintParams {
@@ -44,4 +44,17 @@ export async function convertToPrint(params: ConvertPrintParams) {
 
   if (error) throw error;
   return data;
+}
+
+export async function fetchVehicles() {
+  const { data, error } = await supabase
+    .from('vehicle_models')
+    .select('*')
+    .eq('is_active', true)
+    .order('make', { ascending: true })
+    .order('model', { ascending: true })
+    .order('year', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 }

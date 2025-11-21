@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateMasterCanvas, generate3DRender, convertToPrint } from './api';
+import { VehicleSelector } from './components/VehicleSelector';
 
 export default function DesignPanelProEnterprise() {
   const [width, setWidth] = useState('60');
   const [height, setHeight] = useState('30');
+  const [vehicleModelId, setVehicleModelId] = useState<string | null>(null);
   const [style, setStyle] = useState('commercial');
   const [subStyle, setSubStyle] = useState('clean');
   const [intensity, setIntensity] = useState('medium');
@@ -21,6 +23,11 @@ export default function DesignPanelProEnterprise() {
   const [tiffUrl, setTiffUrl] = useState<string | null>(null);
 
   const handleGenerate = async () => {
+    if (!vehicleModelId) {
+      toast.error('Please select a vehicle first');
+      return;
+    }
+
     setLoading(true);
     try {
       // Step 1: Generate flat panel
@@ -34,11 +41,11 @@ export default function DesignPanelProEnterprise() {
       });
       setPreview(masterData.preview);
       
-      // Step 2: Generate 3D render
+      // Step 2: Generate 3D render with selected vehicle
       toast.info('Creating 3D vehicle render...');
       const renderData = await generate3DRender({
         panelUrl: masterData.preview,
-        vehicleModel: 'generic-sedan'
+        vehicleModelId
       });
       setRender(renderData.render);
       
@@ -72,6 +79,9 @@ export default function DesignPanelProEnterprise() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Vehicle Selector - FIRST */}
+              <VehicleSelector onSelect={setVehicleModelId} />
+
               {/* Width */}
               <div>
                 <Label htmlFor="width">Width (inches)</Label>

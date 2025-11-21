@@ -1465,6 +1465,63 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_models: {
+        Row: {
+          angle_front: string | null
+          angle_front_close: string | null
+          angle_rear: string | null
+          angle_side: string | null
+          body_type: string | null
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          is_oem: boolean | null
+          make: string
+          model: string
+          render_prompt: string | null
+          updated_at: string | null
+          year: string
+        }
+        Insert: {
+          angle_front?: string | null
+          angle_front_close?: string | null
+          angle_rear?: string | null
+          angle_side?: string | null
+          body_type?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_oem?: boolean | null
+          make: string
+          model: string
+          render_prompt?: string | null
+          updated_at?: string | null
+          year: string
+        }
+        Update: {
+          angle_front?: string | null
+          angle_front_close?: string | null
+          angle_rear?: string | null
+          angle_side?: string | null
+          body_type?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_oem?: boolean | null
+          make?: string
+          model?: string
+          render_prompt?: string | null
+          updated_at?: string | null
+          year?: string
+        }
+        Relationships: []
+      }
       wrapbox_kits: {
         Row: {
           created_at: string | null
