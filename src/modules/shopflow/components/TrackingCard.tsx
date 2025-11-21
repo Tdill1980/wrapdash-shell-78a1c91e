@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 interface TrackingCardProps {
   trackingNumber: string;
   trackingUrl?: string;
+  orderId?: string;
 }
 
-export const TrackingCard = ({ trackingNumber, trackingUrl }: TrackingCardProps) => {
-  const { trackingData, loading, error } = useUPSTracking(trackingNumber);
+export const TrackingCard = ({ trackingNumber, trackingUrl, orderId }: TrackingCardProps) => {
+  const { trackingData, loading, error } = useUPSTracking(trackingNumber, orderId);
 
   const getStatusColor = (status: string) => {
     const lowerStatus = status.toLowerCase();

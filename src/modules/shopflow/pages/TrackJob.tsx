@@ -176,6 +176,7 @@ export default function TrackJob() {
           <TrackingCard 
             trackingNumber={order.tracking_number}
             trackingUrl={order.tracking_url}
+            orderId={order.id}
           />
         )}
         
