@@ -1672,6 +1672,7 @@ export type Database = {
           is_oem: boolean | null
           make: string
           model: string
+          panel_geometry: Json | null
           render_prompt: string | null
           sort_order: number | null
           thumbnail_url: string | null
@@ -1696,6 +1697,7 @@ export type Database = {
           is_oem?: boolean | null
           make: string
           model: string
+          panel_geometry?: Json | null
           render_prompt?: string | null
           sort_order?: number | null
           thumbnail_url?: string | null
@@ -1720,6 +1722,7 @@ export type Database = {
           is_oem?: boolean | null
           make?: string
           model?: string
+          panel_geometry?: Json | null
           render_prompt?: string | null
           sort_order?: number | null
           thumbnail_url?: string | null

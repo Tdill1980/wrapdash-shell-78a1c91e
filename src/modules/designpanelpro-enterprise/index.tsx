@@ -10,6 +10,7 @@ import { generateMasterCanvas, generate3DRender, convertToPrint } from './api';
 import { VehicleSelector } from './components/VehicleSelector';
 import { saveDesignPanel } from './panel-api';
 import { PanelLibrary } from './components/PanelLibrary';
+import { PanelSelector } from './components/PanelSelector';
 
 export default function DesignPanelProEnterprise() {
   const [showLibrary, setShowLibrary] = useState(false);
@@ -26,6 +27,10 @@ export default function DesignPanelProEnterprise() {
   const [selectedFinish, setSelectedFinish] = useState<'gloss' | 'satin' | 'matte'>('gloss');
   const [selectedEnvironment, setSelectedEnvironment] = useState<'studio' | 'white' | 'desert' | 'city' | 'garage' | 'showroom'>('studio');
   
+  // Panel Selection (auto-select all panels by default)
+  const [availablePanels, setAvailablePanels] = useState<any[]>([]);
+  const [selectedPanels, setSelectedPanels] = useState<string[]>([]);
+  
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generatingAllAngles, setGeneratingAllAngles] = useState(false);
@@ -34,6 +39,18 @@ export default function DesignPanelProEnterprise() {
   const [renders, setRenders] = useState<Record<string, string>>({});
   const [tiffUrl, setTiffUrl] = useState<string | null>(null);
   const [printMetadata, setPrintMetadata] = useState<any>(null);
+
+  // Auto-select all panels when vehicle changes
+  React.useEffect(() => {
+    if (selectedVehicle?.panel_geometry?.panels) {
+      const panels = selectedVehicle.panel_geometry.panels;
+      setAvailablePanels(panels);
+      setSelectedPanels(panels.map((p: any) => p.name));
+    } else {
+      setAvailablePanels([]);
+      setSelectedPanels([]);
+    }
+  }, [selectedVehicle]);
 
   const handleGenerate = async () => {
     if (!vehicleModelId) {
@@ -54,14 +71,15 @@ export default function DesignPanelProEnterprise() {
       });
       setPreview(masterData.preview);
       
-      // Step 2: Generate 3D render with selected vehicle, angle, finish, and environment
+      // Step 2: Generate 3D render with selected vehicle, angle, finish, environment, and panels
       toast.info(`Creating 3D render (${selectedAngle}, ${selectedFinish})...`);
       const renderData = await generate3DRender({
         panelUrl: masterData.preview,
         vehicleModelId,
         angle: selectedAngle,
         finish: selectedFinish,
-        environment: selectedEnvironment
+        environment: selectedEnvironment,
+        selectedPanels
       });
       setRenders(prev => ({ ...prev, [selectedAngle]: renderData.render }));
       
@@ -103,7 +121,8 @@ export default function DesignPanelProEnterprise() {
           vehicleModelId,
           angle,
           finish: selectedFinish,
-          environment: selectedEnvironment
+          environment: selectedEnvironment,
+          selectedPanels
         });
         setRenders(prev => ({ ...prev, [angle]: renderData.render }));
       }
@@ -279,6 +298,26 @@ export default function DesignPanelProEnterprise() {
                   </Button>
                 </div>
               </div>
+
+              {/* Panel Selection (shown after vehicle selection) */}
+              {vehicleModelId && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <h3 className="text-lg font-semibold text-[#22d3ee]">Panel Selection</h3>
+                  <PanelSelector
+                    panels={availablePanels}
+                    selectedPanels={selectedPanels}
+                    onPanelToggle={(panelName) => {
+                      setSelectedPanels(prev =>
+                        prev.includes(panelName)
+                          ? prev.filter(p => p !== panelName)
+                          : [...prev, panelName]
+                      );
+                    }}
+                    onSelectAll={() => setSelectedPanels(availablePanels.map(p => p.name))}
+                    onDeselectAll={() => setSelectedPanels([])}
+                  />
+                </div>
+              )}
 
               {/* 3D Rendering Options */}
               {preview && vehicleModelId && (
