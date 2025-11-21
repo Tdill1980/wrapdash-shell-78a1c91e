@@ -97,7 +97,7 @@ export function DashboardHeroHeader({
         <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-30% via-background/30 to-60% to-transparent" />
         
         {/* Content Layer */}
-        <div className="relative z-10 px-4 sm:px-8 py-6 sm:py-10">
+        <div className="relative z-10 px-4 sm:px-8 pt-4 pb-6 sm:pt-6 sm:pb-10">
           <div className="mb-4 sm:mb-6">
             <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2">
               <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
@@ -167,7 +167,7 @@ export function DashboardHeroHeader({
               <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-30% via-background/30 to-60% to-transparent" />
               
               {/* Content Layer */}
-              <div className="relative z-10 px-4 sm:px-8 py-6 sm:py-10">
+              <div className="relative z-10 px-4 sm:px-8 pt-4 pb-6 sm:pt-6 sm:pb-10">
                 <div className="mb-4 sm:mb-6">
                   <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2">
                     <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
