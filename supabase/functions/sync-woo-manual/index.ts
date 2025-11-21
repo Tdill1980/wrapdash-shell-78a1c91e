@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
     
     // Limit processing to prevent timeout (process in batches)
-    const maxOrdersToProcess = Math.min(orders.length, 20);
+    const maxOrdersToProcess = Math.min(orders.length, 5);
     console.log(`Processing ${maxOrdersToProcess} of ${orders.length} orders to prevent timeout`);
 
     for (let i = 0; i < maxOrdersToProcess; i++) {
