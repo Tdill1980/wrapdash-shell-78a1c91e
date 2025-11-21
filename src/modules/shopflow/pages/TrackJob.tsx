@@ -189,28 +189,25 @@ export default function TrackJob() {
         {/* Timeline - Full Width Horizontal */}
         <TimelineCard timeline={timeline} />
         
-        {/* Remaining Cards - Horizontal Narrow Columns */}
+        {/* Primary Status Cards - Full Width Horizontal */}
+        <div className="space-y-4">
+          <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
+          
+          <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
+          
+          <UploadedFilesCard 
+            files={files} 
+            missingFiles={missingFiles} 
+            fileErrors={fileErrors} 
+            orderId={order.id}
+            onFileUpload={handleFileUpload}
+            uploading={uploading}
+            orderStatus={order.status}
+          />
+        </div>
+        
+        {/* Additional Cards */}
         <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[280px]">
-            <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
-          </div>
-          
-          <div className="flex-1 min-w-[280px]">
-            <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
-          </div>
-          
-          <div className="flex-1 min-w-[280px]">
-            <UploadedFilesCard 
-              files={files} 
-              missingFiles={missingFiles} 
-              fileErrors={fileErrors} 
-              orderId={order.id}
-              onFileUpload={handleFileUpload}
-              uploading={uploading}
-              orderStatus={order.status}
-            />
-          </div>
-          
           {(fileErrors.length > 0 || missingFiles.length > 0) && (
             <div className="flex-1 min-w-[280px]">
               <ActionRequiredCard order={{ customer_stage: order.customer_stage || order.status, file_error_details: fileErrors, missing_file_list: missingFiles }} />
