@@ -21,7 +21,7 @@ export const FileThumbnail = ({ file, orderId }: any) => {
   // Placeholder if still generating
   if (!thumb) {
     return (
-      <div className="w-20 h-20 rounded-md bg-[#1A1A22] border border-white/10 animate-pulse"></div>
+      <div className="w-10 h-10 rounded-md bg-[#1A1A22] border border-white/10 animate-pulse"></div>
     );
   }
 
@@ -29,7 +29,7 @@ export const FileThumbnail = ({ file, orderId }: any) => {
     <img
       src={thumb}
       alt={file.name}
-      className="w-20 h-20 object-cover rounded-md border border-white/10"
+      className="w-10 h-10 object-cover rounded-md border border-white/10"
     />
   );
 };
