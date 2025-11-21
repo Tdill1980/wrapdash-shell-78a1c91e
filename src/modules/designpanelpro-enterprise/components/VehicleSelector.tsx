@@ -13,7 +13,7 @@ interface Vehicle {
 }
 
 interface VehicleSelectorProps {
-  onSelect: (vehicleId: string | null) => void;
+  onSelect: (vehicle: Vehicle | null) => void;
 }
 
 export function VehicleSelector({ onSelect }: VehicleSelectorProps) {
@@ -45,7 +45,7 @@ export function VehicleSelector({ onSelect }: VehicleSelectorProps) {
       setYear("");
       onSelect(null);
     }
-  }, [make, vehicles, onSelect]);
+  }, [make, vehicles]);
 
   useEffect(() => {
     if (model) {
@@ -58,16 +58,16 @@ export function VehicleSelector({ onSelect }: VehicleSelectorProps) {
       setYear("");
       onSelect(null);
     }
-  }, [model, filteredModels, onSelect]);
+  }, [model, filteredModels]);
 
   useEffect(() => {
     if (year) {
       const selected = filteredYears.find(v => v.year === year);
-      onSelect(selected?.id || null);
+      onSelect(selected || null);
     } else {
       onSelect(null);
     }
-  }, [year, filteredYears, onSelect]);
+  }, [year, filteredYears]);
 
   const uniqueMakes = [...new Set(vehicles.map(v => v.make))].sort();
   const uniqueModels = [...new Set(filteredModels.map(v => v.model))].sort();

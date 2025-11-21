@@ -4,23 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateMasterCanvas, generate3DRender, convertToPrint } from './api';
 import { VehicleSelector } from './components/VehicleSelector';
+import { saveDesignPanel } from './panel-api';
+import { PanelLibrary } from './components/PanelLibrary';
 
 export default function DesignPanelProEnterprise() {
+  const [showLibrary, setShowLibrary] = useState(false);
   const [width, setWidth] = useState('60');
   const [height, setHeight] = useState('30');
   const [vehicleModelId, setVehicleModelId] = useState<string | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [style, setStyle] = useState('commercial');
   const [subStyle, setSubStyle] = useState('clean');
   const [intensity, setIntensity] = useState('medium');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   const [preview, setPreview] = useState<string | null>(null);
   const [render, setRender] = useState<string | null>(null);
   const [tiffUrl, setTiffUrl] = useState<string | null>(null);
+  const [printMetadata, setPrintMetadata] = useState<any>(null);
 
   const handleGenerate = async () => {
     if (!vehicleModelId) {
@@ -57,6 +63,7 @@ export default function DesignPanelProEnterprise() {
         height
       });
       setTiffUrl(printData.tiffUrl);
+      setPrintMetadata(printData.metadata);
       
       toast.success('Panel design complete!');
     } catch (error) {
@@ -66,6 +73,43 @@ export default function DesignPanelProEnterprise() {
       setLoading(false);
     }
   };
+
+  const handleSaveToLibrary = async () => {
+    if (!preview) {
+      toast.error('Generate a panel design first');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await saveDesignPanel({
+        vehicle_id: vehicleModelId || undefined,
+        vehicle_make: selectedVehicle?.make,
+        vehicle_model: selectedVehicle?.model,
+        vehicle_year: selectedVehicle?.year,
+        style,
+        substyle: subStyle,
+        intensity,
+        width_inches: Number(width),
+        height_inches: Number(height),
+        panel_preview_url: preview,
+        panel_3d_url: render || undefined,
+        tiff_url: tiffUrl || undefined,
+        metadata: printMetadata
+      });
+      
+      toast.success('Design saved to library!');
+    } catch (error) {
+      console.error('Error saving panel:', error);
+      toast.error('Failed to save design');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (showLibrary) {
+    return <PanelLibrary />;
+  }
 
   return (
     <div className="min-h-screen bg-[#0B0B0C] p-8">
@@ -79,8 +123,23 @@ export default function DesignPanelProEnterprise() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Library Button */}
+              <Button
+                onClick={() => setShowLibrary(true)}
+                variant="outline"
+                className="w-full"
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Design Library
+              </Button>
+
               {/* Vehicle Selector - FIRST */}
-              <VehicleSelector onSelect={setVehicleModelId} />
+              <VehicleSelector 
+                onSelect={(vehicle) => {
+                  setVehicleModelId(vehicle?.id || null);
+                  setSelectedVehicle(vehicle);
+                }} 
+              />
 
               {/* Width */}
               <div>
@@ -186,6 +245,28 @@ export default function DesignPanelProEnterprise() {
                   'Generate Panel Design'
                 )}
               </Button>
+
+              {/* Save to Library Button */}
+              {preview && (
+                <Button
+                  onClick={handleSaveToLibrary}
+                  disabled={saving}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save to Library
+                    </>
+                  )}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>

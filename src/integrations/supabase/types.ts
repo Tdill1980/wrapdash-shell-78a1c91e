@@ -771,6 +771,194 @@ export type Database = {
         }
         Relationships: []
       }
+      design_panel_folders: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          organization_id: string | null
+          parent_folder_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          organization_id?: string | null
+          parent_folder_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string | null
+          parent_folder_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_panel_folders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_panel_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "design_panel_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_panel_versions: {
+        Row: {
+          changes_description: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          panel_3d_url: string | null
+          panel_id: string
+          panel_preview_url: string
+          tiff_url: string | null
+          version_number: number
+        }
+        Insert: {
+          changes_description?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          panel_3d_url?: string | null
+          panel_id: string
+          panel_preview_url: string
+          tiff_url?: string | null
+          version_number: number
+        }
+        Update: {
+          changes_description?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          panel_3d_url?: string | null
+          panel_id?: string
+          panel_preview_url?: string
+          tiff_url?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_panel_versions_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "design_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_panels: {
+        Row: {
+          created_at: string | null
+          folder_id: string | null
+          height_inches: number
+          id: string
+          intensity: string | null
+          is_shared: boolean | null
+          is_template: boolean | null
+          metadata: Json | null
+          organization_id: string | null
+          panel_3d_url: string | null
+          panel_preview_url: string
+          style: string
+          substyle: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          tiff_url: string | null
+          updated_at: string | null
+          user_id: string
+          vehicle_id: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: string | null
+          width_inches: number
+        }
+        Insert: {
+          created_at?: string | null
+          folder_id?: string | null
+          height_inches: number
+          id?: string
+          intensity?: string | null
+          is_shared?: boolean | null
+          is_template?: boolean | null
+          metadata?: Json | null
+          organization_id?: string | null
+          panel_3d_url?: string | null
+          panel_preview_url: string
+          style: string
+          substyle?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          tiff_url?: string | null
+          updated_at?: string | null
+          user_id: string
+          vehicle_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+          width_inches: number
+        }
+        Update: {
+          created_at?: string | null
+          folder_id?: string | null
+          height_inches?: number
+          id?: string
+          intensity?: string | null
+          is_shared?: boolean | null
+          is_template?: boolean | null
+          metadata?: Json | null
+          organization_id?: string | null
+          panel_3d_url?: string | null
+          panel_preview_url?: string
+          style?: string
+          substyle?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          tiff_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+          vehicle_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+          width_inches?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_panels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_panels_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_branding: {
         Row: {
           created_at: string | null
