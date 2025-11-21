@@ -178,6 +178,7 @@ All colors MUST be HSL.
 
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
+    height: 6px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
