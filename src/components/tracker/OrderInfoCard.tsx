@@ -1,4 +1,4 @@
-import { Package, Car } from "lucide-react";
+import { Package } from "lucide-react";
 import { format } from "date-fns";
 
 interface OrderInfoCardProps {
@@ -17,11 +17,6 @@ interface OrderInfoCardProps {
 }
 
 export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
-  const vehicleInfo = order.vehicle_info as any;
-  const vehicleDisplay = vehicleInfo 
-    ? `${vehicleInfo.year || ''} ${vehicleInfo.make || ''} ${vehicleInfo.model || ''}`.trim()
-    : 'Vehicle Info Pending';
-
   return (
     <div className="bg-[#111317] border border-white/10 rounded-xl p-4 flex items-center gap-4 w-full">
       {/* Product Thumbnail */}
@@ -54,15 +49,6 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
           <p className="text-[10px] uppercase text-white/40">Product</p>
         </div>
         <p className="text-white text-xs font-medium">{order.product_type}</p>
-      </div>
-
-      {/* Vehicle Info */}
-      <div className="flex flex-col justify-center min-w-[140px] border-l border-white/10 pl-4">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <Car className="w-3.5 h-3.5 text-[#2F81F7]" />
-          <p className="text-[10px] uppercase text-white/40">Vehicle</p>
-        </div>
-        <p className="text-white text-xs font-medium">{vehicleDisplay}</p>
       </div>
 
       {/* Order Received Date */}

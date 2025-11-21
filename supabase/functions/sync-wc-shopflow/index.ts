@@ -226,8 +226,8 @@ serve(async (req) => {
     const customerStage = mapWooStatusToCustomerStage(wooStatus);
     console.log(`✅ Normalized Status - Internal: "${status}", Customer: "${customerStage}"`);
     
-    // Extract vehicle info from line items meta data
-    const vehicleInfo = extractVehicleInfo(payload.line_items);
+    // Extract order info from line items meta data
+    const orderInfo = extractOrderInfo(payload.line_items);
     
     // Extract files from meta data or attachments
     const files = extractFiles(payload);
@@ -285,7 +285,7 @@ serve(async (req) => {
           timeline: updatedTimeline,
           files: updatedFiles,
           customer_email: customerEmail,
-          vehicle_info: vehicleInfo,
+        vehicle_info: orderInfo,
           affiliate_ref_code: affiliateRefCode,
           product_image_url: productImageUrl,
           woo_order_id: internalId ? parseInt(internalId) : null,
@@ -360,7 +360,7 @@ serve(async (req) => {
         status,
         customer_stage: initialCustomerStage,
         customer_email: customerEmail,
-        vehicle_info: vehicleInfo,
+        vehicle_info: orderInfo,
         timeline: initialTimeline,
         files,
         product_image_url: productImageUrl,
@@ -464,22 +464,43 @@ function mapWooStatusToCustomerStage(wooStatus: string): string {
   return wooToCustomerStage[normalized] || 'order_received';
 }
 
-function extractVehicleInfo(lineItems: any[]): any {
+function extractOrderInfo(lineItems: any[]): any {
   if (!lineItems || lineItems.length === 0) return {};
   
   const firstItem = lineItems[0];
   const metaData = firstItem.meta_data || [];
   
-  const vehicleInfo: any = {};
+  const orderInfo: any = {
+    quantity: firstItem.quantity || 1,
+  };
+  
+  console.log('📦 Extracting order info from line item metadata...');
   
   for (const meta of metaData) {
     const key = meta.key?.toLowerCase();
-    if (key?.includes('vehicle') || key?.includes('make') || key?.includes('model') || key?.includes('year')) {
-      vehicleInfo[meta.key] = meta.value;
+    const value = meta.value;
+    
+    // Extract quantity
+    if (key?.includes('quantity') || key?.includes('qty')) {
+      orderInfo.quantity = parseInt(value) || orderInfo.quantity;
+      console.log(`  ✓ Found quantity: ${orderInfo.quantity}`);
+    }
+    
+    // Extract square footage
+    if (key?.includes('square') || key?.includes('sqft') || key?.includes('sq ft') || key?.includes('square_footage')) {
+      orderInfo.square_footage = parseFloat(value) || value;
+      console.log(`  ✓ Found square footage: ${orderInfo.square_footage}`);
+    }
+    
+    // Extract shipping speed
+    if (key?.includes('shipping') && (key?.includes('speed') || key?.includes('method'))) {
+      orderInfo.shipping_speed = value;
+      console.log(`  ✓ Found shipping speed: ${orderInfo.shipping_speed}`);
     }
   }
   
-  return vehicleInfo;
+  console.log('📦 Final order info:', orderInfo);
+  return orderInfo;
 }
 
 function extractFiles(payload: any): any[] {
