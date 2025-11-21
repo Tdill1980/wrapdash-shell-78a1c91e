@@ -134,7 +134,7 @@ export default function ShopFlowInternalList() {
               <Card 
                 key={order.id} 
                 className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => navigate(`/shopflow-internal/${order.id}`)}
+                onClick={() => navigate(`/track/${order.woo_order_number ?? order.order_number}`)}
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
@@ -191,7 +191,7 @@ export default function ShopFlowInternalList() {
                   <TableRow 
                     key={order.id}
                     className="hover:bg-white/[0.02] cursor-pointer border-b border-white/5"
-                    onClick={() => navigate(`/shopflow-internal/${order.id}`)}
+                    onClick={() => navigate(`/track/${order.woo_order_number ?? order.order_number}`)}
                   >
                     <TableCell className="font-mono text-sm">
                       #{order.woo_order_number ?? order.order_number}
@@ -231,7 +231,7 @@ export default function ShopFlowInternalList() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/shopflow-internal/${order.id}`);
+                          navigate(`/track/${order.woo_order_number ?? order.order_number}`);
                         }}
                       >
                         View Job

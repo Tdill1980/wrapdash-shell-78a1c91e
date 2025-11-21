@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShopFlowOrder } from "@/hooks/useShopFlow";
 import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { wooToInternalStatus } from "@/lib/status-mapping";
 import { ShopFlowBrandHeader } from "@/components/ShopFlowBrandHeader";
 import { CustomerProgressBar } from "@/components/CustomerProgressBar";
@@ -13,8 +14,16 @@ import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
 import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
+import { WooCommerceStatusBar } from "@/components/shopflow/WooCommerceStatusBar";
+import { ManualSyncButton } from "@/modules/shopflow/components/ManualSyncButton";
+import { NotesCard } from "@/modules/shopflow/components/NotesCard";
+import { JobDetailsCard } from "@/modules/shopflow/components/JobDetailsCard";
+import { FilesCard } from "@/modules/shopflow/components/FilesCard";
+import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
+import { ProofViewer } from "@/modules/shopflow/components/ProofViewer";
 import { toast } from "@/hooks/use-toast";
 import { MainLayout } from "@/layouts/MainLayout";
+import { useAdmin } from "@/hooks/useAdmin";
 
 export default function TrackJob() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
@@ -22,6 +31,7 @@ export default function TrackJob() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     fetchOrder();
@@ -106,7 +116,7 @@ export default function TrackJob() {
   };
 
   if (loading) return (
-    <MainLayout userName="Customer">
+    <MainLayout userName={isAdmin ? "Trish" : "Customer"}>
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
@@ -114,7 +124,7 @@ export default function TrackJob() {
   );
   
   if (error || !order) return (
-    <MainLayout userName="Customer">
+    <MainLayout userName={isAdmin ? "Trish" : "Customer"}>
       <div className="flex items-center justify-center min-h-[50vh]">
         <Card className="p-8 text-center max-w-md">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
@@ -130,10 +140,27 @@ export default function TrackJob() {
   const fileErrors = ((order as any).file_error_details as any) || [];
 
   return (
-    <MainLayout userName="Customer">
+    <MainLayout userName={isAdmin ? "Trish" : "Customer"}>
       <div className="w-full space-y-6">
+        {/* Admin-Only: WooCommerce Status Bar */}
+        {isAdmin && (
+          <WooCommerceStatusBar 
+            currentStatus={order.status}
+          />
+        )}
+
         {/* Brand Header */}
         <ShopFlowBrandHeader />
+        
+        {/* Admin-Only: Manual Sync Button */}
+        {isAdmin && (
+          <div className="flex justify-end">
+            <ManualSyncButton 
+              orderNumber={order.order_number} 
+              onSyncComplete={fetchOrder}
+            />
+          </div>
+        )}
         
         {/* Order Info - Full Width Horizontal */}
         <OrderInfoCard order={order} />
@@ -160,6 +187,21 @@ export default function TrackJob() {
           
           <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
         </div>
+        
+        {/* Admin-Only: Internal Management Section */}
+        {isAdmin && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 space-y-4">
+              <ProofViewer order={order} />
+              <FilesCard files={files} orderId={order.id} />
+              <NotesCard orderId={order.id} />
+            </div>
+            <div className="space-y-4">
+              <ActionSidebar order={order} />
+              <JobDetailsCard order={order} />
+            </div>
+          </div>
+        )}
         
         {/* Additional Cards */}
         <div className="flex flex-wrap gap-4">
