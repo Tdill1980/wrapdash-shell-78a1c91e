@@ -1663,12 +1663,18 @@ export type Database = {
           category: string | null
           created_at: string | null
           created_by: string | null
+          default_environment: string | null
+          default_finish: string | null
           id: string
           is_active: boolean | null
+          is_featured: boolean | null
+          is_hidden: boolean | null
           is_oem: boolean | null
           make: string
           model: string
           render_prompt: string | null
+          sort_order: number | null
+          thumbnail_url: string | null
           updated_at: string | null
           year: string
         }
@@ -1681,12 +1687,18 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           created_by?: string | null
+          default_environment?: string | null
+          default_finish?: string | null
           id?: string
           is_active?: boolean | null
+          is_featured?: boolean | null
+          is_hidden?: boolean | null
           is_oem?: boolean | null
           make: string
           model: string
           render_prompt?: string | null
+          sort_order?: number | null
+          thumbnail_url?: string | null
           updated_at?: string | null
           year: string
         }
@@ -1699,12 +1711,18 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           created_by?: string | null
+          default_environment?: string | null
+          default_finish?: string | null
           id?: string
           is_active?: boolean | null
+          is_featured?: boolean | null
+          is_hidden?: boolean | null
           is_oem?: boolean | null
           make?: string
           model?: string
           render_prompt?: string | null
+          sort_order?: number | null
+          thumbnail_url?: string | null
           updated_at?: string | null
           year?: string
         }

@@ -36,6 +36,7 @@ import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import { AffiliateCard, AffiliateDashboard, AffiliateAdmin, AffiliateSignup } from "./modules/affiliate";
 import AffiliatePayments from "./modules/affiliate/pages/AffiliatePayments";
+import VehicleAdmin from "./modules/vehicle-admin";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/admin/products" element={<ProductAdmin />} />
             <Route path="/admin/designvault" element={<DesignVaultAdmin />} />
             <Route path="/admin/dashboard-hero" element={<DashboardHeroAdmin />} />
+            <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
