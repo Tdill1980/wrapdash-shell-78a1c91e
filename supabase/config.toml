@@ -54,11 +54,5 @@ verify_jwt = false
 [functions.generate-thumbnail]
 verify_jwt = true
 
-[functions.generate-master]
-verify_jwt = false
-
-[functions.generate-3d]
-verify_jwt = false
-
-[functions.convert-print]
+[functions.ups-track]
 verify_jwt = false
