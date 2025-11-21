@@ -3,6 +3,10 @@
 
 import { useParams } from "react-router-dom";
 import { useShopFlow } from "@/hooks/useShopFlow";
+import { useApproveFlow } from "@/hooks/useApproveFlow";
+import { useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 import {
   getStageFromWoo,
@@ -17,6 +21,10 @@ import { MainLayout } from "@/layouts/MainLayout";
 export default function CustomerOrder() {
   const { id } = useParams<{ id: string }>();
   const { order, loading } = useShopFlow(id);
+  const { approveDesign, requestRevision } = useApproveFlow(order?.approveflow_project_id);
+  const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const [revisionNotes, setRevisionNotes] = useState("");
+  const { toast } = useToast();
 
   if (loading)
     return (
@@ -121,14 +129,71 @@ export default function CustomerOrder() {
 
           <img src={order.proof_url} className="rounded-md w-full max-w-xl mx-auto" />
 
-          <div className="flex gap-3 mt-4 justify-center">
-            <button className="px-4 py-2 rounded-md bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] text-white">
-              Approve Design
-            </button>
-            <button className="px-4 py-2 rounded-md bg-[#16161E] text-white border border-white/10">
-              Request Revision
-            </button>
-          </div>
+          {!showRevisionForm ? (
+            <div className="flex gap-3 mt-4 justify-center">
+              <button 
+                onClick={async () => {
+                  await approveDesign();
+                  toast({
+                    title: "Design Approved! 🎉",
+                    description: "Your approval has been recorded. We'll move forward with production.",
+                  });
+                }}
+                className="px-4 py-2 rounded-md bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] text-white hover:opacity-90 transition-opacity"
+              >
+                Approve Design
+              </button>
+              <button 
+                onClick={() => setShowRevisionForm(true)}
+                className="px-4 py-2 rounded-md bg-[#16161E] text-white border border-white/10 hover:bg-[#1e1e2a] transition-colors"
+              >
+                Request Revision
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <h4 className="text-white font-medium">What would you like changed?</h4>
+              <Textarea
+                value={revisionNotes}
+                onChange={(e) => setRevisionNotes(e.target.value)}
+                placeholder="Please describe the changes you'd like to see..."
+                className="bg-[#16161E] border-white/10 text-white min-h-[100px]"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    if (!revisionNotes.trim()) {
+                      toast({
+                        title: "Please add details",
+                        description: "Tell us what you'd like changed",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    await requestRevision(revisionNotes);
+                    setRevisionNotes("");
+                    setShowRevisionForm(false);
+                    toast({
+                      title: "Revision Requested",
+                      description: "Our design team will review your feedback and update the proof.",
+                    });
+                  }}
+                  className="px-4 py-2 rounded-md bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] text-white hover:opacity-90 transition-opacity"
+                >
+                  Submit Revision
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRevisionForm(false);
+                    setRevisionNotes("");
+                  }}
+                  className="px-4 py-2 rounded-md bg-[#16161E] text-white border border-white/10 hover:bg-[#1e1e2a] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
