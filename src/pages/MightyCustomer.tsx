@@ -18,7 +18,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const categories = ["Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint", "WePrintWraps.com products"];
+const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
 const addOnOptions = [
   "PPF Hood Only",
