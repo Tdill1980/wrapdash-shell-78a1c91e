@@ -134,18 +134,15 @@ export default function TrackJob() {
   return (
     <MainLayout userName={isAdmin ? "Trish" : "Customer"}>
       <div className="w-full space-y-6">
-        {/* Brand Header */}
-        <ShopFlowBrandHeader />
-        
-        {/* Admin-Only: Manual Sync Button */}
-        {isAdmin && (
-          <div className="flex justify-end">
+        {/* Brand Header with optional admin sync button */}
+        <ShopFlowBrandHeader 
+          syncButton={isAdmin ? (
             <ManualSyncButton 
               orderNumber={order.order_number} 
               onSyncComplete={fetchOrder}
             />
-          </div>
-        )}
+          ) : undefined}
+        />
         
         {/* Order Info - Full Width Horizontal */}
         <OrderInfoCard order={order} />
