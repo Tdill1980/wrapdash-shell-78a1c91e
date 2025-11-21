@@ -134,7 +134,7 @@ export default function TrackJob() {
 
   return (
     <MainLayout userName={isAdmin ? "Trish" : "Customer"}>
-      <div className="w-full space-y-6">
+      <div className="w-full space-y-4 sm:space-y-6 px-2 sm:px-0">
         {/* Brand Header with optional admin sync button */}
         <ShopFlowBrandHeader 
           syncButton={isAdmin ? (
@@ -145,7 +145,7 @@ export default function TrackJob() {
           ) : undefined}
         />
         
-        {/* Order Info - Full Width Horizontal */}
+        {/* Order Info - Responsive */}
         <OrderInfoCard order={order} />
         
         {/* Progress Bar - Icon-Based Timeline */}
@@ -154,8 +154,8 @@ export default function TrackJob() {
           hasApproveFlowProject={!!order.approveflow_project_id}
         />
         
-        {/* Primary Status Cards - Full Width Horizontal */}
-        <div className="space-y-4">
+        {/* Primary Status Cards - Full Width */}
+        <div className="space-y-3 sm:space-y-4">
           <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
           
           <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
@@ -180,26 +180,26 @@ export default function TrackJob() {
           />
         )}
         
-        {/* Additional Cards */}
-        <div className="flex flex-wrap gap-4">
+        {/* Additional Cards - Stack on mobile, grid on desktop */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
           {(fileErrors.length > 0 || missingFiles.length > 0) && (
-            <div className="flex-1 min-w-[280px]">
+            <div className="w-full sm:flex-1 sm:min-w-[280px]">
               <ActionRequiredCard order={{ customer_stage: order.customer_stage || order.status, file_error_details: fileErrors, missing_file_list: missingFiles }} />
             </div>
           )}
           
-          <div className="flex-1 min-w-[280px]">
+          <div className="w-full sm:flex-1 sm:min-w-[280px]">
             <OrderSummaryCard order={order} />
           </div>
           
           {order.approveflow_project_id && (
-            <div className="flex-1 min-w-[280px]">
-              <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20 h-full">
-                <h3 className="text-lg font-semibold text-white mb-2">Design Proof Available</h3>
-                <p className="text-white/70 text-sm mb-4">Your design proof is ready for review in ApproveFlow.</p>
+            <div className="w-full sm:flex-1 sm:min-w-[280px]">
+              <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20 h-full">
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Design Proof Available</h3>
+                <p className="text-white/70 text-xs sm:text-sm mb-3 sm:mb-4">Your design proof is ready for review in ApproveFlow.</p>
                 <a 
                   href={`/approveflow/${order.approveflow_project_id}`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 sm:py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:opacity-90 transition-opacity w-full sm:w-auto justify-center"
                 >
                   View Design Proof
                   <ArrowRight className="w-4 h-4" />
@@ -209,7 +209,7 @@ export default function TrackJob() {
           )}
         </div>
         
-        <div className="text-center py-8 text-muted-foreground text-sm">
+        <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm px-4">
           Powered by <span className="text-primary">WrapCommand™</span> — Real-time wrap order tracking for peace of mind.
         </div>
       </div>

@@ -105,7 +105,7 @@ export const UploadedFilesCard = ({
           </div>
           
           {!internalMode && onFileUpload && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -118,16 +118,16 @@ export const UploadedFilesCard = ({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
                 size="sm"
-                className="flex-1"
+                className="flex-1 w-full sm:w-auto"
               >
                 {uploading ? (
                   <>
-                    <Upload className="w-3 h-3 animate-pulse" />
+                    <Upload className="w-3.5 h-3.5 sm:w-3 sm:h-3 animate-pulse" />
                     <span className="text-xs">Uploading...</span>
                   </>
                 ) : (
                   <>
-                    <Upload className="w-3 h-3" />
+                    <Upload className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                     <span className="text-xs">Upload Files</span>
                   </>
                 )}
@@ -136,7 +136,7 @@ export const UploadedFilesCard = ({
                 variant="outline"
                 asChild
                 size="sm"
-                className="flex-1"
+                className="flex-1 w-full sm:w-auto"
               >
                 <a href={`mailto:Design@WePrintWraps.com?subject=Files for Order ${orderId || ''}`}>
                   <span className="text-xs">Email Instead</span>

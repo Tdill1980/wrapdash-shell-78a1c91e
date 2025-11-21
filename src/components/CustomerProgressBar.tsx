@@ -71,15 +71,15 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
   );
 
   return (
-    <div className="w-full py-6 bg-[#0A0A0F]">
+    <div className="w-full py-4 sm:py-6 bg-[#0A0A0F] -mx-2 sm:mx-0">
       {/* Progress icons with labels and connecting line */}
-      <div className="relative flex items-center justify-between gap-2 px-4 overflow-x-auto">
-        {/* Base gray line connecting all steps */}
-        <div className="absolute top-5 left-12 right-12 h-0.5 bg-gray-700/50 z-0" />
+      <div className="relative flex items-center justify-between gap-1 sm:gap-2 px-2 sm:px-4 overflow-x-auto pb-2 custom-scrollbar">
+        {/* Base gray line connecting all steps - hidden on mobile */}
+        <div className="hidden sm:block absolute top-5 left-12 right-12 h-0.5 bg-gray-700/50 z-0" />
         
-        {/* Animated blue progress line */}
+        {/* Animated blue progress line - hidden on mobile */}
         <div 
-          className="absolute top-5 left-12 h-0.5 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] z-0 transition-all duration-700 ease-out"
+          className="hidden sm:block absolute top-5 left-12 h-0.5 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] z-0 transition-all duration-700 ease-out"
           style={{ 
             width: currentIndex >= 0 
               ? `calc(${(currentIndex / (steps.length - 1)) * 100}% - 48px)` 
@@ -94,25 +94,25 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
           const Icon = step.icon;
           
           return (
-            <div key={step.label} className="flex flex-col items-center min-w-[80px] relative z-10">
+            <div key={step.label} className="flex flex-col items-center min-w-[60px] sm:min-w-[80px] relative z-10">
               <div 
-                className={`h-10 w-10 flex items-center justify-center rounded-full transition-all duration-500 ${
+                className={`h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center rounded-full transition-all duration-500 ${
                   completed
-                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-4 ring-blue-400/20" 
+                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-2 sm:ring-4 ring-blue-400/20" 
                     : active
-                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-4 ring-blue-400/40 animate-pulse"
+                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-2 sm:ring-4 ring-blue-400/40 animate-pulse"
                     : "bg-gray-700"
                 }`}
               >
                 {completed ? (
-                  <CheckCircle className="h-5 w-5 text-white" />
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 ) : active ? (
-                  <Icon className="h-5 w-5 text-white" />
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 ) : (
-                  <div className="h-2 w-2 rounded-full bg-white/40" />
+                  <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-white/40" />
                 )}
               </div>
-              <p className={`text-xs mt-2 text-center transition-colors duration-300 ${
+              <p className={`text-[10px] sm:text-xs mt-1.5 sm:mt-2 text-center transition-colors duration-300 leading-tight ${
                 completed || active ? 'text-[#15D1FF] font-semibold' : 'text-white/40'
               }`}>
                 {step.label}
