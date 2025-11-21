@@ -1,9 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -20,9 +20,9 @@ serve(async (req) => {
 
     // Fetch the base64 image
     let imageBuffer: Uint8Array;
-    if (panelUrl.startsWith('data:')) {
-      const imageData = panelUrl.split(',')[1];
-      imageBuffer = Uint8Array.from(atob(imageData), c => c.charCodeAt(0));
+    if (panelUrl.startsWith("data:")) {
+      const imageData = panelUrl.split(",")[1];
+      imageBuffer = Uint8Array.from(atob(imageData), (c) => c.charCodeAt(0));
     } else {
       // If it's a URL, fetch it
       const response = await fetch(panelUrl);
@@ -38,21 +38,21 @@ serve(async (req) => {
     // 4. Add bleed and safety margins
     // 5. Save as TIFF format
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase configuration missing');
+      throw new Error("Supabase configuration missing");
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const filename = `panel-print-${Date.now()}.png`;
-    
+
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('design-vault')
+      .from("design-vault")
       .upload(filename, imageBuffer, {
-        contentType: 'image/png',
+        contentType: "image/png",
         upsert: true
       });
 
@@ -62,27 +62,29 @@ serve(async (req) => {
     }
 
     const { data: urlData } = supabase.storage
-      .from('design-vault')
+      .from("design-vault")
       .getPublicUrl(filename);
 
     console.log("Print file uploaded:", urlData.publicUrl);
 
-    return new Response(JSON.stringify({
-      tiffUrl: urlData.publicUrl,
-      dimensions: {
-        width: printWidth,
-        height: printHeight,
-        dpi: 300
+    return new Response(
+      JSON.stringify({
+        tiffUrl: urlData.publicUrl,
+        dimensions: {
+          width: printWidth,
+          height: printHeight,
+          dpi: 300
+        }
+      }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
       }
-    }), {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json"
-      }
-    });
-
+    );
   } catch (error) {
-    console.error('Error in convert-print:', error);
+    console.error("Error in convert-print:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {
