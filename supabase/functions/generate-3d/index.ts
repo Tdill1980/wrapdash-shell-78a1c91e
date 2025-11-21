@@ -8,7 +8,14 @@ serve(async (req) => {
   }
 
   try {
-    const { panelUrl, vehicleModelId, angle = 'front', finish = 'gloss', environment = 'studio' } = await req.json();
+    const { 
+      panelUrl, 
+      vehicleModelId, 
+      angle = 'front', 
+      finish = 'gloss', 
+      environment = 'studio',
+      selectedPanels = [] // Array of panel names to apply wrap to
+    } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
@@ -31,6 +38,34 @@ serve(async (req) => {
     }
 
     console.log("Generating 3D render for:", vehicle.year, vehicle.make, vehicle.model, `(${angle}, ${finish}, ${environment})`);
+
+    // Parse panel geometry for smart wrap application
+    const panelGeometry = vehicle.panel_geometry?.panels || [];
+    const panelsToApply = selectedPanels.length > 0 ? selectedPanels : panelGeometry.map((p: any) => p.name);
+
+    // Build panel application instructions
+    let panelInstructions = "";
+    if (panelGeometry.length > 0 && panelsToApply.length > 0) {
+      panelInstructions = `\n\nPANEL APPLICATION INSTRUCTIONS:
+Apply the wrap design to the following vehicle panels: ${panelsToApply.join(", ")}
+
+Panel Geometry Reference:
+${panelGeometry
+  .filter((p: any) => panelsToApply.includes(p.name))
+  .map((p: any) => `- ${p.name}: ${p.width_in}" wide × ${p.height_in}" tall (${p.orientation})`)
+  .join("\n")}
+
+WRAP APPLICATION RULES:
+✓ Position artwork naturally according to vehicle body lines
+✓ For SIDE PANELS: Stretch design horizontally along vehicle length, maintain height proportions
+✓ For HOOD/ROOF: Center design and scale to fit panel dimensions
+✓ For REAR panels: Apply vertically centered, respecting panel height
+✓ Mirror side_1 design to side_2 for symmetry
+✓ Wrap smoothly across doors, fenders, and body gaps
+✓ Maintain design continuity and professional installation appearance
+✓ Stretch artwork minimally - preserve design integrity
+✓ Flow design along natural vehicle contours and body lines`;
+    }
 
     // Determine camera angle from vehicle data
     let cameraAngle = vehicle.angle_front || 'front 3/4 view, 45-degree angle';
@@ -57,21 +92,40 @@ serve(async (req) => {
     };
     const environmentDescription = environmentMap[environment] || environmentMap.studio;
 
-    // Build prompt using vehicle data
-    const prompt = `Generate a hyper-realistic 3D vehicle wrap render.
+    // Build professional wrap application prompt
+    const prompt = `You are a professional vehicle wrap installer and 3D visualization expert.
 
-Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
-Camera angle: ${cameraAngle}
-Wrap finish: ${finishDescription}
-Environment: ${environmentDescription}
+TASK:
+Apply the provided flat wrap panel design to a ${vehicle.year} ${vehicle.make} ${vehicle.model} vehicle, creating a photorealistic 3D render showing accurate wrap installation.
 
-Apply the wrap design from the provided panel image exactly as shown.
-Show accurate body lines, panel gaps, and surface details.
-The wrap should look professionally installed with no bubbles or imperfections.
-Emphasize the ${finish} finish with appropriate lighting and reflections.
-No distortion, no fisheye, no cartoon style.
+VEHICLE SPECIFICATIONS:
+- Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}
+- Camera angle: ${cameraAngle}
+- Wrap finish: ${finishDescription}
+- Environment: ${environmentDescription}
+${panelInstructions}
 
-${vehicle.render_prompt || 'Emphasize accurate vehicle proportions and wrap adhesion on body panels.'}`;
+CRITICAL WRAP APPLICATION RULES:
+✓ Apply the flat panel artwork as a professionally installed vehicle wrap
+✓ Map design to vehicle body panels using natural installation flow
+✓ Wrap continuously across body lines, doors, fenders, and panels
+✓ Maintain design proportions - avoid excessive stretching or distortion
+✓ Show realistic wrap adhesion following vehicle contours and curves
+✓ Keep design elements aligned and continuous across panel gaps
+✓ Position artwork according to vehicle body lines and natural wrap zones
+✓ For horizontal panels (sides): stretch design along vehicle length
+✓ For vertical panels (rear): apply design vertically centered
+✓ Show professional installation quality with no bubbles or imperfections
+
+RENDERING QUALITY:
+✓ Photorealistic vehicle render with accurate body shape
+✓ Show correct ${finish} wrap finish with appropriate reflections
+✓ Emphasize wrapped panels with proper lighting
+✓ Accurate shadows, reflections, and material properties
+✓ Clean, professional automotive photography aesthetic
+✓ No cartoon style, no fisheye distortion, no unrealistic proportions
+
+${vehicle.render_prompt || 'Emphasize accurate vehicle proportions and professional wrap installation appearance.'}`;
 
     const ai = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -108,7 +162,7 @@ ${vehicle.render_prompt || 'Emphasize accurate vehicle proportions and wrap adhe
 
     if (!render) throw new Error("No 3D render returned");
 
-    console.log("3D render generated successfully for:", vehicle.make, vehicle.model);
+    console.log("3D render generated successfully for:", vehicle.make, vehicle.model, angle);
 
     return new Response(JSON.stringify({ render }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }

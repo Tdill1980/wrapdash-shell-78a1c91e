@@ -24,6 +24,7 @@ export interface VehicleFormData {
   is_featured?: boolean;
   is_hidden?: boolean;
   sort_order?: number;
+  panel_geometry?: any;
 }
 
 export async function fetchAllVehicles(): Promise<VehicleModel[]> {

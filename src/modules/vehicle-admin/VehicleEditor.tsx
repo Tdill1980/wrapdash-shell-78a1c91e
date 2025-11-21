@@ -52,6 +52,7 @@ export function VehicleEditor({
     is_featured: false,
     is_hidden: false,
     sort_order: 0,
+    panel_geometry: { panels: [] },
   });
 
   const [uploading, setUploading] = useState(false);
@@ -78,6 +79,7 @@ export function VehicleEditor({
         is_featured: vehicle.is_featured ?? false,
         is_hidden: vehicle.is_hidden ?? false,
         sort_order: vehicle.sort_order ?? 0,
+        panel_geometry: (vehicle as any).panel_geometry || { panels: [] },
       });
     } else {
       setFormData({
@@ -99,6 +101,7 @@ export function VehicleEditor({
         is_featured: false,
         is_hidden: false,
         sort_order: 0,
+        panel_geometry: { panels: [] },
       });
     }
   }, [vehicle]);
@@ -142,9 +145,10 @@ export function VehicleEditor({
 
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="angles">Camera Angles</TabsTrigger>
+              <TabsTrigger value="panels">Panel Geometry</TabsTrigger>
               <TabsTrigger value="defaults">Defaults</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
@@ -271,6 +275,53 @@ export function VehicleEditor({
                   rows={3}
                   placeholder="Additional rendering instructions..."
                 />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="panels" className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label>Panel Geometry (JSON)</Label>
+                <Textarea
+                  value={typeof formData.panel_geometry === 'string' 
+                    ? formData.panel_geometry 
+                    : JSON.stringify(formData.panel_geometry || { panels: [] }, null, 2)}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setFormData({ ...formData, panel_geometry: parsed });
+                    } catch {
+                      setFormData({ ...formData, panel_geometry: e.target.value as any });
+                    }
+                  }}
+                  className="font-mono text-sm min-h-[300px]"
+                  placeholder={`{
+  "panels": [
+    {
+      "name": "side_1",
+      "width_in": 186,
+      "height_in": 54,
+      "orientation": "horizontal"
+    },
+    {
+      "name": "side_2",
+      "width_in": 186,
+      "height_in": 54,
+      "orientation": "horizontal"
+    },
+    {
+      "name": "hood",
+      "width_in": 64,
+      "height_in": 52,
+      "orientation": "square"
+    }
+  ]
+}`}
+                />
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Define panel shapes for accurate wrap application</p>
+                  <p className="font-mono">Common panels: side_1, side_2, hood, roof, rear_hatch, front_bumper, rear_bumper</p>
+                  <p className="font-mono">Orientations: horizontal, vertical, square</p>
+                </div>
               </div>
             </TabsContent>
 

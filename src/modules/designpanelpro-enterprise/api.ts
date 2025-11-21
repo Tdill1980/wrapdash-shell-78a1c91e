@@ -14,6 +14,7 @@ interface Generate3DParams {
   angle?: 'front' | 'side' | 'rear' | 'front-close';
   finish?: 'gloss' | 'satin' | 'matte';
   environment?: 'studio' | 'white' | 'desert' | 'city' | 'garage' | 'showroom';
+  selectedPanels?: string[];
 }
 
 interface ConvertPrintParams {
