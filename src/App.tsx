@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import Dashboard from "./pages/Dashboard";
 import { Visualize as WrapCloser, InkFusion, DesignPanelPro, FadeWraps, WBTY } from "./modules/designproai";
+import DesignPanelProEnterprise from "./modules/designpanelpro-enterprise";
 import { DesignVault } from "./modules/designvault";
 import DesignVaultUpload from "./pages/DesignVaultUpload";
 import { WrapBox } from "./modules/wrapbox";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/wrapcloser" element={<WrapCloser />} />
             <Route path="/inkfusion" element={<InkFusion />} />
             <Route path="/designpanel" element={<DesignPanelPro />} />
+            <Route path="/designpanelpro-enterprise" element={<DesignPanelProEnterprise />} />
             <Route path="/fadewraps" element={<FadeWraps />} />
             <Route path="/wbty" element={<WBTY />} />
             <Route path="/designvault" element={<DesignVault />} />
