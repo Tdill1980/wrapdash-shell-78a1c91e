@@ -368,10 +368,11 @@ export default function MightyCustomer() {
             <div className="flex gap-2 overflow-x-auto pb-2">
               {categories.map((category) => {
                 const isWPWCategory = category === "WePrintWraps.com products";
+                const isSelected = selectedService === category;
                 return (
                   <Button
                     key={category}
-                    variant={selectedService === category ? "default" : "outline"}
+                    variant={isWPWCategory ? (isSelected ? "default" : "ghost") : (isSelected ? "default" : "outline")}
                     onClick={() => {
                       setSelectedService(category);
                       setSelectedProduct(null);
@@ -379,7 +380,7 @@ export default function MightyCustomer() {
                     }}
                     className={`whitespace-nowrap px-6 ${
                       isWPWCategory
-                        ? "bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0"
+                        ? `bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0 ${isSelected ? 'ring-2 ring-white/50' : ''}`
                         : ""
                     }`}
                   >
