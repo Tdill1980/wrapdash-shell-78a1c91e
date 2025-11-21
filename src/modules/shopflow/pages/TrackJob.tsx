@@ -156,6 +156,10 @@ export default function TrackJob() {
         
         {/* Primary Status Cards - Full Width Horizontal */}
         <div className="space-y-4">
+          <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
+          
+          <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
+          
           <UploadedFilesCard 
             files={files} 
             missingFiles={missingFiles} 
@@ -165,10 +169,6 @@ export default function TrackJob() {
             uploading={uploading}
             orderStatus={order.status}
           />
-          
-          <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
-          
-          <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
         </div>
         
         {/* Tracking Card - Only show if tracking number exists */}
