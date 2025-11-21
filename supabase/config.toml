@@ -3,6 +3,15 @@ project_id = "wzwqhfbmymrengjqikjl"
 [functions.analyze-vinyl-swatch]
 verify_jwt = false
 
+[functions.generate-master]
+verify_jwt = false
+
+[functions.generate-3d]
+verify_jwt = false
+
+[functions.convert-print]
+verify_jwt = false
+
 [functions.approveflow-event]
 verify_jwt = false
 

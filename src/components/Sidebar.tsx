@@ -46,6 +46,19 @@ const navigationItems = [
     )
   },
   { 
+    name: "PanelPro Enterprise™", 
+    path: "/designpanelpro-enterprise", 
+    icon: Sparkles,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Panel</span>
+        <span className="text-gradient">Pro</span>
+        <span className="text-white"> Enterprise</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
     name: "FadeWraps™", 
     path: "/fadewraps", 
     icon: Sparkles,
