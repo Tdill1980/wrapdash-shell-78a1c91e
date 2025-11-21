@@ -4,8 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShopFlowOrder } from "@/hooks/useShopFlow";
 import { Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { wooToInternalStatus } from "@/lib/status-mapping";
 import { ShopFlowBrandHeader } from "@/components/ShopFlowBrandHeader";
 import { CustomerProgressBar } from "@/components/CustomerProgressBar";
 import { UploadedFilesCard } from "@/modules/shopflow/components/UploadedFilesCard";
@@ -14,13 +12,7 @@ import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
 import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
-import { WooCommerceStatusBar } from "@/components/shopflow/WooCommerceStatusBar";
 import { ManualSyncButton } from "@/modules/shopflow/components/ManualSyncButton";
-import { NotesCard } from "@/modules/shopflow/components/NotesCard";
-import { JobDetailsCard } from "@/modules/shopflow/components/JobDetailsCard";
-import { FilesCard } from "@/modules/shopflow/components/FilesCard";
-import { ActionSidebar } from "@/modules/shopflow/components/ActionSidebar";
-import { ProofViewer } from "@/modules/shopflow/components/ProofViewer";
 import { toast } from "@/hooks/use-toast";
 import { MainLayout } from "@/layouts/MainLayout";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -181,20 +173,6 @@ export default function TrackJob() {
           <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
         </div>
         
-        {/* Admin-Only: Internal Management Section */}
-        {isAdmin && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 space-y-4">
-              <ProofViewer order={order} />
-              <FilesCard files={files} orderId={order.id} />
-              <NotesCard orderId={order.id} />
-            </div>
-            <div className="space-y-4">
-              <ActionSidebar order={order} />
-              <JobDetailsCard order={order} />
-            </div>
-          </div>
-        )}
         
         {/* Additional Cards */}
         <div className="flex flex-wrap gap-4">
