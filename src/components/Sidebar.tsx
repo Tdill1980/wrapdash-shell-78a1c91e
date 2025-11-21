@@ -120,6 +120,18 @@ const navigationItems = [
       </span>
     )
   },
+  { 
+    name: "ShopFlow Bulk Admin", 
+    path: "/shopflow-bulk-admin", 
+    icon: Package,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Shop</span>
+        <span className="text-gradient">Flow</span>
+        <span className="text-white"> Bulk</span>
+      </span>
+    )
+  },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
   { 
