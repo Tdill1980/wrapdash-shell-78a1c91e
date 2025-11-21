@@ -19,15 +19,12 @@ export const OrderSummaryCard = ({ order }: OrderSummaryCardProps) => {
   const productType = order.product_type || order.productType || 'Product';
   const productImage = order.product_image_url;
   
-  const vehicleInfo = order.vehicle_info as any;
-  const vehicleDisplay = order.vehicle 
-    || (vehicleInfo ? `${vehicleInfo.year || ''} ${vehicleInfo.make || ''} ${vehicleInfo.model || ''}`.trim() : null)
-    || 'Vehicle Info Pending';
-
-  // Extract quantity and sq ft from vehicle_info or product data
-  const quantity = vehicleInfo?.quantity || 1;
-  const sqft = vehicleInfo?.sqft || vehicleInfo?.square_footage || 'Calculating...';
-  const shippingSpeed = vehicleInfo?.shipping_speed || vehicleInfo?.shipping || 'Standard';
+  const orderInfo = order.vehicle_info as any;
+  
+  // Extract order details from WooCommerce metadata
+  const quantity = orderInfo?.quantity || 1;
+  const sqft = orderInfo?.square_footage || orderInfo?.sqft || 'TBD';
+  const shippingSpeed = orderInfo?.shipping_speed || orderInfo?.shipping || 'Standard';
 
   return (
     <div className="bg-[#111317] border border-white/10 rounded-xl p-5">
@@ -52,11 +49,10 @@ export const OrderSummaryCard = ({ order }: OrderSummaryCardProps) => {
         )}
 
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-3">
             <Package className="w-4 h-4 text-[#2F81F7]" />
             <p className="font-semibold text-white">{productType}</p>
           </div>
-          <p className="text-sm text-white/70 mb-1">{vehicleDisplay}</p>
           
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
