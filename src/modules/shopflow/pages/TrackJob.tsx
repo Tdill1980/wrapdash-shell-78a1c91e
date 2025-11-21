@@ -142,13 +142,6 @@ export default function TrackJob() {
   return (
     <MainLayout userName={isAdmin ? "Trish" : "Customer"}>
       <div className="w-full space-y-6">
-        {/* Admin-Only: WooCommerce Status Bar */}
-        {isAdmin && (
-          <WooCommerceStatusBar 
-            currentStatus={order.status}
-          />
-        )}
-
         {/* Brand Header */}
         <ShopFlowBrandHeader />
         
