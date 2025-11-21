@@ -146,8 +146,7 @@ Deno.serve(async (req) => {
         // Fetch product image
         const productImageUrl = await fetchWooProductImage(productId, wooKey, wooSecret);
         
-        // Build customer address
-        const address = `${order.billing?.address_1 || ""} ${order.billing?.address_2 || ""}, ${order.billing?.city || ""}, ${order.billing?.state || ""} ${order.billing?.postcode || ""}`.trim();
+         // Customer address intentionally not stored in shopflow_orders (no column in schema)
 
         // Check if order exists
         const { data: existing } = await supabase
@@ -167,7 +166,6 @@ Deno.serve(async (req) => {
               customer_name: customerName,
               customer_email: order.billing?.email || null,
               customer_phone: order.billing?.phone || null,
-              customer_address: address || null,
               product_type: productType,
               product_image_url: productImageUrl,
               status: internalStatus,
@@ -188,7 +186,6 @@ Deno.serve(async (req) => {
               customer_name: customerName,
               customer_email: order.billing?.email || null,
               customer_phone: order.billing?.phone || null,
-              customer_address: address || null,
               product_type: productType,
               product_image_url: productImageUrl,
               status: internalStatus,

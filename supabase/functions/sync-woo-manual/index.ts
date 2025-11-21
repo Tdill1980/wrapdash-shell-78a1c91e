@@ -319,8 +319,7 @@ Deno.serve(async (req) => {
           // Fetch product image
           const productImageUrl = await fetchWooProductImage(productId, wooKey, wooSecret);
           
-          // Build customer address
-          const address = `${order.billing?.address_1 || ""} ${order.billing?.address_2 || ""}, ${order.billing?.city || ""}, ${order.billing?.state || ""} ${order.billing?.postcode || ""}`.trim();
+          // Customer address intentionally not stored in shopflow_orders (no column in schema)
 
           // Check if order already exists
           const { data: existing } = await supabase
@@ -329,26 +328,25 @@ Deno.serve(async (req) => {
             .eq('order_number', orderNumber)
             .maybeSingle();
 
-          if (!existing) {
-            // Insert new order with all fields
-            const { error: insertError } = await supabase
-              .from('shopflow_orders')
-              .insert({
-                order_number: orderNumber,
-                woo_order_id: order.id,
-                woo_order_number: order.number,
-                customer_name: customerName,
-                customer_email: order.billing?.email || null,
-                customer_phone: order.billing?.phone || null,
-                customer_address: address || null,
-                product_type: productType,
-                product_image_url: productImageUrl,
-                status: internalStatus,
-                customer_stage: customerStage,
-                priority: internalStatus === 'action_required' ? 'high' : 'normal',
-                created_at: order.date_created,
-                updated_at: new Date().toISOString(),
-              });
+            if (!existing) {
+              // Insert new order with all fields
+              const { error: insertError } = await supabase
+                .from('shopflow_orders')
+                .insert({
+                  order_number: orderNumber,
+                  woo_order_id: order.id,
+                  woo_order_number: order.number,
+                  customer_name: customerName,
+                  customer_email: order.billing?.email || null,
+                  customer_phone: order.billing?.phone || null,
+                  product_type: productType,
+                  product_image_url: productImageUrl,
+                  status: internalStatus,
+                  customer_stage: customerStage,
+                  priority: internalStatus === 'action_required' ? 'high' : 'normal',
+                  created_at: order.date_created,
+                  updated_at: new Date().toISOString(),
+                });
 
             if (insertError) {
               errors.push(`ShopFlow - Order ${orderNumber}: ${insertError.message}`);
@@ -356,24 +354,23 @@ Deno.serve(async (req) => {
               syncedShopFlow++;
               console.log(`✅ Synced order ${orderNumber} to ShopFlow`);
             }
-          } else {
-            // Update existing order with all fields
-            const { error: updateError } = await supabase
-              .from('shopflow_orders')
-              .update({
-                woo_order_id: order.id,
-                woo_order_number: order.number,
-                customer_name: customerName,
-                customer_email: order.billing?.email || null,
-                customer_phone: order.billing?.phone || null,
-                customer_address: address || null,
-                product_type: productType,
-                product_image_url: productImageUrl,
-                status: internalStatus,
-                customer_stage: customerStage,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', existing.id);
+            } else {
+              // Update existing order with all fields
+              const { error: updateError } = await supabase
+                .from('shopflow_orders')
+                .update({
+                  woo_order_id: order.id,
+                  woo_order_number: order.number,
+                  customer_name: customerName,
+                  customer_email: order.billing?.email || null,
+                  customer_phone: order.billing?.phone || null,
+                  product_type: productType,
+                  product_image_url: productImageUrl,
+                  status: internalStatus,
+                  customer_stage: customerStage,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existing.id);
 
             if (updateError) {
               errors.push(`ShopFlow - Order ${orderNumber} update: ${updateError.message}`);
