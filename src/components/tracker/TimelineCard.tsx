@@ -12,25 +12,48 @@ export const TimelineCard = ({ timeline }: TimelineCardProps) => {
   }
 
   return (
-    <div className="bg-[#111317] border border-white/10 rounded-xl p-5">
-      <h3 className="card-header mb-4">Timeline</h3>
+    <div className="bg-[#111317] border border-white/10 rounded-xl p-5 w-full">
+      <h3 className="card-header mb-6">Timeline</h3>
 
-      <div className="space-y-4">
+      {/* Horizontal Stepper */}
+      <div className="flex items-start justify-between relative">
+        {/* Connecting Line */}
+        <div className="absolute top-[14px] left-0 right-0 h-[2px] bg-gray-700">
+          <div 
+            className="h-full bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] transition-all duration-500"
+            style={{ 
+              width: `${(timeline.filter(e => e.completed).length / timeline.length) * 100}%` 
+            }}
+          />
+        </div>
+
+        {/* Timeline Steps */}
         {timeline.map((event, i) => (
-          <div key={i} className="flex items-start gap-3">
+          <div key={i} className="flex flex-col items-center relative z-10 flex-1">
+            {/* Dot */}
             <div 
-              className={`h-3 w-3 rounded-full mt-1 flex-shrink-0 ${
+              className={`w-7 h-7 rounded-full flex items-center justify-center mb-3 transition-all duration-300 ${
                 event.completed 
-                  ? 'bg-gradient-to-r from-[#2F81F7] to-[#15D1FF]' 
-                  : 'bg-gray-700'
+                  ? 'bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg shadow-[#2F81F7]/50' 
+                  : 'bg-gray-700 border-2 border-gray-600'
               }`}
-            />
-            <div className="flex-1">
-              <p className={`font-medium ${event.completed ? 'text-white' : 'text-white/50'}`}>
+            >
+              {event.completed && (
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            
+            {/* Label & Timestamp */}
+            <div className="text-center max-w-[100px]">
+              <p className={`text-xs font-medium mb-1 ${event.completed ? 'text-white' : 'text-white/40'}`}>
                 {event.label}
               </p>
               {event.timestamp && (
-                <p className="text-xs text-white/40 mt-1">{event.timestamp}</p>
+                <p className="text-[10px] text-white/30">
+                  {new Date(event.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </p>
               )}
             </div>
           </div>

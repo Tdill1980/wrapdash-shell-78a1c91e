@@ -1,4 +1,4 @@
-import { Package, Car, Mail, Phone } from "lucide-react";
+import { Package, Car } from "lucide-react";
 import { format } from "date-fns";
 
 interface OrderInfoCardProps {
@@ -23,9 +23,9 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
     : 'Vehicle Info Pending';
 
   return (
-    <div className="bg-[#111317] border border-white/10 rounded-xl p-5 flex gap-6 items-start">
+    <div className="bg-[#111317] border border-white/10 rounded-xl p-4 flex items-center gap-4 w-full">
       {/* Product Thumbnail */}
-      <div className="w-24 h-24 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 bg-[#1a1a24] flex items-center justify-center">
+      <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 bg-[#1a1a24] flex items-center justify-center">
         {order.product_image_url ? (
           <img
             src={order.product_image_url}
@@ -33,79 +33,61 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
             className="w-full h-full object-cover"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
-              e.currentTarget.parentElement!.innerHTML = '<div class="text-[#2F81F7]"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>';
+              e.currentTarget.parentElement!.innerHTML = '<div class="text-[#2F81F7]"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>';
             }}
           />
         ) : (
-          <Package className="w-10 h-10 text-[#2F81F7]" />
+          <Package className="w-8 h-8 text-[#2F81F7]" />
         )}
       </div>
 
-      <div className="flex flex-col gap-3 text-white flex-1">
-        <div>
-          <h2 className="card-header">
-            Order #{order.woo_order_number ?? order.order_number}
-          </h2>
-          <p className="text-white/70 mt-1">{order.customer_name}</p>
-          {order.customer_email && (
-            <div className="flex items-center gap-2 mt-1">
-              <Mail className="w-3.5 h-3.5 text-[#2F81F7]" />
-              <p className="text-white/60 text-sm">{order.customer_email}</p>
-            </div>
-          )}
-          {order.customer_phone && (
-            <div className="flex items-center gap-2 mt-1">
-              <Phone className="w-3.5 h-3.5 text-[#2F81F7]" />
-              <p className="text-white/60 text-sm">{order.customer_phone}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-8 text-white/70">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Package className="w-4 h-4 text-[#2F81F7]" />
-              <p className="text-xs uppercase opacity-50">Product</p>
-            </div>
-            <p className="font-medium text-white">{order.product_type}</p>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Car className="w-4 h-4 text-[#2F81F7]" />
-              <p className="text-xs uppercase opacity-50">Vehicle</p>
-            </div>
-            <p className="font-medium text-white">{vehicleDisplay}</p>
-          </div>
-        </div>
-
-        {/* Date/Time Stamps */}
-        <div className="border-t border-white/10 pt-3 mt-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs uppercase opacity-50 mb-1">Order Received</p>
-              <p className="text-sm text-white font-medium">
-                {format(new Date(order.created_at), 'MMM d, yyyy')}
-              </p>
-              <p className="text-xs text-white/50">
-                {format(new Date(order.created_at), 'h:mm a')}
-              </p>
-            </div>
-            
-            {order.files && order.files.length > 0 && order.files[0].uploaded_at && (
-              <div>
-                <p className="text-xs uppercase opacity-50 mb-1">Art Received</p>
-                <p className="text-sm text-white font-medium">
-                  {format(new Date(order.files[0].uploaded_at), 'MMM d, yyyy')}
-                </p>
-                <p className="text-xs text-white/50">
-                  {format(new Date(order.files[0].uploaded_at), 'h:mm a')}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Order Number & Customer */}
+      <div className="flex flex-col justify-center min-w-[140px]">
+        <h3 className="text-white font-semibold text-sm">Order #{order.woo_order_number ?? order.order_number}</h3>
+        <p className="text-white/60 text-xs">{order.customer_name}</p>
       </div>
+
+      {/* Product Type */}
+      <div className="flex flex-col justify-center min-w-[120px] border-l border-white/10 pl-4">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <Package className="w-3.5 h-3.5 text-[#2F81F7]" />
+          <p className="text-[10px] uppercase text-white/40">Product</p>
+        </div>
+        <p className="text-white text-xs font-medium">{order.product_type}</p>
+      </div>
+
+      {/* Vehicle Info */}
+      <div className="flex flex-col justify-center min-w-[140px] border-l border-white/10 pl-4">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <Car className="w-3.5 h-3.5 text-[#2F81F7]" />
+          <p className="text-[10px] uppercase text-white/40">Vehicle</p>
+        </div>
+        <p className="text-white text-xs font-medium">{vehicleDisplay}</p>
+      </div>
+
+      {/* Order Received Date */}
+      <div className="flex flex-col justify-center min-w-[100px] border-l border-white/10 pl-4">
+        <p className="text-[10px] uppercase text-white/40 mb-0.5">Order Received</p>
+        <p className="text-white text-xs font-medium">
+          {format(new Date(order.created_at), 'MMM d, yyyy')}
+        </p>
+        <p className="text-[10px] text-white/40">
+          {format(new Date(order.created_at), 'h:mm a')}
+        </p>
+      </div>
+
+      {/* Art Received Date */}
+      {order.files && order.files.length > 0 && order.files[0].uploaded_at && (
+        <div className="flex flex-col justify-center min-w-[100px] border-l border-white/10 pl-4">
+          <p className="text-[10px] uppercase text-white/40 mb-0.5">Art Received</p>
+          <p className="text-white text-xs font-medium">
+            {format(new Date(order.files[0].uploaded_at), 'MMM d, yyyy')}
+          </p>
+          <p className="text-[10px] text-white/40">
+            {format(new Date(order.files[0].uploaded_at), 'h:mm a')}
+          </p>
+        </div>
+      )}
     </div>
   );
 };

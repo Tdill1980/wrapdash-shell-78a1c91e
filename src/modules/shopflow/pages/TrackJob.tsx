@@ -177,23 +177,29 @@ export default function TrackJob() {
         {/* Brand Header */}
         <ShopFlowBrandHeader />
         
-        {/* Progress Tracker */}
+        {/* Order Info - Full Width Horizontal */}
+        <OrderInfoCard order={order} />
+        
+        {/* Progress Bar */}
         <CustomerProgressBar 
           currentStatus={order.status}
           hasApproveFlowProject={!!order.approveflow_project_id}
         />
         
-        {/* Main Content Grid */}
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {/* Left Column - Order Details */}
-          <div className="space-y-6">
-            <OrderInfoCard order={order} />
+        {/* Timeline - Full Width Horizontal */}
+        <TimelineCard timeline={timeline} />
+        
+        {/* Remaining Cards - Horizontal Narrow Columns */}
+        <div className="flex flex-wrap gap-4">
+          <div className="flex-1 min-w-[280px]">
             <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
+          </div>
+          
+          <div className="flex-1 min-w-[280px]">
             <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
           </div>
           
-          {/* Middle Column - Files & Timeline */}
-          <div className="space-y-6">
+          <div className="flex-1 min-w-[280px]">
             <UploadedFilesCard 
               files={files} 
               missingFiles={missingFiles} 
@@ -203,17 +209,21 @@ export default function TrackJob() {
               uploading={uploading}
               orderStatus={order.status}
             />
-            <TimelineCard timeline={timeline} />
-            {(fileErrors.length > 0 || missingFiles.length > 0) && (
-              <ActionRequiredCard order={{ customer_stage: order.customer_stage || order.status, file_error_details: fileErrors, missing_file_list: missingFiles }} />
-            )}
           </div>
           
-          {/* Right Column - Summary */}
-          <div className="space-y-6">
+          {(fileErrors.length > 0 || missingFiles.length > 0) && (
+            <div className="flex-1 min-w-[280px]">
+              <ActionRequiredCard order={{ customer_stage: order.customer_stage || order.status, file_error_details: fileErrors, missing_file_list: missingFiles }} />
+            </div>
+          )}
+          
+          <div className="flex-1 min-w-[280px]">
             <OrderSummaryCard order={order} />
-            {order.approveflow_project_id && (
-              <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+          </div>
+          
+          {order.approveflow_project_id && (
+            <div className="flex-1 min-w-[280px]">
+              <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20 h-full">
                 <h3 className="text-lg font-semibold text-white mb-2">Design Proof Available</h3>
                 <p className="text-white/70 text-sm mb-4">Your design proof is ready for review in ApproveFlow.</p>
                 <a 
@@ -224,8 +234,8 @@ export default function TrackJob() {
                   <ArrowRight className="w-4 h-4" />
                 </a>
               </Card>
-            )}
-          </div>
+            </div>
+          )}
         </div>
         
         <div className="text-center py-8 text-muted-foreground text-sm">
