@@ -1,9 +1,21 @@
-export const ShopFlowBrandHeader = () => {
+interface ShopFlowBrandHeaderProps {
+  syncButton?: React.ReactNode;
+}
+
+export const ShopFlowBrandHeader = ({ syncButton }: ShopFlowBrandHeaderProps) => {
   return (
-    <div className="w-full mb-6 bg-[#1a1a24] rounded-xl border border-white/5 overflow-hidden">
-      {/* ShopFlow Title with Two-Tone Gradient */}
+    <div className="w-full mb-6 bg-[#1a1a24] rounded-xl border border-white/5 overflow-hidden relative">
+      {/* Admin Sync Button - Top Right Corner */}
+      {syncButton && (
+        <div className="absolute top-4 right-4 z-10">
+          {syncButton}
+        </div>
+      )}
+
+      {/* ShopFlow Title with Two-Tone */}
       <h1 className="text-4xl font-extrabold tracking-wide px-4 pt-4 font-['Poppins']">
-        <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">ShopFlow</span>
+        <span className="text-white">Shop</span>
+        <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">Flow</span>
         <span className="text-[10px] align-super opacity-70 text-white">™</span>
       </h1>
 
