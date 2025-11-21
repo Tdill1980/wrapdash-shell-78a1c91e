@@ -132,6 +132,13 @@ export default function ShopFlowInternal() {
           <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20 text-xs sm:text-sm">
             Internal Staff View
           </Badge>
+          <Link 
+            to={`/track/${order.order_number}`}
+            className="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] text-white rounded-lg text-xs sm:text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
+            View Customer Portal
+          </Link>
           {order.approveflow_project_id && (
             <Link 
               to={`/approveflow/${order.approveflow_project_id}`}
