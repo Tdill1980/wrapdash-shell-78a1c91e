@@ -36,65 +36,65 @@ export const UploadedFilesCard = ({
     }
   };
   return (
-    <div className="bg-[#111317] border border-white/10 rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Upload className="w-5 h-5 text-[#2F81F7]" />
-        <h3 className="card-header">
+    <div className="bg-[#111317] border border-white/10 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Upload className="w-4 h-4 text-[#2F81F7]" />
+        <h3 className="text-sm font-semibold text-white">
           {internalMode ? "Uploaded Files (Technical)" : "Files You Uploaded"}
         </h3>
       </div>
 
       {/* File Thumbnails or Upload UI */}
       {files.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="flex flex-wrap gap-2">
           {files.map((file, index) => (
-            <div key={index} className="flex flex-col gap-2">
+            <a 
+              key={index}
+              href={file.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+            >
               <FileThumbnail file={file} orderId={orderId} />
-              <a 
-                href={file.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs text-[#15D1FF] hover:underline truncate"
-              >
+              <span className="text-xs text-[#15D1FF] hover:underline truncate max-w-[150px]">
                 {file.name || `File ${index + 1}`}
-              </a>
-            </div>
+              </span>
+            </a>
           ))}
         </div>
       ) : orderStatus === 'dropbox-link-sent' ? (
-        <div className="p-6 bg-blue-500/10 border-2 border-blue-400/50 rounded-xl">
-          <div className="flex items-center gap-3">
-            <Mail className="w-6 h-6 text-blue-400 flex-shrink-0" />
+        <div className="p-4 bg-blue-500/10 border border-blue-400/30 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-blue-400 flex-shrink-0" />
             <div>
-              <h4 className="text-blue-400 font-semibold text-lg">
+              <h4 className="text-blue-400 font-semibold text-sm">
                 Dropbox Link Sent
               </h4>
-              <p className="text-white/70 text-sm mt-1">
-                We've sent you a Dropbox link to upload your design files. Please check your email.
+              <p className="text-white/70 text-xs mt-0.5">
+                Check your email for the Dropbox upload link.
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="p-6 bg-orange-500/10 border-2 border-orange-500/30 rounded-xl">
-          <div className="flex items-start gap-3 mb-4">
-            <AlertTriangle className="w-6 h-6 text-orange-400 flex-shrink-0 mt-0.5" />
+        <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+          <div className="flex items-start gap-2 mb-3">
+            <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-orange-400 font-semibold text-lg mb-2">
+              <h4 className="text-orange-400 font-semibold text-sm mb-1">
                 Missing Artwork Files
               </h4>
-              <p className="text-white/70 text-sm mb-4">
-                We haven't received your print files yet. Please upload them below or email them to{" "}
+              <p className="text-white/70 text-xs">
+                Upload files below or email to{" "}
                 <a href={`mailto:Design@WePrintWraps.com?subject=Files for Order ${orderId || ''}`} className="text-[#15D1FF] hover:underline">
                   Design@WePrintWraps.com
                 </a>
-                {" "}(please include your order number)
               </p>
             </div>
           </div>
           
           {!internalMode && onFileUpload && (
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -106,27 +106,29 @@ export const UploadedFilesCard = ({
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
+                size="sm"
                 className="flex-1"
               >
                 {uploading ? (
                   <>
-                    <Upload className="animate-pulse" />
-                    Uploading...
+                    <Upload className="w-3 h-3 animate-pulse" />
+                    <span className="text-xs">Uploading...</span>
                   </>
                 ) : (
                   <>
-                    <Upload />
-                    Upload Files
+                    <Upload className="w-3 h-3" />
+                    <span className="text-xs">Upload Files</span>
                   </>
                 )}
               </Button>
               <Button
                 variant="outline"
                 asChild
+                size="sm"
                 className="flex-1"
               >
                 <a href={`mailto:Design@WePrintWraps.com?subject=Files for Order ${orderId || ''}`}>
-                  Email Files Instead
+                  <span className="text-xs">Email Instead</span>
                 </a>
               </Button>
             </div>
@@ -136,11 +138,11 @@ export const UploadedFilesCard = ({
 
       {/* Missing Files */}
       {missingFiles.length > 0 && (
-        <div className="mt-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-          <h4 className="text-orange-400 font-semibold mb-2">
+        <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+          <h4 className="text-orange-400 font-semibold text-xs mb-1">
             {internalMode ? "Missing Files (Technical)" : "Missing Files"}
           </h4>
-          <ul className="list-disc ml-6 text-white/70 text-sm space-y-1">
+          <ul className="list-disc ml-4 text-white/70 text-xs space-y-0.5">
             {missingFiles.map((file, i) => (
               <li key={i}>{file}</li>
             ))}
@@ -150,11 +152,11 @@ export const UploadedFilesCard = ({
 
       {/* File Errors */}
       {fileErrors.length > 0 && (
-        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <h4 className="text-red-400 font-semibold mb-2">
+        <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <h4 className="text-red-400 font-semibold text-xs mb-1">
             {internalMode ? "File Errors (Technical)" : "File Errors"}
           </h4>
-          <ul className="list-disc ml-6 text-white/70 text-sm space-y-1">
+          <ul className="list-disc ml-4 text-white/70 text-xs space-y-0.5">
             {fileErrors.map((err, i) => (
               <li key={i}>{err}</li>
             ))}
