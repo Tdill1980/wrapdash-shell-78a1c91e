@@ -10,7 +10,7 @@ export const ShopFlowBrandHeader = () => {
 
       {/* Description */}
       <p className="text-white/70 text-sm px-4 mt-2 max-w-2xl pb-4">
-        Real-time order tracking from print to delivery. Watch your project move through each stage of production with complete transparency.
+        WePrintWraps.com's real-time order tracking from print to delivery. Watch your project move through each stage of production with complete transparency.
       </p>
     </div>
   );
