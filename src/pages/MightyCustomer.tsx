@@ -115,41 +115,52 @@ export default function MightyCustomer() {
     setIsManualSqft(true);
   };
 
-  const handleVoiceTranscript = (transcript: string) => {
+  const handleVoiceTranscript = (transcript: string, parsedData: any) => {
+    console.log('Voice transcript received:', transcript);
+    console.log('Parsed data:', parsedData);
+    
+    // Update customer data with parsed info
+    if (parsedData.customerName || parsedData.companyName || parsedData.phone || parsedData.email) {
+      setCustomerData(prev => ({
+        ...prev,
+        name: parsedData.customerName || prev.name,
+        company: parsedData.companyName || prev.company,
+        phone: parsedData.phone || prev.phone,
+        email: parsedData.email || prev.email,
+        vehicleYear: parsedData.year || prev.vehicleYear,
+        vehicleMake: parsedData.make || prev.vehicleMake,
+        vehicleModel: parsedData.model || prev.vehicleModel,
+      }));
+    }
+    
+    // Update service type if parsed
+    if (parsedData.serviceType) {
+      const serviceMap: Record<string, string> = {
+        "Printed Vinyl": "Full Wraps",
+        "Color Change": "Full Wraps", 
+        "PPF": "PPF",
+        "Tint": "Window Tint",
+        "Window Perf": "Window Perf",
+        "Wall Wrap": "Full Wraps"
+      };
+      const mappedService = serviceMap[parsedData.serviceType];
+      if (mappedService) {
+        setSelectedService(mappedService);
+      }
+    }
+    
+    // Set product if available
+    if (parsedData.productType && allProducts.length > 0) {
+      const matchingProduct = allProducts.find(p => 
+        p.product_name.toLowerCase().includes(parsedData.productType.toLowerCase())
+      );
+      if (matchingProduct) {
+        setSelectedProduct(matchingProduct);
+      }
+    }
+    
+    // Handle finish from transcript
     const lower = transcript.toLowerCase();
-    
-    if (lower.includes("tahoe") || lower.includes("silverado") || lower.includes("f-150")) {
-      const vehicleMatch = transcript.match(/(\d{4})\s+(\w+)\s+(\w+)/i);
-      if (vehicleMatch) {
-        setCustomerData(prev => ({
-          ...prev,
-          vehicleYear: vehicleMatch[1],
-          vehicleMake: vehicleMatch[2],
-          vehicleModel: vehicleMatch[3],
-        }));
-      }
-    }
-    
-    if (lower.includes("full wrap")) {
-      setSelectedService("Full Wraps");
-    } else if (lower.includes("ppf")) {
-      setSelectedService("PPF");
-    }
-    
-    if (lower.includes("name") || lower.includes("customer")) {
-      const nameMatch = transcript.match(/(?:name|customer)\s+(\w+(?:\s+\w+)?)/i);
-      if (nameMatch) {
-        setCustomerData(prev => ({ ...prev, name: nameMatch[1] }));
-      }
-    }
-    
-    if (lower.includes("phone")) {
-      const phoneMatch = transcript.match(/(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/);
-      if (phoneMatch) {
-        setCustomerData(prev => ({ ...prev, phone: phoneMatch[1] }));
-      }
-    }
-    
     if (lower.includes("gloss")) setFinish("Gloss");
     if (lower.includes("matte")) setFinish("Matte");
     if (lower.includes("satin")) setFinish("Satin");
