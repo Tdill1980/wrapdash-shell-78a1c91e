@@ -15,8 +15,11 @@ export const ManualSyncButton = ({ orderNumber, onSyncComplete }: ManualSyncButt
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-wc-shopflow', {
-        body: { order_number: orderNumber }
+      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+        body: { 
+          order_number: orderNumber,
+          sync_type: 'shopflow'
+        }
       });
 
       if (error) throw error;
