@@ -1,214 +1,250 @@
-import React, { useState } from "react";
-import { generateMasterCanvas, generate3DRender, convertToPrint } from "./api";
-import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { generateMasterCanvas, generate3DRender, convertToPrint } from './api';
 
 export default function DesignPanelProEnterprise() {
-  const { toast } = useToast();
-  
-  // PANEL INPUTS
-  const [width, setWidth] = useState("186");
-  const [height, setHeight] = useState("56");
-  const [style, setStyle] = useState("commercial");
-  const [subStyle, setSubStyle] = useState("clean");
-  const [intensity, setIntensity] = useState("medium");
-
-  // OUTPUT
-  const [preview, setPreview] = useState<string | null>(null);
-  const [threeD, setThreeD] = useState<string | null>(null);
-  const [printURL, setPrintURL] = useState<string | null>(null);
+  const [width, setWidth] = useState('60');
+  const [height, setHeight] = useState('30');
+  const [style, setStyle] = useState('commercial');
+  const [subStyle, setSubStyle] = useState('clean');
+  const [intensity, setIntensity] = useState('medium');
   const [loading, setLoading] = useState(false);
+  
+  const [preview, setPreview] = useState<string | null>(null);
+  const [render, setRender] = useState<string | null>(null);
+  const [tiffUrl, setTiffUrl] = useState<string | null>(null);
 
-  const generatePanel = async () => {
+  const handleGenerate = async () => {
     setLoading(true);
     try {
-      // 1) MASTER CANVAS
-      const master = await generateMasterCanvas({
+      // Step 1: Generate flat panel
+      toast.info('Generating flat panel design...');
+      const masterData = await generateMasterCanvas({
         width,
         height,
         style,
         subStyle,
         intensity
       });
-
-      setPreview(master.preview);
-
-      // 2) 3D RENDER
-      const render3D = await generate3DRender({
-        panelUrl: master.preview,
-        vehicleModel: "generic-sedan"
+      setPreview(masterData.preview);
+      
+      // Step 2: Generate 3D render
+      toast.info('Creating 3D vehicle render...');
+      const renderData = await generate3DRender({
+        panelUrl: masterData.preview,
+        vehicleModel: 'generic-sedan'
       });
-
-      setThreeD(render3D.render);
-
-      // 3) PRINT-READY OUTPUT
-      const finalPrint = await convertToPrint({
-        panelUrl: master.preview,
+      setRender(renderData.render);
+      
+      // Step 3: Convert to print-ready
+      toast.info('Converting to print-ready format...');
+      const printData = await convertToPrint({
+        panelUrl: masterData.preview,
         width,
         height
       });
-
-      setPrintURL(finalPrint.tiffUrl);
-
-      toast({
-        title: "Generation Complete",
-        description: "Panel, 3D render, and print files ready",
-      });
+      setTiffUrl(printData.tiffUrl);
+      
+      toast.success('Panel design complete!');
     } catch (error) {
-      toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive"
-      });
+      console.error('Generation error:', error);
+      toast.error('Failed to generate design');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#0B0B0C] text-white flex">
-      {/* LEFT SIDEBAR */}
-      <div className="w-[320px] bg-[#171718] p-6 flex flex-col gap-6 border-r border-[#242424]">
-        <h1 className="text-2xl font-bold">
-          <span className="text-[#22d3ee]">DesignPanelPro</span>
-          <span className="text-white"> Enterprise™</span>
-        </h1>
+    <div className="min-h-screen bg-[#0B0B0C] p-8">
+      <div className="flex gap-6">
+        {/* Left Sidebar */}
+        <div className="w-[320px] flex-shrink-0">
+          <Card className="rounded-2xl bg-[#141415] border-border">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold">
+                DesignPanelPro Enterprise™
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Width */}
+              <div>
+                <Label htmlFor="width">Width (inches)</Label>
+                <Input
+                  id="width"
+                  type="number"
+                  value={width}
+                  onChange={(e) => setWidth(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
 
-        {/* Panel Size */}
-        <div className="bg-[#101011] p-4 rounded-xl">
-          <h2 className="text-lg mb-3 font-semibold">Panel Size (inches)</h2>
-          <div className="flex gap-4">
-            <div>
-              <label className="text-sm text-gray-400 block mb-1">Width</label>
-              <input 
-                className="w-24 bg-black border border-gray-700 p-2 rounded-lg text-white"
-                value={width}
-                onChange={(e) => setWidth(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 block mb-1">Height</label>
-              <input 
-                className="w-24 bg-black border border-gray-700 p-2 rounded-lg text-white"
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+              {/* Height */}
+              <div>
+                <Label htmlFor="height">Height (inches)</Label>
+                <Input
+                  id="height"
+                  type="number"
+                  value={height}
+                  onChange={(e) => setHeight(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
 
-        {/* Style */}
-        <div className="bg-[#101011] p-4 rounded-xl">
-          <h2 className="text-lg mb-3 font-semibold">Category</h2>
-          <select 
-            className="w-full bg-black border border-gray-700 p-3 rounded-lg text-white"
-            value={style}
-            onChange={(e) => setStyle(e.target.value)}
-          >
-            <option value="commercial">Commercial</option>
-            <option value="restyle">Restyle</option>
-            <option value="anime">Anime</option>
-            <option value="livery">Livery</option>
-            <option value="racing">Racing</option>
-            <option value="offroad">Off-Road</option>
-            <option value="highend">High End</option>
-          </select>
+              {/* Category */}
+              <div>
+                <Label htmlFor="style">Category</Label>
+                <Select value={style} onValueChange={setStyle}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                    <SelectItem value="restyle">Restyle</SelectItem>
+                    <SelectItem value="anime">Anime</SelectItem>
+                    <SelectItem value="livery">Livery</SelectItem>
+                    <SelectItem value="racing">Racing</SelectItem>
+                    <SelectItem value="offroad">Offroad</SelectItem>
+                    <SelectItem value="highend">High-End</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {style === "commercial" && (
-            <select 
-              className="w-full bg-black border border-gray-700 p-3 rounded-lg mt-3 text-white"
-              value={subStyle}
-              onChange={(e) => setSubStyle(e.target.value)}
-            >
-              <option value="clean">Clean</option>
-              <option value="bold">Bold</option>
-              <option value="patterned">Patterned</option>
-              <option value="premium">Premium</option>
-            </select>
-          )}
-        </div>
+              {/* Sub-Style (only for commercial) */}
+              {style === 'commercial' && (
+                <div>
+                  <Label htmlFor="subStyle">Sub-Style</Label>
+                  <Select value={subStyle} onValueChange={setSubStyle}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="clean">Clean</SelectItem>
+                      <SelectItem value="bold">Bold</SelectItem>
+                      <SelectItem value="patterned">Patterned</SelectItem>
+                      <SelectItem value="premium">Premium</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-        {/* Intensity */}
-        <div className="bg-[#101011] p-4 rounded-xl">
-          <h2 className="text-lg mb-3 font-semibold">Intensity</h2>
-          <div className="flex gap-3">
-            {["soft","medium","extreme"].map(i => (
-              <button
-                key={i}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  intensity === i 
-                    ? "bg-[#22d3ee] text-black" 
-                    : "bg-black text-gray-400 hover:bg-gray-800"
-                }`}
-                onClick={() => setIntensity(i)}
+              {/* Intensity */}
+              <div>
+                <Label>Intensity</Label>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  <Button
+                    variant={intensity === 'soft' ? 'default' : 'outline'}
+                    onClick={() => setIntensity('soft')}
+                    className={intensity === 'soft' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90' : ''}
+                  >
+                    Soft
+                  </Button>
+                  <Button
+                    variant={intensity === 'medium' ? 'default' : 'outline'}
+                    onClick={() => setIntensity('medium')}
+                    className={intensity === 'medium' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90' : ''}
+                  >
+                    Medium
+                  </Button>
+                  <Button
+                    variant={intensity === 'extreme' ? 'default' : 'outline'}
+                    onClick={() => setIntensity('extreme')}
+                    className={intensity === 'extreme' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90' : ''}
+                  >
+                    Extreme
+                  </Button>
+                </div>
+              </div>
+
+              {/* Generate Button */}
+              <Button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="w-full h-12 bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black font-bold"
               >
-                {i}
-              </button>
-            ))}
-          </div>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate Panel Design'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        <button 
-          onClick={generatePanel}
-          disabled={loading}
-          className="mt-4 bg-[#22d3ee] text-black py-3 rounded-xl text-lg font-bold hover:bg-[#1ab8d4] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            "Generate Panel Design"
-          )}
-        </button>
-      </div>
+        {/* Main Canvas */}
+        <div className="flex-1 space-y-6">
+          {/* Flat Panel Design */}
+          <Card className="rounded-2xl bg-[#141415] border-border">
+            <CardHeader>
+              <CardTitle>Flat Panel Design</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[550px] flex items-center justify-center bg-black/20 rounded-lg">
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt="Flat Panel Design"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <p className="text-muted-foreground">Panel design will appear here</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* MAIN CANVAS */}
-      <div className="flex-1 p-8 overflow-y-auto space-y-6">
-        
-        {/* MASTER PREVIEW */}
-        <div className="bg-[#141415] p-6 rounded-2xl">
-          <h2 className="text-xl font-semibold mb-4">Flat Panel Design</h2>
-          <div className="bg-[#0B0B0C] rounded-xl h-[550px] flex items-center justify-center">
-            {preview ? (
-              <img src={preview} className="max-w-full max-h-full rounded-lg object-contain" alt="Panel preview" />
-            ) : (
-              <span className="text-gray-500">Panel preview will appear here</span>
-            )}
-          </div>
+          {/* 3D Vehicle Render */}
+          <Card className="rounded-2xl bg-[#141415] border-border">
+            <CardHeader>
+              <CardTitle>3D Vehicle Render</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[450px] flex items-center justify-center bg-black/20 rounded-lg">
+                {render ? (
+                  <img
+                    src={render}
+                    alt="3D Vehicle Render"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <p className="text-muted-foreground">3D render will appear here</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Print-Ready Files */}
+          <Card className="rounded-2xl bg-[#141415] border-border">
+            <CardHeader>
+              <CardTitle>Print-Ready Files</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {tiffUrl ? (
+                <Button
+                  asChild
+                  className="bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black font-bold"
+                >
+                  <a href={tiffUrl} download target="_blank" rel="noopener noreferrer">
+                    Download Print-Ready TIFF (300 DPI)
+                  </a>
+                </Button>
+              ) : (
+                <p className="text-muted-foreground">
+                  Print-ready file will be available after generation
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
-
-        {/* 3D RENDER */}
-        <div className="bg-[#141415] p-6 rounded-2xl">
-          <h2 className="text-xl font-semibold mb-4">3D Vehicle Render</h2>
-          <div className="bg-[#0B0B0C] rounded-xl h-[450px] flex items-center justify-center">
-            {threeD ? (
-              <img src={threeD} className="max-w-full max-h-full rounded-lg object-contain" alt="3D render" />
-            ) : (
-              <span className="text-gray-500">3D vehicle render will appear here</span>
-            )}
-          </div>
-        </div>
-
-        {/* PRINT READY */}
-        <div className="bg-[#141415] p-6 rounded-2xl">
-          <h2 className="text-xl font-semibold mb-4">Print-Ready Files</h2>
-          <div className="bg-[#0B0B0C] rounded-xl p-6">
-            {printURL ? (
-              <a 
-                href={printURL}
-                download
-                className="bg-[#22d3ee] text-black px-6 py-3 rounded-xl inline-flex items-center gap-2 hover:bg-[#1ab8d4] font-medium transition-colors"
-              >
-                Download Print-Ready TIFF (300 DPI)
-              </a>
-            ) : (
-              <span className="text-gray-500">Will generate after running</span>
-            )}
-          </div>
-        </div>
-
       </div>
     </div>
   );
