@@ -61,6 +61,18 @@ const navigationItems = [
     )
   },
   { 
+    name: "Design Generator™", 
+    path: "/design-generator", 
+    icon: Sparkles,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Design</span>
+        <span className="text-gradient">Generator</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
     name: "FadeWraps™", 
     path: "/fadewraps", 
     icon: Sparkles,
