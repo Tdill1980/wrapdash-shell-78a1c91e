@@ -72,24 +72,49 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
 
   return (
     <div className="w-full py-6 bg-[#0A0A0F]">
-      {/* Progress icons with labels */}
-      <div className="flex items-center justify-between gap-2 px-4 overflow-x-auto">
+      {/* Progress icons with labels and connecting line */}
+      <div className="relative flex items-center justify-between gap-2 px-4 overflow-x-auto">
+        {/* Base gray line connecting all steps */}
+        <div className="absolute top-5 left-12 right-12 h-0.5 bg-gray-700/50 z-0" />
+        
+        {/* Animated blue progress line */}
+        <div 
+          className="absolute top-5 left-12 h-0.5 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] z-0 transition-all duration-700 ease-out"
+          style={{ 
+            width: currentIndex >= 0 
+              ? `calc(${(currentIndex / (steps.length - 1)) * 100}% - 48px)` 
+              : '0%'
+          }}
+        />
+        
         {steps.map((step, i) => {
-          const active = i <= currentIndex;
+          const completed = i < currentIndex;
+          const active = i === currentIndex;
+          const pending = i > currentIndex;
           const Icon = step.icon;
           
           return (
-            <div key={step.label} className="flex flex-col items-center min-w-[80px]">
+            <div key={step.label} className="flex flex-col items-center min-w-[80px] relative z-10">
               <div 
-                className={`h-10 w-10 flex items-center justify-center rounded-full transition-all ${
-                  active 
-                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg" 
+                className={`h-10 w-10 flex items-center justify-center rounded-full transition-all duration-500 ${
+                  completed
+                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-4 ring-blue-400/20" 
+                    : active
+                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-4 ring-blue-400/40 animate-pulse"
                     : "bg-gray-700"
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? 'text-white' : 'text-white/40'}`} />
+                {completed ? (
+                  <CheckCircle className="h-5 w-5 text-white" />
+                ) : active ? (
+                  <Icon className="h-5 w-5 text-white" />
+                ) : (
+                  <div className="h-2 w-2 rounded-full bg-white/40" />
+                )}
               </div>
-              <p className={`text-xs mt-2 text-center ${active ? 'text-[#15D1FF]' : 'text-white/40'}`}>
+              <p className={`text-xs mt-2 text-center transition-colors duration-300 ${
+                completed || active ? 'text-[#15D1FF] font-semibold' : 'text-white/40'
+              }`}>
                 {step.label}
               </p>
             </div>
