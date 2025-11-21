@@ -13,7 +13,6 @@ import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
 import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
-import { TimelineCard } from "@/components/tracker/TimelineCard";
 import { toast } from "@/hooks/use-toast";
 import { MainLayout } from "@/layouts/MainLayout";
 
@@ -129,47 +128,6 @@ export default function TrackJob() {
   const files = (order.files as any[]) || [];
   const missingFiles = ((order as any).missing_file_list as any) || [];
   const fileErrors = ((order as any).file_error_details as any) || [];
-  
-  // Build timeline from actual order timeline data
-  const orderTimeline = (order.timeline as Record<string, string>) || {};
-  const timeline = [
-    { 
-      label: "Order Received", 
-      timestamp: order.created_at, 
-      completed: true,
-      status: "Order created in system"
-    },
-    { 
-      label: "Dropbox Link Sent", 
-      timestamp: orderTimeline["dropbox-link-sent"] || orderTimeline["dropbox_link_sent"] || "", 
-      completed: !!orderTimeline["dropbox-link-sent"] || !!orderTimeline["dropbox_link_sent"],
-      status: "Dropbox link sent to customer"
-    },
-    { 
-      label: "Files Received", 
-      timestamp: files.length > 0 ? files[0].uploaded_at : (orderTimeline["order_received"] || orderTimeline["in-design"] || ""), 
-      completed: files.length > 0 || !!orderTimeline["in-design"],
-      status: "Customer files received"
-    },
-    { 
-      label: "In Design/Prep", 
-      timestamp: orderTimeline["in-design"] || orderTimeline["ready-for-print"] || orderTimeline["pre-press"] || "", 
-      completed: !!orderTimeline["in-design"] || !!orderTimeline["ready-for-print"] || !!orderTimeline["pre-press"],
-      status: "Files being prepared"
-    },
-    { 
-      label: "Print Production", 
-      timestamp: orderTimeline["print-production"] || orderTimeline["printing"] || orderTimeline["lamination"] || orderTimeline["finishing"] || "", 
-      completed: !!orderTimeline["print-production"] || !!orderTimeline["printing"] || !!orderTimeline["lamination"] || !!orderTimeline["finishing"],
-      status: "In production"
-    },
-    { 
-      label: "Ready/Shipped", 
-      timestamp: orderTimeline["ready-for-pickup"] || orderTimeline["shipped"] || orderTimeline["completed"] || order.shipped_at || "", 
-      completed: !!orderTimeline["ready-for-pickup"] || !!orderTimeline["shipped"] || !!orderTimeline["completed"] || !!order.shipped_at,
-      status: order.shipped_at ? "Shipped" : "Ready for pickup"
-    },
-  ];
 
   return (
     <MainLayout userName="Customer">
@@ -180,21 +138,14 @@ export default function TrackJob() {
         {/* Order Info - Full Width Horizontal */}
         <OrderInfoCard order={order} />
         
-        {/* Progress Bar */}
+        {/* Progress Bar - Icon-Based Timeline */}
         <CustomerProgressBar 
           currentStatus={order.status}
           hasApproveFlowProject={!!order.approveflow_project_id}
         />
         
-        {/* Timeline - Full Width Horizontal */}
-        <TimelineCard timeline={timeline} />
-        
         {/* Primary Status Cards - Full Width Horizontal */}
         <div className="space-y-4">
-          <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
-          
-          <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
-          
           <UploadedFilesCard 
             files={files} 
             missingFiles={missingFiles} 
@@ -204,6 +155,10 @@ export default function TrackJob() {
             uploading={uploading}
             orderStatus={order.status}
           />
+          
+          <CurrentStageCard order={{ customer_stage: order.customer_stage || order.status }} />
+          
+          <NextStepCard order={{ customer_stage: order.customer_stage || order.status }} />
         </div>
         
         {/* Additional Cards */}
