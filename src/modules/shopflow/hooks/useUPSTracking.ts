@@ -14,7 +14,7 @@ export interface TrackingData {
   events: TrackingEvent[];
 }
 
-export const useUPSTracking = (trackingNumber: string | null | undefined, orderId?: string) => {
+export const useUPSTracking = (trackingNumber: string | null | undefined, orderId?: string, mockMode: boolean = false) => {
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,8 @@ export const useUPSTracking = (trackingNumber: string | null | undefined, orderI
       const { data, error: fnError } = await supabase.functions.invoke('ups-track', {
         body: { 
           tracking_number: trackingNumber,
-          order_id: orderId 
+          order_id: orderId,
+          mock: mockMode
         }
       });
       
@@ -49,18 +50,20 @@ export const useUPSTracking = (trackingNumber: string | null | undefined, orderI
     } finally {
       setLoading(false);
     }
-  }, [trackingNumber]);
+  }, [trackingNumber, mockMode]);
 
   useEffect(() => {
-    if (trackingNumber) {
+    if (trackingNumber && !mockMode) {
       fetchTracking();
       
-      // Auto-refresh every 30 seconds
+      // Auto-refresh every 30 seconds (only in non-mock mode)
       const interval = setInterval(fetchTracking, 30000);
       
       return () => clearInterval(interval);
+    } else if (trackingNumber && mockMode) {
+      fetchTracking();
     }
-  }, [trackingNumber, orderId, fetchTracking]);
+  }, [trackingNumber, orderId, mockMode, fetchTracking]);
 
   return {
     trackingData,

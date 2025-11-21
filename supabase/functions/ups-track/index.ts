@@ -31,7 +31,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tracking_number, order_id } = await req.json();
+    const { tracking_number, order_id, mock } = await req.json();
+
+    // Mock mode for UI previews
+    if (mock) {
+      const mockStatuses = ['in_transit', 'out_for_delivery', 'delivered'];
+      const mockStatus = mockStatuses[Math.floor(Math.random() * mockStatuses.length)];
+      
+      return new Response(
+        JSON.stringify({
+          status: mockStatus === 'in_transit' ? 'In Transit' : mockStatus === 'out_for_delivery' ? 'Out for Delivery' : 'Delivered',
+          eta: '2025-11-23',
+          location: 'Phoenix, AZ',
+          events: [
+            { time: '2025-11-21T14:12:00Z', status: 'In Transit', location: 'Louisville, KY' },
+            { time: '2025-11-20T23:05:00Z', status: 'Arrived at Facility', location: 'Phoenix, AZ' },
+            { time: '2025-11-20T09:02:00Z', status: 'Label Created', location: 'Mesa, AZ' }
+          ]
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!tracking_number) {
       return new Response(
