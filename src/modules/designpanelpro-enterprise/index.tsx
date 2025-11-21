@@ -20,11 +20,18 @@ export default function DesignPanelProEnterprise() {
   const [style, setStyle] = useState('commercial');
   const [subStyle, setSubStyle] = useState('clean');
   const [intensity, setIntensity] = useState('medium');
+  
+  // 3D Rendering Options
+  const [selectedAngle, setSelectedAngle] = useState<'front' | 'side' | 'rear' | 'front-close'>('front');
+  const [selectedFinish, setSelectedFinish] = useState<'gloss' | 'satin' | 'matte'>('gloss');
+  const [selectedEnvironment, setSelectedEnvironment] = useState<'studio' | 'white' | 'desert' | 'city' | 'garage' | 'showroom'>('studio');
+  
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingAllAngles, setGeneratingAllAngles] = useState(false);
   
   const [preview, setPreview] = useState<string | null>(null);
-  const [render, setRender] = useState<string | null>(null);
+  const [renders, setRenders] = useState<Record<string, string>>({});
   const [tiffUrl, setTiffUrl] = useState<string | null>(null);
   const [printMetadata, setPrintMetadata] = useState<any>(null);
 
@@ -47,13 +54,16 @@ export default function DesignPanelProEnterprise() {
       });
       setPreview(masterData.preview);
       
-      // Step 2: Generate 3D render with selected vehicle
-      toast.info('Creating 3D vehicle render...');
+      // Step 2: Generate 3D render with selected vehicle, angle, finish, and environment
+      toast.info(`Creating 3D render (${selectedAngle}, ${selectedFinish})...`);
       const renderData = await generate3DRender({
         panelUrl: masterData.preview,
-        vehicleModelId
+        vehicleModelId,
+        angle: selectedAngle,
+        finish: selectedFinish,
+        environment: selectedEnvironment
       });
-      setRender(renderData.render);
+      setRenders(prev => ({ ...prev, [selectedAngle]: renderData.render }));
       
       // Step 3: Convert to print-ready
       toast.info('Converting to print-ready format...');
@@ -74,6 +84,39 @@ export default function DesignPanelProEnterprise() {
     }
   };
 
+  const handleGenerateAllAngles = async () => {
+    if (!vehicleModelId || !preview) {
+      toast.error('Generate a panel design first');
+      return;
+    }
+
+    setGeneratingAllAngles(true);
+    const angles: Array<'front' | 'side' | 'rear' | 'front-close'> = ['front', 'side', 'rear', 'front-close'];
+    
+    try {
+      toast.info('Generating all camera angles...');
+      
+      for (const angle of angles) {
+        toast.info(`Generating ${angle} view...`);
+        const renderData = await generate3DRender({
+          panelUrl: preview,
+          vehicleModelId,
+          angle,
+          finish: selectedFinish,
+          environment: selectedEnvironment
+        });
+        setRenders(prev => ({ ...prev, [angle]: renderData.render }));
+      }
+      
+      toast.success('All angles generated successfully!');
+    } catch (error) {
+      console.error('Error generating all angles:', error);
+      toast.error('Failed to generate all angles');
+    } finally {
+      setGeneratingAllAngles(false);
+    }
+  };
+
   const handleSaveToLibrary = async () => {
     if (!preview) {
       toast.error('Generate a panel design first');
@@ -82,6 +125,8 @@ export default function DesignPanelProEnterprise() {
 
     setSaving(true);
     try {
+      const primaryRender = renders[selectedAngle] || renders.front || Object.values(renders)[0];
+      
       await saveDesignPanel({
         vehicle_id: vehicleModelId || undefined,
         vehicle_make: selectedVehicle?.make,
@@ -93,9 +138,14 @@ export default function DesignPanelProEnterprise() {
         width_inches: Number(width),
         height_inches: Number(height),
         panel_preview_url: preview,
-        panel_3d_url: render || undefined,
+        panel_3d_url: primaryRender || undefined,
         tiff_url: tiffUrl || undefined,
-        metadata: printMetadata
+        metadata: {
+          ...printMetadata,
+          renders,
+          finish: selectedFinish,
+          environment: selectedEnvironment
+        }
       });
       
       toast.success('Design saved to library!');
@@ -230,6 +280,118 @@ export default function DesignPanelProEnterprise() {
                 </div>
               </div>
 
+              {/* 3D Rendering Options */}
+              {preview && vehicleModelId && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <h3 className="text-lg font-semibold text-[#22d3ee]">3D Rendering Options</h3>
+                  
+                  {/* Camera Angle */}
+                  <div>
+                    <Label>Camera Angle</Label>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <Button
+                        variant={selectedAngle === 'front' ? 'default' : 'outline'}
+                        onClick={() => setSelectedAngle('front')}
+                        className={selectedAngle === 'front' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black' : ''}
+                        size="sm"
+                      >
+                        Front 3/4
+                      </Button>
+                      <Button
+                        variant={selectedAngle === 'side' ? 'default' : 'outline'}
+                        onClick={() => setSelectedAngle('side')}
+                        className={selectedAngle === 'side' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black' : ''}
+                        size="sm"
+                      >
+                        Side
+                      </Button>
+                      <Button
+                        variant={selectedAngle === 'rear' ? 'default' : 'outline'}
+                        onClick={() => setSelectedAngle('rear')}
+                        className={selectedAngle === 'rear' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black' : ''}
+                        size="sm"
+                      >
+                        Rear 3/4
+                      </Button>
+                      <Button
+                        variant={selectedAngle === 'front-close' ? 'default' : 'outline'}
+                        onClick={() => setSelectedAngle('front-close')}
+                        className={selectedAngle === 'front-close' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black' : ''}
+                        size="sm"
+                      >
+                        Front Close
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Finish Type */}
+                  <div>
+                    <Label>Wrap Finish</Label>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      <Button
+                        variant={selectedFinish === 'gloss' ? 'default' : 'outline'}
+                        onClick={() => setSelectedFinish('gloss')}
+                        className={selectedFinish === 'gloss' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black' : ''}
+                        size="sm"
+                      >
+                        Gloss
+                      </Button>
+                      <Button
+                        variant={selectedFinish === 'satin' ? 'default' : 'outline'}
+                        onClick={() => setSelectedFinish('satin')}
+                        className={selectedFinish === 'satin' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black' : ''}
+                        size="sm"
+                      >
+                        Satin
+                      </Button>
+                      <Button
+                        variant={selectedFinish === 'matte' ? 'default' : 'outline'}
+                        onClick={() => setSelectedFinish('matte')}
+                        className={selectedFinish === 'matte' ? 'bg-[#22d3ee] hover:bg-[#22d3ee]/90 text-black' : ''}
+                        size="sm"
+                      >
+                        Matte
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Environment */}
+                  <div>
+                    <Label>Environment</Label>
+                    <Select value={selectedEnvironment} onValueChange={(v: any) => setSelectedEnvironment(v)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="studio">Dark Studio</SelectItem>
+                        <SelectItem value="white">White Cyclorama</SelectItem>
+                        <SelectItem value="desert">Desert Landscape</SelectItem>
+                        <SelectItem value="city">Night City</SelectItem>
+                        <SelectItem value="garage">Industrial Garage</SelectItem>
+                        <SelectItem value="showroom">Luxury Showroom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Generate All Angles Button */}
+                  <Button
+                    onClick={handleGenerateAllAngles}
+                    disabled={generatingAllAngles}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {generatingAllAngles ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating All Angles...
+                      </>
+                    ) : (
+                      'Generate All Camera Angles'
+                    )}
+                  </Button>
+                </div>
+              )}
+
               {/* Generate Button */}
               <Button
                 onClick={handleGenerate}
@@ -293,23 +455,65 @@ export default function DesignPanelProEnterprise() {
             </CardContent>
           </Card>
 
-          {/* 3D Vehicle Render */}
+          {/* 3D Vehicle Renders */}
           <Card className="rounded-2xl bg-[#141415] border-border">
             <CardHeader>
-              <CardTitle>3D Vehicle Render</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>3D Vehicle Render</span>
+                {Object.keys(renders).length > 0 && (
+                  <span className="text-sm text-[#22d3ee]">
+                    {Object.keys(renders).length} angle{Object.keys(renders).length !== 1 ? 's' : ''} generated
+                  </span>
+                )}
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Main Render Display */}
               <div className="h-[450px] flex items-center justify-center bg-black/20 rounded-lg">
-                {render ? (
+                {renders[selectedAngle] ? (
                   <img
-                    src={render}
-                    alt="3D Vehicle Render"
+                    src={renders[selectedAngle]}
+                    alt={`3D Vehicle Render - ${selectedAngle}`}
                     className="max-h-full max-w-full object-contain"
                   />
                 ) : (
-                  <p className="text-muted-foreground">3D render will appear here</p>
+                  <p className="text-muted-foreground">
+                    {Object.keys(renders).length > 0 
+                      ? `No ${selectedAngle} render yet. Select a different angle or generate it.`
+                      : '3D render will appear here'}
+                  </p>
                 )}
               </div>
+
+              {/* Angle Thumbnails */}
+              {Object.keys(renders).length > 1 && (
+                <div className="grid grid-cols-4 gap-3">
+                  {(['front', 'side', 'rear', 'front-close'] as const).map(angle => (
+                    renders[angle] && (
+                      <button
+                        key={angle}
+                        onClick={() => setSelectedAngle(angle)}
+                        className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${
+                          selectedAngle === angle 
+                            ? 'border-[#22d3ee] ring-2 ring-[#22d3ee]/50' 
+                            : 'border-border hover:border-[#22d3ee]/50'
+                        }`}
+                      >
+                        <img
+                          src={renders[angle]}
+                          alt={`${angle} view`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1">
+                          <p className="text-xs text-white capitalize">
+                            {angle.replace('-', ' ')}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
