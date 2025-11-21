@@ -205,9 +205,13 @@ Deno.serve(async (req) => {
     let syncedApproveFlow = 0;
     let skipped = 0;
     const errors: string[] = [];
+    
+    // Limit processing to prevent timeout (process in batches)
+    const maxOrdersToProcess = Math.min(orders.length, 20);
+    console.log(`Processing ${maxOrdersToProcess} of ${orders.length} orders to prevent timeout`);
 
-
-    for (const order of orders) {
+    for (let i = 0; i < maxOrdersToProcess; i++) {
+      const order = orders[i];
       try {
         const orderNumber = order.number.toString();
         const customerName = `${order.billing.first_name} ${order.billing.last_name}`.trim() || 'Unknown Customer';
@@ -449,6 +453,8 @@ Deno.serve(async (req) => {
       syncedApproveFlow,
       skipped,
       total: orders.length,
+      processed: maxOrdersToProcess,
+      note: maxOrdersToProcess < orders.length ? `Processed ${maxOrdersToProcess} of ${orders.length} orders to prevent timeout. Run again to process more.` : undefined,
       errors: errors.length > 0 ? errors : undefined,
     };
 
