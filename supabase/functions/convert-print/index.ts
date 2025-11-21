@@ -23,10 +23,18 @@ serve(async (req) => {
     console.log("Print dimensions (pixels):", { printWidth, printHeight });
 
     // Fetch the base64 image
-    const imageData = panelUrl.split(',')[1];
-    const imageBuffer = Uint8Array.from(atob(imageData), c => c.charCodeAt(0));
+    let imageBuffer: Uint8Array;
+    if (panelUrl.startsWith('data:')) {
+      const imageData = panelUrl.split(',')[1];
+      imageBuffer = Uint8Array.from(atob(imageData), c => c.charCodeAt(0));
+    } else {
+      // If it's a URL, fetch it
+      const response = await fetch(panelUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      imageBuffer = new Uint8Array(arrayBuffer);
+    }
 
-    // For now, we'll store the original high-res image
+    // For now, we'll store the original high-res image as PNG
     // In production, you'd use a proper image processing library to:
     // 1. Resize to exact printWidth x printHeight
     // 2. Convert to CMYK color space
@@ -43,7 +51,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const filename = `panel-${Date.now()}.png`;
+    const filename = `panel-print-${Date.now()}.png`;
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('design-vault')

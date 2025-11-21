@@ -18,6 +18,8 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    console.log("Generating master canvas:", { width, height, style, subStyle, intensity });
+
     // Build style-specific prompt
     let stylePrompt = "";
     
