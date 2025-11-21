@@ -89,6 +89,7 @@ export async function createApproveFlowProjectFromQuote(
 
 /**
  * Save 3D render URLs to ApproveFlow project
+ * Converts base64 data URLs to stored images for efficient loading
  */
 export async function save3DRendersToApproveFlow(
   projectId: string,
@@ -96,12 +97,58 @@ export async function save3DRendersToApproveFlow(
   renderUrls: Record<string, string>
 ) {
   try {
+    // Convert base64 data URLs to storage URLs
+    const uploadedRenderUrls: Record<string, string> = {};
+    
+    for (const [angle, dataUrl] of Object.entries(renderUrls)) {
+      if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image')) {
+        // Extract base64 data from data URL
+        const base64Data = dataUrl.split(',')[1];
+        const mimeType = dataUrl.match(/data:(.*?);base64/)?.[1] || 'image/png';
+        const fileExtension = mimeType.split('/')[1];
+        
+        // Convert base64 to blob
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        
+        // Upload to storage
+        const filename = `${projectId}/renders/${versionId}_${angle}.${fileExtension}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('approveflow-files')
+          .upload(filename, blob, {
+            contentType: mimeType,
+            upsert: true,
+          });
+        
+        if (uploadError) {
+          console.error(`Failed to upload ${angle} render:`, uploadError);
+          // Fall back to storing the data URL if upload fails
+          uploadedRenderUrls[angle] = dataUrl;
+        } else {
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('approveflow-files')
+            .getPublicUrl(filename);
+          
+          uploadedRenderUrls[angle] = publicUrl;
+        }
+      } else {
+        // Already a URL, keep as is
+        uploadedRenderUrls[angle] = dataUrl;
+      }
+    }
+    
     const { data, error } = await supabase
       .from('approveflow_3d')
       .insert({
         project_id: projectId,
         version_id: versionId,
-        render_urls: renderUrls,
+        render_urls: uploadedRenderUrls,
       })
       .select()
       .single();
@@ -114,7 +161,7 @@ export async function save3DRendersToApproveFlow(
         eventType: '3d_render_ready',
         projectId,
         versionId,
-        renderUrls,
+        renderUrls: uploadedRenderUrls,
       },
     });
 
