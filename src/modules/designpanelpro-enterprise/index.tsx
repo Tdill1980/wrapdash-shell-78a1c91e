@@ -66,30 +66,30 @@ export default function DesignPanelProEnterprise() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-background text-foreground flex">
+    <div className="w-full min-h-screen bg-[#0B0B0C] text-white flex">
       {/* LEFT SIDEBAR */}
-      <div className="w-[320px] bg-card p-6 flex flex-col gap-6 border-r border-border">
+      <div className="w-[320px] bg-[#171718] p-6 flex flex-col gap-6 border-r border-[#242424]">
         <h1 className="text-2xl font-bold">
           <span className="text-[#22d3ee]">DesignPanelPro</span>
-          <span className="text-foreground"> Enterprise™</span>
+          <span className="text-white"> Enterprise™</span>
         </h1>
 
         {/* Panel Size */}
-        <div className="bg-background p-4 rounded-xl border border-border">
+        <div className="bg-[#101011] p-4 rounded-xl">
           <h2 className="text-lg mb-3 font-semibold">Panel Size (inches)</h2>
           <div className="flex gap-4">
             <div>
-              <label className="text-sm text-muted-foreground block mb-1">Width</label>
+              <label className="text-sm text-gray-400 block mb-1">Width</label>
               <input 
-                className="w-24 bg-background border border-input p-2 rounded-lg text-foreground"
+                className="w-24 bg-black border border-gray-700 p-2 rounded-lg text-white"
                 value={width}
                 onChange={(e) => setWidth(e.target.value)}
               />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground block mb-1">Height</label>
+              <label className="text-sm text-gray-400 block mb-1">Height</label>
               <input 
-                className="w-24 bg-background border border-input p-2 rounded-lg text-foreground"
+                className="w-24 bg-black border border-gray-700 p-2 rounded-lg text-white"
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
               />
@@ -98,10 +98,10 @@ export default function DesignPanelProEnterprise() {
         </div>
 
         {/* Style */}
-        <div className="bg-background p-4 rounded-xl border border-border">
+        <div className="bg-[#101011] p-4 rounded-xl">
           <h2 className="text-lg mb-3 font-semibold">Category</h2>
           <select 
-            className="w-full bg-background border border-input p-3 rounded-lg text-foreground"
+            className="w-full bg-black border border-gray-700 p-3 rounded-lg text-white"
             value={style}
             onChange={(e) => setStyle(e.target.value)}
           >
@@ -116,7 +116,7 @@ export default function DesignPanelProEnterprise() {
 
           {style === "commercial" && (
             <select 
-              className="w-full bg-background border border-input p-3 rounded-lg mt-3 text-foreground"
+              className="w-full bg-black border border-gray-700 p-3 rounded-lg mt-3 text-white"
               value={subStyle}
               onChange={(e) => setSubStyle(e.target.value)}
             >
@@ -129,7 +129,7 @@ export default function DesignPanelProEnterprise() {
         </div>
 
         {/* Intensity */}
-        <div className="bg-background p-4 rounded-xl border border-border">
+        <div className="bg-[#101011] p-4 rounded-xl">
           <h2 className="text-lg mb-3 font-semibold">Intensity</h2>
           <div className="flex gap-3">
             {["soft","medium","extreme"].map(i => (
@@ -138,7 +138,7 @@ export default function DesignPanelProEnterprise() {
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   intensity === i 
                     ? "bg-[#22d3ee] text-black" 
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    : "bg-black text-gray-400 hover:bg-gray-800"
                 }`}
                 onClick={() => setIntensity(i)}
               >
@@ -151,7 +151,7 @@ export default function DesignPanelProEnterprise() {
         <button 
           onClick={generatePanel}
           disabled={loading}
-          className="mt-4 bg-[#22d3ee] text-black py-3 rounded-xl text-lg font-bold hover:bg-[#22d3ee]/90 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="mt-4 bg-[#22d3ee] text-black py-3 rounded-xl text-lg font-bold hover:bg-[#1ab8d4] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
         >
           {loading ? (
             <>
@@ -168,43 +168,43 @@ export default function DesignPanelProEnterprise() {
       <div className="flex-1 p-8 overflow-y-auto space-y-6">
         
         {/* MASTER PREVIEW */}
-        <div className="bg-card border border-border p-6 rounded-xl">
+        <div className="bg-[#141415] p-6 rounded-2xl">
           <h2 className="text-xl font-semibold mb-4">Flat Panel Design</h2>
-          <div className="bg-background rounded-xl h-[550px] flex items-center justify-center border border-border">
+          <div className="bg-[#0B0B0C] rounded-xl h-[550px] flex items-center justify-center">
             {preview ? (
               <img src={preview} className="max-w-full max-h-full rounded-lg object-contain" alt="Panel preview" />
             ) : (
-              <span className="text-muted-foreground">Panel preview will appear here</span>
+              <span className="text-gray-500">Panel preview will appear here</span>
             )}
           </div>
         </div>
 
         {/* 3D RENDER */}
-        <div className="bg-card border border-border p-6 rounded-xl">
+        <div className="bg-[#141415] p-6 rounded-2xl">
           <h2 className="text-xl font-semibold mb-4">3D Vehicle Render</h2>
-          <div className="bg-background rounded-xl h-[550px] flex items-center justify-center border border-border">
+          <div className="bg-[#0B0B0C] rounded-xl h-[450px] flex items-center justify-center">
             {threeD ? (
               <img src={threeD} className="max-w-full max-h-full rounded-lg object-contain" alt="3D render" />
             ) : (
-              <span className="text-muted-foreground">3D vehicle render will appear here</span>
+              <span className="text-gray-500">3D vehicle render will appear here</span>
             )}
           </div>
         </div>
 
         {/* PRINT READY */}
-        <div className="bg-card border border-border p-6 rounded-xl">
+        <div className="bg-[#141415] p-6 rounded-2xl">
           <h2 className="text-xl font-semibold mb-4">Print-Ready Files</h2>
-          <div className="bg-background rounded-xl p-6 border border-border">
+          <div className="bg-[#0B0B0C] rounded-xl p-6">
             {printURL ? (
               <a 
                 href={printURL}
                 download
-                className="bg-[#22d3ee] text-black px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:bg-[#22d3ee]/90 font-medium"
+                className="bg-[#22d3ee] text-black px-6 py-3 rounded-xl inline-flex items-center gap-2 hover:bg-[#1ab8d4] font-medium transition-colors"
               >
                 Download Print-Ready TIFF (300 DPI)
               </a>
             ) : (
-              <span className="text-muted-foreground">Will generate after running</span>
+              <span className="text-gray-500">Will generate after running</span>
             )}
           </div>
         </div>
