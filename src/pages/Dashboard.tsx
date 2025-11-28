@@ -331,7 +331,7 @@ export default function Dashboard() {
         {/* LEFT: Quote Builder Card */}
         <Card className="dashboard-card">
           <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex flex-row items-start justify-between gap-2">
               <div>
                 <CardTitle className="font-poppins text-xl sm:text-2xl font-bold leading-tight">
                   <span className="text-foreground">Mighty</span>
