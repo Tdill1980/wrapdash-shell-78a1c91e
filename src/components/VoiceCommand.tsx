@@ -99,7 +99,7 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
   };
 
   return (
-    <div ref={containerRef} className="absolute top-4 right-4 z-50">
+    <div ref={containerRef} className="relative z-10">
       {!isExpanded ? (
         // Collapsed Badge
         <button
