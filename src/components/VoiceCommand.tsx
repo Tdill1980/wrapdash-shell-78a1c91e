@@ -1,16 +1,17 @@
 import { Mic, X, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 
 interface VoiceCommandProps {
   onTranscript: (transcript: string, parsedData: any) => void;
 }
 
 export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
-  const [isRecording, setIsRecording] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
 
   // Click outside to collapse
   useEffect(() => {
@@ -26,66 +27,18 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
     }
   }, [isExpanded]);
 
-  const handleMouseDown = () => {
-    setIsRecording(true);
-    startRecording();
+  const handleTouchStart = async () => {
+    await startRecording();
   };
 
-  const handleMouseUp = () => {
-    setIsRecording(false);
-    stopRecording();
-  };
-
-  const startRecording = () => {
-    // Web Speech API implementation
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast({
-        title: "Not Supported",
-        description: "Speech recognition not supported in this browser",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[event.results.length - 1][0].transcript;
-      parseVoiceInput(transcript);
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      
-      let title = "Voice Command Error";
-      let description = "Could not process voice input";
-      
-      if (event.error === 'not-allowed') {
-        title = "Microphone Access Denied";
-        description = "Please allow microphone access in your browser settings and try again";
-      } else if (event.error === 'no-speech') {
-        title = "No Speech Detected";
-        description = "Hold the button and speak clearly";
+  const handleTouchEnd = async () => {
+    try {
+      const transcript = await stopRecording();
+      if (transcript) {
+        parseVoiceInput(transcript);
       }
-      
-      toast({
-        title,
-        description,
-        variant: "destructive",
-      });
-    };
-
-    (window as any).currentRecognition = recognition;
-    recognition.start();
-  };
-
-  const stopRecording = () => {
-    if ((window as any).currentRecognition) {
-      (window as any).currentRecognition.stop();
+    } catch (error) {
+      console.error('Voice input error:', error);
     }
   };
 
@@ -199,22 +152,28 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
             </div>
 
             <button
-              onMouseDown={handleMouseDown}
-              onMouseUp={handleMouseUp}
-              onTouchStart={handleMouseDown}
-              onTouchEnd={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleTouchStart}
+              onMouseUp={handleTouchEnd}
+              disabled={isProcessing}
               className={`
                 w-full px-6 py-3 rounded-lg font-semibold text-white text-sm
                 transition-all duration-200 shadow-lg
                 ${isRecording 
                   ? 'bg-gradient-to-r from-red-500 to-red-600 scale-105 shadow-red-500/50 animate-pulse' 
+                  : isProcessing
+                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 animate-pulse'
                   : 'bg-gradient-to-r from-primary to-accent hover:scale-105 hover:shadow-primary/50'
                 }
+                disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
               <div className="flex items-center justify-center gap-2">
                 <Mic className="h-4 w-4" />
-                <span>{isRecording ? '🎤 Listening...' : '🎙️ Hold & Speak'}</span>
+                <span>
+                  {isProcessing ? '⏳ Processing...' : isRecording ? '🎤 Listening...' : '🎙️ Hold & Speak'}
+                </span>
               </div>
             </button>
           </div>
