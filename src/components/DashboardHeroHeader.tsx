@@ -85,13 +85,15 @@ export function DashboardHeroHeader({
     return (
       <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-r from-black/60 via-black/30 to-transparent">
         {/* Background Image Layer */}
-        <div 
-          className="absolute inset-0 bg-cover bg-right-center opacity-80"
-          style={{
-            backgroundImage: `url(${backgroundImage})`,
-            backgroundPosition: 'right center',
-          }}
-        />
+              <div 
+                className="absolute inset-0 bg-cover opacity-80"
+                style={{
+                  backgroundImage: `url(${backgroundImage})`,
+                  backgroundPosition: window.innerWidth < 768 
+                    ? (currentImage?.background_position_mobile || 'center')
+                    : (currentImage?.background_position_desktop || 'center'),
+                }}
+              />
         
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-30% via-background/30 to-60% to-transparent" />
@@ -156,10 +158,12 @@ export function DashboardHeroHeader({
             <div className="relative w-full bg-gradient-to-r from-black/60 via-black/30 to-transparent">
               {/* Background Image Layer */}
               <div 
-                className="absolute inset-0 bg-cover bg-right-center opacity-80"
+                className="absolute inset-0 bg-cover opacity-80"
                 style={{
                   backgroundImage: `url(${image.image_url})`,
-                  backgroundPosition: 'right center',
+                  backgroundPosition: window.innerWidth < 768 
+                    ? (image.background_position_mobile || 'center')
+                    : (image.background_position_desktop || 'center'),
                 }}
               />
               

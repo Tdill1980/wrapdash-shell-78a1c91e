@@ -19,6 +19,8 @@ export default function DashboardHeroAdmin() {
   const [subtitle, setSubtitle] = useState('');
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'afternoon' | 'night' | 'all'>('all');
   const [displayOrder, setDisplayOrder] = useState('0');
+  const [positionDesktop, setPositionDesktop] = useState('center');
+  const [positionMobile, setPositionMobile] = useState('center');
 
   if (adminLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -43,6 +45,8 @@ export default function DashboardHeroAdmin() {
       subtitle,
       time_of_day: timeOfDay,
       display_order: parseInt(displayOrder),
+      background_position_desktop: positionDesktop,
+      background_position_mobile: positionMobile,
     });
 
     // Reset form
@@ -51,6 +55,8 @@ export default function DashboardHeroAdmin() {
     setSubtitle('');
     setTimeOfDay('all');
     setDisplayOrder('0');
+    setPositionDesktop('center');
+    setPositionMobile('center');
   };
 
   return (
@@ -127,6 +133,40 @@ export default function DashboardHeroAdmin() {
             />
           </div>
 
+          <div>
+            <Label htmlFor="positionDesktop">Desktop Position</Label>
+            <Select value={positionDesktop} onValueChange={setPositionDesktop}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="right center">Right Center</SelectItem>
+                <SelectItem value="left center">Left Center</SelectItem>
+                <SelectItem value="top center">Top Center</SelectItem>
+                <SelectItem value="bottom center">Bottom Center</SelectItem>
+                <SelectItem value="right top">Right Top</SelectItem>
+                <SelectItem value="left top">Left Top</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="positionMobile">Mobile Position</Label>
+            <Select value={positionMobile} onValueChange={setPositionMobile}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="top">Top</SelectItem>
+                <SelectItem value="bottom">Bottom</SelectItem>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button onClick={handleUpload} disabled={!selectedFile} className="w-full">
             <Upload className="w-4 h-4 mr-2" />
             Upload Hero Image
@@ -174,6 +214,10 @@ export default function DashboardHeroAdmin() {
                       <span className="text-muted-foreground">
                         Order: {image.display_order}
                       </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      <p>Desktop: {image.background_position_desktop || 'center'}</p>
+                      <p>Mobile: {image.background_position_mobile || 'center'}</p>
                     </div>
                     <Button
                       variant="destructive"
