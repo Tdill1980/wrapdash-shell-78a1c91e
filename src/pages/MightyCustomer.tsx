@@ -430,8 +430,10 @@ export default function MightyCustomer() {
     <MainLayout userName="Admin">
       <div className="w-full space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-white via-blue-200 to-blue-400 bg-clip-text text-transparent drop-shadow-2xl" style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>
-            MightyCustomer™
+          <h1 className="font-poppins text-4xl sm:text-5xl font-bold leading-tight">
+            <span className="text-foreground">Mighty</span>
+            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Customer</span>
+            <span className="text-muted-foreground text-xl sm:text-2xl align-super">™</span>
           </h1>
           <p className="text-muted-foreground text-lg">Quote Builder & Order Management</p>
         </div>

@@ -37,6 +37,7 @@ import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { MainLayout } from "@/layouts/MainLayout";
 import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
+import { isWPW } from "@/lib/wpwProducts";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -128,7 +129,7 @@ export default function Dashboard() {
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
   // Quote Builder State
-  const [productCategory, setProductCategory] = useState<'wrap' | 'ppf' | 'tint' | 'all'>('all');
+  const [productCategory, setProductCategory] = useState<'wrap' | 'ppf' | 'tint' | 'all' | 'wpw'>('all');
   const [product, setProduct] = useState("");
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
@@ -148,6 +149,9 @@ export default function Dashboard() {
   // Filter products by category
   const filteredProducts = useMemo(() => {
     if (productCategory === 'all') return products;
+    if (productCategory === 'wpw') {
+      return products.filter(p => isWPW(p.woo_product_id));
+    }
     return products.filter(p => p.category === productCategory);
   }, [products, productCategory]);
   
@@ -228,14 +232,6 @@ export default function Dashboard() {
   };
   
   const latestDesigns = designs?.slice(0, 5) || [];
-
-  const productTypes = [
-    { name: "Full Wraps", gradient: "bg-gradient-primary" },
-    { name: "Partial Wraps", gradient: "bg-gradient-primary" },
-    { name: "Chrome Delete", gradient: "bg-gradient-primary" },
-    { name: "PPF", gradient: "bg-gradient-primary" },
-    { name: "Window Tint", gradient: "bg-gradient-primary" },
-  ];
 
   const nextSlide = () => {
     if (latestDesigns.length > 0) {
@@ -330,39 +326,23 @@ export default function Dashboard() {
           activeRendersCount={activeRendersCount}
         />
 
-      {/* Product Type Chips */}
-      <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-        {productTypes.map((product) => (
-          <button
-            key={product.name}
-            onClick={() => product.name === "Full Wraps" ? navigate("/visualize") : null}
-            className={`px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap ${product.gradient} text-white hover:opacity-90 transition-opacity`}
-          >
-            {product.name}
-          </button>
-        ))}
-      </div>
-
       {/* Two-Column Hero Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* LEFT: Quote Builder Card */}
         <Card className="dashboard-card">
-          <CardHeader className="pb-3 relative">
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div>
-                <CardTitle className="dashboard-card-title text-lg font-bold font-poppins">
+                <CardTitle className="font-poppins text-xl sm:text-2xl font-bold leading-tight">
                   <span className="text-foreground">Mighty</span>
-                  <span className="text-gradient">Customer</span>
-                  <span className="text-muted-foreground text-sm align-super">™</span>
+                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Customer</span>
+                  <span className="text-muted-foreground text-sm sm:text-lg align-super">™</span>
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
                   Quote & Order Builder
                 </p>
               </div>
-              {/* VoiceCommand Widget - positioned in corner */}
-              <div className="absolute top-3 right-3">
-                <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
-              </div>
+              <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
@@ -370,7 +350,20 @@ export default function Dashboard() {
               {/* Category Filter Buttons */}
               <div>
                 <label className="text-xs text-muted-foreground mb-2 block">Product Category</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={productCategory === 'wpw' ? 'default' : 'outline'}
+                    onClick={() => { setProductCategory('wpw'); setProduct(""); }}
+                    className={`text-xs py-1 h-auto font-semibold ${
+                      productCategory === 'wpw'
+                        ? 'bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0 shadow-lg'
+                        : ''
+                    }`}
+                  >
+                    WePrintWraps.com
+                  </Button>
                   <Button
                     type="button"
                     size="sm"
