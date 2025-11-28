@@ -342,15 +342,30 @@ export default function MightyCustomer() {
       if (error) throw error;
 
       toast({
-        title: "Quote Saved!",
-        description: `Quote ${quoteNumber} has been saved successfully`,
+        title: "✅ Quote Added Successfully!",
+        description: `Quote ${quoteNumber} saved for ${customerData.name} - Total: $${total.toFixed(2)}`,
+        duration: 5000,
       });
+
+      // Reset form after successful save
+      setCustomerData({
+        name: "",
+        company: "",
+        phone: "",
+        email: "",
+        vehicleYear: "",
+        vehicleMake: "",
+        vehicleModel: "",
+      });
+      setSelectedProduct(null);
+      setSelectedService("");
     } catch (error: any) {
       console.error("Error saving quote:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to save quote",
+        title: "Error Saving Quote",
+        description: error.message || "Failed to save quote. Please try again.",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsSavingQuote(false);
@@ -415,10 +430,10 @@ export default function MightyCustomer() {
     <MainLayout userName="Admin">
       <div className="w-full space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-white via-blue-200 to-blue-400 bg-clip-text text-transparent drop-shadow-2xl" style={{ fontFamily: 'Impact, "Arial Black", sans-serif' }}>
             MightyCustomer™
           </h1>
-          <p className="text-muted-foreground">Quote Builder & Order Management</p>
+          <p className="text-muted-foreground text-lg">Quote Builder & Order Management</p>
         </div>
 
         <Card className="dashboard-card p-6 space-y-6 relative">
@@ -463,15 +478,15 @@ export default function MightyCustomer() {
                 return (
                   <Button
                     key={category}
-                    variant={isWPWCategory ? (isSelected ? "default" : "ghost") : (isSelected ? "default" : "outline")}
+                    variant={isSelected ? "default" : "outline"}
                     onClick={() => {
                       setSelectedService(category);
                       setSelectedProduct(null);
                       setActiveProductTab("regular");
                     }}
-                    className={`whitespace-nowrap px-6 ${
+                    className={`whitespace-nowrap px-6 font-semibold ${
                       isWPWCategory
-                        ? `bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0 ${isSelected ? 'ring-2 ring-white/50' : ''}`
+                        ? `bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0 shadow-lg shadow-purple-500/50 ${isSelected ? 'ring-2 ring-white/50 scale-105' : 'hover:scale-105'} transition-all`
                         : ""
                     }`}
                   >
@@ -1159,12 +1174,11 @@ export default function MightyCustomer() {
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleSaveQuote}
-              variant="outline"
               disabled={isSavingQuote || !selectedProduct || !total || !customerData.name || !customerData.email}
-              className="flex-1 border-primary/40 hover:bg-primary/10"
+              className="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white shadow-lg"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {isSavingQuote ? "Saving..." : "Save Quote"}
+              {isSavingQuote ? "Adding Quote..." : "Add Quote"}
             </Button>
             
             <Button
