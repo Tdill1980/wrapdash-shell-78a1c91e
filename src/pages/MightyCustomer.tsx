@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
+import RealtimeVoiceQuote from "@/components/RealtimeVoiceQuote";
 import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
@@ -68,6 +69,7 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
+  const [showRealtimeVoice, setShowRealtimeVoice] = useState(false);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -113,6 +115,53 @@ export default function MightyCustomer() {
   const handleSqftChange = (value: number) => {
     setSqft(value);
     setIsManualSqft(true);
+  };
+
+  const handleRealtimeVehicle = (vehicle: { year: string; make: string; model: string }) => {
+    setCustomerData(prev => ({
+      ...prev,
+      vehicleYear: vehicle.year,
+      vehicleMake: vehicle.make,
+      vehicleModel: vehicle.model,
+    }));
+  };
+
+  const handleRealtimeCustomer = (customer: { name: string; company?: string; phone?: string; email?: string }) => {
+    setCustomerData(prev => ({
+      ...prev,
+      name: customer.name,
+      company: customer.company || prev.company,
+      phone: customer.phone || prev.phone,
+      email: customer.email || prev.email,
+    }));
+  };
+
+  const handleRealtimeService = (service: { type: string; panels?: string[] }) => {
+    const serviceTypeMap: { [key: string]: string } = {
+      full_wrap: "Full Wraps",
+      partial_wrap: "Partial Wraps",
+      color_change: "Full Wraps",
+      ppf: "PPF",
+      tint: "Window Tint"
+    };
+    
+    const mappedService = serviceTypeMap[service.type];
+    if (mappedService) {
+      setSelectedService(mappedService);
+    }
+    
+    if (service.type === "partial_wrap" && service.panels) {
+      setWrapType("partial");
+      const newPanels = {
+        sides: service.panels.includes("sides"),
+        back: service.panels.includes("back"),
+        hood: service.panels.includes("hood"),
+        roof: service.panels.includes("roof")
+      };
+      setSelectedPanels(newPanels);
+    } else if (service.type === "full_wrap") {
+      setWrapType("full");
+    }
   };
 
   const handleVoiceTranscript = (transcript: string, parsedData: any) => {
@@ -373,7 +422,38 @@ export default function MightyCustomer() {
         </div>
 
         <Card className="dashboard-card p-6 space-y-6 relative">
-          <VoiceCommand onTranscript={handleVoiceTranscript} />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-lg font-semibold">Voice Input</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant={!showRealtimeVoice ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowRealtimeVoice(false)}
+                >
+                  Quick Voice
+                </Button>
+                <Button
+                  variant={showRealtimeVoice ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowRealtimeVoice(true)}
+                >
+                  AI Conversation
+                </Button>
+              </div>
+            </div>
+
+            {!showRealtimeVoice ? (
+              <VoiceCommand onTranscript={handleVoiceTranscript} />
+            ) : (
+              <RealtimeVoiceQuote
+                onVehicleDetected={handleRealtimeVehicle}
+                onCustomerDetected={handleRealtimeCustomer}
+                onServiceDetected={handleRealtimeService}
+              />
+            )}
+          </div>
+
           <div className="space-y-4">
             <Label className="text-lg font-semibold">Select Category</Label>
             <div className="flex gap-2 overflow-x-auto pb-2">
