@@ -737,6 +737,8 @@ export type Database = {
       }
       dashboard_hero_images: {
         Row: {
+          background_position_desktop: string | null
+          background_position_mobile: string | null
           created_at: string | null
           display_order: number | null
           id: string
@@ -748,6 +750,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          background_position_desktop?: string | null
+          background_position_mobile?: string | null
           created_at?: string | null
           display_order?: number | null
           id?: string
@@ -759,6 +763,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          background_position_desktop?: string | null
+          background_position_mobile?: string | null
           created_at?: string | null
           display_order?: number | null
           id?: string
