@@ -1,4 +1,4 @@
-import vehicleDimensionsData from "@/data/vehicle-dimensions.json";
+import { vehicleDimensionsData } from '@/data/parseVehicleData';
 
 export interface VehicleDimensions {
   Make: string;
