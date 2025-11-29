@@ -76,6 +76,9 @@ export default function MightyCustomer() {
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
   const [showRealtimeVoice, setShowRealtimeVoice] = useState(false);
+  const [includeInstallation, setIncludeInstallation] = useState(false);
+  const [installationDescription, setInstallationDescription] = useState("");
+  const [customInstallationHours, setCustomInstallationHours] = useState(0);
 
   // Pre-populate from Dashboard navigation state
   useEffect(() => {
@@ -112,11 +115,11 @@ export default function MightyCustomer() {
     sqftOptions,
     panelCosts,
     materialCost,
-    laborCost,
+    installationCost,
     installHours,
-    subtotal,
-    marginAmount,
-    total,
+    wholesaleCost,
+    customerPrice,
+    resellerProfit,
   } = useQuoteEngine(
     selectedProduct,
     vehicle,
@@ -124,7 +127,10 @@ export default function MightyCustomer() {
     settings.install_rate_per_hour,
     margin,
     includeRoof,
-    wrapType === 'partial' ? selectedPanels : null
+    wrapType === 'partial' ? selectedPanels : null,
+    includeInstallation,
+    installationDescription,
+    customInstallationHours
   );
 
   // Track vehicle match status
@@ -251,7 +257,7 @@ export default function MightyCustomer() {
       return;
     }
 
-    if (!selectedProduct || !total) {
+    if (!selectedProduct || !customerPrice) {
       toast({
         title: "Incomplete Quote",
         description: "Please complete the quote before sending",
@@ -279,9 +285,9 @@ export default function MightyCustomer() {
             vehicle_model: customerData.vehicleModel,
             product_name: selectedProduct.product_name,
             sqft: sqft,
-            material_cost: materialCost,
-            labor_cost: laborCost,
-            quote_total: total,
+            material_cost: wholesaleCost,
+            installation_cost: includeInstallation ? installationCost : 0,
+            quote_total: customerPrice,
             portal_url: window.location.origin + "/mighty-customer",
           },
           tone: emailTone,
@@ -319,7 +325,7 @@ export default function MightyCustomer() {
       return;
     }
 
-    if (!selectedProduct || !total) {
+    if (!selectedProduct || !customerPrice) {
       toast({
         title: "Incomplete Quote",
         description: "Please complete the quote before saving",
@@ -355,9 +361,16 @@ export default function MightyCustomer() {
         }),
         product_name: selectedProduct.product_name,
         sqft: sqft,
+        wholesale_cost: wholesaleCost,
+        customer_price: customerPrice,
+        reseller_profit: resellerProfit,
         material_cost: materialCost,
-        labor_cost: laborCost,
-        total_price: total,
+        installation_included: includeInstallation,
+        installation_cost: includeInstallation ? installationCost : null,
+        installation_description: includeInstallation ? installationDescription : null,
+        installation_hours: includeInstallation ? (customInstallationHours || installHours) : null,
+        installation_rate: includeInstallation ? settings.install_rate_per_hour : null,
+        total_price: customerPrice,
         margin: margin,
         status: "pending",
         auto_retarget: true,
@@ -370,7 +383,7 @@ export default function MightyCustomer() {
 
       toast({
         title: "✅ Quote Added Successfully!",
-        description: `Quote ${quoteNumber} saved for ${customerData.name} - Total: $${total.toFixed(2)}`,
+        description: `Quote ${quoteNumber} saved for ${customerData.name} - Total: $${customerPrice.toFixed(2)}`,
         duration: 5000,
       });
 
@@ -1128,39 +1141,90 @@ export default function MightyCustomer() {
             </div>
           </div>
 
-          {/* Quote Summary */}
+          {/* Installation Toggle */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <Label className="text-lg font-semibold">Include Installation</Label>
+              <Button
+                type="button"
+                variant={includeInstallation ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIncludeInstallation(!includeInstallation)}
+              >
+                {includeInstallation ? "✓ Included" : "Add Installation"}
+              </Button>
+            </div>
+            
+            {includeInstallation && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                <div className="space-y-2">
+                  <Label>Installation Description</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g., Full wrap - Avery SW900"
+                    value={installationDescription}
+                    onChange={(e) => setInstallationDescription(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Hours</Label>
+                    <Input
+                      type="number"
+                      placeholder={installHours.toString()}
+                      value={customInstallationHours || ""}
+                      onChange={(e) => setCustomInstallationHours(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Rate/Hour</Label>
+                    <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
+                      <span className="text-sm">${settings.install_rate_per_hour}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Total</Label>
+                    <div className="flex items-center h-10 px-3 border rounded-md bg-primary/10 text-primary font-semibold">
+                      <span className="text-sm">${installationCost.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quote Summary - Dual Pricing for Resellers */}
           {selectedProduct && sqft > 0 && (
             <div className="space-y-4 pt-4 border-t">
-              <Label className="text-lg font-semibold">Quote Summary</Label>
+              <Label className="text-lg font-semibold">Pricing (Reseller View)</Label>
               <div className="p-4 bg-gradient-to-br from-background to-muted/20 rounded-lg border space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Material Cost:</span>
-                  <span className="font-semibold">${materialCost.toFixed(2)}</span>
+                  <span className="text-muted-foreground">WPW Base Cost:</span>
+                  <span className="font-semibold">${wholesaleCost.toFixed(2)}</span>
                 </div>
                 
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    Labor ({installHours}h × ${settings.install_rate_per_hour}/h):
-                  </span>
-                  <span className="font-semibold">${laborCost.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Suggested Retail ({margin}%):</span>
+                  <span className="font-semibold">${(wholesaleCost * (1 + margin / 100)).toFixed(2)}</span>
                 </div>
                 
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Margin ({margin}%):</span>
-                  <span className="font-semibold text-blue-400">${marginAmount.toFixed(2)}</span>
-                </div>
+                {includeInstallation && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Installation:</span>
+                    <span className="font-semibold">${installationCost.toFixed(2)}</span>
+                  </div>
+                )}
                 
                 <div className="pt-3 border-t border-border">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Total:</span>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-lg font-bold">Customer Price:</span>
                     <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-                      ${total.toFixed(2)}
+                      ${customerPrice.toFixed(2)}
                     </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
+                    <span className="text-green-400 font-semibold">💰 Your Profit:</span>
+                    <span className="text-green-400 font-bold">${resellerProfit.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -1301,7 +1365,7 @@ export default function MightyCustomer() {
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleSaveQuote}
-              disabled={isSavingQuote || !selectedProduct || !total || !customerData.name || !customerData.email}
+              disabled={isSavingQuote || !selectedProduct || !customerPrice || !customerData.name || !customerData.email}
               className="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white shadow-lg"
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -1311,7 +1375,7 @@ export default function MightyCustomer() {
             <Button
               onClick={() => setEmailPreviewOpen(true)}
               variant="outline"
-              disabled={!selectedProduct || !total}
+              disabled={!selectedProduct || !customerPrice}
               className="flex-1 border-primary/40 hover:bg-primary/10"
             >
               <Mail className="mr-2 h-4 w-4" />
@@ -1320,7 +1384,7 @@ export default function MightyCustomer() {
 
             <Button
               onClick={handleSendQuoteEmail}
-              disabled={isSendingEmail || !selectedProduct || !total || !customerData.email || !customerData.name}
+              disabled={isSendingEmail || !selectedProduct || !customerPrice || !customerData.email || !customerData.name}
               className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
             >
               <Mail className="mr-2 h-4 w-4" />
@@ -1377,9 +1441,9 @@ export default function MightyCustomer() {
             vehicleModel: customerData.vehicleModel,
             productName: selectedProduct?.product_name,
             sqft: sqft,
-            materialCost: materialCost,
-            laborCost: laborCost,
-            total: total,
+            materialCost: wholesaleCost,
+            installationCost: includeInstallation ? installationCost : 0,
+            total: customerPrice,
             portalUrl: window.location.origin + "/mighty-customer",
           }}
           tone={emailTone}
