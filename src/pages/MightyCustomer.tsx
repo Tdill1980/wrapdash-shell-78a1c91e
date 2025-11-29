@@ -542,7 +542,7 @@ export default function MightyCustomer() {
         <div className="text-center space-y-2">
           <h1 className="font-poppins text-4xl sm:text-5xl font-bold leading-tight">
             <span className="text-foreground">Mighty</span>
-            <span className="bg-gradient-to-r from-[#E1306C] via-[#833AB4] to-[#405DE6] bg-clip-text text-transparent">Customer</span>
+            <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Customer</span>
             <span className="text-muted-foreground text-xl sm:text-2xl align-super">™</span>
           </h1>
           <p className="text-muted-foreground text-lg">Quote Builder & Order Management</p>
@@ -598,7 +598,7 @@ export default function MightyCustomer() {
                     }}
                     className={`whitespace-nowrap px-6 font-semibold ${
                       isWPWCategory
-                        ? `bg-gradient-to-r from-[#E1306C] via-[#833AB4] to-[#405DE6] hover:from-[#F56A9E] hover:via-[#9B59B6] hover:to-[#5B7FFF] text-white border-0 shadow-lg shadow-purple-500/50 ${isSelected ? 'ring-2 ring-white/50 scale-105' : 'hover:scale-105'} transition-all`
+                        ? `bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E] text-white border-0 shadow-lg shadow-purple-500/50 ${isSelected ? 'ring-2 ring-white/50 scale-105' : 'hover:scale-105'} transition-all`
                         : ""
                     }`}
                   >
@@ -1348,7 +1348,7 @@ export default function MightyCustomer() {
                 <Button
                   onClick={() => handleAddToCart(selectedProduct)}
                   disabled={isSending || sqft === 0 || !customerData.name || !customerData.email}
-                  className="flex-1 bg-gradient-to-r from-[#E1306C] via-[#833AB4] to-[#405DE6] hover:from-[#F56A9E] hover:via-[#9B59B6] hover:to-[#5B7FFF] text-white"
+                  className="flex-1 bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E] text-white"
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   {isSending ? "Opening WPW Cart..." : "Order from WPW"}
