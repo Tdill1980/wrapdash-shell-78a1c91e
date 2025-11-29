@@ -654,7 +654,7 @@ export default function MightyCustomer() {
               // Show only WePrintWraps products
               categoryFiltered = allProducts.filter(p => p.woo_product_id && isWPW(p.woo_product_id));
             } else {
-              categoryFiltered = allProducts.filter(p => p.category === categoryKey);
+              categoryFiltered = allProducts.filter(p => p.category === categoryKey && !isWPW(p.woo_product_id));
             }
 
             return (
