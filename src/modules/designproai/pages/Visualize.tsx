@@ -244,7 +244,7 @@ export default function Visualize() {
           <div className="mb-6">
             <h2 className="text-2xl font-bold font-poppins">
               <span className="text-foreground">Wrap</span>
-              <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Closer</span>
+              <span className="bg-gradient-to-r from-[#E1306C] via-[#833AB4] to-[#405DE6] bg-clip-text text-transparent">Closer</span>
               <span className="text-muted-foreground text-sm align-super">™</span>
             </h2>
             <p className="text-xs font-light text-muted-foreground mt-1">
