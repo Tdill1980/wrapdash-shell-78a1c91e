@@ -16,44 +16,43 @@ interface CustomerProgressBarProps {
 }
 
 export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = false }: CustomerProgressBarProps) => {
-  // Map WooCommerce status to simplified customer stages
+  // Map both WooCommerce and internal status formats to simplified customer stages
   const statusMap: Record<string, string> = {
-    // Order stages
+    // === Internal Status Formats (from database) ===
+    "order_received": "Order Received",
+    "dropbox_link_sent": "Dropbox Link Sent", 
+    "files_received": "Files Received",
+    "action_required": "Files Received",
+    "design_requested": "Files Received",
+    "awaiting_approval": hasApproveFlowProject ? "Awaiting Approval" : "Print Production",
+    "design_complete": hasApproveFlowProject ? "Awaiting Approval" : "Print Production",
+    "preparing_for_print": "Print Production",
+    "in_production": "Print Production",
+    "ready_or_shipped": "Ready/Shipped",
+    "shipped": "Being Quality Checked",
+    "completed": "Ready/Shipped",
+    
+    // === WooCommerce Status Formats (hyphenated) ===
     "pending": "Order Received",
     "processing": "Order Received",
     "on-hold": "Order Received",
     "waiting-to-place-order": "Order Received",
     "waiting-on-email-response": "Order Received",
     "add-on": "Order Received",
-    
-    // Dropbox stage
     "dropbox-link-sent": "Dropbox Link Sent",
-    
-    // Files received stages
     "in-design": "Files Received",
     "file-error": "Files Received",
     "missing-file": "Files Received",
-    
-    // Approval stages
     "design-complete": hasApproveFlowProject ? "Awaiting Approval" : "Print Production",
     "work-order-printed": hasApproveFlowProject ? "Awaiting Approval" : "Print Production",
-    
-    // Production stages
     "ready-for-print": "Print Production",
     "pre-press": "Print Production",
     "print-production": "Print Production",
     "in-production": "Print Production",
-    "in_production": "Print Production",
     "lamination": "Print Production",
     "finishing": "Print Production",
-    
-    // Quality check - ONLY when shipped
-    "shipped": "Being Quality Checked",
-    
-    // Final stages
     "ready-for-pickup": "Ready/Shipped",
     "shipping-cost": "Ready/Shipped",
-    "completed": "Ready/Shipped"
   };
 
   const displayStatus = statusMap[currentStatus] || "Order Received";

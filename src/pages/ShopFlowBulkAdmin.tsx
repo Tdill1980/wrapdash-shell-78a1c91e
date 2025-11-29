@@ -10,11 +10,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { RefreshCw, Zap, Search, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export default function ShopFlowBulkAdmin() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showTrackingDialog, setShowTrackingDialog] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
 
   // Fetch all orders
   const { data: orders, isLoading, refetch } = useQuery({
@@ -132,6 +144,76 @@ export default function ShopFlowBulkAdmin() {
     }
   };
 
+  const handleMarkShipped = () => {
+    if (selectedOrders.size === 0) {
+      toast({
+        title: "No orders selected",
+        description: "Please select at least one order to mark as shipped",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowTrackingDialog(true);
+  };
+
+  const handleSubmitTracking = async () => {
+    if (!trackingNumber.trim()) {
+      toast({
+        title: "Tracking number required",
+        description: "Please enter a tracking number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const orderIds = Array.from(selectedOrders);
+      
+      const { error } = await supabase
+        .from("shopflow_orders")
+        .update({
+          status: "shipped",
+          tracking_number: trackingNumber.trim(),
+          tracking_url: trackingUrl.trim() || `https://www.ups.com/track?tracknum=${trackingNumber.trim()}`,
+          shipped_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .in("id", orderIds);
+
+      if (error) throw error;
+
+      // Log the tracking events
+      for (const orderId of orderIds) {
+        await supabase.from("shopflow_logs").insert({
+          order_id: orderId,
+          event_type: "tracking_added",
+          payload: {
+            tracking_number: trackingNumber.trim(),
+            tracking_url: trackingUrl.trim() || `https://www.ups.com/track?tracknum=${trackingNumber.trim()}`,
+          },
+        });
+      }
+
+      toast({
+        title: "Orders marked as shipped",
+        description: `Updated ${orderIds.length} orders with tracking number`,
+      });
+
+      await refetch();
+      setSelectedOrders(new Set());
+      setShowTrackingDialog(false);
+      setTrackingNumber("");
+      setTrackingUrl("");
+    } catch (error: any) {
+      console.error("Tracking update error:", error);
+      toast({
+        title: "Update failed",
+        description: error.message || "Failed to add tracking information",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <MainLayout userName="Admin">
       <div className="space-y-6">
@@ -182,7 +264,7 @@ export default function ShopFlowBulkAdmin() {
                 Mark In Production
               </Button>
               <Button
-                onClick={() => handleBulkStatusUpdate("shipped")}
+                onClick={handleMarkShipped}
                 disabled={selectedOrders.size === 0}
                 size="sm"
                 variant="outline"
@@ -269,6 +351,50 @@ export default function ShopFlowBulkAdmin() {
           </div>
         </Card>
       </div>
+
+      {/* Tracking Number Dialog */}
+      <Dialog open={showTrackingDialog} onOpenChange={setShowTrackingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Tracking Information</DialogTitle>
+            <DialogDescription>
+              Enter the UPS tracking number for the selected orders. A tracking URL will be generated automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tracking-number">UPS Tracking Number *</Label>
+              <Input
+                id="tracking-number"
+                placeholder="1Z999AA10123456784"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tracking-url">Tracking URL (Optional)</Label>
+              <Input
+                id="tracking-url"
+                placeholder="https://www.ups.com/track?tracknum=..."
+                value={trackingUrl}
+                onChange={(e) => setTrackingUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to auto-generate UPS tracking URL
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTrackingDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitTracking}>
+              Mark as Shipped
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
