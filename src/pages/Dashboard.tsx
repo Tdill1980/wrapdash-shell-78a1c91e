@@ -150,7 +150,7 @@ export default function Dashboard() {
     if (productCategory === 'wpw') {
       return products.filter(p => isWPW(p.woo_product_id));
     }
-    return products.filter(p => p.category === productCategory);
+    return products.filter(p => p.category === productCategory && !isWPW(p.woo_product_id));
   }, [products, productCategory]);
   
   // Get vehicle data from helper functions
