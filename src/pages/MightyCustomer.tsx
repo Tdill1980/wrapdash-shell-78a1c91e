@@ -18,6 +18,7 @@ import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getVehicleMakes, getVehicleModels } from "@/lib/vehicleSqft";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -629,6 +630,45 @@ export default function MightyCustomer() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
+                <Label>Vehicle Make</Label>
+                <Select
+                  value={customerData.vehicleMake}
+                  onValueChange={(value) => {
+                    console.log('Make updated:', value);
+                    setCustomerData(prev => ({ ...prev, vehicleMake: value, vehicleModel: '' }));
+                  }}
+                >
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue placeholder="Select Make" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border z-50">
+                    {getVehicleMakes().map((make) => (
+                      <SelectItem key={make} value={make}>{make}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Model</Label>
+                <Select
+                  value={customerData.vehicleModel}
+                  onValueChange={(value) => {
+                    console.log('Model updated:', value);
+                    setCustomerData(prev => ({ ...prev, vehicleModel: value }));
+                  }}
+                  disabled={!customerData.vehicleMake}
+                >
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue placeholder="Select Model" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border z-50">
+                    {customerData.vehicleMake && getVehicleModels(customerData.vehicleMake).map((model) => (
+                      <SelectItem key={model} value={model}>{model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Vehicle Year</Label>
                 <Input
                   type="text"
@@ -637,30 +677,6 @@ export default function MightyCustomer() {
                   onChange={(e) => {
                     console.log('Year updated:', e.target.value);
                     setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }));
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Vehicle Make</Label>
-                <Input
-                  type="text"
-                  placeholder="Chevrolet"
-                  value={customerData.vehicleMake}
-                  onChange={(e) => {
-                    console.log('Make updated:', e.target.value);
-                    setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }));
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Vehicle Model</Label>
-                <Input
-                  type="text"
-                  placeholder="Tahoe"
-                  value={customerData.vehicleModel}
-                  onChange={(e) => {
-                    console.log('Model updated:', e.target.value);
-                    setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }));
                   }}
                 />
               </div>
