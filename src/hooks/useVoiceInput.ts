@@ -84,15 +84,48 @@ export const useVoiceInput = () => {
 
             setIsProcessing(false);
 
-            if (error) throw error;
-            
-            resolve(data.text || '');
+            if (error) {
+              console.error('❌ Function invoke error:', error);
+              const errorMessage = error.message || 'Failed to connect to transcription service';
+              toast({
+                title: "Connection Error",
+                description: errorMessage,
+                variant: "destructive",
+              });
+              reject(new Error(errorMessage));
+              return;
+            }
+
+            if (data?.error) {
+              console.error('❌ Transcription error:', data.error);
+              toast({
+                title: "Transcription Failed",
+                description: data.error,
+                variant: "destructive",
+              });
+              reject(new Error(data.error));
+              return;
+            }
+
+            if (!data?.text) {
+              console.error('⚠️ No transcription returned');
+              toast({
+                title: "No Speech Detected",
+                description: "Please try speaking clearly into the microphone",
+                variant: "destructive",
+              });
+              reject(new Error('No transcription returned'));
+              return;
+            }
+
+            console.log('✅ Transcription success:', data.text);
+            resolve(data.text);
           } catch (error) {
-            console.error('Transcription error:', error);
+            console.error('❌ Transcription error:', error);
             setIsProcessing(false);
             toast({
               title: "Transcription Error",
-              description: "Failed to process voice input",
+              description: error instanceof Error ? error.message : "Unknown error occurred",
               variant: "destructive",
             });
             reject(error);
