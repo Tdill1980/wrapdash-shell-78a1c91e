@@ -1208,6 +1208,44 @@ export type Database = {
           },
         ]
       }
+      margin_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          margin_percentage: number
+          organization_id: string | null
+          scope: string
+          scope_value: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          margin_percentage?: number
+          organization_id?: string | null
+          scope: string
+          scope_value?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          margin_percentage?: number
+          organization_id?: string | null
+          scope?: string
+          scope_value?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "margin_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string | null
@@ -1385,12 +1423,18 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone: string | null
+          customer_price: number | null
           email_design: string | null
           email_tone: string | null
           engagement_level: string | null
           expires_at: string | null
           follow_up_count: number | null
           id: string
+          installation_cost: number | null
+          installation_description: string | null
+          installation_hours: number | null
+          installation_included: boolean | null
+          installation_rate: number | null
           labor_cost: number | null
           last_activity: string | null
           last_follow_up_sent: string | null
@@ -1400,6 +1444,7 @@ export type Database = {
           organization_id: string | null
           product_name: string | null
           quote_number: string
+          reseller_profit: number | null
           sqft: number | null
           status: string | null
           total_price: number
@@ -1410,6 +1455,7 @@ export type Database = {
           vehicle_model: string | null
           vehicle_year: string | null
           wc_sync_status: string | null
+          wholesale_cost: number | null
           woo_order_id: string | null
         }
         Insert: {
@@ -1423,12 +1469,18 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone?: string | null
+          customer_price?: number | null
           email_design?: string | null
           email_tone?: string | null
           engagement_level?: string | null
           expires_at?: string | null
           follow_up_count?: number | null
           id?: string
+          installation_cost?: number | null
+          installation_description?: string | null
+          installation_hours?: number | null
+          installation_included?: boolean | null
+          installation_rate?: number | null
           labor_cost?: number | null
           last_activity?: string | null
           last_follow_up_sent?: string | null
@@ -1438,6 +1490,7 @@ export type Database = {
           organization_id?: string | null
           product_name?: string | null
           quote_number: string
+          reseller_profit?: number | null
           sqft?: number | null
           status?: string | null
           total_price: number
@@ -1448,6 +1501,7 @@ export type Database = {
           vehicle_model?: string | null
           vehicle_year?: string | null
           wc_sync_status?: string | null
+          wholesale_cost?: number | null
           woo_order_id?: string | null
         }
         Update: {
@@ -1461,12 +1515,18 @@ export type Database = {
           customer_email?: string
           customer_name?: string
           customer_phone?: string | null
+          customer_price?: number | null
           email_design?: string | null
           email_tone?: string | null
           engagement_level?: string | null
           expires_at?: string | null
           follow_up_count?: number | null
           id?: string
+          installation_cost?: number | null
+          installation_description?: string | null
+          installation_hours?: number | null
+          installation_included?: boolean | null
+          installation_rate?: number | null
           labor_cost?: number | null
           last_activity?: string | null
           last_follow_up_sent?: string | null
@@ -1476,6 +1536,7 @@ export type Database = {
           organization_id?: string | null
           product_name?: string | null
           quote_number?: string
+          reseller_profit?: number | null
           sqft?: number | null
           status?: string | null
           total_price?: number
@@ -1486,6 +1547,7 @@ export type Database = {
           vehicle_model?: string | null
           vehicle_year?: string | null
           wc_sync_status?: string | null
+          wholesale_cost?: number | null
           woo_order_id?: string | null
         }
         Relationships: [
