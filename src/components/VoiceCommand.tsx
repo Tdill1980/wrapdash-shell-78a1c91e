@@ -28,21 +28,48 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
   }, [isExpanded]);
 
   const handleTouchStart = async () => {
-    await startRecording();
+    console.log('🎤 Starting voice recording...');
+    try {
+      await startRecording();
+      console.log('✅ Recording started successfully');
+    } catch (error) {
+      console.error('❌ Failed to start recording:', error);
+      toast({
+        title: "Microphone Error",
+        description: "Could not access microphone. Please check permissions.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleTouchEnd = async () => {
+    console.log('⏹️ Stopping recording...');
     try {
       const transcript = await stopRecording();
+      console.log('📝 Transcription result:', transcript);
+      
       if (transcript) {
         parseVoiceInput(transcript);
+      } else {
+        console.warn('⚠️ No transcript received');
+        toast({
+          title: "No Speech Detected",
+          description: "Please try again and speak clearly.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Voice input error:', error);
+      console.error('❌ Voice input error:', error);
+      toast({
+        title: "Transcription Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
     }
   };
 
   const parseVoiceInput = (transcript: string) => {
+    console.log('🔍 Parsing voice input:', transcript);
     const lower = transcript.toLowerCase();
     
     // Parse vehicle info
@@ -90,6 +117,7 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
       description: transcript,
     };
 
+    console.log('✅ Parsed data:', parsedData);
     onTranscript(transcript, parsedData);
     
     toast({
