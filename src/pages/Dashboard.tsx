@@ -310,7 +310,18 @@ export default function Dashboard() {
                   Quote & Order Builder
                 </p>
               </div>
-              <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
+              <VoiceCommand onTranscript={(transcript, parsedData) => {
+                console.log('📝 Voice transcript:', transcript);
+                console.log('🔍 Parsed data:', parsedData);
+                
+                // Use parsedData directly instead of re-parsing
+                if (parsedData.year) setVehicleYear(parsedData.year);
+                if (parsedData.make) setVehicleMake(parsedData.make);
+                if (parsedData.model) setVehicleModel(parsedData.model);
+                if (parsedData.customerName) setCustomerName(parsedData.customerName);
+                if (parsedData.email) setCustomerEmail(parsedData.email);
+                if (parsedData.productType) setProduct(parsedData.productType);
+              }} />
             </div>
           </CardHeader>
           <CardContent className="pt-0">
