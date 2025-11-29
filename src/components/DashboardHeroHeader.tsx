@@ -46,7 +46,7 @@ export function DashboardHeroHeader({
   const displayImages = getFilteredImages();
   const currentImage = displayImages[currentImageIndex] || null;
   const backgroundImage = currentImage?.image_url || broncoImage;
-  const heroTitle = currentImage?.title || "WrapCommand";
+  const heroTitle = currentImage?.title || "Wrap";
   const heroSubtitle = currentImage?.subtitle || "Your Command Center for Wrap Operations";
 
   const quickWins: QuickWinCard[] = [
@@ -102,7 +102,7 @@ export function DashboardHeroHeader({
         <div className="relative z-10 px-4 sm:px-8 pt-4 pb-6 sm:pt-6 sm:pb-10">
           <div className="mb-4 sm:mb-6">
             <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2">
-              <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+              <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5 whitespace-nowrap" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
                 <span className="text-foreground">{heroTitle} </span>
                 <span className="text-gradient">Dashboard</span>
                 <span className="text-muted-foreground text-lg sm:text-2xl align-super">™</span>
@@ -174,8 +174,8 @@ export function DashboardHeroHeader({
               <div className="relative z-10 px-4 sm:px-8 pt-4 pb-6 sm:pt-6 sm:pb-10">
                 <div className="mb-4 sm:mb-6">
                   <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2">
-                    <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                      <span className="text-foreground">{image.title || "WrapCommand"} </span>
+                    <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5 whitespace-nowrap" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+                      <span className="text-foreground">{image.title || "Wrap"} </span>
                       <span className="text-gradient">Dashboard</span>
                       <span className="text-muted-foreground text-lg sm:text-2xl align-super">™</span>
                     </h1>
