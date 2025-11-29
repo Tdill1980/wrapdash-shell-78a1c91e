@@ -317,11 +317,11 @@ export default function Dashboard() {
                   <Button
                     type="button"
                     size="sm"
-                    variant={productCategory === 'wpw' ? 'default' : 'outline'}
+                    variant={productCategory === 'wpw' ? 'ghost' : 'outline'}
                     onClick={() => { setProductCategory('wpw'); setProduct(""); }}
                     className={`text-xs py-1 h-auto font-semibold ${
                       productCategory === 'wpw'
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white border-0 shadow-lg'
+                        ? '!bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white border-0 shadow-lg'
                         : ''
                     }`}
                   >
