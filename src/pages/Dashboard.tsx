@@ -150,7 +150,12 @@ export default function Dashboard() {
     if (productCategory === 'wpw') {
       return products.filter(p => isWPW(p.woo_product_id));
     }
-    return products.filter(p => p.category === productCategory && !isWPW(p.woo_product_id));
+    // For non-WPW categories, show products in that category excluding WPW products
+    return products.filter(p => {
+      const categoryMatch = p.category.toLowerCase().includes(productCategory.toLowerCase());
+      const notWPW = !isWPW(p.woo_product_id);
+      return categoryMatch && notWPW;
+    });
   }, [products, productCategory]);
   
   // Get vehicle data from helper functions
