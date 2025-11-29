@@ -22,12 +22,18 @@ const statusConfig = {
   files_received: { label: "Files Received", color: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20" },
   file_error: { label: "File Error", color: "bg-red-500/10 text-red-500 border-red-500/20" },
   missing_file: { label: "Missing File", color: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-  in_design: { label: "Preparing for Print", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-  awaiting_approval: { label: "Preparing for Print", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-  design_complete: { label: "Preparing for Print", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+  action_required: { label: "Action Required", color: "bg-red-500/10 text-red-500 border-red-500/20" },
+  design_requested: { label: "Design Requested", color: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" },
+  in_design: { label: "In Design", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+  awaiting_approval: { label: "Awaiting Approval", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+  design_complete: { label: "Design Complete", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+  preparing_for_print: { label: "Preparing for Print", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
   print_production: { label: "In Production", color: "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] text-white" },
+  in_production: { label: "In Production", color: "bg-gradient-to-r from-[#8FD3FF] to-[#0047FF] text-white" },
   ready_for_pickup: { label: "Ready for Pickup", color: "bg-green-500/10 text-green-500 border-green-500/20" },
-  shipped: { label: "Shipped", color: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
+  ready_or_shipped: { label: "Ready / Shipped", color: "bg-green-500/10 text-green-500 border-green-500/20" },
+  shipped: { label: "Shipped", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
+  completed: { label: "Completed", color: "bg-gray-500/10 text-gray-500 border-gray-500/20" },
 };
 
 export default function ShopFlowInternalList() {
@@ -43,14 +49,25 @@ export default function ShopFlowInternalList() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'order_received':
-        return <ClipboardList className="h-4 w-4" />;
+      case 'design_requested':
       case 'files_received':
+        return <ClipboardList className="h-4 w-4" />;
+      case 'awaiting_approval':
         return <Clock className="h-4 w-4" />;
+      case 'in_production':
       case 'print_production':
+      case 'preparing_for_print':
+      case 'in_design':
         return <Wrench className="h-4 w-4" />;
+      case 'ready_or_shipped':
       case 'ready_for_pickup':
       case 'shipped':
+      case 'completed':
         return <CheckCircle2 className="h-4 w-4" />;
+      case 'action_required':
+      case 'file_error':
+      case 'missing_file':
+        return <AlertCircle className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
     }
