@@ -30,16 +30,14 @@ import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useProducts } from "@/hooks/useProducts";
-import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
 import VoiceCommand from "@/components/VoiceCommand";
+import { getVehicleMakes, getVehicleModels } from "@/lib/vehicleSqft";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { MainLayout } from "@/layouts/MainLayout";
 import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 import { isWPW } from "@/lib/wpwProducts";
-
-const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
 const metrics = [
   {
@@ -155,60 +153,10 @@ export default function Dashboard() {
     return products.filter(p => p.category === productCategory);
   }, [products, productCategory]);
   
-  // Parse vehicle dimensions data
-  const vehicleData = useMemo(() => {
-    const makes = Array.from(new Set(vehicleDimensionsData.map((v: any) => v.Make))).sort();
-    
-    const modelsByMake = vehicleDimensionsData.reduce((acc: any, v: any) => {
-      if (!acc[v.Make]) acc[v.Make] = new Set();
-      acc[v.Make].add(v.Model);
-      return acc;
-    }, {});
-    
-    // Convert sets to sorted arrays
-    Object.keys(modelsByMake).forEach(make => {
-      modelsByMake[make] = Array.from(modelsByMake[make]).sort();
-    });
-    
-    return { makes, modelsByMake, data: vehicleDimensionsData };
-  }, []);
+  // Get vehicle data from helper functions
+  const vehicleMakes = getVehicleMakes();
   
-  // Auto-fill sq ft when vehicle is selected
-  useEffect(() => {
-    if (vehicleMake && vehicleModel && vehicleYear) {
-      console.log(`🔍 Searching for: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
-      
-      const match = vehicleData.data.find((v: any) => {
-        const vehicleYearStr = v.Year.toString();
-        const yearInput = vehicleYear.toString();
-        
-        // Handle year ranges like "2018-2022"
-        let yearMatch = false;
-        if (vehicleYearStr.includes('-')) {
-          const [startYear, endYear] = vehicleYearStr.split('-').map((y: string) => parseInt(y.trim()));
-          const inputYear = parseInt(yearInput);
-          yearMatch = inputYear >= startYear && inputYear <= endYear;
-        } else {
-          yearMatch = vehicleYearStr === yearInput;
-        }
-        
-        // Case-insensitive make/model matching
-        const makeMatch = v.Make.toLowerCase() === vehicleMake.toLowerCase();
-        const modelMatch = v.Model.toLowerCase().includes(vehicleModel.toLowerCase()) || 
-                          vehicleModel.toLowerCase().includes(v.Model.toLowerCase());
-        
-        return yearMatch && makeMatch && modelMatch;
-      });
-      
-      if (match) {
-        const sqftValue = match["Corrected Sq Foot"] || match["Total Sq Foot"] || 0;
-        console.log(`✓ Match found! Setting sqft to ${sqftValue}`);
-        setSqFt(sqftValue);
-      } else {
-        console.log(`✗ No match found`);
-      }
-    }
-  }, [vehicleMake, vehicleModel, vehicleYear, vehicleData]);
+  // Auto-fill sq ft when vehicle is selected (removed lookup logic as it's handled by MightyCustomer now)
   
   // Pricing calculation based on WPW products
   const selectedProduct = products.find(p => p.product_name === product);
@@ -447,7 +395,7 @@ export default function Dashboard() {
                         className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       >
                         <option value="">Make</option>
-                        {vehicleData.makes.map((make: string) => (
+                        {vehicleMakes.map((make: string) => (
                           <option key={make} value={make}>{make}</option>
                         ))}
                       </select>
@@ -458,7 +406,7 @@ export default function Dashboard() {
                         className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                       >
                         <option value="">Model</option>
-                        {vehicleMake && vehicleData.modelsByMake[vehicleMake]?.map((model: string) => (
+                        {vehicleMake && getVehicleModels(vehicleMake).map((model: string) => (
                           <option key={model} value={model}>{model}</option>
                         ))}
                       </select>
