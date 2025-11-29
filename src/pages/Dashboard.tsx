@@ -321,7 +321,7 @@ export default function Dashboard() {
                     onClick={() => { setProductCategory('wpw'); setProduct(""); }}
                     className={`text-xs py-1 h-auto font-semibold ${
                       productCategory === 'wpw'
-                        ? '!bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white border-0 shadow-lg'
+                        ? '!bg-gradient-to-r from-[#E1306C] via-[#833AB4] to-[#405DE6] hover:from-[#F56A9E] hover:via-[#9B59B6] hover:to-[#5B7FFF] text-white border-0 shadow-lg'
                         : ''
                     }`}
                   >

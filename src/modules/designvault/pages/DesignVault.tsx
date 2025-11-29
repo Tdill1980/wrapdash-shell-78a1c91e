@@ -31,7 +31,7 @@ export default function DesignVault() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight relative inline-block font-poppins">
             <span className="text-foreground">Design</span>
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Vault</span>
+            <span className="bg-gradient-to-r from-[#E1306C] via-[#833AB4] to-[#405DE6] bg-clip-text text-transparent">Vault</span>
             <span className="text-muted-foreground text-lg align-super">™</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-2">
