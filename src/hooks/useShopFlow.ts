@@ -39,7 +39,7 @@ export interface ShopFlowLog {
   created_at: string;
 }
 
-export const useShopFlow = (orderId?: string) => {
+export const useShopFlow = (orderId?: string, organizationId?: string) => {
   const [orders, setOrders] = useState<ShopFlowOrder[]>([]);
   const [order, setOrder] = useState<ShopFlowOrder | null>(null);
   const [logs, setLogs] = useState<ShopFlowLog[]>([]);
@@ -47,12 +47,19 @@ export const useShopFlow = (orderId?: string) => {
   const { toast } = useToast();
 
   const fetchOrders = async () => {
-    console.log('[ShopFlow] fetchOrders called');
+    console.log('[ShopFlow] fetchOrders called with organizationId:', organizationId);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('shopflow_orders')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      // Filter by organization if provided
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('[ShopFlow] fetchOrders error:', error);

@@ -593,9 +593,24 @@ export default function Dashboard() {
               {/* Action Button */}
               <Button 
                 className="w-full bg-gradient-primary hover:opacity-90 text-white text-sm font-semibold"
-                onClick={() => navigate("/mighty-customer")}
+                onClick={() => navigate("/mighty-customer", {
+                  state: {
+                    productCategory,
+                    product,
+                    vehicleMake,
+                    vehicleModel,
+                    vehicleYear,
+                    quantity,
+                    finish,
+                    customerName,
+                    customerEmail,
+                    margin,
+                    sqFt,
+                    installHours,
+                  }
+                })}
               >
-                + Add to Quote
+                + Start Building Quote
               </Button>
             </div>
           </CardContent>

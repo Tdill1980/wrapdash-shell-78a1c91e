@@ -6,9 +6,13 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Mail, RefreshCw, Search } from "lucide-react";
+import { Eye, Mail, RefreshCw, Search, ShoppingCart, Plus } from "lucide-react";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { generateOrderNumber } from "@/lib/orderNumberGenerator";
+import { isWPW } from "@/lib/wpwProducts";
+import { useNavigate } from "react-router-dom";
 
 interface Quote {
   id: string;
@@ -53,7 +57,10 @@ export default function MightyMailQuotes() {
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [convertingOrder, setConvertingOrder] = useState<string | null>(null);
   const { toast } = useToast();
+  const { organizationId, organizationSettings } = useOrganization();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchQuotes();
@@ -62,10 +69,17 @@ export default function MightyMailQuotes() {
   async function fetchQuotes() {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("quotes")
         .select("*")
         .order("created_at", { ascending: false });
+      
+      // Filter by organization if not main WPW org
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -176,6 +190,89 @@ export default function MightyMailQuotes() {
   function handlePreviewEmail(quote: Quote) {
     setSelectedQuote(quote);
     setEmailPreviewOpen(true);
+  }
+
+  async function handleConvertToOrder(quote: Quote) {
+    setConvertingOrder(quote.id);
+    try {
+      // Check if product is WPW (has woo_product_id)
+      const { data: product } = await supabase
+        .from('products')
+        .select('woo_product_id, product_type')
+        .eq('product_name', quote.product_name)
+        .maybeSingle();
+
+      const isWPWProduct = product && product.woo_product_id && isWPW(product.woo_product_id);
+
+      if (isWPWProduct) {
+        // Save pending order then open WPW cart
+        const pendingOrderNumber = generateOrderNumber(organizationSettings.subdomain);
+        
+        const { error: orderError } = await supabase.from("shopflow_orders").insert({
+          order_number: pendingOrderNumber,
+          organization_id: organizationId,
+          customer_name: quote.customer_name,
+          customer_email: quote.customer_email,
+          product_type: quote.product_name || '',
+          status: "pending_wpw_checkout",
+          customer_stage: "awaiting_checkout",
+          vehicle_info: {
+            year: quote.vehicle_year,
+            make: quote.vehicle_make,
+            model: quote.vehicle_model,
+          },
+          order_source: "wpw_reseller",
+        });
+
+        if (orderError) throw orderError;
+
+        // Open WPW cart
+        const wooCartUrl = `https://weprintwraps.com/cart/?add-to-cart=${product.woo_product_id}&quantity=1`;
+        window.open(wooCartUrl, '_blank');
+
+        toast({
+          title: "Opening WePrintWraps.com",
+          description: `Order ${pendingOrderNumber} created. Complete checkout to finalize.`,
+        });
+      } else {
+        // Create direct order for non-WPW products
+        const orderNumber = generateOrderNumber(organizationSettings.subdomain);
+        
+        const { error } = await supabase.from("shopflow_orders").insert({
+          order_number: orderNumber,
+          organization_id: organizationId,
+          customer_name: quote.customer_name,
+          customer_email: quote.customer_email,
+          product_type: quote.product_name || '',
+          status: "design_requested",
+          customer_stage: "order_received",
+          vehicle_info: {
+            year: quote.vehicle_year,
+            make: quote.vehicle_make,
+            model: quote.vehicle_model,
+          },
+          order_source: "direct",
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Order Created",
+          description: `Order ${orderNumber} created successfully!`,
+        });
+        
+        navigate("/shopflow-internal");
+      }
+    } catch (error: any) {
+      console.error("Convert to order error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to convert quote to order",
+        variant: "destructive",
+      });
+    } finally {
+      setConvertingOrder(null);
+    }
   }
 
   const filteredQuotes = quotes.filter(
@@ -431,6 +528,7 @@ export default function MightyMailQuotes() {
                             variant="ghost"
                             onClick={() => handlePreviewEmail(quote)}
                             className="h-8 w-8 p-0"
+                            title="Preview Email"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -440,8 +538,23 @@ export default function MightyMailQuotes() {
                             onClick={() => sendOrderConfirmation(quote)}
                             disabled={sendingEmail === quote.id}
                             className="h-8 w-8 p-0"
+                            title="Send Email"
                           >
                             <Mail className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleConvertToOrder(quote)}
+                            disabled={convertingOrder === quote.id}
+                            className="h-8 w-8 p-0"
+                            title="Convert to Order"
+                          >
+                            {convertingOrder === quote.id ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <ShoppingCart className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       </td>

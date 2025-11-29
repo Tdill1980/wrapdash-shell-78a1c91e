@@ -19,6 +19,9 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getVehicleMakes, getVehicleModels } from "@/lib/vehicleSqft";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { generateOrderNumber, generateQuoteNumber } from "@/lib/orderNumberGenerator";
+import { useLocation } from "react-router-dom";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -34,8 +37,10 @@ const finishTypes = ["Gloss", "Satin", "Matte", "Gloss PPF", "Matte PPF"];
 
 export default function MightyCustomer() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { products: allProducts, loading: productsLoading, settings } = useProducts();
+  const { organizationId, organizationSettings } = useOrganization();
 
   const [selectedService, setSelectedService] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -71,6 +76,26 @@ export default function MightyCustomer() {
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
   const [showRealtimeVoice, setShowRealtimeVoice] = useState(false);
+
+  // Pre-populate from Dashboard navigation state
+  useEffect(() => {
+    if (location.state) {
+      const state = location.state as any;
+      if (state.productCategory) setSelectedService(state.productCategory);
+      if (state.product) {
+        const matchingProduct = allProducts.find(p => p.product_name === state.product);
+        if (matchingProduct) setSelectedProduct(matchingProduct);
+      }
+      if (state.vehicleMake) setCustomerData(prev => ({ ...prev, vehicleMake: state.vehicleMake }));
+      if (state.vehicleModel) setCustomerData(prev => ({ ...prev, vehicleModel: state.vehicleModel }));
+      if (state.vehicleYear) setCustomerData(prev => ({ ...prev, vehicleYear: state.vehicleYear }));
+      if (state.quantity) setQuantity(state.quantity);
+      if (state.finish) setFinish(state.finish);
+      if (state.customerName) setCustomerData(prev => ({ ...prev, name: state.customerName }));
+      if (state.customerEmail) setCustomerData(prev => ({ ...prev, email: state.customerEmail }));
+      if (state.margin) setMargin(state.margin);
+    }
+  }, [location.state, allProducts]);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -305,12 +330,13 @@ export default function MightyCustomer() {
 
     setIsSavingQuote(true);
     try {
-      const quoteNumber = `WPW-${Date.now().toString().slice(-6)}`;
+      const quoteNumber = generateQuoteNumber(organizationSettings.subdomain);
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
 
       const { error } = await supabase.from("quotes").insert({
         quote_number: quoteNumber,
+        organization_id: organizationId,
         customer_name: customerData.name,
         customer_email: customerData.email,
         customer_phone: customerData.phone,
@@ -396,30 +422,113 @@ export default function MightyCustomer() {
       return;
     }
 
+    if (!customerData.name || !customerData.email) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter customer name and email",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsSending(true);
       
-      // Call server-side protected edge function
-      const { data, error } = await supabase.functions.invoke('add-to-woo-cart', {
-        body: {
-          product_id: product.woo_product_id,
-          quantity: quantity,
+      // Save pending order in subdomain's database BEFORE redirect
+      const pendingOrderNumber = generateOrderNumber(organizationSettings.subdomain);
+      
+      const { error: orderError } = await supabase.from("shopflow_orders").insert({
+        order_number: pendingOrderNumber,
+        organization_id: organizationId,
+        customer_name: customerData.name,
+        customer_email: customerData.email,
+        product_type: product.product_name,
+        status: "pending_wpw_checkout",
+        customer_stage: "awaiting_checkout",
+        vehicle_info: {
+          year: customerData.vehicleYear,
+          make: customerData.vehicleMake,
+          model: customerData.vehicleModel,
         },
+        order_source: "wpw_reseller",
+      });
+
+      if (orderError) throw orderError;
+
+      // Build WooCommerce cart URL with product + quantity
+      const wooCartUrl = `https://weprintwraps.com/cart/?add-to-cart=${product.woo_product_id}&quantity=${quantity}`;
+      
+      // Open WPW cart in new tab
+      window.open(wooCartUrl, '_blank');
+
+      toast({
+        title: "Opening WePrintWraps.com Cart",
+        description: `Order ${pendingOrderNumber} created. Complete checkout to finalize.`,
+      });
+    } catch (error) {
+      console.error("Cart error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleCreateOrder = async () => {
+    if (!customerData.name || !customerData.email) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter customer name and email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedProduct) {
+      toast({
+        title: "Missing Product",
+        description: "Please select a product",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSending(true);
+      const orderNumber = generateOrderNumber(organizationSettings.subdomain);
+      
+      const { error } = await supabase.from("shopflow_orders").insert({
+        order_number: orderNumber,
+        organization_id: organizationId,
+        customer_name: customerData.name,
+        customer_email: customerData.email,
+        product_type: selectedProduct.product_name,
+        status: "design_requested",
+        customer_stage: "order_received",
+        vehicle_info: {
+          year: customerData.vehicleYear,
+          make: customerData.vehicleMake,
+          model: customerData.vehicleModel,
+        },
+        order_source: "direct",
       });
 
       if (error) throw error;
 
       toast({
-        title: "Added to Cart",
-        description: `${product.product_name} added to your cart!`,
+        title: `Order ${orderNumber} Created`,
+        description: "Order created successfully!",
       });
       
-      console.log("Added to cart:", data);
-    } catch (error) {
-      console.error("Cart error:", error);
+      navigate("/shopflow-internal");
+    } catch (error: any) {
+      console.error("Create order error:", error);
       toast({
         title: "Error",
-        description: "Failed to add item to cart. Please try again.",
+        description: error.message || "Failed to create order",
         variant: "destructive",
       });
     } finally {
@@ -1238,19 +1347,20 @@ export default function MightyCustomer() {
               return productIsWPW ? (
                 <Button
                   onClick={() => handleAddToCart(selectedProduct)}
-                  disabled={isSending || sqft === 0}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
+                  disabled={isSending || sqft === 0 || !customerData.name || !customerData.email}
+                  className="flex-1 bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white"
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
-                  {isSending ? "Adding..." : "Add to Cart"}
+                  {isSending ? "Opening WPW Cart..." : "Order from WPW"}
                 </Button>
               ) : (
                 <Button
-                  disabled
-                  className="flex-1 bg-gray-600 cursor-not-allowed"
+                  onClick={handleCreateOrder}
+                  disabled={isSending || !customerData.name || !customerData.email}
+                  className="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900"
                 >
-                  <Lock className="mr-2 h-4 w-4" />
-                  Quote Only
+                  <Plus className="mr-2 h-4 w-4" />
+                  {isSending ? "Creating..." : "Create Order"}
                 </Button>
               );
             })()}
