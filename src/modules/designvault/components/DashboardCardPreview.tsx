@@ -44,7 +44,7 @@ export function DashboardCardPreview() {
           <div>
             <CardTitle className="text-lg font-bold font-poppins">
               <span className="text-foreground">Design</span>
-              <span className="bg-gradient-to-r from-[#E1306C] via-[#833AB4] to-[#405DE6] bg-clip-text text-transparent">Vault</span>
+              <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Vault</span>
               <span className="text-muted-foreground text-sm align-super">™</span>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
