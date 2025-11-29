@@ -1546,12 +1546,14 @@ export type Database = {
           missing_file_list: Json | null
           notes: string | null
           order_number: string
+          order_source: string | null
           organization_id: string | null
           preflight_status: string | null
           priority: string | null
           product_image_url: string | null
           product_type: string
           shipped_at: string | null
+          source_organization_id: string | null
           status: string
           timeline: Json | null
           tracking_number: string | null
@@ -1560,6 +1562,7 @@ export type Database = {
           vehicle_info: Json | null
           woo_order_id: number | null
           woo_order_number: number | null
+          wpw_production_order_id: string | null
         }
         Insert: {
           affiliate_ref_code?: string | null
@@ -1576,12 +1579,14 @@ export type Database = {
           missing_file_list?: Json | null
           notes?: string | null
           order_number: string
+          order_source?: string | null
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
           product_image_url?: string | null
           product_type: string
           shipped_at?: string | null
+          source_organization_id?: string | null
           status?: string
           timeline?: Json | null
           tracking_number?: string | null
@@ -1590,6 +1595,7 @@ export type Database = {
           vehicle_info?: Json | null
           woo_order_id?: number | null
           woo_order_number?: number | null
+          wpw_production_order_id?: string | null
         }
         Update: {
           affiliate_ref_code?: string | null
@@ -1606,12 +1612,14 @@ export type Database = {
           missing_file_list?: Json | null
           notes?: string | null
           order_number?: string
+          order_source?: string | null
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
           product_image_url?: string | null
           product_type?: string
           shipped_at?: string | null
+          source_organization_id?: string | null
           status?: string
           timeline?: Json | null
           tracking_number?: string | null
@@ -1620,6 +1628,7 @@ export type Database = {
           vehicle_info?: Json | null
           woo_order_id?: number | null
           woo_order_number?: number | null
+          wpw_production_order_id?: string | null
         }
         Relationships: [
           {
@@ -1634,6 +1643,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopflow_orders_source_organization_id_fkey"
+            columns: ["source_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopflow_orders_wpw_production_order_id_fkey"
+            columns: ["wpw_production_order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
             referencedColumns: ["id"]
           },
         ]
