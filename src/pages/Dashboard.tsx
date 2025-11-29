@@ -31,7 +31,7 @@ import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useProducts } from "@/hooks/useProducts";
 import VoiceCommand from "@/components/VoiceCommand";
-import { getVehicleMakes, getVehicleModels } from "@/lib/vehicleSqft";
+import { getVehicleMakes, getVehicleModels, getVehicleSQFTOptions } from "@/lib/vehicleSqft";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
@@ -156,7 +156,22 @@ export default function Dashboard() {
   // Get vehicle data from helper functions
   const vehicleMakes = getVehicleMakes();
   
-  // Auto-fill sq ft when vehicle is selected (removed lookup logic as it's handled by MightyCustomer now)
+  // Auto-fill sq ft when vehicle is selected
+  useEffect(() => {
+    if (!vehicleYear || !vehicleMake || !vehicleModel) {
+      return;
+    }
+    
+    const options = getVehicleSQFTOptions(vehicleYear, vehicleMake, vehicleModel);
+    
+    if (options) {
+      // Use the "Corrected Sq Foot" (with 10% for waste)
+      setSqFt(options.withRoof);
+      console.log(`✓ Auto-filled SQFT: ${options.withRoof} sq ft for ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
+    } else {
+      console.log(`✗ No SQFT data found for: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
+    }
+  }, [vehicleYear, vehicleMake, vehicleModel]);
   
   // Pricing calculation based on WPW products
   const selectedProduct = products.find(p => p.product_name === product);
