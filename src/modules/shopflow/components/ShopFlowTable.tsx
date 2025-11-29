@@ -1,6 +1,6 @@
 import { ShopFlowOrder } from "@/hooks/useShopFlow";
 import { ShopFlowStatusTag } from "./ShopFlowStatusTag";
-import { wooToInternalStatus } from "@/lib/status-mapping";
+import { InternalStatus } from "@/lib/status-mapping";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -29,7 +29,7 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
     return (
       <div className="space-y-3">
         {orders.map((order) => {
-          const internalStatus = wooToInternalStatus[order.status] || "order_received";
+          const internalStatus = (order.status as InternalStatus) || "order_received";
           return (
             <Card
               key={order.id}
@@ -81,7 +81,7 @@ export function ShopFlowTable({ orders }: ShopFlowTableProps) {
         </TableHeader>
         <TableBody>
           {orders.map((order) => {
-            const internalStatus = wooToInternalStatus[order.status] || "order_received";
+            const internalStatus = (order.status as InternalStatus) || "order_received";
             return (
               <TableRow
                 key={order.id}
