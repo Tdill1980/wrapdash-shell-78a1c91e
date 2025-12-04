@@ -1515,6 +1515,122 @@ export type Database = {
           },
         ]
       }
+      portfolio_jobs: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          finish: string | null
+          id: string
+          job_price: number | null
+          order_number: string | null
+          organization_id: string | null
+          shopflow_order_id: string | null
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          upload_token: string | null
+          user_id: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_name?: string | null
+          finish?: string | null
+          id?: string
+          job_price?: number | null
+          order_number?: string | null
+          organization_id?: string | null
+          shopflow_order_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          upload_token?: string | null
+          user_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_name?: string | null
+          finish?: string | null
+          id?: string
+          job_price?: number | null
+          order_number?: string | null
+          organization_id?: string | null
+          shopflow_order_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          upload_token?: string | null
+          user_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_jobs_shopflow_order_id_fkey"
+            columns: ["shopflow_order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_media: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          display_order: number | null
+          file_type: string | null
+          id: string
+          job_id: string
+          media_type: string | null
+          storage_path: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          file_type?: string | null
+          id?: string
+          job_id: string
+          media_type?: string | null
+          storage_path: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          file_type?: string | null
+          id?: string
+          job_id?: string
+          media_type?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_media_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string

@@ -42,6 +42,7 @@ import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
 import { AppLayout } from "./layouts/AppLayout";
 import MightyChat from "./pages/MightyChat";
+import PortfolioUpload from "./pages/PortfolioUpload";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/customer/:projectId" element={<CustomerPortal />} />
             <Route path="/track/:orderNumber" element={<TrackJob />} />
             <Route path="/my-shopflow" element={<MyShopFlow />} />
+            <Route path="/portfolio/upload/:uploadToken" element={<PortfolioUpload />} />
 
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />

@@ -143,7 +143,18 @@ const navigationItems = [
     )
   },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
-  { name: "Portfolio", path: "/portfolio", icon: Briefcase },
+  { 
+    name: "MightyPortfolio", 
+    path: "/portfolio", 
+    icon: Briefcase,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Mighty</span>
+        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Portfolio</span>
+        <span className="text-[8px] align-super text-muted-foreground">AI™</span>
+      </span>
+    )
+  },
   { 
     name: "Affiliate Dashboard", 
     path: "/affiliate/dashboard", 
