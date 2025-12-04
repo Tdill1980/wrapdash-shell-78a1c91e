@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import RealtimeVoiceQuote from "@/components/RealtimeVoiceQuote";
+import VoiceCommand, { type ParsedVoiceData } from "@/components/VoiceCommand";
 import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, PlusCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
@@ -75,10 +76,12 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
+  const [quoteNotes, setQuoteNotes] = useState("");
   
   const [includeInstallation, setIncludeInstallation] = useState(false);
   const [installationDescription, setInstallationDescription] = useState("");
   const [customInstallationHours, setCustomInstallationHours] = useState(0);
+  const [customInstallationRate, setCustomInstallationRate] = useState(65);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
   // Pre-populate from Dashboard navigation state
@@ -633,10 +636,67 @@ export default function MightyCustomer() {
         <Card className="dashboard-card p-6 space-y-6 relative">
           <div className="space-y-4">
             <Label className="text-lg font-semibold">AI Voice Assistant</Label>
-            <RealtimeVoiceQuote
-              onVehicleDetected={handleRealtimeVehicle}
-              onCustomerDetected={handleRealtimeCustomer}
-              onServiceDetected={handleRealtimeService}
+            <VoiceCommand
+              onTranscript={(transcript: string, parsedData: ParsedVoiceData) => {
+                console.log('📝 Voice transcript:', transcript);
+                console.log('🔍 Parsed data:', parsedData);
+                
+                // Update customer data
+                setCustomerData(prev => ({
+                  ...prev,
+                  name: parsedData.customerName || prev.name,
+                  company: parsedData.companyName || prev.company,
+                  email: parsedData.email || prev.email,
+                  phone: parsedData.phone || prev.phone,
+                  vehicleYear: parsedData.vehicleYear || prev.vehicleYear,
+                  vehicleMake: parsedData.vehicleMake || prev.vehicleMake,
+                  vehicleModel: parsedData.vehicleModel || prev.vehicleModel,
+                }));
+                
+                // Update finish if detected
+                if (parsedData.finish) {
+                  const finishMap: Record<string, string> = {
+                    'gloss': 'Gloss',
+                    'matte': 'Matte', 
+                    'satin': 'Satin',
+                  };
+                  const mappedFinish = finishMap[parsedData.finish.toLowerCase()];
+                  if (mappedFinish) setFinish(mappedFinish);
+                }
+                
+                // Auto-select category based on service type
+                if (parsedData.serviceType) {
+                  const serviceType = parsedData.serviceType.toLowerCase();
+                  if (serviceType.includes('ppf') || serviceType.includes('protection')) {
+                    setSelectedService('PPF');
+                  } else if (serviceType.includes('tint') || serviceType.includes('window')) {
+                    setSelectedService('Window Tint');
+                  } else if (serviceType.includes('chrome')) {
+                    setSelectedService('Chrome Delete');
+                  } else if (serviceType.includes('partial')) {
+                    setSelectedService('Partial Wraps');
+                  } else if (serviceType.includes('wrap') || serviceType.includes('color')) {
+                    setSelectedService('Full Wraps');
+                  } else if (serviceType.includes('print')) {
+                    setSelectedService('WePrintWraps.com products');
+                  }
+                }
+                
+                // Auto-select product if brand mentioned
+                if (parsedData.productType && allProducts.length > 0) {
+                  const matchingProduct = allProducts.find(p => 
+                    p.product_name.toLowerCase().includes(parsedData.productType.toLowerCase())
+                  );
+                  if (matchingProduct) {
+                    setSelectedProduct(matchingProduct);
+                  }
+                }
+                
+                // Store notes
+                if (parsedData.notes) {
+                  setQuoteNotes(prev => prev ? `${prev}\n${parsedData.notes}` : parsedData.notes);
+                }
+              }}
             />
           </div>
 

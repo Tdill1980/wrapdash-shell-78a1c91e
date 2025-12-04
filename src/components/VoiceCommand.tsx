@@ -4,8 +4,22 @@ import { useToast } from "@/components/ui/use-toast";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface ParsedVoiceData {
+  customerName: string;
+  companyName: string;
+  email: string;
+  phone: string;
+  vehicleYear: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  serviceType: string;
+  productType: string;
+  finish: string;
+  notes: string;
+}
+
 interface VoiceCommandProps {
-  onTranscript: (transcript: string, parsedData: any) => void;
+  onTranscript: (transcript: string, parsedData: ParsedVoiceData) => void;
 }
 
 export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
@@ -81,7 +95,6 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
 
       if (error) {
         console.error('❌ AI parsing error:', error);
-        // Fall back to basic parsing
         fallbackParse(transcript);
         return;
       }
@@ -90,29 +103,39 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
         const parsed = data.parsedData;
         console.log('✅ AI parsed data:', parsed);
         
-        // Transform AI response to match expected format
-        const parsedData = {
-          year: parsed.vehicleYear || '',
-          make: parsed.vehicleMake || '',
-          model: parsed.vehicleModel || '',
+        const parsedData: ParsedVoiceData = {
           customerName: parsed.customerName || '',
-          companyName: '',
-          phone: '',
-          email: '',
-          serviceType: parsed.serviceType || 'Printed Vinyl',
+          companyName: parsed.companyName || '',
+          email: parsed.email || '',
+          phone: parsed.phone || '',
+          vehicleYear: parsed.vehicleYear || '',
+          vehicleMake: parsed.vehicleMake || '',
+          vehicleModel: parsed.vehicleModel || '',
+          serviceType: parsed.serviceType || '',
           productType: parsed.productType || '',
-          addOns: [],
-          description: transcript,
+          finish: parsed.finish || '',
+          notes: parsed.notes || '',
         };
 
         onTranscript(transcript, parsedData);
         
-        const fieldsFound = Object.values(parsedData).filter(v => v && v !== transcript).length;
+        // Build a summary of what was found
+        const foundItems: string[] = [];
+        if (parsedData.customerName) foundItems.push(`👤 ${parsedData.customerName}`);
+        if (parsedData.companyName) foundItems.push(`🏢 ${parsedData.companyName}`);
+        if (parsedData.email) foundItems.push(`📧 ${parsedData.email}`);
+        if (parsedData.phone) foundItems.push(`📱 ${parsedData.phone}`);
+        if (parsedData.vehicleYear || parsedData.vehicleMake || parsedData.vehicleModel) {
+          foundItems.push(`🚗 ${[parsedData.vehicleYear, parsedData.vehicleMake, parsedData.vehicleModel].filter(Boolean).join(' ')}`);
+        }
+        if (parsedData.serviceType) foundItems.push(`🔧 ${parsedData.serviceType}`);
+        if (parsedData.finish) foundItems.push(`✨ ${parsedData.finish}`);
+        
         toast({
-          title: "Voice Command Processed",
-          description: fieldsFound > 1 
-            ? `Found ${fieldsFound} fields from your voice input` 
-            : "Transcript captured, but couldn't extract structured data",
+          title: "Voice Command Processed ✅",
+          description: foundItems.length > 0 
+            ? foundItems.join(' • ')
+            : "Transcript captured",
         });
       } else {
         fallbackParse(transcript);
@@ -132,25 +155,33 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
     
     const yearMatch = lower.match(/(\d{4})/);
     const makeMatch = lower.match(/(ford|chevy|chevrolet|toyota|honda|bmw|tesla|dodge|ram|gmc|jeep|buick|cadillac|lincoln|acura|lexus|infiniti|nissan|mazda|subaru|volkswagen|audi|mercedes|porsche|volvo|kia|hyundai|genesis|land rover|jaguar|mini|fiat|chrysler|alfa romeo)/i);
+    const emailMatch = transcript.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    const phoneMatch = transcript.match(/(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/);
     
-    const parsedData = {
-      year: yearMatch ? yearMatch[1] : "",
-      make: makeMatch ? makeMatch[1] : "",
-      model: "",
-      customerName: "",
-      companyName: "",
-      phone: "",
-      email: "",
-      serviceType: "Printed Vinyl",
-      productType: "",
-      addOns: [],
-      description: transcript,
+    // Detect finish
+    let finish = '';
+    if (lower.includes('gloss')) finish = 'Gloss';
+    else if (lower.includes('matte')) finish = 'Matte';
+    else if (lower.includes('satin')) finish = 'Satin';
+    
+    const parsedData: ParsedVoiceData = {
+      customerName: '',
+      companyName: '',
+      email: emailMatch ? emailMatch[1] : '',
+      phone: phoneMatch ? phoneMatch[1] : '',
+      vehicleYear: yearMatch ? yearMatch[1] : '',
+      vehicleMake: makeMatch ? makeMatch[1] : '',
+      vehicleModel: '',
+      serviceType: '',
+      productType: '',
+      finish: finish,
+      notes: transcript,
     };
 
     onTranscript(transcript, parsedData);
     toast({
       title: "Voice Command Processed",
-      description: "Basic parsing used - speak clearly for better results",
+      description: "Basic parsing used - AI unavailable",
     });
   };
 
@@ -198,12 +229,12 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
           {/* Content */}
           <div className="p-4 space-y-3">
             <p className="text-xs text-white/70 text-center">
-              Hold the button and speak your quote details
+              Hold the button and speak all quote details
             </p>
             
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
               <p className="text-[11px] text-white/80 text-center leading-relaxed">
-                💡 Say: "2024 Chevy Tahoe full wrap customer John Smith phone 555-1234"
+                💡 Example: "Quote for John Smith at ABC Wraps, email john@abc.com, phone 555-1234, 2024 Chevy Silverado, full wrap, gloss black, 3M film, needs it by Friday"
               </p>
             </div>
 
