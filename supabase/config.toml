@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.send-mightychat-email]
 verify_jwt = false
+
+[functions.ai-detect-priority]
+verify_jwt = false
