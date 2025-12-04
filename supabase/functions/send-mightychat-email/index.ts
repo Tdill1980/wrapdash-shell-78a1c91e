@@ -4,6 +4,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// Configurable sender email - defaults to Resend dev domain, can be overridden with verified domain
+const FROM_EMAIL = Deno.env.get("MIGHTYCHAT_FROM_EMAIL") || "onboarding@resend.dev";
+const FROM_NAME = Deno.env.get("MIGHTYCHAT_FROM_NAME") || "WePrintWraps";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -75,22 +79,23 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("✅ Message record created:", messageData.id);
 
-    // Send email via Resend
+    // Send email via Resend with configurable sender
+    const actualSenderName = senderName || FROM_NAME;
     const emailResponse = await resend.emails.send({
-      from: `${senderName} <onboarding@resend.dev>`,
+      from: `${actualSenderName} <${FROM_EMAIL}>`,
       to: [recipientEmail],
-      subject: subject || "Message from WrapCommand",
+      subject: subject || "Message from WePrintWraps",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #405DE6, #833AB4, #E1306C); padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">WrapCommand</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">WePrintWraps</h1>
           </div>
           <div style="padding: 30px; background: #f9f9f9;">
             <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${recipientName || "there"},</p>
             <div style="color: #333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${content}</div>
           </div>
           <div style="padding: 20px; background: #333; text-align: center;">
-            <p style="color: #888; font-size: 12px; margin: 0;">Sent via MightyChat™ by WrapCommand AI</p>
+            <p style="color: #888; font-size: 12px; margin: 0;">Sent via MightyChat™ by WePrintWraps</p>
           </div>
         </div>
       `,

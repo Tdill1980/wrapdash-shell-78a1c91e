@@ -1,14 +1,33 @@
-import { MessageSquare, Mail, ArrowRight, Inbox, Plus, AlertTriangle, RefreshCw } from "lucide-react";
+import { MessageSquare, Mail, ArrowRight, Inbox, Plus, AlertTriangle, RefreshCw, Download, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 export function MightyChatCard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Import contacts from WooCommerce mutation
+  const importContactsMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('seed-contacts-from-woo');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`Imported ${data.imported} contacts from WooCommerce orders`);
+      queryClient.invalidateQueries({ queryKey: ['mightychat-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Import failed: ${error.message}`);
+    },
+  });
 
   // Fetch conversation stats with error handling
   const { data: stats, isLoading, isError, error, refetch } = useQuery({
@@ -183,18 +202,34 @@ export function MightyChatCard() {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">No conversations yet</p>
                   <p className="text-[10px] text-muted-foreground/70">
-                    Start a conversation to manage all your customer communications
+                    Import contacts from WooCommerce or start a new conversation
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/mightychat')}
-                  className="text-xs h-7"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  New Conversation
-                </Button>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => importContactsMutation.mutate()}
+                    disabled={importContactsMutation.isPending}
+                    className="text-xs h-7"
+                  >
+                    {importContactsMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3 mr-1" />
+                    )}
+                    Import from WooCommerce
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/mightychat')}
+                    className="text-xs h-7"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    New
+                  </Button>
+                </div>
               </div>
             )}
           </>
