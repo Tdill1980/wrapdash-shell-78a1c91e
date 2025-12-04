@@ -1208,6 +1208,27 @@ export type Database = {
           },
         ]
       }
+      launch_signups: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       margin_settings: {
         Row: {
           created_at: string | null
