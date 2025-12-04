@@ -38,6 +38,7 @@ import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { MainLayout } from "@/layouts/MainLayout";
 import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 import { isWPW } from "@/lib/wpwProducts";
+import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 
 const metrics = [
   {
@@ -822,6 +823,9 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        
+        {/* MightyChat Quick Actions */}
+        <MightyChatCard />
         
         {/* UTIM Analytics Dashboard */}
         <UTIMAnalyticsDashboard />
