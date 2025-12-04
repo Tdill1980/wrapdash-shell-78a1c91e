@@ -1411,6 +1411,66 @@ export type Database = {
           },
         ]
       }
+      quote_line_items: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          line_total: number
+          notes: string | null
+          panel_selections: Json | null
+          product_id: string | null
+          product_name: string
+          quantity: number | null
+          quote_id: string
+          sqft: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          line_total: number
+          notes?: string | null
+          panel_selections?: Json | null
+          product_id?: string | null
+          product_name: string
+          quantity?: number | null
+          quote_id: string
+          sqft?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          line_total?: number
+          notes?: string | null
+          panel_selections?: Json | null
+          product_id?: string | null
+          product_name?: string
+          quantity?: number | null
+          quote_id?: string
+          sqft?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_settings: {
         Row: {
           id: string

@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
 import RealtimeVoiceQuote from "@/components/RealtimeVoiceQuote";
-import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle } from "lucide-react";
+import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, PlusCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
@@ -22,6 +22,7 @@ import { getVehicleMakes, getVehicleModels } from "@/lib/vehicleSqft";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { generateOrderNumber, generateQuoteNumber } from "@/lib/orderNumberGenerator";
 import { useLocation } from "react-router-dom";
+import { EstimateLineItems, type LineItem } from "@/components/EstimateLineItems";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -79,6 +80,7 @@ export default function MightyCustomer() {
   const [includeInstallation, setIncludeInstallation] = useState(false);
   const [installationDescription, setInstallationDescription] = useState("");
   const [customInstallationHours, setCustomInstallationHours] = useState(0);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
   // Pre-populate from Dashboard navigation state
   useEffect(() => {
@@ -257,10 +259,13 @@ export default function MightyCustomer() {
       return;
     }
 
-    if (!selectedProduct || !customerPrice) {
+    const hasLineItems = lineItems.length > 0;
+    const hasSingleProduct = selectedProduct && customerPrice;
+    
+    if (!hasLineItems && !hasSingleProduct) {
       toast({
         title: "Incomplete Quote",
-        description: "Please complete the quote before sending",
+        description: "Add at least one product to the estimate",
         variant: "destructive",
       });
       return;
@@ -275,6 +280,11 @@ export default function MightyCustomer() {
         .eq('email', customerData.email)
         .maybeSingle();
 
+      // Calculate totals based on line items or single product
+      const finalTotal = hasLineItems 
+        ? estimateTotal
+        : customerPrice + (includeInstallation ? installationCost : 0);
+
       const { data, error } = await supabase.functions.invoke("send-mightymail-quote", {
         body: {
           customerEmail: customerData.email,
@@ -283,16 +293,23 @@ export default function MightyCustomer() {
             vehicle_year: customerData.vehicleYear,
             vehicle_make: customerData.vehicleMake,
             vehicle_model: customerData.vehicleModel,
-            product_name: selectedProduct.product_name,
-            sqft: sqft,
-            material_cost: wholesaleCost,
+            product_name: hasLineItems 
+              ? lineItems.map(i => i.product_name).join(', ')
+              : selectedProduct?.product_name,
+            sqft: hasLineItems 
+              ? lineItems.reduce((sum, i) => sum + i.sqft, 0)
+              : sqft,
+            material_cost: hasLineItems
+              ? lineItems.reduce((sum, i) => sum + i.line_total, 0)
+              : wholesaleCost,
             installation_cost: includeInstallation ? installationCost : 0,
-            quote_total: customerPrice,
+            quote_total: finalTotal,
+            line_items: hasLineItems ? lineItems : null,
             portal_url: window.location.origin + "/mighty-customer",
           },
           tone: emailTone,
           design: emailDesign,
-          quoteId: null, // Will be set when quote is saved
+          quoteId: null,
           customerId: customer?.id || null,
         },
       });
@@ -315,6 +332,48 @@ export default function MightyCustomer() {
     }
   };
 
+  const handleAddToEstimate = () => {
+    if (!selectedProduct || !customerPrice || sqft <= 0) {
+      toast({
+        title: "Cannot Add Item",
+        description: "Please select a product and ensure pricing is calculated",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newLineItem: LineItem = {
+      id: crypto.randomUUID(),
+      product_name: selectedProduct.product_name,
+      product_id: selectedProduct.id,
+      quantity,
+      sqft,
+      unit_price: selectedProduct.pricing_type === 'per_sqft' 
+        ? (selectedProduct.price_per_sqft || 0)
+        : (selectedProduct.flat_price || 0),
+      line_total: customerPrice,
+      panel_selections: wrapType === 'partial' ? selectedPanels : null,
+    };
+
+    setLineItems(prev => [...prev, newLineItem]);
+    
+    toast({
+      title: "✅ Added to Estimate",
+      description: `${selectedProduct.product_name} - $${customerPrice.toFixed(2)}`,
+    });
+
+    // Reset product selection for next item
+    setSelectedProduct(null);
+  };
+
+  const handleRemoveLineItem = (id: string) => {
+    setLineItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  // Calculate estimate totals
+  const estimateSubtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
+  const estimateTotal = estimateSubtotal + (includeInstallation ? installationCost : 0);
+
   const handleSaveQuote = async () => {
     if (!customerData.name || !customerData.email) {
       toast({
@@ -325,10 +384,14 @@ export default function MightyCustomer() {
       return;
     }
 
-    if (!selectedProduct || !customerPrice) {
+    // Allow saving with either line items OR a single selected product
+    const hasLineItems = lineItems.length > 0;
+    const hasSingleProduct = selectedProduct && customerPrice;
+    
+    if (!hasLineItems && !hasSingleProduct) {
       toast({
-        title: "Incomplete Quote",
-        description: "Please complete the quote before saving",
+        title: "No Items",
+        description: "Add at least one product to the estimate",
         variant: "destructive",
       });
       return;
@@ -340,7 +403,17 @@ export default function MightyCustomer() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
 
-      const { error } = await supabase.from("quotes").insert({
+      // Calculate totals based on line items or single product
+      const finalTotal = hasLineItems 
+        ? estimateTotal
+        : customerPrice + (includeInstallation ? installationCost : 0);
+      const finalWholesale = hasLineItems
+        ? lineItems.reduce((sum, item) => sum + (item.unit_price * item.sqft), 0)
+        : wholesaleCost;
+      const finalProfit = finalTotal - finalWholesale - (includeInstallation ? installationCost : 0);
+
+      // Insert quote header
+      const { data: quote, error: quoteError } = await supabase.from("quotes").insert({
         quote_number: quoteNumber,
         organization_id: organizationId,
         customer_name: customerData.name,
@@ -359,31 +432,56 @@ export default function MightyCustomer() {
           selectedPanels: wrapType === 'partial' ? selectedPanels : null,
           sqftOptions: sqftOptions
         }),
-        product_name: selectedProduct.product_name,
-        sqft: sqft,
-        wholesale_cost: wholesaleCost,
-        customer_price: customerPrice,
-        reseller_profit: resellerProfit,
+        product_name: hasLineItems 
+          ? lineItems.map(i => i.product_name).join(', ')
+          : selectedProduct?.product_name,
+        sqft: hasLineItems 
+          ? lineItems.reduce((sum, i) => sum + i.sqft, 0)
+          : sqft,
+        wholesale_cost: finalWholesale,
+        customer_price: finalTotal,
+        reseller_profit: finalProfit,
         material_cost: materialCost,
         installation_included: includeInstallation,
         installation_cost: includeInstallation ? installationCost : null,
         installation_description: includeInstallation ? installationDescription : null,
         installation_hours: includeInstallation ? (customInstallationHours || installHours) : null,
         installation_rate: includeInstallation ? settings.install_rate_per_hour : null,
-        total_price: customerPrice,
+        total_price: finalTotal,
         margin: margin,
         status: "pending",
         auto_retarget: true,
         email_tone: emailTone,
         email_design: emailDesign,
         expires_at: expiresAt.toISOString(),
-      });
+      }).select().single();
 
-      if (error) throw error;
+      if (quoteError) throw quoteError;
+
+      // Insert line items if we have them
+      if (hasLineItems && quote) {
+        const lineItemsToInsert = lineItems.map((item, index) => ({
+          quote_id: quote.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          sqft: item.sqft,
+          unit_price: item.unit_price,
+          line_total: item.line_total,
+          panel_selections: item.panel_selections,
+          display_order: index,
+        }));
+
+        const { error: lineItemsError } = await supabase
+          .from("quote_line_items")
+          .insert(lineItemsToInsert);
+
+        if (lineItemsError) throw lineItemsError;
+      }
 
       toast({
-        title: "✅ Quote Added Successfully!",
-        description: `Quote ${quoteNumber} saved for ${customerData.name} - Total: $${customerPrice.toFixed(2)}`,
+        title: "✅ Estimate Saved!",
+        description: `Quote ${quoteNumber} saved for ${customerData.name} - Total: $${finalTotal.toFixed(2)}`,
         duration: 5000,
       });
 
@@ -399,6 +497,7 @@ export default function MightyCustomer() {
       });
       setSelectedProduct(null);
       setSelectedService("");
+      setLineItems([]);
     } catch (error: any) {
       console.error("Error saving quote:", error);
       toast({
@@ -1286,6 +1385,16 @@ export default function MightyCustomer() {
                   </div>
                 </div>
               </div>
+              
+              {/* Add to Estimate Button */}
+              <Button
+                onClick={handleAddToEstimate}
+                disabled={!selectedProduct || !customerPrice || sqft <= 0}
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add to Estimate
+              </Button>
             </div>
           )}
 
@@ -1420,20 +1529,28 @@ export default function MightyCustomer() {
             </div>
           </div>
 
+          {/* Estimate Line Items Summary */}
+          <EstimateLineItems
+            lineItems={lineItems}
+            onRemoveItem={handleRemoveLineItem}
+            installationCost={installationCost}
+            includeInstallation={includeInstallation}
+          />
+
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleSaveQuote}
-              disabled={isSavingQuote || !selectedProduct || !customerPrice || !customerData.name || !customerData.email}
+              disabled={isSavingQuote || (lineItems.length === 0 && (!selectedProduct || !customerPrice)) || !customerData.name || !customerData.email}
               className="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white shadow-lg"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {isSavingQuote ? "Adding Quote..." : "Add Quote"}
+              {isSavingQuote ? "Saving Estimate..." : lineItems.length > 0 ? `Save Estimate (${lineItems.length} items)` : "Save Estimate"}
             </Button>
             
             <Button
               onClick={() => setEmailPreviewOpen(true)}
               variant="outline"
-              disabled={!selectedProduct || !customerPrice}
+              disabled={lineItems.length === 0 && (!selectedProduct || !customerPrice)}
               className="flex-1 border-primary/40 hover:bg-primary/10"
             >
               <Mail className="mr-2 h-4 w-4" />
@@ -1442,7 +1559,7 @@ export default function MightyCustomer() {
 
             <Button
               onClick={handleSendQuoteEmail}
-              disabled={isSendingEmail || !selectedProduct || !customerPrice || !customerData.email || !customerData.name}
+              disabled={isSendingEmail || (lineItems.length === 0 && (!selectedProduct || !customerPrice)) || !customerData.email || !customerData.name}
               className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
             >
               <Mail className="mr-2 h-4 w-4" />
