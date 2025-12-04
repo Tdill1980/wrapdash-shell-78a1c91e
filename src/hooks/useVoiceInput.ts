@@ -12,60 +12,117 @@ export const useVoiceInput = () => {
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      console.log('🎤 Requesting microphone access...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        } 
+      });
+      
+      // Try to use webm format first, fallback to mp4 for Safari
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : '';
+      
+      console.log('📼 Using MIME type:', mimeType || 'default');
+      
+      const mediaRecorder = mimeType 
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+        
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
+          console.log(`📦 Chunk received: ${e.data.size} bytes`);
         }
       };
 
-      mediaRecorder.start();
+      mediaRecorder.onerror = (e) => {
+        console.error('❌ MediaRecorder error:', e);
+      };
+
+      // Request data every 250ms for smoother capture
+      mediaRecorder.start(250);
       recordingStartTimeRef.current = Date.now();
       setIsRecording(true);
+      console.log('✅ Recording started');
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('❌ Error starting recording:', error);
       toast({
         title: "Microphone Error",
-        description: "Could not access microphone",
+        description: error instanceof Error ? error.message : "Could not access microphone",
         variant: "destructive",
       });
+      throw error;
     }
   }, [toast]);
 
   const stopRecording = useCallback((): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (!mediaRecorderRef.current) {
+        console.error('❌ No MediaRecorder found');
         reject(new Error('No recording in progress'));
         return;
       }
 
-      mediaRecorderRef.current.onstop = async () => {
+      const recorder = mediaRecorderRef.current;
+      
+      recorder.onstop = async () => {
         setIsRecording(false);
         
-        // Check minimum recording duration - lowered for quick commands
+        // Check minimum recording duration - lowered to 300ms
         const recordingDuration = Date.now() - recordingStartTimeRef.current;
-        const MIN_RECORDING_DURATION = 400; // 400ms minimum
+        const MIN_RECORDING_DURATION = 300;
+        
+        console.log(`📊 Recording duration: ${recordingDuration}ms, Chunks: ${chunksRef.current.length}`);
         
         if (recordingDuration < MIN_RECORDING_DURATION) {
           toast({
             title: "Recording Too Short",
-            description: `Hold longer (${Math.round(recordingDuration)}ms < 400ms minimum)`,
+            description: `Hold longer (${Math.round(recordingDuration)}ms < 300ms minimum)`,
             variant: "destructive",
           });
           reject(new Error('Recording too short'));
           return;
         }
-        
-        console.log(`📊 Recording duration: ${recordingDuration}ms`);
+
+        if (chunksRef.current.length === 0) {
+          toast({
+            title: "No Audio Captured",
+            description: "No audio data was recorded. Please try again.",
+            variant: "destructive",
+          });
+          reject(new Error('No audio data captured'));
+          return;
+        }
 
         setIsProcessing(true);
 
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        // Determine MIME type from first chunk or use default
+        const mimeType = chunksRef.current[0]?.type || 'audio/webm';
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType });
+        console.log(`🎵 Audio blob created: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
         
+        if (audioBlob.size < 1000) {
+          setIsProcessing(false);
+          toast({
+            title: "Audio Too Small",
+            description: "Recording captured very little audio. Please speak louder or closer to the microphone.",
+            variant: "destructive",
+          });
+          reject(new Error('Audio too small'));
+          return;
+        }
+
         // Convert to base64
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
@@ -74,12 +131,18 @@ export const useVoiceInput = () => {
           
           if (!base64Audio) {
             setIsProcessing(false);
+            toast({
+              title: "Conversion Error",
+              description: "Failed to process audio data",
+              variant: "destructive",
+            });
             reject(new Error('Failed to convert audio'));
             return;
           }
 
+          console.log(`📤 Sending ${base64Audio.length} chars to transcription service...`);
+
           try {
-            // Call edge function for transcription
             const { data, error } = await supabase.functions.invoke('transcribe-audio', {
               body: { audio: base64Audio }
             });
@@ -110,7 +173,7 @@ export const useVoiceInput = () => {
             }
 
             if (!data?.text) {
-              console.error('⚠️ No transcription returned');
+              console.error('⚠️ No transcription returned:', data);
               toast({
                 title: "No Speech Detected",
                 description: "Please try speaking clearly into the microphone",
@@ -133,10 +196,20 @@ export const useVoiceInput = () => {
             reject(error);
           }
         };
+
+        reader.onerror = () => {
+          setIsProcessing(false);
+          console.error('❌ FileReader error');
+          reject(new Error('Failed to read audio data'));
+        };
       };
 
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      // Stop the recorder and all tracks
+      recorder.stop();
+      recorder.stream.getTracks().forEach(track => {
+        track.stop();
+        console.log('🔇 Track stopped:', track.kind);
+      });
     });
   }, [toast]);
 
