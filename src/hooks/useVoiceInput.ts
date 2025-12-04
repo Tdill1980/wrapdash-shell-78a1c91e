@@ -46,18 +46,24 @@ export const useVoiceInput = () => {
       mediaRecorderRef.current.onstop = async () => {
         setIsRecording(false);
         
-        // Check minimum recording duration (500ms)
+        // Check minimum recording duration
         const recordingDuration = Date.now() - recordingStartTimeRef.current;
-        const MIN_RECORDING_DURATION = 500; // 500ms minimum
+        const MIN_RECORDING_DURATION = 800; // 800ms minimum for better quality
+        const IDEAL_RECORDING_DURATION = 1500; // 1.5s for best results
         
         if (recordingDuration < MIN_RECORDING_DURATION) {
           toast({
             title: "Recording Too Short",
-            description: "Please hold the button for at least half a second",
+            description: "Hold the button for at least 1 second while speaking",
             variant: "destructive",
           });
           reject(new Error('Recording too short'));
           return;
+        }
+        
+        // Warn if recording might be too short for complex input
+        if (recordingDuration < IDEAL_RECORDING_DURATION) {
+          console.log('⚠️ Short recording detected, may affect transcription quality');
         }
 
         setIsProcessing(true);
