@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Car } from "lucide-react";
 import { VehicleSQFTOptions } from "@/lib/vehicleSqft";
+import { getVehicleType, VehicleType } from "@/lib/vehicleTypeDetection";
+import { SedanSilhouette, SUVSilhouette, TruckSilhouette, VanSilhouette, TopDownView } from "@/components/vehicle-diagrams";
+import { PanelMeasurementsTable } from "@/components/vehicle-diagrams/PanelMeasurementsTable";
 
 interface PanelVisualizationProps {
   vehicle: {
@@ -29,247 +32,161 @@ export function PanelVisualization({
   onClose
 }: PanelVisualizationProps) {
   const [hoveredPanel, setHoveredPanel] = useState<string | null>(null);
+  
+  // Auto-detect vehicle type from make/model
+  const vehicleType: VehicleType = getVehicleType(vehicle.make, vehicle.model);
 
-  const getPanelColor = (panel: keyof typeof selectedPanels) => {
-    const isSelected = selectedPanels[panel];
-    const isHovered = hoveredPanel === panel;
-    
-    if (isSelected) {
-      switch(panel) {
-        case 'sides': return isHovered ? 'hsl(217, 91%, 65%)' : 'hsl(217, 91%, 60%)'; // Blue
-        case 'hood': return isHovered ? 'hsl(142, 71%, 50%)' : 'hsl(142, 71%, 45%)'; // Green
-        case 'back': return isHovered ? 'hsl(271, 91%, 70%)' : 'hsl(271, 91%, 65%)'; // Purple
-        case 'roof': return isHovered ? 'hsl(25, 95%, 58%)' : 'hsl(25, 95%, 53%)'; // Orange
-      }
-    }
-    
-    return isHovered ? 'hsl(240, 6%, 25%)' : 'hsl(240, 6%, 20%)';
+  const handlePanelClick = (panel: keyof typeof selectedPanels) => {
+    onPanelClick?.(panel);
   };
 
+  const handlePanelHover = (panel: string | null) => {
+    setHoveredPanel(panel);
+  };
+
+  // Get the appropriate silhouette component based on vehicle type
+  const renderSilhouette = () => {
+    const props = {
+      selectedPanels,
+      onPanelClick: handlePanelClick,
+      sqftOptions,
+      hoveredPanel,
+      onPanelHover: handlePanelHover
+    };
+
+    switch (vehicleType) {
+      case 'suv':
+        return <SUVSilhouette {...props} />;
+      case 'truck':
+        return <TruckSilhouette {...props} />;
+      case 'van':
+        return <VanSilhouette {...props} />;
+      default:
+        return <SedanSilhouette {...props} />;
+    }
+  };
+
+  const getVehicleTypeLabel = () => {
+    switch (vehicleType) {
+      case 'suv': return 'SUV/Crossover';
+      case 'truck': return 'Truck';
+      case 'van': return 'Van/Minivan';
+      default: return 'Sedan/Coupe';
+    }
+  };
+
+  const totalSelected = (selectedPanels.sides ? sqftOptions.panels.sides : 0) +
+    (selectedPanels.back ? sqftOptions.panels.back : 0) +
+    (selectedPanels.hood ? sqftOptions.panels.hood : 0) +
+    (selectedPanels.roof ? sqftOptions.panels.roof : 0);
+
   const content = (
-    <div className={showAsModal ? "bg-card rounded-lg border border-border p-6" : ""}>
+    <div className={showAsModal ? "bg-card rounded-lg border border-border p-6 max-h-[90vh] overflow-y-auto" : ""}>
       {showAsModal && onClose && (
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-semibold">Panel Selection Guide</h3>
+            <h3 className="text-lg font-semibold">Vehicle Panel Selection</h3>
             <p className="text-sm text-muted-foreground">
               {vehicle.year} {vehicle.make} {vehicle.model}
             </p>
+            <div className="flex items-center gap-2 mt-1">
+              <Car className="h-3 w-3 text-primary" />
+              <span className="text-xs text-primary font-medium">{getVehicleTypeLabel()}</span>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-muted rounded-lg"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
       )}
       
-      <div className="flex flex-col lg:flex-row gap-6 items-center">
-        {/* SVG Diagram */}
-        <div className="flex-1">
-          <svg 
-            viewBox="0 0 400 300" 
-            className="w-full h-auto"
-            style={{ maxWidth: '500px' }}
-          >
-            {/* Vehicle Outline (Top-Down View) */}
-            <g>
-              {/* Hood */}
-              <rect 
-                x="120" y="40" width="160" height="60"
-                rx="8"
-                fill={getPanelColor('hood')}
-                stroke="hsl(var(--border))"
-                strokeWidth="2"
-                className="cursor-pointer transition-all duration-200"
-                onClick={() => onPanelClick?.('hood')}
-                onMouseEnter={() => setHoveredPanel('hood')}
-                onMouseLeave={() => setHoveredPanel(null)}
-              />
-              <text 
-                x="200" y="75" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="14"
-                fontWeight="600"
-                pointerEvents="none"
-              >
-                Hood
-              </text>
-              <text 
-                x="200" y="92" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="12"
-                pointerEvents="none"
-              >
-                {sqftOptions.panels.hood} sq ft
-              </text>
-
-              {/* Left Side */}
-              <rect 
-                x="40" y="110" width="60" height="120"
-                rx="8"
-                fill={getPanelColor('sides')}
-                stroke="hsl(var(--border))"
-                strokeWidth="2"
-                className="cursor-pointer transition-all duration-200"
-                onClick={() => onPanelClick?.('sides')}
-                onMouseEnter={() => setHoveredPanel('sides')}
-                onMouseLeave={() => setHoveredPanel(null)}
-              />
-              <text 
-                x="70" y="165" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="14"
-                fontWeight="600"
-                pointerEvents="none"
-              >
-                Left
-              </text>
-              <text 
-                x="70" y="180" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="11"
-                pointerEvents="none"
-              >
-                Side
-              </text>
-
-              {/* Roof (Center) */}
-              <rect 
-                x="110" y="110" width="180" height="120"
-                rx="8"
-                fill={getPanelColor('roof')}
-                stroke="hsl(var(--border))"
-                strokeWidth="2"
-                className="cursor-pointer transition-all duration-200"
-                onClick={() => onPanelClick?.('roof')}
-                onMouseEnter={() => setHoveredPanel('roof')}
-                onMouseLeave={() => setHoveredPanel(null)}
-              />
-              <text 
-                x="200" y="165" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="14"
-                fontWeight="600"
-                pointerEvents="none"
-              >
-                Roof
-              </text>
-              <text 
-                x="200" y="182" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="12"
-                pointerEvents="none"
-              >
-                {sqftOptions.panels.roof} sq ft
-              </text>
-
-              {/* Right Side */}
-              <rect 
-                x="300" y="110" width="60" height="120"
-                rx="8"
-                fill={getPanelColor('sides')}
-                stroke="hsl(var(--border))"
-                strokeWidth="2"
-                className="cursor-pointer transition-all duration-200"
-                onClick={() => onPanelClick?.('sides')}
-                onMouseEnter={() => setHoveredPanel('sides')}
-                onMouseLeave={() => setHoveredPanel(null)}
-              />
-              <text 
-                x="330" y="165" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="14"
-                fontWeight="600"
-                pointerEvents="none"
-              >
-                Right
-              </text>
-              <text 
-                x="330" y="180" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="11"
-                pointerEvents="none"
-              >
-                Side
-              </text>
-
-              {/* Back */}
-              <rect 
-                x="120" y="240" width="160" height="50"
-                rx="8"
-                fill={getPanelColor('back')}
-                stroke="hsl(var(--border))"
-                strokeWidth="2"
-                className="cursor-pointer transition-all duration-200"
-                onClick={() => onPanelClick?.('back')}
-                onMouseEnter={() => setHoveredPanel('back')}
-                onMouseLeave={() => setHoveredPanel(null)}
-              />
-              <text 
-                x="200" y="268" 
-                textAnchor="middle" 
-                fill="white" 
-                fontSize="14"
-                fontWeight="600"
-                pointerEvents="none"
-              >
-                Back - {sqftOptions.panels.back} sq ft
-              </text>
-
-              {/* Direction Arrow */}
-              <g>
-                <line x1="200" y1="20" x2="200" y2="32" stroke="hsl(var(--muted-foreground))" strokeWidth="2" />
-                <polygon points="200,20 195,28 205,28" fill="hsl(var(--muted-foreground))" />
-                <text x="200" y="15" textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="10">
-                  FRONT
-                </text>
-              </g>
-            </g>
-          </svg>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Side Profile View */}
+        <div className="lg:col-span-2 space-y-3">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Side Profile View
+          </div>
+          <div className="bg-muted/20 rounded-lg p-4 border border-border">
+            {renderSilhouette()}
+          </div>
+          
+          {/* Top-Down View */}
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
+            Top-Down View
+          </div>
+          <div className="bg-muted/20 rounded-lg p-4 border border-border flex justify-center">
+            <TopDownView
+              vehicleType={vehicleType}
+              selectedPanels={selectedPanels}
+              onPanelClick={handlePanelClick}
+              sqftOptions={sqftOptions}
+              hoveredPanel={hoveredPanel}
+              onPanelHover={handlePanelHover}
+            />
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="space-y-3">
-          <div className="text-sm font-semibold text-muted-foreground">Panel Legend</div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(217, 91%, 60%)' }}></div>
-              <span className="text-sm">Sides ({sqftOptions.panels.sides} sq ft)</span>
+        {/* Panel Measurements Table */}
+        <div className="space-y-4">
+          <PanelMeasurementsTable
+            selectedPanels={selectedPanels}
+            onPanelToggle={handlePanelClick}
+            sqftOptions={sqftOptions}
+          />
+          
+          {/* Coverage Summary */}
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Coverage Summary
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(142, 71%, 45%)' }}></div>
-              <span className="text-sm">Hood ({sqftOptions.panels.hood} sq ft)</span>
+            <div className="text-3xl font-bold text-primary">
+              {totalSelected.toFixed(1)} sqft
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(271, 91%, 65%)' }}></div>
-              <span className="text-sm">Back ({sqftOptions.panels.back} sq ft)</span>
+            <div className="text-sm text-muted-foreground mt-1">
+              Total selected coverage area
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: 'hsl(25, 95%, 53%)' }}></div>
-              <span className="text-sm">Roof ({sqftOptions.panels.roof} sq ft)</span>
+            
+            <div className="mt-3 pt-3 border-t border-primary/20 space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Full wrap (with roof):</span>
+                <span className="font-medium">{sqftOptions.withRoof.toFixed(1)} sqft</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Full wrap (no roof):</span>
+                <span className="font-medium">{sqftOptions.withoutRoof.toFixed(1)} sqft</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Coverage %:</span>
+                <span className="font-medium text-primary">
+                  {((totalSelected / sqftOptions.withRoof) * 100).toFixed(0)}%
+                </span>
+              </div>
             </div>
           </div>
           
-          <div className="pt-3 border-t border-border">
-            <div className="text-sm font-semibold mb-1">Total Selected</div>
-            <div className="text-2xl font-bold text-primary">
-              {(selectedPanels.sides ? sqftOptions.panels.sides : 0) +
-               (selectedPanels.back ? sqftOptions.panels.back : 0) +
-               (selectedPanels.hood ? sqftOptions.panels.hood : 0) +
-               (selectedPanels.roof ? sqftOptions.panels.roof : 0)} sq ft
+          {/* Color Legend */}
+          <div className="border border-border rounded-lg p-3">
+            <div className="text-xs font-semibold text-muted-foreground mb-2">Panel Colors</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-primary"></div>
+                <span>Selected</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-muted/30 border border-border"></div>
+                <span>Available</span>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Instructions */}
+      <div className="mt-4 text-xs text-muted-foreground text-center">
+        Click on any panel in the diagram or use the checkboxes to select coverage areas
       </div>
     </div>
   );
@@ -277,7 +194,7 @@ export function PanelVisualization({
   if (showAsModal) {
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-        <div className="max-w-4xl w-full">
+        <div className="max-w-5xl w-full">
           {content}
         </div>
       </div>
