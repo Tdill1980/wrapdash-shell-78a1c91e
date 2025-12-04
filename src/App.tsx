@@ -41,6 +41,7 @@ import AffiliatePayments from "./modules/affiliate/pages/AffiliatePayments";
 import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
 import { AppLayout } from "./layouts/AppLayout";
+import Inbox from "./pages/Inbox";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
             {/* Protected routes */}
             <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
             <Route path="/wrapcloser" element={<ProtectedRoute><WrapCloser /></ProtectedRoute>} />
             <Route path="/inkfusion" element={<ProtectedRoute><InkFusion /></ProtectedRoute>} />
             <Route path="/designpanel" element={<ProtectedRoute><DesignPanelPro /></ProtectedRoute>} />
