@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { audio } = await req.json();
+    const { audio, mimeType = 'audio/webm' } = await req.json();
     
     if (!audio) {
       console.error('❌ No audio data provided');
@@ -23,7 +23,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('📥 Received audio data, length:', audio.length);
+    console.log('📥 Received audio data, length:', audio.length, 'mimeType:', mimeType);
 
     // Use Deno's built-in base64 decoder (handles any size correctly)
     const binaryAudio = base64Decode(audio);
@@ -38,11 +38,23 @@ serve(async (req) => {
       );
     }
 
+    // Map MIME type to correct file extension for Whisper
+    const getFileExtension = (mime: string): string => {
+      if (mime.includes('mp4') || mime.includes('m4a')) return 'mp4';
+      if (mime.includes('ogg')) return 'ogg';
+      if (mime.includes('wav')) return 'wav';
+      return 'webm';
+    };
+    
+    const fileExtension = getFileExtension(mimeType);
+    console.log('📁 Using file extension:', fileExtension);
+
     // Prepare form data for OpenAI Whisper
     const formData = new FormData();
-    const blob = new Blob([new Uint8Array(binaryAudio)], { type: 'audio/webm' });
-    formData.append('file', blob, 'audio.webm');
+    const blob = new Blob([new Uint8Array(binaryAudio)], { type: mimeType });
+    formData.append('file', blob, `audio.${fileExtension}`);
     formData.append('model', 'whisper-1');
+    formData.append('language', 'en');
 
     console.log('📤 Sending to OpenAI Whisper API...');
 
