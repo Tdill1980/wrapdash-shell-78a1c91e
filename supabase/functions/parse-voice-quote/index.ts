@@ -31,21 +31,34 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a voice transcript parser for a vehicle wrap quote system. Extract structured data from natural speech.
+    const systemPrompt = `You are a voice transcript parser for a vehicle wrap quote system. Extract ALL structured data from natural speech.
 
 Extract the following fields if mentioned (leave empty string if not found):
-- customerName: The customer's name (could be mentioned as "for John", "customer John Smith", "John's", etc.)
+
+CUSTOMER INFO:
+- customerName: The customer's full name (e.g., "John Smith", "Sarah Johnson")
+- companyName: Business/company name if mentioned (e.g., "ABC Wraps", "Vinyl Vixen")
+- email: Email address - people might say "at" for @ and "dot" for . (e.g., "john at gmail dot com" = "john@gmail.com")
+- phone: Phone number in any format (e.g., "555-123-4567", "five five five one two three four five six seven")
+
+VEHICLE INFO:
 - vehicleYear: The vehicle year (4 digits like 2024, 2019, etc.)
-- vehicleMake: The vehicle manufacturer (Ford, Chevy/Chevrolet, Toyota, Honda, BMW, Mercedes, Audi, Lexus, Acura, Infiniti, Nissan, Mazda, Subaru, Volkswagen, Porsche, Jeep, Dodge, Ram, GMC, Cadillac, Lincoln, Buick, Chrysler, Kia, Hyundai, Genesis, Volvo, Land Rover, Jaguar, Mini, Fiat, Alfa Romeo, Maserati, Ferrari, Lamborghini, Tesla, Rivian, Lucid, etc.)
-- vehicleModel: The specific model (F-150, Camry, Civic, 3 Series, Mustang, Corvette, Silverado, etc.)
-- serviceType: The type of service (wrap, color change, PPF, paint protection, tint, window tint, chrome delete, partial wrap, full wrap, etc.)
-- productType: Specific product if mentioned (Avery, 3M, XPEL, Suntek, etc.)
+- vehicleMake: The vehicle manufacturer (Ford, Chevy/Chevrolet, Toyota, Honda, BMW, Mercedes, Audi, Lexus, etc.)
+- vehicleModel: The specific model (F-150, Camry, Civic, 3 Series, Mustang, Corvette, Silverado, Model Y, etc.)
+
+SERVICE INFO:
+- serviceType: The type of service (wrap, color change, PPF, paint protection, tint, window tint, chrome delete, partial wrap, full wrap, printed wrap, etc.)
+- productType: Specific brand/product if mentioned (Avery, 3M, XPEL, Suntek, KPMF, Hexis, etc.)
+- finish: Finish type if mentioned (gloss, matte, satin, metallic, chrome, brushed)
+
+ADDITIONAL:
+- notes: Any other important details, special requests, deadlines, or requirements (e.g., "needs it by Friday", "chrome delete on mirrors", "wants racing stripes")
 
 Be flexible with speech patterns. People might say:
-- "Quote for John Smith, 2024 Ford F-150, full wrap"
-- "John needs a wrap on his 2019 Toyota Camry"
-- "Color change for a 2023 BMW M3"
-- "PPF on 2024 Porsche 911"
+- "Quote for John Smith at ABC Wraps, email john@abc.com, phone 555-1234, 2024 Ford F-150, full wrap"
+- "Customer Sarah Johnson, Vinyl Vixen company, 2023 Tesla Model Y, gloss black color change, 3M film"
+- "John needs a wrap on his 2019 Toyota Camry, matte finish, customer mentioned he wants it done by next week"
+- "PPF on 2024 Porsche 911, customer is Mike at mike dot smith at gmail dot com"
 
 Return ONLY valid JSON with these exact keys, no explanation.`;
 
@@ -91,11 +104,16 @@ Return ONLY valid JSON with these exact keys, no explanation.`;
     // Parse the JSON from AI response
     let parsedData = {
       customerName: '',
+      companyName: '',
+      email: '',
+      phone: '',
       vehicleYear: '',
       vehicleMake: '',
       vehicleModel: '',
       serviceType: '',
-      productType: ''
+      productType: '',
+      finish: '',
+      notes: ''
     };
 
     try {
@@ -109,11 +127,16 @@ Return ONLY valid JSON with these exact keys, no explanation.`;
       const parsed = JSON.parse(jsonStr);
       parsedData = {
         customerName: parsed.customerName || '',
+        companyName: parsed.companyName || '',
+        email: parsed.email || '',
+        phone: parsed.phone || '',
         vehicleYear: parsed.vehicleYear?.toString() || '',
         vehicleMake: parsed.vehicleMake || '',
         vehicleModel: parsed.vehicleModel || '',
         serviceType: parsed.serviceType || '',
-        productType: parsed.productType || ''
+        productType: parsed.productType || '',
+        finish: parsed.finish || '',
+        notes: parsed.notes || ''
       };
     } catch (parseError) {
       console.error('❌ Failed to parse AI JSON response:', parseError);

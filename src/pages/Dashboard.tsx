@@ -314,10 +314,10 @@ export default function Dashboard() {
                 console.log('📝 Voice transcript:', transcript);
                 console.log('🔍 Parsed data:', parsedData);
                 
-                // Use parsedData directly instead of re-parsing
-                if (parsedData.year) setVehicleYear(parsedData.year);
-                if (parsedData.make) setVehicleMake(parsedData.make);
-                if (parsedData.model) setVehicleModel(parsedData.model);
+                // Use parsedData with new field names
+                if (parsedData.vehicleYear) setVehicleYear(parsedData.vehicleYear);
+                if (parsedData.vehicleMake) setVehicleMake(parsedData.vehicleMake);
+                if (parsedData.vehicleModel) setVehicleModel(parsedData.vehicleModel);
                 if (parsedData.customerName) setCustomerName(parsedData.customerName);
                 if (parsedData.email) setCustomerEmail(parsedData.email);
                 if (parsedData.productType) setProduct(parsedData.productType);
