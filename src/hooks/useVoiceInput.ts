@@ -140,11 +140,11 @@ export const useVoiceInput = () => {
             return;
           }
 
-          console.log(`📤 Sending ${base64Audio.length} chars to transcription service...`);
+          console.log(`📤 Sending ${base64Audio.length} chars to transcription service, mimeType: ${mimeType}`);
 
           try {
             const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-              body: { audio: base64Audio }
+              body: { audio: base64Audio, mimeType }
             });
 
             setIsProcessing(false);
