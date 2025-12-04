@@ -60,6 +60,9 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
             <Route path="/affiliate/signup" element={<AffiliateSignup />} />
+            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+            <Route path="/affiliate/admin" element={<AffiliateAdmin />} />
+            <Route path="/affiliate/payments" element={<AffiliatePayments />} />
             <Route path="/customer/:projectId" element={<CustomerPortal />} />
             <Route path="/track/:orderNumber" element={<TrackJob />} />
             <Route path="/my-shopflow" element={<MyShopFlow />} />
@@ -104,9 +107,6 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-            <Route path="/affiliate/dashboard" element={<ProtectedRoute><AffiliateDashboard /></ProtectedRoute>} />
-            <Route path="/affiliate/admin" element={<ProtectedRoute><AffiliateAdmin /></ProtectedRoute>} />
-            <Route path="/affiliate/payments" element={<ProtectedRoute><AffiliatePayments /></ProtectedRoute>} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
