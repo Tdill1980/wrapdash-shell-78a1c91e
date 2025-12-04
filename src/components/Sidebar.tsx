@@ -16,11 +16,23 @@ import {
   Mail,
   TrendingUp,
   Car,
+  Inbox,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { 
+    name: "Inbox", 
+    path: "/inbox", 
+    icon: Inbox,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Unified </span>
+        <span className="text-gradient">Inbox</span>
+      </span>
+    )
+  },
   { 
     name: "InkFusion™", 
     path: "/inkfusion", 
