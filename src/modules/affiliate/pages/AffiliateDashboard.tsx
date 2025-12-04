@@ -121,11 +121,11 @@ export const AffiliateDashboard = () => {
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-white mb-2">Your Product Ecosystem</h2>
             <p className="text-muted-foreground">
-              Promote any of our 5 products and earn commission on every sale
+              Promote any of our 4 products and earn commission on every sale
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <ProductCard
               productName="WrapCommand AI"
               description="The all-in-one OS for wrap shops with quoting, CRM, AI tools, and automation."
@@ -140,29 +140,16 @@ export const AffiliateDashboard = () => {
             />
 
             <ProductCard
-              productName="DesignProAI"
-              description="Generate instant, AI-powered wrap designs in all major styles."
-              tagline="Level-up your wrap designs."
-              commissionRate={20}
-              baseUrl="https://designpro.ai"
+              productName="RestylePro Visualizer Suite"
+              description="AI-powered vehicle visualization and color rendering for wrap professionals."
+              tagline="See the wrap before you wrap."
+              commissionRate={15}
+              baseUrl="https://restylepro.ai"
               affiliateCode={founder.affiliateCode}
               icon="🎨"
-              totalEarned={commissions.filter(c => c.productName === 'DesignProAI').reduce((sum, c) => sum + c.commissionAmount, 0)}
-              totalReferrals={commissions.filter(c => c.productName === 'DesignProAI').length}
-              color="from-orange-500 to-red-500"
-            />
-
-            <ProductCard
-              productName="The Closer by DesignProAI"
-              description="Sales accelerator engine powered by DesignProAI. Convert leads into jobs."
-              tagline="Close more. Faster."
-              commissionRate={10}
-              baseUrl="https://designpro.ai/closer"
-              affiliateCode={founder.affiliateCode}
-              icon="🎯"
-              totalEarned={commissions.filter(c => c.productName === 'The Closer by DesignProAI').reduce((sum, c) => sum + c.commissionAmount, 0)}
-              totalReferrals={commissions.filter(c => c.productName === 'The Closer by DesignProAI').length}
-              color="from-green-500 to-emerald-500"
+              totalEarned={commissions.filter(c => c.productName === 'RestylePro Visualizer Suite').reduce((sum, c) => sum + c.commissionAmount, 0)}
+              totalReferrals={commissions.filter(c => c.productName === 'RestylePro Visualizer Suite').length}
+              color="from-orange-500 to-amber-500"
             />
 
             <ProductCard

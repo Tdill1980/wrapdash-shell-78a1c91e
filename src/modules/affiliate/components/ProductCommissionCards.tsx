@@ -15,11 +15,10 @@ interface ProductData {
 }
 
 const PRODUCTS: ProductData[] = [
-  { name: 'WePrintWraps.com', rate: 2.5, color: 'from-blue-500 to-cyan-500', icon: '🖨️' },
   { name: 'WrapCommand AI', rate: 20.0, color: 'from-cyan-500 to-blue-600', icon: '🤖' },
+  { name: 'RestylePro Visualizer Suite', rate: 15.0, color: 'from-orange-500 to-amber-500', icon: '🎨' },
   { name: 'Ink & Edge Magazine', rate: 20.0, color: 'from-purple-500 to-pink-500', icon: '📰' },
-  { name: 'The Closer by DesignProAI', rate: 10.0, color: 'from-green-500 to-emerald-500', icon: '🎯' },
-  { name: 'DesignProAI', rate: 20.0, color: 'from-orange-500 to-red-500', icon: '🎨' },
+  { name: 'WePrintWraps.com', rate: 2.5, color: 'from-blue-500 to-cyan-500', icon: '🖨️' },
 ];
 
 export const ProductCommissionCards = ({ commissions }: ProductCommissionCardsProps) => {
