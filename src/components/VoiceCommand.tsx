@@ -2,6 +2,7 @@ import { Mic, X, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VoiceCommandProps {
   onTranscript: (transcript: string, parsedData: any) => void;
@@ -9,6 +10,7 @@ interface VoiceCommandProps {
 
 export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
@@ -49,7 +51,7 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
       console.log('📝 Transcription result:', transcript);
       
       if (transcript) {
-        parseVoiceInput(transcript);
+        await parseVoiceInputWithAI(transcript);
       } else {
         console.warn('⚠️ No transcript received');
         toast({
@@ -68,61 +70,87 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
     }
   };
 
-  const parseVoiceInput = (transcript: string) => {
-    console.log('🔍 Parsing voice input:', transcript);
+  const parseVoiceInputWithAI = async (transcript: string) => {
+    console.log('🤖 AI parsing transcript:', transcript);
+    setIsParsing(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-voice-quote', {
+        body: { transcript }
+      });
+
+      if (error) {
+        console.error('❌ AI parsing error:', error);
+        // Fall back to basic parsing
+        fallbackParse(transcript);
+        return;
+      }
+
+      if (data?.parsedData) {
+        const parsed = data.parsedData;
+        console.log('✅ AI parsed data:', parsed);
+        
+        // Transform AI response to match expected format
+        const parsedData = {
+          year: parsed.vehicleYear || '',
+          make: parsed.vehicleMake || '',
+          model: parsed.vehicleModel || '',
+          customerName: parsed.customerName || '',
+          companyName: '',
+          phone: '',
+          email: '',
+          serviceType: parsed.serviceType || 'Printed Vinyl',
+          productType: parsed.productType || '',
+          addOns: [],
+          description: transcript,
+        };
+
+        onTranscript(transcript, parsedData);
+        
+        const fieldsFound = Object.values(parsedData).filter(v => v && v !== transcript).length;
+        toast({
+          title: "Voice Command Processed",
+          description: fieldsFound > 1 
+            ? `Found ${fieldsFound} fields from your voice input` 
+            : "Transcript captured, but couldn't extract structured data",
+        });
+      } else {
+        fallbackParse(transcript);
+      }
+    } catch (error) {
+      console.error('❌ AI parsing failed:', error);
+      fallbackParse(transcript);
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  // Fallback regex parsing if AI fails
+  const fallbackParse = (transcript: string) => {
+    console.log('⚠️ Using fallback regex parsing');
     const lower = transcript.toLowerCase();
     
-    // Parse vehicle info
     const yearMatch = lower.match(/(\d{4})/);
-    const makeMatch = lower.match(/(ford|chevy|chevrolet|toyota|honda|bmw|tesla|dodge|ram|tahoe|silverado|f-150|f150)/i);
-    const modelMatch = lower.match(/(?:ford|chevy|chevrolet|toyota|honda|bmw|tesla|dodge|ram)\s+([a-z0-9\-]+)/i);
-    
-    // Parse customer info
-    const nameMatch = lower.match(/customer\s+([a-z\s]+?)(?:\s+company|\s+full|\s+phone|\s+email|$)/i);
-    const companyMatch = lower.match(/company(?:\s+name)?\s+([a-z'\s]+?)(?:\s+phone|\s+email|\s+also|$)/i);
-    const phoneMatch = lower.match(/phone\s*([\d\-]+)/i);
-    const emailMatch = lower.match(/email\s+([\w\.\-]+@[\w\.\-]+)/i);
-    
-    // Parse service type
-    let serviceType = "Printed Vinyl";
-    if (lower.includes("color change")) serviceType = "Color Change";
-    if (lower.includes("ppf") || lower.includes("paint protection")) serviceType = "PPF";
-    if (lower.includes("tint")) serviceType = "Tint";
-    if (lower.includes("window perf")) serviceType = "Window Perf";
-    if (lower.includes("wall wrap")) serviceType = "Wall Wrap";
-    
-    // Parse product type
-    let productType = "";
-    if (lower.includes("printed wrap") || lower.includes("full printed wrap")) {
-      productType = "WPW Printed Wrap (Avery)";
-    }
-    
-    // Parse add-ons
-    const addOns = [];
-    if (lower.includes("ppf") && lower.includes("hood")) addOns.push("PPF Hood Only");
-    if (lower.includes("roof wrap")) addOns.push("Roof Wrap");
-    if (lower.includes("install")) addOns.push("Installation");
+    const makeMatch = lower.match(/(ford|chevy|chevrolet|toyota|honda|bmw|tesla|dodge|ram|gmc|jeep|buick|cadillac|lincoln|acura|lexus|infiniti|nissan|mazda|subaru|volkswagen|audi|mercedes|porsche|volvo|kia|hyundai|genesis|land rover|jaguar|mini|fiat|chrysler|alfa romeo)/i);
     
     const parsedData = {
       year: yearMatch ? yearMatch[1] : "",
       make: makeMatch ? makeMatch[1] : "",
-      model: modelMatch ? modelMatch[1] : "",
-      customerName: nameMatch ? nameMatch[1].trim() : "",
-      companyName: companyMatch ? companyMatch[1].trim() : "",
-      phone: phoneMatch ? phoneMatch[1] : "",
-      email: emailMatch ? emailMatch[1] : "",
-      serviceType,
-      productType,
-      addOns,
+      model: "",
+      customerName: "",
+      companyName: "",
+      phone: "",
+      email: "",
+      serviceType: "Printed Vinyl",
+      productType: "",
+      addOns: [],
       description: transcript,
     };
 
-    console.log('✅ Parsed data:', parsedData);
     onTranscript(transcript, parsedData);
-    
     toast({
       title: "Voice Command Processed",
-      description: "Quote fields populated from voice input",
+      description: "Basic parsing used - speak clearly for better results",
     });
   };
 
@@ -184,13 +212,13 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
               onTouchEnd={handleTouchEnd}
               onMouseDown={handleTouchStart}
               onMouseUp={handleTouchEnd}
-              disabled={isProcessing}
+              disabled={isProcessing || isParsing}
               className={`
                 w-full px-6 py-3 rounded-lg font-semibold text-white text-sm
                 transition-all duration-200 shadow-lg
                 ${isRecording 
                   ? 'bg-gradient-to-r from-red-500 to-red-600 scale-105 shadow-red-500/50 animate-pulse' 
-                  : isProcessing
+                  : isProcessing || isParsing
                   ? 'bg-gradient-to-r from-yellow-500 to-orange-500 animate-pulse'
                   : 'bg-gradient-to-r from-primary to-accent hover:scale-105 hover:shadow-primary/50'
                 }
@@ -200,7 +228,7 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
               <div className="flex items-center justify-center gap-2">
                 <Mic className="h-4 w-4" />
                 <span>
-                  {isProcessing ? '⏳ Processing...' : isRecording ? '🎤 Listening...' : '🎙️ Hold & Speak'}
+                  {isParsing ? '🧠 AI Parsing...' : isProcessing ? '⏳ Transcribing...' : isRecording ? '🎤 Listening...' : '🎙️ Hold & Speak'}
                 </span>
               </div>
             </button>
