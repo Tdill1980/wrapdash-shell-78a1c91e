@@ -422,6 +422,27 @@ export default function MightyCustomer() {
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
+    
+    // Auto-configure panels based on partial wrap product names
+    const productName = product.product_name.toLowerCase();
+    
+    if (productName.includes('hood only') || productName.includes('hood wrap')) {
+      setWrapType('partial');
+      setSelectedPanels({ sides: false, back: false, hood: true, roof: false });
+    } else if (productName.includes('roof only') || productName.includes('roof wrap')) {
+      setWrapType('partial');
+      setSelectedPanels({ sides: false, back: false, hood: false, roof: true });
+    } else if (productName.includes('pillars') || productName.includes('pillar')) {
+      setWrapType('partial');
+      setSelectedPanels({ sides: true, back: false, hood: false, roof: false });
+    } else if (productName.includes('accent') || productName.includes('custom panel')) {
+      setWrapType('partial');
+      setSelectedPanels({ sides: true, back: true, hood: false, roof: false });
+    } else if (product.category?.toLowerCase().includes('partial')) {
+      setWrapType('partial');
+    } else if (product.category?.toLowerCase().includes('full')) {
+      setWrapType('full');
+    }
   };
 
   const handleAddToCart = async (product: Product) => {
@@ -670,6 +691,27 @@ export default function MightyCustomer() {
                     const productIsWPW = product.woo_product_id && isWPW(product.woo_product_id);
                     const isSelected = selectedProduct?.id === product.id;
                     
+                    // Calculate panel-specific SQFT and price for partial wrap products
+                    let panelSqft = 0;
+                    let panelPrice = 0;
+                    const productName = product.product_name.toLowerCase();
+                    
+                    if (sqftOptions && product.pricing_type === 'per_sqft' && product.price_per_sqft) {
+                      if (productName.includes('hood only') || productName.includes('hood wrap')) {
+                        panelSqft = sqftOptions.panels.hood;
+                        panelPrice = panelSqft * product.price_per_sqft;
+                      } else if (productName.includes('roof only') || productName.includes('roof wrap')) {
+                        panelSqft = sqftOptions.panels.roof;
+                        panelPrice = panelSqft * product.price_per_sqft;
+                      } else if (productName.includes('pillars') || productName.includes('pillar')) {
+                        panelSqft = sqftOptions.panels.sides;
+                        panelPrice = panelSqft * product.price_per_sqft;
+                      } else if (productName.includes('accent') || productName.includes('custom')) {
+                        panelSqft = sqftOptions.panels.sides + sqftOptions.panels.back;
+                        panelPrice = panelSqft * product.price_per_sqft;
+                      }
+                    }
+                    
                     return (
                       <div key={product.id} className="relative">
                         <button
@@ -694,6 +736,17 @@ export default function MightyCustomer() {
                               ? `$${product.price_per_sqft}/sqft`
                               : `$${product.flat_price} flat`}
                           </p>
+                          
+                          {/* Show calculated SQFT and price for partial wrap products */}
+                          {panelSqft > 0 && (
+                            <div className="mt-2 pt-2 border-t border-border/50">
+                              <div className="text-sm font-bold text-primary">{panelSqft} sq ft</div>
+                              <div className="text-xs text-green-400 font-semibold">
+                                Est. ${panelPrice.toFixed(2)}
+                              </div>
+                            </div>
+                          )}
+                          
                           {product.product_type === 'quote-only' && (
                             <span className="text-xs text-muted-foreground mt-1 block">
                               Quote Only
