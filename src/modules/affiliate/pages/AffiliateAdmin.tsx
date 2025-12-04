@@ -6,8 +6,13 @@ import { AffiliateAdminView } from './AffiliateAdminView';
 import { StatsCards } from '../components/StatsCards';
 import { SalesChart } from '../components/SalesChart';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, ToggleLeft, ToggleRight, Download, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Mail, ToggleLeft, ToggleRight, Download, ExternalLink, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export const AffiliateAdmin = () => {
   const { isAdmin, loading: adminLoading } = useAdmin();
@@ -18,6 +23,42 @@ export const AffiliateAdmin = () => {
   const [platformStats, setPlatformStats] = useState<any>(null);
   const [allCommissions, setAllCommissions] = useState<any[]>([]);
   const { sendMagicLink, toggleFounderStatus, exportCSV } = useAdminActions();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newFounder, setNewFounder] = useState({
+    fullName: '',
+    email: '',
+    affiliateCode: '',
+    companyName: '',
+    commissionRate: '20'
+  });
+  const [creating, setCreating] = useState(false);
+
+  const handleCreateFounder = async () => {
+    if (!newFounder.fullName || !newFounder.email || !newFounder.affiliateCode) {
+      toast.error('Name, email, and affiliate code are required');
+      return;
+    }
+    setCreating(true);
+    try {
+      const { error } = await supabase.from('affiliate_founders').insert({
+        full_name: newFounder.fullName,
+        email: newFounder.email,
+        affiliate_code: newFounder.affiliateCode.toUpperCase(),
+        company_name: newFounder.companyName || null,
+        commission_rate: parseFloat(newFounder.commissionRate) || 20,
+        is_active: true
+      });
+      if (error) throw error;
+      toast.success('Founder created successfully!');
+      setShowCreateModal(false);
+      setNewFounder({ fullName: '', email: '', affiliateCode: '', companyName: '', commissionRate: '20' });
+      fetchFounders();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create founder');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   useEffect(() => {
     if (isAdmin) {
@@ -126,7 +167,77 @@ export const AffiliateAdmin = () => {
       </div>
 
       <div className="p-6 bg-[#101016] rounded-2xl border border-white/10">
-        <h2 className="text-xl font-bold mb-4">All Affiliates</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">All Affiliates</h2>
+          <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] hover:opacity-90">
+                <UserPlus className="w-4 h-4 mr-2" /> Create Founder
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#0A0A0F] border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-white">Create New Founder Affiliate</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <Label className="text-white">Full Name *</Label>
+                  <Input
+                    value={newFounder.fullName}
+                    onChange={(e) => setNewFounder(prev => ({ ...prev, fullName: e.target.value }))}
+                    placeholder="John Smith"
+                    className="bg-[#16161E] border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">Email *</Label>
+                  <Input
+                    type="email"
+                    value={newFounder.email}
+                    onChange={(e) => setNewFounder(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="john@example.com"
+                    className="bg-[#16161E] border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">Affiliate Code *</Label>
+                  <Input
+                    value={newFounder.affiliateCode}
+                    onChange={(e) => setNewFounder(prev => ({ ...prev, affiliateCode: e.target.value.toUpperCase() }))}
+                    placeholder="JOHN"
+                    className="bg-[#16161E] border-white/10 text-white uppercase"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">Company Name</Label>
+                  <Input
+                    value={newFounder.companyName}
+                    onChange={(e) => setNewFounder(prev => ({ ...prev, companyName: e.target.value }))}
+                    placeholder="Optional"
+                    className="bg-[#16161E] border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white">Commission Rate (%)</Label>
+                  <Input
+                    type="number"
+                    value={newFounder.commissionRate}
+                    onChange={(e) => setNewFounder(prev => ({ ...prev, commissionRate: e.target.value }))}
+                    placeholder="20"
+                    className="bg-[#16161E] border-white/10 text-white"
+                  />
+                </div>
+                <Button
+                  onClick={handleCreateFounder}
+                  disabled={creating}
+                  className="w-full bg-gradient-to-r from-[#00AFFF] to-[#0047FF] hover:opacity-90"
+                >
+                  {creating ? 'Creating...' : 'Create Founder'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <div className="flex flex-wrap gap-4">
           {founders.map((f) => (
