@@ -23,6 +23,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { generateOrderNumber, generateQuoteNumber } from "@/lib/orderNumberGenerator";
 import { useLocation } from "react-router-dom";
 import { EstimateLineItems, type LineItem } from "@/components/EstimateLineItems";
+import { EstimateBuilder } from "@/components/EstimateBuilder";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -1515,13 +1516,26 @@ export default function MightyCustomer() {
             </div>
           </div>
 
-          {/* Estimate Line Items Summary */}
-          <EstimateLineItems
-            lineItems={lineItems}
-            onRemoveItem={handleRemoveLineItem}
-            installationCost={installationCost}
-            includeInstallation={includeInstallation}
-          />
+          {/* ShopVOX-Style Estimate Builder */}
+          {lineItems.length > 0 && (
+            <EstimateBuilder
+              lineItems={lineItems}
+              onRemoveItem={handleRemoveLineItem}
+              onAddItem={() => setSelectedProduct(null)}
+              onCreateJob={handleCreateOrder}
+              customerData={{
+                name: customerData.name,
+                company: customerData.company,
+                email: customerData.email,
+                phone: customerData.phone,
+              }}
+              vehicleInfo={vehicle}
+              sqftOptions={sqftOptions}
+              installationCost={installationCost}
+              includeInstallation={includeInstallation}
+              status="draft"
+            />
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button

@@ -31,36 +31,40 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a voice transcript parser for a vehicle wrap quote system. Extract ALL structured data from natural speech.
+const systemPrompt = `You are a voice transcript parser for a vehicle wrap quote system. Extract ALL structured data from natural speech.
 
-Extract the following fields if mentioned (leave empty string if not found):
+IMPORTANT: Return a FLAT JSON object with these exact keys (NOT nested categories):
+{
+  "customerName": "string or empty",
+  "companyName": "string or empty", 
+  "email": "string or empty",
+  "phone": "string or empty",
+  "vehicleYear": "string or empty",
+  "vehicleMake": "string or empty",
+  "vehicleModel": "string or empty",
+  "serviceType": "string or empty",
+  "productType": "string or empty",
+  "finish": "string or empty",
+  "notes": "string or empty"
+}
 
-CUSTOMER INFO:
-- customerName: The customer's full name (e.g., "John Smith", "Sarah Johnson")
-- companyName: Business/company name if mentioned (e.g., "ABC Wraps", "Vinyl Vixen")
-- email: Email address - people might say "at" for @ and "dot" for . (e.g., "john at gmail dot com" = "john@gmail.com")
-- phone: Phone number in any format (e.g., "555-123-4567", "five five five one two three four five six seven")
+Field definitions:
+- customerName: Full name (e.g., "John Smith")
+- companyName: Business name (e.g., "ABC Wraps")
+- email: Email - convert "at" to @ and "dot" to . (e.g., "john at gmail dot com" = "john@gmail.com")
+- phone: Phone number in any format
+- vehicleYear: 4-digit year (2024, 2019, etc.)
+- vehicleMake: Manufacturer (Ford, Chevy, Toyota, Honda, BMW, etc.)
+- vehicleModel: Model name (F-150, Camry, Silverado, Model Y, etc.)
+- serviceType: Service type (full wrap, partial wrap, color change, PPF, tint, chrome delete, etc.)
+- productType: Brand/product (Avery, 3M, XPEL, Suntek, KPMF, Hexis, etc.)
+- finish: Finish type (gloss, matte, satin, metallic, etc.)
+- notes: Other details, deadlines, special requests
 
-VEHICLE INFO:
-- vehicleYear: The vehicle year (4 digits like 2024, 2019, etc.)
-- vehicleMake: The vehicle manufacturer (Ford, Chevy/Chevrolet, Toyota, Honda, BMW, Mercedes, Audi, Lexus, etc.)
-- vehicleModel: The specific model (F-150, Camry, Civic, 3 Series, Mustang, Corvette, Silverado, Model Y, etc.)
+Example input: "Quote for John Smith at ABC Wraps, john@abc.com, 555-1234, 2024 Chevy Silverado, full wrap, 3M gloss black"
+Example output: {"customerName":"John Smith","companyName":"ABC Wraps","email":"john@abc.com","phone":"555-1234","vehicleYear":"2024","vehicleMake":"Chevrolet","vehicleModel":"Silverado","serviceType":"full wrap","productType":"3M","finish":"gloss","notes":"black"}
 
-SERVICE INFO:
-- serviceType: The type of service (wrap, color change, PPF, paint protection, tint, window tint, chrome delete, partial wrap, full wrap, printed wrap, etc.)
-- productType: Specific brand/product if mentioned (Avery, 3M, XPEL, Suntek, KPMF, Hexis, etc.)
-- finish: Finish type if mentioned (gloss, matte, satin, metallic, chrome, brushed)
-
-ADDITIONAL:
-- notes: Any other important details, special requests, deadlines, or requirements (e.g., "needs it by Friday", "chrome delete on mirrors", "wants racing stripes")
-
-Be flexible with speech patterns. People might say:
-- "Quote for John Smith at ABC Wraps, email john@abc.com, phone 555-1234, 2024 Ford F-150, full wrap"
-- "Customer Sarah Johnson, Vinyl Vixen company, 2023 Tesla Model Y, gloss black color change, 3M film"
-- "John needs a wrap on his 2019 Toyota Camry, matte finish, customer mentioned he wants it done by next week"
-- "PPF on 2024 Porsche 911, customer is Mike at mike dot smith at gmail dot com"
-
-Return ONLY valid JSON with these exact keys, no explanation.`;
+Return ONLY the JSON object, no markdown, no explanation.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -125,21 +129,32 @@ Return ONLY valid JSON with these exact keys, no explanation.`;
       }
       
       const parsed = JSON.parse(jsonStr);
+      console.log('📦 Raw parsed JSON:', JSON.stringify(parsed, null, 2));
+      
+      // Handle BOTH nested (old AI format) AND flat (new format) structures
+      const customerInfo = parsed["CUSTOMER INFO"] || parsed["Customer Info"] || parsed;
+      const vehicleInfo = parsed["VEHICLE INFO"] || parsed["Vehicle Info"] || parsed;
+      const serviceInfo = parsed["SERVICE INFO"] || parsed["Service Info"] || parsed;
+      const additional = parsed["ADDITIONAL"] || parsed["Additional"] || parsed;
+      
       parsedData = {
-        customerName: parsed.customerName || '',
-        companyName: parsed.companyName || '',
-        email: parsed.email || '',
-        phone: parsed.phone || '',
-        vehicleYear: parsed.vehicleYear?.toString() || '',
-        vehicleMake: parsed.vehicleMake || '',
-        vehicleModel: parsed.vehicleModel || '',
-        serviceType: parsed.serviceType || '',
-        productType: parsed.productType || '',
-        finish: parsed.finish || '',
-        notes: parsed.notes || ''
+        customerName: customerInfo.customerName || parsed.customerName || '',
+        companyName: customerInfo.companyName || parsed.companyName || '',
+        email: customerInfo.email || parsed.email || '',
+        phone: customerInfo.phone || parsed.phone || '',
+        vehicleYear: (vehicleInfo.vehicleYear || parsed.vehicleYear || '').toString(),
+        vehicleMake: vehicleInfo.vehicleMake || parsed.vehicleMake || '',
+        vehicleModel: vehicleInfo.vehicleModel || parsed.vehicleModel || '',
+        serviceType: serviceInfo.serviceType || parsed.serviceType || '',
+        productType: serviceInfo.productType || parsed.productType || '',
+        finish: serviceInfo.finish || parsed.finish || '',
+        notes: additional.notes || parsed.notes || ''
       };
+      
+      console.log('✨ Final parsed data:', JSON.stringify(parsedData, null, 2));
     } catch (parseError) {
       console.error('❌ Failed to parse AI JSON response:', parseError);
+      console.error('❌ Raw content was:', content);
     }
 
     console.log('✅ Parsed data:', parsedData);
