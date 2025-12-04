@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Message, Conversation, Contact } from "@/hooks/useInbox";
+import { QuoteRequestBanner } from "@/components/mightychat/QuoteRequestBanner";
 
 interface MessageThreadProps {
   conversation: (Conversation & { contact: Contact }) | undefined;
@@ -151,6 +152,14 @@ export const MessageThread = ({
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-3xl mx-auto">
+          {/* Quote Request Banner */}
+          <QuoteRequestBanner
+            messageType={conversation.priority === 'high' ? 'quote_request' : undefined}
+            priority={conversation.priority || undefined}
+            contactEmail={conversation.contact?.email || undefined}
+            contactName={conversation.contact?.name || undefined}
+          />
+          
           {messages?.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <p className="text-sm">No messages yet. Start the conversation!</p>

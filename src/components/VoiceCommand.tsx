@@ -43,34 +43,52 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
     }
   }, [isExpanded]);
 
-  const handleTouchStart = async () => {
+  const handleTouchStart = async (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     console.log('🎤 Starting voice recording...');
     try {
       await startRecording();
       console.log('✅ Recording started successfully');
+      toast({
+        title: "🎤 Recording...",
+        description: "Speak now - release button when done",
+      });
     } catch (error) {
       console.error('❌ Failed to start recording:', error);
       toast({
         title: "Microphone Error",
-        description: "Could not access microphone. Please check permissions.",
+        description: "Could not access microphone. Please check browser permissions.",
         variant: "destructive",
       });
     }
   };
 
-  const handleTouchEnd = async () => {
+  const handleTouchEnd = async (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isRecording) {
+      console.log('⚠️ Not recording, skipping stop');
+      return;
+    }
+    
     console.log('⏹️ Stopping recording...');
     try {
       const transcript = await stopRecording();
       console.log('📝 Transcription result:', transcript);
       
-      if (transcript) {
+      if (transcript && transcript.trim().length > 0) {
+        toast({
+          title: "🧠 Processing...",
+          description: `"${transcript.substring(0, 50)}..."`,
+        });
         await parseVoiceInputWithAI(transcript);
       } else {
         console.warn('⚠️ No transcript received');
         toast({
           title: "No Speech Detected",
-          description: "Please try again and speak clearly.",
+          description: "Please try again and speak clearly into the microphone.",
           variant: "destructive",
         });
       }
@@ -243,6 +261,7 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
               onTouchEnd={handleTouchEnd}
               onMouseDown={handleTouchStart}
               onMouseUp={handleTouchEnd}
+              onMouseLeave={(e) => { if (isRecording) handleTouchEnd(e); }}
               disabled={isProcessing || isParsing}
               className={`
                 w-full px-6 py-3 rounded-lg font-semibold text-white text-sm
