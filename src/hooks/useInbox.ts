@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 export interface Contact {
   id: string;
@@ -100,8 +101,8 @@ export const useInbox = (selectedConversationId?: string) => {
     },
   });
 
-  // Send a new message
-  const sendMessage = useMutation({
+  // Send a new message (for non-email channels)
+  const sendMessageMutation = useMutation({
     mutationFn: async ({ 
       conversationId, 
       content, 
@@ -137,6 +138,44 @@ export const useInbox = (selectedConversationId?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
       queryClient.invalidateQueries({ queryKey: ['inbox-conversations'] });
+    },
+  });
+
+  // Send email via edge function
+  const sendEmailMutation = useMutation({
+    mutationFn: async ({ 
+      conversationId, 
+      recipientEmail, 
+      recipientName,
+      subject,
+      content 
+    }: { 
+      conversationId: string; 
+      recipientEmail: string;
+      recipientName: string;
+      subject: string;
+      content: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke('send-mightychat-email', {
+        body: {
+          conversationId,
+          recipientEmail,
+          recipientName,
+          subject,
+          content,
+        },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Email sent successfully");
+      queryClient.invalidateQueries({ queryKey: ['inbox-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['inbox-conversations'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to send email: ${error.message}`);
     },
   });
 
@@ -252,10 +291,12 @@ export const useInbox = (selectedConversationId?: string) => {
     conversationsLoading,
     messagesLoading,
     contactsLoading,
-    sendMessage: sendMessage.mutate,
+    sendMessage: sendMessageMutation.mutate,
+    sendEmail: sendEmailMutation.mutate,
     createContact: createContact.mutate,
     createConversation: createConversation.mutate,
     updateConversationStatus: updateConversationStatus.mutate,
-    isSending: sendMessage.isPending,
+    isSending: sendMessageMutation.isPending,
+    isEmailSending: sendEmailMutation.isPending,
   };
 };

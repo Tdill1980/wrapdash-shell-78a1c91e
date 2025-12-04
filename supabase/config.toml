@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.parse-voice-quote]
 verify_jwt = false
+
+[functions.send-mightychat-email]
+verify_jwt = false

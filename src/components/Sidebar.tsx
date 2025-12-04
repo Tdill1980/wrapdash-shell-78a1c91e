@@ -23,13 +23,14 @@ import logo from "@/assets/wrapcommand-logo-new.png";
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { 
-    name: "Inbox", 
-    path: "/inbox", 
+    name: "MightyChat", 
+    path: "/mightychat", 
     icon: Inbox,
     customRender: (
-      <span className="font-medium">
-        <span className="text-white">Unified </span>
-        <span className="text-gradient">Inbox</span>
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Mighty</span>
+        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
       </span>
     )
   },
