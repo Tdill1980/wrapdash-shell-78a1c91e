@@ -4,9 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { PanelSourceSelector } from "../components/PanelSourceSelector";
 import { VehicleInput } from "../components/VehicleInput";
 import { AIGeneratorForm } from "../components/AIGeneratorForm";
-import { ProofResults } from "../components/ProofResults";
+import { ProofResultsEnhanced } from "../components/ProofResultsEnhanced";
+import { UploadPanel } from "../components/UploadPanel";
+import { LibraryPanelSelector } from "../components/LibraryPanelSelector";
 import { generatePanel, generate3DProof, generatePrintPackage, detectVehicleSize } from "../generator-api";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
+import { DesignPanel } from "../panel-api";
 
 export default function DesignGenerator() {
   const { toast } = useToast();
@@ -22,6 +25,7 @@ export default function DesignGenerator() {
   const handleGeneratePanel = async (prompt: string, style: string) => {
     try {
       setIsGeneratingPanel(true);
+      setProofUrl(""); // Clear previous proof
       const size = vehicle ? detectVehicleSize(vehicle) : 'medium';
       
       const result = await generatePanel({ prompt, style, size });
@@ -47,11 +51,31 @@ export default function DesignGenerator() {
     }
   };
 
+  const handlePanelUploaded = (url: string) => {
+    setPanelUrl(url);
+    setProofUrl(""); // Clear previous proof
+    // Default dimensions for uploaded panels
+    setPanelDimensions({ width: 120, height: 48 });
+  };
+
+  const handleLibraryPanelSelected = (url: string, panel: DesignPanel) => {
+    setPanelUrl(url);
+    setProofUrl(""); // Clear previous proof
+    setPanelDimensions({ 
+      width: panel.width_inches || 120, 
+      height: panel.height_inches || 48 
+    });
+    // Auto-fill vehicle if panel has vehicle info
+    if (panel.vehicle_year && panel.vehicle_make && panel.vehicle_model) {
+      setVehicle(`${panel.vehicle_year} ${panel.vehicle_make} ${panel.vehicle_model}`);
+    }
+  };
+
   const handleGenerate3DProof = async () => {
     if (!panelUrl || !vehicle) {
       toast({
         title: "Missing Information",
-        description: "Please generate a panel and enter a vehicle first",
+        description: "Please select a panel and enter a vehicle first",
         variant: "destructive",
       });
       return;
@@ -120,19 +144,29 @@ export default function DesignGenerator() {
     }
   };
 
+  const resetFlow = () => {
+    setMode(null);
+    setPanelUrl("");
+    setProofUrl("");
+    setVehicle("");
+    setPanelDimensions(null);
+  };
+
   return (
     <div className="space-y-6 p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
-          Design<span className="text-primary">Pro</span>™ Generator
+          Design<span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Pro</span>™ Generator
         </h1>
         <p className="text-muted-foreground">
           Create professional wrap designs with AI-powered 3D proofs
         </p>
       </div>
 
+      {/* Step 1: Panel Source Selection */}
       <PanelSourceSelector onSelect={setMode} selectedMode={mode || undefined} />
 
+      {/* Step 2: Panel Creation/Selection based on mode */}
       {mode === 'ai' && (
         <AIGeneratorForm 
           onGenerate={handleGeneratePanel}
@@ -140,22 +174,45 @@ export default function DesignGenerator() {
         />
       )}
 
-      {panelUrl && <VehicleInput value={vehicle} onChange={setVehicle} />}
+      {mode === 'upload' && (
+        <UploadPanel onPanelUploaded={handlePanelUploaded} />
+      )}
 
+      {mode === 'library' && (
+        <LibraryPanelSelector onPanelSelected={handleLibraryPanelSelected} />
+      )}
+
+      {/* Step 3: Vehicle Input (shown after panel is ready) */}
+      {panelUrl && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ArrowRight className="h-4 w-4" />
+            <span>Panel ready! Now enter the target vehicle:</span>
+          </div>
+          <VehicleInput value={vehicle} onChange={setVehicle} />
+        </div>
+      )}
+
+      {/* Step 4: Generate 3D Proof Button */}
       {panelUrl && vehicle && (
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-4">
           <Button 
             onClick={handleGenerate3DProof}
             disabled={isGeneratingProof}
             size="lg"
+            className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E]"
           >
             {isGeneratingProof && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Generate 3D Wrap Proof
           </Button>
+          <Button variant="outline" onClick={resetFlow}>
+            Start Over
+          </Button>
         </div>
       )}
 
-      <ProofResults 
+      {/* Step 5: Results Display with Lightbox */}
+      <ProofResultsEnhanced 
         panelUrl={panelUrl}
         proofUrl={proofUrl}
         onGeneratePrintPackage={proofUrl ? handleGeneratePrintPackage : undefined}
