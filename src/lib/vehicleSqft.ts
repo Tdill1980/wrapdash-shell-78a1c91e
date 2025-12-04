@@ -24,6 +24,7 @@ export interface VehicleSQFTOptions {
 /**
  * Get vehicle SQFT options from lookup table
  * Returns all three SQFT values: with roof, without roof, and roof only
+ * Uses flexible matching - if exact year not in range, finds closest match for same make/model
  */
 export function getVehicleSQFTOptions(year: string, make: string, model: string): VehicleSQFTOptions | null {
   if (!vehicleDimensionsData?.vehicles || vehicleDimensionsData.vehicles.length === 0) {
@@ -35,23 +36,15 @@ export function getVehicleSQFTOptions(year: string, make: string, model: string)
   const normalizedYear = year.trim();
   const normalizedMake = make.trim().toLowerCase();
   const normalizedModel = model.trim().toLowerCase();
+  const inputYear = parseInt(normalizedYear);
 
   console.log(`Searching for vehicle: ${normalizedYear} ${normalizedMake} ${normalizedModel}`);
 
-  const vehicle = vehicleDimensionsData.vehicles.find((v: any) => {
+  // First pass: find exact matches
+  let vehicle = vehicleDimensionsData.vehicles.find((v: any) => {
     const vehicleYear = v.Year.toString();
     const vehicleMake = v.Make.toLowerCase();
     const vehicleModel = v.Model.toLowerCase();
-    
-    // Improved year matching - handle ranges like "2018-2022" and single years
-    let yearMatch = false;
-    if (vehicleYear.includes('-')) {
-      const [startYear, endYear] = vehicleYear.split('-').map(y => parseInt(y.trim()));
-      const inputYear = parseInt(normalizedYear);
-      yearMatch = inputYear >= startYear && inputYear <= endYear;
-    } else {
-      yearMatch = vehicleYear === normalizedYear;
-    }
     
     // Case-insensitive make matching
     const makeMatch = vehicleMake === normalizedMake;
@@ -60,17 +53,67 @@ export function getVehicleSQFTOptions(year: string, make: string, model: string)
     const modelMatch = 
       vehicleModel.includes(normalizedModel) || 
       normalizedModel.includes(vehicleModel);
+
+    if (!makeMatch || !modelMatch) return false;
     
-    if (yearMatch && makeMatch && modelMatch) {
-      console.log(`✓ Match found: ${v.Year} ${v.Make} ${v.Model}`);
+    // Year matching - handle ranges like "2008-2017" and single years
+    let yearMatch = false;
+    if (vehicleYear.includes('-')) {
+      const [startYear, endYear] = vehicleYear.split('-').map(y => parseInt(y.trim()));
+      yearMatch = inputYear >= startYear && inputYear <= endYear;
+    } else {
+      yearMatch = vehicleYear === normalizedYear;
     }
     
-    return yearMatch && makeMatch && modelMatch;
+    if (yearMatch) {
+      console.log(`✓ Exact match found: ${v.Year} ${v.Make} ${v.Model}`);
+    }
+    
+    return yearMatch;
   });
+
+  // Second pass: if no exact match, find closest match for same make/model
+  if (!vehicle) {
+    const makeModelMatches = vehicleDimensionsData.vehicles.filter((v: any) => {
+      const vehicleMake = v.Make.toLowerCase();
+      const vehicleModel = v.Model.toLowerCase();
+      const makeMatch = vehicleMake === normalizedMake;
+      const modelMatch = vehicleModel.includes(normalizedModel) || normalizedModel.includes(vehicleModel);
+      return makeMatch && modelMatch;
+    });
+
+    if (makeModelMatches.length > 0) {
+      // Find the closest year range
+      let closestVehicle = null;
+      let closestDistance = Infinity;
+
+      for (const v of makeModelMatches) {
+        const vehicleYear = v.Year.toString();
+        let endYear: number;
+        
+        if (vehicleYear.includes('-')) {
+          endYear = parseInt(vehicleYear.split('-')[1].trim());
+        } else {
+          endYear = parseInt(vehicleYear);
+        }
+
+        const distance = Math.abs(inputYear - endYear);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestVehicle = v;
+        }
+      }
+
+      if (closestVehicle && closestDistance <= 5) {
+        // Allow up to 5 years difference
+        console.log(`✓ Closest match found: ${closestVehicle.Year} ${closestVehicle.Make} ${closestVehicle.Model} (${closestDistance} years off)`);
+        vehicle = closestVehicle;
+      }
+    }
+  }
 
   if (!vehicle) {
     console.log(`✗ No match found for: ${normalizedYear} ${normalizedMake} ${normalizedModel}`);
-    console.log(`Available makes:`, [...new Set(vehicleDimensionsData.vehicles.map((v: any) => v.Make))]);
     return null;
   }
 
