@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import VoiceCommand from "@/components/VoiceCommand";
 import RealtimeVoiceQuote from "@/components/RealtimeVoiceQuote";
 import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, PlusCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
@@ -76,7 +75,7 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
-  const [showRealtimeVoice, setShowRealtimeVoice] = useState(false);
+  
   const [includeInstallation, setIncludeInstallation] = useState(false);
   const [installationDescription, setInstallationDescription] = useState("");
   const [customInstallationHours, setCustomInstallationHours] = useState(0);
@@ -198,56 +197,6 @@ export default function MightyCustomer() {
     }
   };
 
-  const handleVoiceTranscript = (transcript: string, parsedData: any) => {
-    console.log('Voice transcript received:', transcript);
-    console.log('Parsed data:', parsedData);
-    
-    // Update customer data with parsed info
-    if (parsedData.customerName || parsedData.companyName || parsedData.phone || parsedData.email) {
-      setCustomerData(prev => ({
-        ...prev,
-        name: parsedData.customerName || prev.name,
-        company: parsedData.companyName || prev.company,
-        phone: parsedData.phone || prev.phone,
-        email: parsedData.email || prev.email,
-        vehicleYear: parsedData.year || prev.vehicleYear,
-        vehicleMake: parsedData.make || prev.vehicleMake,
-        vehicleModel: parsedData.model || prev.vehicleModel,
-      }));
-    }
-    
-    // Update service type if parsed
-    if (parsedData.serviceType) {
-      const serviceMap: Record<string, string> = {
-        "Printed Vinyl": "Full Wraps",
-        "Color Change": "Full Wraps", 
-        "PPF": "PPF",
-        "Tint": "Window Tint",
-        "Window Perf": "Window Perf",
-        "Wall Wrap": "Full Wraps"
-      };
-      const mappedService = serviceMap[parsedData.serviceType];
-      if (mappedService) {
-        setSelectedService(mappedService);
-      }
-    }
-    
-    // Set product if available
-    if (parsedData.productType && allProducts.length > 0) {
-      const matchingProduct = allProducts.find(p => 
-        p.product_name.toLowerCase().includes(parsedData.productType.toLowerCase())
-      );
-      if (matchingProduct) {
-        setSelectedProduct(matchingProduct);
-      }
-    }
-    
-    // Handle finish from transcript
-    const lower = transcript.toLowerCase();
-    if (lower.includes("gloss")) setFinish("Gloss");
-    if (lower.includes("matte")) setFinish("Matte");
-    if (lower.includes("satin")) setFinish("Satin");
-  };
 
   const handleSendQuoteEmail = async () => {
     if (!customerData.email || !customerData.name) {
@@ -683,35 +632,12 @@ export default function MightyCustomer() {
 
         <Card className="dashboard-card p-6 space-y-6 relative">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">Voice Input</Label>
-              <div className="flex gap-2">
-                <Button
-                  variant={!showRealtimeVoice ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShowRealtimeVoice(false)}
-                >
-                  Quick Voice
-                </Button>
-                <Button
-                  variant={showRealtimeVoice ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShowRealtimeVoice(true)}
-                >
-                  AI Conversation
-                </Button>
-              </div>
-            </div>
-
-            {!showRealtimeVoice ? (
-              <VoiceCommand onTranscript={handleVoiceTranscript} />
-            ) : (
-              <RealtimeVoiceQuote
-                onVehicleDetected={handleRealtimeVehicle}
-                onCustomerDetected={handleRealtimeCustomer}
-                onServiceDetected={handleRealtimeService}
-              />
-            )}
+            <Label className="text-lg font-semibold">AI Voice Assistant</Label>
+            <RealtimeVoiceQuote
+              onVehicleDetected={handleRealtimeVehicle}
+              onCustomerDetected={handleRealtimeCustomer}
+              onServiceDetected={handleRealtimeService}
+            />
           </div>
 
           <div className="space-y-4">
