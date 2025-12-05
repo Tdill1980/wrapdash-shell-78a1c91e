@@ -146,6 +146,33 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
 
       if (error) {
         console.error('❌ AI parsing error:', error);
+        // Check for specific error types
+        const errorMsg = error.message?.toLowerCase() || '';
+        if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
+          toast({
+            title: "⏳ AI Busy",
+            description: "Rate limited - using backup parsing",
+            variant: "destructive",
+          });
+        } else if (errorMsg.includes('402') || errorMsg.includes('credits')) {
+          toast({
+            title: "💳 AI Credits",
+            description: "Credits exhausted - using backup parsing",
+            variant: "destructive",
+          });
+        }
+        fallbackParse(transcript);
+        return;
+      }
+
+      // Check for error in response body
+      if (data?.error) {
+        console.error('❌ AI response error:', data.error);
+        toast({
+          title: "AI Error",
+          description: data.error,
+          variant: "destructive",
+        });
         fallbackParse(transcript);
         return;
       }

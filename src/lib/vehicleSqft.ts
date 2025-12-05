@@ -104,9 +104,13 @@ export function getVehicleSQFTOptions(year: string, make: string, model: string)
         }
       }
 
-      if (closestVehicle && closestDistance <= 5) {
-        // Allow up to 5 years difference
+      if (closestVehicle && closestDistance <= 15) {
+        // Allow up to 15 years difference for flexible matching
         console.log(`✓ Closest match found: ${closestVehicle.Year} ${closestVehicle.Make} ${closestVehicle.Model} (${closestDistance} years off)`);
+        vehicle = closestVehicle;
+      } else if (closestVehicle) {
+        // Final fallback: use ANY match for same make/model regardless of year
+        console.log(`✓ Fallback match (year mismatch): ${closestVehicle.Year} ${closestVehicle.Make} ${closestVehicle.Model}`);
         vehicle = closestVehicle;
       }
     }
