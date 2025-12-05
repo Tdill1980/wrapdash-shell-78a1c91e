@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash2, Copy, Mail } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Search, Edit, Trash2, Copy, Mail, Sparkles, FolderOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import TemplateGallery from '@/components/mightymail/TemplateGallery';
 
 interface EmailTemplate {
   id: string;
@@ -155,7 +157,7 @@ const MightyMailTemplates = () => {
               <span className="text-foreground ml-2">Templates</span>
             </h1>
             <p className="text-muted-foreground mt-1">
-              Create and manage drag-and-drop email templates
+              Professional email templates for wrap shops
             </p>
           </div>
           <Button onClick={() => navigate('/admin/mightymail/templates/new')}>
@@ -164,92 +166,114 @@ const MightyMailTemplates = () => {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search templates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        {/* Main Tabs - Gallery vs My Templates */}
+        <Tabs defaultValue="gallery" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="gallery" className="gap-2">
+              <Sparkles className="h-4 w-4" />
+              Template Gallery
+            </TabsTrigger>
+            <TabsTrigger value="my-templates" className="gap-2">
+              <FolderOpen className="h-4 w-4" />
+              My Templates ({templates.length})
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Templates Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-5 bg-muted rounded w-2/3" />
-                  <div className="h-4 bg-muted rounded w-1/2 mt-2" />
-                </CardHeader>
-                <CardContent>
-                  <div className="h-20 bg-muted rounded" />
-                </CardContent>
+          {/* Gallery Tab */}
+          <TabsContent value="gallery" className="mt-6">
+            <TemplateGallery />
+          </TabsContent>
+
+          {/* My Templates Tab */}
+          <TabsContent value="my-templates" className="mt-6 space-y-4">
+            {/* Search */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search your templates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Templates Grid */}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map(i => (
+                  <Card key={i} className="animate-pulse">
+                    <CardHeader>
+                      <div className="h-5 bg-muted rounded w-2/3" />
+                      <div className="h-4 bg-muted rounded w-1/2 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-20 bg-muted rounded" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredTemplates.length === 0 ? (
+              <Card className="p-12 text-center">
+                <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Templates Yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Start by picking a template from the gallery, or create one from scratch
+                </p>
+                <Button onClick={() => navigate('/admin/mightymail/templates/new')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Template
+                </Button>
               </Card>
-            ))}
-          </div>
-        ) : filteredTemplates.length === 0 ? (
-          <Card className="p-12 text-center">
-            <Mail className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Templates Yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first email template with our drag-and-drop editor
-            </p>
-            <Button onClick={() => navigate('/admin/mightymail/templates/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Template
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTemplates.map(template => (
-              <Card key={template.id} className="hover:border-primary/50 transition-colors">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{template.name}</CardTitle>
-                      <CardDescription className="mt-1">
-                        Updated {format(new Date(template.updated_at), 'MMM d, yyyy')}
-                      </CardDescription>
-                    </div>
-                    <Badge className={getCategoryColor(template.category)}>
-                      {template.category}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => navigate(`/admin/mightymail/templates/${template.id}`)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDuplicate(template)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteId(template.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredTemplates.map(template => (
+                  <Card key={template.id} className="hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{template.name}</CardTitle>
+                          <CardDescription className="mt-1">
+                            Updated {format(new Date(template.updated_at), 'MMM d, yyyy')}
+                          </CardDescription>
+                        </div>
+                        <Badge className={getCategoryColor(template.category)}>
+                          {template.category}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => navigate(`/admin/mightymail/templates/${template.id}`)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDuplicate(template)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeleteId(template.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Delete Confirmation */}
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
