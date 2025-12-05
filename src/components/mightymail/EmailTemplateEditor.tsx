@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Save, Download, ArrowLeft, Eye } from 'lucide-react';
+import { Save, Download, ArrowLeft, Eye, Sparkles, RefreshCw, ImageIcon, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import AITemplateGeneratorModal from './AITemplateGeneratorModal';
+import AIImageGeneratorModal from './AIImageGeneratorModal';
 
 interface EmailTemplateEditorProps {
   templateId?: string;
@@ -28,6 +30,9 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   const [category, setCategory] = useState(initialCategory);
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [showTemplateGenerator, setShowTemplateGenerator] = useState(false);
+  const [showImageGenerator, setShowImageGenerator] = useState(false);
+  const [improving, setImproving] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -54,7 +59,6 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
 
       try {
         if (templateId) {
-          // Update existing template
           const { error } = await supabase
             .from('email_templates')
             .update({
@@ -72,7 +76,6 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
             description: "Your email template has been saved"
           });
         } else {
-          // Create new template
           const { error } = await supabase
             .from('email_templates')
             .insert({
@@ -124,6 +127,51 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
   const handlePreview = () => {
     emailEditorRef.current?.editor?.exportHtml((data) => {
       setPreviewHtml(data.html);
+    });
+  };
+
+  const handleTemplateGenerated = (design: any) => {
+    emailEditorRef.current?.editor?.loadDesign(design);
+    toast({
+      title: "Template Loaded",
+      description: "AI-generated template has been loaded into the editor"
+    });
+  };
+
+  const handleAIImprove = async () => {
+    setImproving(true);
+
+    emailEditorRef.current?.editor?.exportHtml(async (data) => {
+      const { html } = data;
+
+      try {
+        const { data: improvedData, error } = await supabase.functions.invoke('ai-improve-email-content', {
+          body: {
+            currentHtml: html,
+            improvementType: 'more_compelling',
+            tone: 'installer'
+          }
+        });
+
+        if (error) throw error;
+
+        if (improvedData?.improvedHtml) {
+          toast({
+            title: "Content Improved!",
+            description: "AI has enhanced your email content. The improved HTML has been copied to your clipboard.",
+          });
+          await navigator.clipboard.writeText(improvedData.improvedHtml);
+        }
+      } catch (error: any) {
+        console.error('Improve error:', error);
+        toast({
+          title: "Improvement Failed",
+          description: error.message || "Failed to improve content",
+          variant: "destructive"
+        });
+      } finally {
+        setImproving(false);
+      }
     });
   };
 
@@ -190,12 +238,50 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
         </CardHeader>
       </Card>
 
+      {/* AI Toolbar */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[hsl(var(--primary))]/10 via-[#833AB4]/10 to-[#E1306C]/10 border-b">
+        <Sparkles className="h-4 w-4 text-purple-500" />
+        <span className="text-sm font-medium">AI Assistant:</span>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => setShowTemplateGenerator(true)}
+          className="text-xs"
+        >
+          <Sparkles className="h-3 w-3 mr-1" />
+          Generate Template
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={handleAIImprove}
+          disabled={improving}
+          className="text-xs"
+        >
+          {improving ? (
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3 w-3 mr-1" />
+          )}
+          Improve Content
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => setShowImageGenerator(true)}
+          className="text-xs"
+        >
+          <ImageIcon className="h-3 w-3 mr-1" />
+          Generate Image
+        </Button>
+      </div>
+
       {/* Email Editor */}
       <div className="flex-1 bg-muted">
         <EmailEditor
           ref={emailEditorRef}
           onReady={onReady}
-          minHeight="calc(100vh - 200px)"
+          minHeight="calc(100vh - 250px)"
           options={{
             displayMode: 'email',
             features: {
@@ -244,6 +330,18 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
           </Card>
         </div>
       )}
+
+      {/* AI Modals */}
+      <AITemplateGeneratorModal
+        open={showTemplateGenerator}
+        onOpenChange={setShowTemplateGenerator}
+        onTemplateGenerated={handleTemplateGenerated}
+      />
+
+      <AIImageGeneratorModal
+        open={showImageGenerator}
+        onOpenChange={setShowImageGenerator}
+      />
     </div>
   );
 };
