@@ -4,13 +4,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Send } from "lucide-react";
+import { Plus, Send, Sparkles, Loader2, Calendar, Clock } from "lucide-react";
+
+interface FollowupEmail {
+  day: number;
+  subject: string;
+  previewText: string;
+  bodyHtml: string;
+  urgencyLevel: 'friendly' | 'helpful' | 'urgent' | 'final';
+}
 
 export default function SequenceManager() {
   const [sequences, setSequences] = useState<any[]>([]);
   const [testEmail, setTestEmail] = useState("");
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedEmails, setGeneratedEmails] = useState<FollowupEmail[]>([]);
+  const [aiForm, setAiForm] = useState({
+    customerName: '',
+    quoteNumber: '',
+    vehicleInfo: '',
+    productName: '',
+    totalPrice: '',
+    tone: 'installer' as 'installer' | 'luxury' | 'hype'
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,7 +98,247 @@ export default function SequenceManager() {
     }
   }
 
+  async function generateAIFollowups() {
+    if (!aiForm.customerName || !aiForm.quoteNumber) {
+      toast({
+        title: "Missing Info",
+        description: "Please enter customer name and quote number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedEmails([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-followup-sequence', {
+        body: {
+          customerName: aiForm.customerName,
+          customerEmail: testEmail || 'customer@example.com',
+          quoteNumber: aiForm.quoteNumber,
+          vehicleInfo: aiForm.vehicleInfo || undefined,
+          productName: aiForm.productName || undefined,
+          totalPrice: aiForm.totalPrice ? parseFloat(aiForm.totalPrice) : undefined,
+          tone: aiForm.tone,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.emails) {
+        setGeneratedEmails(data.emails);
+        toast({
+          title: "Sequence Generated",
+          description: `Created ${data.emails.length} follow-up emails`,
+        });
+      }
+    } catch (error) {
+      console.error('Error generating followups:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate follow-up sequence",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function saveSequence() {
+    if (generatedEmails.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('email_sequences')
+        .insert([{
+          name: `Follow-up: ${aiForm.customerName} - ${aiForm.quoteNumber}`,
+          description: `AI-generated follow-up sequence for ${aiForm.vehicleInfo || 'vehicle wrap'} quote`,
+          emails: JSON.parse(JSON.stringify(generatedEmails)),
+          writing_tone: aiForm.tone,
+          is_active: false,
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sequence Saved",
+        description: "Follow-up sequence saved successfully",
+      });
+
+      setShowAIModal(false);
+      setGeneratedEmails([]);
+      setAiForm({
+        customerName: '',
+        quoteNumber: '',
+        vehicleInfo: '',
+        productName: '',
+        totalPrice: '',
+        tone: 'installer'
+      });
+      loadSequences();
+    } catch (error) {
+      console.error('Error saving sequence:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save sequence",
+        variant: "destructive",
+      });
+    }
+  }
+
+  const urgencyColors = {
+    friendly: 'bg-green-500/20 text-green-400 border-green-500/30',
+    helpful: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    urgent: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    final: 'bg-red-500/20 text-red-400 border-red-500/30',
+  };
+
   return (
+    <>
+      {/* AI Generation Modal */}
+      <Dialog open={showAIModal} onOpenChange={setShowAIModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-[#16161E] border-[rgba(255,255,255,0.06)]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              AI Follow-up Sequence Generator
+            </DialogTitle>
+            <DialogDescription>
+              Generate 4 unique follow-up emails with escalating urgency (Day 1, 3, 7, 14)
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Customer Name *</Label>
+                <Input
+                  value={aiForm.customerName}
+                  onChange={(e) => setAiForm({ ...aiForm, customerName: e.target.value })}
+                  placeholder="John Smith"
+                  className="bg-background"
+                />
+              </div>
+              <div>
+                <Label>Quote Number *</Label>
+                <Input
+                  value={aiForm.quoteNumber}
+                  onChange={(e) => setAiForm({ ...aiForm, quoteNumber: e.target.value })}
+                  placeholder="WPW-Q001234"
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Vehicle Info</Label>
+                <Input
+                  value={aiForm.vehicleInfo}
+                  onChange={(e) => setAiForm({ ...aiForm, vehicleInfo: e.target.value })}
+                  placeholder="2024 Ford F-150"
+                  className="bg-background"
+                />
+              </div>
+              <div>
+                <Label>Product</Label>
+                <Input
+                  value={aiForm.productName}
+                  onChange={(e) => setAiForm({ ...aiForm, productName: e.target.value })}
+                  placeholder="Full Color Change Wrap"
+                  className="bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Quote Total ($)</Label>
+                <Input
+                  type="number"
+                  value={aiForm.totalPrice}
+                  onChange={(e) => setAiForm({ ...aiForm, totalPrice: e.target.value })}
+                  placeholder="3500"
+                  className="bg-background"
+                />
+              </div>
+              <div>
+                <Label>Tone</Label>
+                <Select value={aiForm.tone} onValueChange={(v: any) => setAiForm({ ...aiForm, tone: v })}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="installer">Installer (Professional)</SelectItem>
+                    <SelectItem value="luxury">Luxury (Premium)</SelectItem>
+                    <SelectItem value="hype">Hype (Energetic)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Button
+              onClick={generateAIFollowups}
+              disabled={isGenerating}
+              className="w-full bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Sequence...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate Follow-up Sequence
+                </>
+              )}
+            </Button>
+
+            {/* Generated Emails Preview */}
+            {generatedEmails.length > 0 && (
+              <div className="space-y-4 mt-6">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Generated Follow-up Emails
+                </h3>
+                
+                {generatedEmails.map((email, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-[#101016] rounded-lg border border-[rgba(255,255,255,0.06)]"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        Day {email.day}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded border ${urgencyColors[email.urgencyLevel]}`}>
+                        {email.urgencyLevel}
+                      </span>
+                    </div>
+                    <h4 className="font-medium text-foreground mb-1">{email.subject}</h4>
+                    <p className="text-sm text-muted-foreground mb-2">{email.previewText}</p>
+                    <div 
+                      className="text-sm text-muted-foreground bg-background/50 p-3 rounded max-h-32 overflow-y-auto"
+                      dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
+                    />
+                  </div>
+                ))}
+
+                <Button
+                  onClick={saveSequence}
+                  className="w-full bg-gradient-to-r from-[#00AFFF] to-[#4EEAFF] text-white"
+                >
+                  Save Sequence
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
     <Card className="bg-[#16161E] border-[rgba(255,255,255,0.06)]">
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -87,10 +348,19 @@ export default function SequenceManager() {
               Manage automated email campaigns and customer follow-ups.
             </CardDescription>
           </div>
-          <Button className="bg-gradient-to-r from-[#00AFFF] to-[#4EEAFF] text-white">
-            <Plus size={16} className="mr-2" />
-            New Sequence
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowAIModal(true)}
+              className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white"
+            >
+              <Sparkles size={16} className="mr-2" />
+              AI Generate
+            </Button>
+            <Button className="bg-gradient-to-r from-[#00AFFF] to-[#4EEAFF] text-white">
+              <Plus size={16} className="mr-2" />
+              New Sequence
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -152,5 +422,6 @@ export default function SequenceManager() {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
