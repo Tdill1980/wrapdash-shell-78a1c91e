@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Mail, Palette, PenTool, Settings2, Upload } from "lucide-react";
+import { Mail, Palette, PenTool, Settings2, Upload, LayoutTemplate } from "lucide-react";
 import SequenceManager from "@/components/mightymail/SequenceManager";
 import BrandingManager from "@/components/mightymail/BrandingManager";
 import CSVUploader from "@/components/mightymail/CSVUploader";
@@ -33,9 +33,13 @@ export default function MightyMailAdmin() {
       </div>
 
       <Tabs defaultValue="quotes" className="w-full">
-        <TabsList className="grid grid-cols-7 w-full bg-[#16161E]">
+        <TabsList className="grid grid-cols-8 w-full bg-[#16161E]">
           <TabsTrigger value="quotes" onClick={() => navigate("/admin/mightymail/quotes")}>
             <Mail size={16} className="mr-2" /> Quotes
+          </TabsTrigger>
+
+          <TabsTrigger value="templates" onClick={() => navigate("/admin/mightymail/templates")}>
+            <LayoutTemplate size={16} className="mr-2" /> Templates
           </TabsTrigger>
 
           <TabsTrigger value="performance">

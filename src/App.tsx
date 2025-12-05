@@ -43,6 +43,8 @@ import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGen
 import { AppLayout } from "./layouts/AppLayout";
 import MightyChat from "./pages/MightyChat";
 import PortfolioUpload from "./pages/PortfolioUpload";
+import MightyMailTemplates from "./pages/MightyMailTemplates";
+import MightyMailTemplateEditor from "./pages/MightyMailTemplateEditor";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +95,9 @@ const App = () => (
             <Route path="/admin/mightymail" element={<ProtectedRoute><MightyMailAdmin /></ProtectedRoute>} />
             <Route path="/admin/mightymail/quotes" element={<ProtectedRoute><MightyMailQuotes /></ProtectedRoute>} />
             <Route path="/admin/mightymail/performance" element={<ProtectedRoute><MightyMailPerformance /></ProtectedRoute>} />
+            <Route path="/admin/mightymail/templates" element={<ProtectedRoute><MightyMailTemplates /></ProtectedRoute>} />
+            <Route path="/admin/mightymail/templates/new" element={<ProtectedRoute><MightyMailTemplateEditor /></ProtectedRoute>} />
+            <Route path="/admin/mightymail/templates/:templateId" element={<ProtectedRoute><MightyMailTemplateEditor /></ProtectedRoute>} />
             <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
             <Route path="/admin/pricing" element={<ProtectedRoute><ProductPricingAdmin /></ProtectedRoute>} />
             <Route path="/admin/products" element={<ProtectedRoute><ProductAdmin /></ProtectedRoute>} />
