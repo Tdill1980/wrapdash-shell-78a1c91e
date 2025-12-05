@@ -1,5 +1,14 @@
 project_id = "wzwqhfbmymrengjqikjl"
 
+[functions.ai-generate-template]
+verify_jwt = false
+
+[functions.ai-improve-email-content]
+verify_jwt = false
+
+[functions.ai-generate-email-image]
+verify_jwt = false
+
 [functions.analyze-vinyl-swatch]
 verify_jwt = false
 
