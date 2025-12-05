@@ -1273,6 +1273,56 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          design_json: Json
+          html: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          design_json?: Json
+          html?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          design_json?: Json
+          html?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_tracking: {
         Row: {
           clicked_at: string | null
