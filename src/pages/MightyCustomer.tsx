@@ -17,7 +17,8 @@ import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getVehicleMakes, getVehicleModels, getVehicleYears } from "@/lib/vehicleSqft";
+import { VehicleSelectorV2 } from "@/components/VehicleSelectorV2";
+import { VehicleSQFTOptions } from "@/hooks/useVehicleDimensions";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -70,11 +71,8 @@ export default function MightyCustomer() {
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
   
-  // Cascading dropdown state
-  const [availableMakes] = useState<string[]>(getVehicleMakes());
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [availableYears, setAvailableYears] = useState<string[]>([]);
-  const [customYear, setCustomYear] = useState(false);
+  // Supabase-powered SQFT options from VehicleSelectorV2
+  const [dbSqftOptions, setDbSqftOptions] = useState<VehicleSQFTOptions | null>(null);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -88,7 +86,6 @@ export default function MightyCustomer() {
   const {
     sqft,
     setSqft,
-    sqftOptions,
     panelCosts,
     materialCost,
     laborCost,
@@ -106,44 +103,34 @@ export default function MightyCustomer() {
     wrapType === 'partial' ? selectedPanels : null
   );
 
-  // Track vehicle match status
+  // Track vehicle match status - now driven by Supabase lookup
   useEffect(() => {
-    if (sqftOptions && vehicle) {
+    if (dbSqftOptions && vehicle) {
       setVehicleMatchFound(true);
       setIsManualSqft(false);
-    } else if (vehicle && !sqftOptions) {
+    } else if (vehicle && !dbSqftOptions) {
       setVehicleMatchFound(false);
     }
-  }, [sqftOptions, vehicle]);
+  }, [dbSqftOptions, vehicle]);
 
-  // Update available models when make changes
-  useEffect(() => {
-    if (customerData.vehicleMake) {
-      const models = getVehicleModels(customerData.vehicleMake);
-      setAvailableModels(models);
-      // Reset model and year if make changed and model not in list
-      if (!models.some(m => m.toLowerCase() === customerData.vehicleModel.toLowerCase())) {
-        setCustomerData(prev => ({ ...prev, vehicleModel: '', vehicleYear: '' }));
-        setAvailableYears([]);
+  // Handle SQFT options from VehicleSelectorV2 (Supabase-powered)
+  const handleSQFTOptionsChange = (options: VehicleSQFTOptions | null) => {
+    setDbSqftOptions(options);
+    if (options && !isManualSqft) {
+      // Auto-set SQFT based on wrap type and roof selection
+      if (wrapType === 'full') {
+        setSqft(includeRoof ? options.withRoof : options.withoutRoof);
+      } else {
+        // Partial wrap - calculate from selected panels
+        let total = 0;
+        if (selectedPanels.sides) total += options.panels.sides;
+        if (selectedPanels.back) total += options.panels.back;
+        if (selectedPanels.hood) total += options.panels.hood;
+        if (selectedPanels.roof) total += options.panels.roof;
+        setSqft(total);
       }
-    } else {
-      setAvailableModels([]);
-      setAvailableYears([]);
     }
-  }, [customerData.vehicleMake]);
-
-  // Update available years when model changes
-  useEffect(() => {
-    if (customerData.vehicleMake && customerData.vehicleModel) {
-      const years = getVehicleYears(customerData.vehicleMake, customerData.vehicleModel);
-      setAvailableYears(years);
-      // Reset year if model changed and year not in list
-      if (years.length > 0 && !years.includes(customerData.vehicleYear)) {
-        setCustomerData(prev => ({ ...prev, vehicleYear: '' }));
-      }
-      setCustomYear(false);
-    }
-  }, [customerData.vehicleMake, customerData.vehicleModel]);
+  };
 
   // Custom setSqft wrapper to track manual entries
   const handleSqftChange = (value: number) => {
@@ -323,7 +310,7 @@ export default function MightyCustomer() {
           wrapType: wrapType,
           includeRoof: includeRoof,
           selectedPanels: wrapType === 'partial' ? selectedPanels : null,
-          sqftOptions: sqftOptions
+          sqftOptions: dbSqftOptions
         }),
         product_name: selectedProduct.product_name,
         sqft: sqft,
@@ -557,124 +544,24 @@ export default function MightyCustomer() {
           <div className="space-y-4 pt-4 border-t">
             <Label className="text-lg font-semibold">Vehicle Information</Label>
             
-            {/* Vehicle Lookup Status */}
-            {customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel && (
-              <div className={`p-3 rounded-lg border ${
-                sqftOptions 
-                  ? 'bg-green-500/10 border-green-500/50 text-green-400' 
-                  : 'bg-amber-500/10 border-amber-500/50 text-amber-400'
-              }`}>
-                {sqftOptions ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    Vehicle found: {customerData.vehicleYear} {customerData.vehicleMake} {customerData.vehicleModel}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    Vehicle not found in database. Try exact spelling (e.g., "Tahoe" not "tahoe")
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Vehicle Make Dropdown */}
-              <div className="space-y-2">
-                <Label>Vehicle Make</Label>
-                <Select
-                  value={customerData.vehicleMake}
-                  onValueChange={(value) => {
-                    console.log('Make selected:', value);
-                    setCustomerData(prev => ({ ...prev, vehicleMake: value, vehicleModel: '', vehicleYear: '' }));
-                    setCustomYear(false);
-                  }}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Select Make" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border border-border max-h-60">
-                    {availableMakes.map((make) => (
-                      <SelectItem key={make} value={make}>{make}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Vehicle Model Dropdown */}
-              <div className="space-y-2">
-                <Label>Vehicle Model</Label>
-                <Select
-                  value={customerData.vehicleModel}
-                  onValueChange={(value) => {
-                    console.log('Model selected:', value);
-                    setCustomerData(prev => ({ ...prev, vehicleModel: value, vehicleYear: '' }));
-                    setCustomYear(false);
-                  }}
-                  disabled={!customerData.vehicleMake}
-                >
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder={customerData.vehicleMake ? "Select Model" : "Select Make first"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border border-border max-h-60">
-                    {availableModels.map((model) => (
-                      <SelectItem key={model} value={model}>{model}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Vehicle Year Dropdown with Custom Option */}
-              <div className="space-y-2">
-                <Label>Vehicle Year</Label>
-                {!customYear ? (
-                  <Select
-                    value={customerData.vehicleYear}
-                    onValueChange={(value) => {
-                      if (value === 'custom') {
-                        setCustomYear(true);
-                        setCustomerData(prev => ({ ...prev, vehicleYear: '' }));
-                      } else {
-                        console.log('Year selected:', value);
-                        setCustomerData(prev => ({ ...prev, vehicleYear: value }));
-                      }
-                    }}
-                    disabled={!customerData.vehicleModel}
-                  >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder={customerData.vehicleModel ? "Select Year" : "Select Model first"} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border border-border max-h-60">
-                      {availableYears.map((year) => (
-                        <SelectItem key={year} value={year}>{year}</SelectItem>
-                      ))}
-                      <SelectItem value="custom">Other Year...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      type="text"
-                      placeholder="Enter year (e.g., 2024)"
-                      value={customerData.vehicleYear}
-                      onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }))}
-                      className="flex-1"
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setCustomYear(false)}
-                      className="shrink-0"
-                    >
-                      Back
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Supabase-powered Vehicle Selector V2 */}
+            <VehicleSelectorV2
+              value={{
+                make: customerData.vehicleMake,
+                model: customerData.vehicleModel,
+                year: customerData.vehicleYear,
+              }}
+              onChange={(v) => setCustomerData(prev => ({
+                ...prev,
+                vehicleMake: v.make,
+                vehicleModel: v.model,
+                vehicleYear: v.year,
+              }))}
+              onSQFTOptionsChange={handleSQFTOptionsChange}
+            />
 
             {/* Wrap Type Selection */}
-            {sqftOptions && (
+            {dbSqftOptions && (
               <div className="space-y-4">
                 {/* Show Panel Visualization Button */}
                 <div className="flex justify-end">
@@ -740,7 +627,7 @@ export default function MightyCustomer() {
                       >
                         <div className="text-sm font-semibold text-foreground">No Roof Included</div>
                         <div className="text-2xl font-bold text-primary">
-                          {sqftOptions.withoutRoof} sq. ft.
+                          {dbSqftOptions.withoutRoof} sq. ft.
                         </div>
                       </button>
                       
@@ -755,10 +642,10 @@ export default function MightyCustomer() {
                       >
                         <div className="text-sm font-semibold text-foreground">Roof Included</div>
                         <div className="text-2xl font-bold text-primary">
-                          {sqftOptions.withRoof} sq. ft.
+                          {dbSqftOptions.withRoof} sq. ft.
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          +{sqftOptions.roofOnly} sq. ft. roof
+                          +{dbSqftOptions.roofOnly} sq. ft. roof
                         </div>
                       </button>
                     </div>
@@ -780,9 +667,9 @@ export default function MightyCustomer() {
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
-                          <div className="text-sm font-semibold text-foreground">Both Sides</div>
+                        <div className="text-sm font-semibold text-foreground">Both Sides</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.sides} sq. ft.
+                            {dbSqftOptions.panels.sides} sq. ft.
                           </div>
                           {panelCosts.sides > 0 && (
                             <div className="text-xs text-muted-foreground mt-1">
@@ -800,9 +687,9 @@ export default function MightyCustomer() {
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
-                          <div className="text-sm font-semibold text-foreground">Back</div>
+                        <div className="text-sm font-semibold text-foreground">Back</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.back} sq. ft.
+                            {dbSqftOptions.panels.back} sq. ft.
                           </div>
                           {panelCosts.back > 0 && (
                             <div className="text-xs text-muted-foreground mt-1">
@@ -820,9 +707,9 @@ export default function MightyCustomer() {
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
-                          <div className="text-sm font-semibold text-foreground">Hood</div>
+                        <div className="text-sm font-semibold text-foreground">Hood</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.hood} sq. ft.
+                            {dbSqftOptions.panels.hood} sq. ft.
                           </div>
                           {panelCosts.hood > 0 && (
                             <div className="text-xs text-muted-foreground mt-1">
@@ -840,9 +727,9 @@ export default function MightyCustomer() {
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
-                          <div className="text-sm font-semibold text-foreground">Roof</div>
+                        <div className="text-sm font-semibold text-foreground">Roof</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.roof} sq. ft.
+                            {dbSqftOptions.panels.roof} sq. ft.
                           </div>
                           {panelCosts.roof > 0 && (
                             <div className="text-xs text-muted-foreground mt-1">
@@ -864,7 +751,7 @@ export default function MightyCustomer() {
                         >
                           <div className="text-sm font-semibold text-foreground">Both Sides</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.sides} sq. ft.
+                            {dbSqftOptions.panels.sides} sq. ft.
                           </div>
                         </button>
 
@@ -879,7 +766,7 @@ export default function MightyCustomer() {
                         >
                           <div className="text-sm font-semibold text-foreground">Back</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.back} sq. ft.
+                            {dbSqftOptions.panels.back} sq. ft.
                           </div>
                         </button>
 
@@ -894,7 +781,7 @@ export default function MightyCustomer() {
                         >
                           <div className="text-sm font-semibold text-foreground">Hood</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.hood} sq. ft.
+                            {dbSqftOptions.panels.hood} sq. ft.
                           </div>
                         </button>
 
@@ -909,7 +796,7 @@ export default function MightyCustomer() {
                         >
                           <div className="text-sm font-semibold text-foreground">Roof</div>
                           <div className="text-lg font-bold text-primary">
-                            {sqftOptions.panels.roof} sq. ft.
+                            {dbSqftOptions.panels.roof} sq. ft.
                           </div>
                         </button>
                       </div>
@@ -927,7 +814,7 @@ export default function MightyCustomer() {
               </div>
             )}
             
-            {vehicle && !sqftOptions && (
+            {vehicle && !dbSqftOptions && (
               <div className="flex items-center gap-2 p-3 bg-orange-950/30 border border-orange-500/30 rounded-lg text-orange-200 text-sm">
                 <AlertCircle className="h-4 w-4" />
                 <span>Vehicle not in database - please enter square footage manually below</span>
@@ -959,7 +846,7 @@ export default function MightyCustomer() {
                           ? 'text-purple-300'
                           : 'text-blue-300'
                     }`}>
-                      {sqftOptions 
+                    {dbSqftOptions 
                         ? wrapType === 'full'
                           ? (includeRoof ? "Total SQFT (Roof Included)" : "Total SQFT (No Roof)")
                           : "Total SQFT (Selected Panels)"
@@ -1269,10 +1156,10 @@ export default function MightyCustomer() {
         />
 
         {/* Panel Visualization Modal */}
-        {showPanelVisualization && vehicle && sqftOptions && (
+        {showPanelVisualization && vehicle && dbSqftOptions && (
           <PanelVisualization
             vehicle={vehicle}
-            sqftOptions={sqftOptions}
+            sqftOptions={dbSqftOptions}
             selectedPanels={selectedPanels}
             onPanelClick={(panel) => {
               setSelectedPanels(prev => ({ ...prev, [panel]: !prev[panel] }));
