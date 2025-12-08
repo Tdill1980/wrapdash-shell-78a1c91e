@@ -276,6 +276,9 @@ serve(async (req) => {
         updatedTimeline[updatedCustomerStage] = new Date().toISOString();
       }
       
+      // Extract order total for revenue tracking
+      const orderTotal = parseFloat(payload.total || '0');
+      
       // Update existing order
       await supabase
         .from('shopflow_orders')
@@ -285,11 +288,12 @@ serve(async (req) => {
           timeline: updatedTimeline,
           files: updatedFiles,
           customer_email: customerEmail,
-        vehicle_info: orderInfo,
+          vehicle_info: orderInfo,
           affiliate_ref_code: affiliateRefCode,
           product_image_url: productImageUrl,
           woo_order_id: internalId ? parseInt(internalId) : null,
           woo_order_number: displayNumber ? parseInt(displayNumber) : null,
+          order_total: orderTotal, // Capture order total on update
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
@@ -365,6 +369,10 @@ serve(async (req) => {
       }
     }
     
+    // Extract order total from WooCommerce payload
+    const orderTotal = parseFloat(payload.total || '0');
+    console.log(`💰 Order total: $${orderTotal}`);
+
     // Create new ShopFlow order
     const { data: newOrder, error: insertError } = await supabase
       .from('shopflow_orders')
@@ -387,6 +395,7 @@ serve(async (req) => {
         organization_id: null, // WPW production order (main org)
         source_organization_id: sourceOrgId, // Track reseller if applicable
         order_source: sourceOrgId ? 'wpw_reseller' : 'woo_webhook',
+        order_total: orderTotal, // Capture WooCommerce order total for revenue tracking
       })
       .select()
       .single();
