@@ -66,27 +66,27 @@ export interface TradeDNAData {
 
 export const useTradeDNA = () => {
   const { toast } = useToast();
-  const { organization } = useOrganization();
+  const { organizationId, organizationSettings } = useOrganization();
   const [tradeDNA, setTradeDNA] = useState<TradeDNAData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
-    if (organization?.id) {
+    if (organizationId) {
       fetchTradeDNA();
     }
-  }, [organization?.id]);
+  }, [organizationId]);
 
   const fetchTradeDNA = async () => {
-    if (!organization?.id) return;
+    if (!organizationId) return;
     
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('organization_tradedna')
         .select('*')
-        .eq('organization_id', organization.id)
+        .eq('organization_id', organizationId)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -108,7 +108,7 @@ export const useTradeDNA = () => {
   };
 
   const saveTradeDNA = async (data: Partial<TradeDNAData>) => {
-    if (!organization?.id) {
+    if (!organizationId) {
       toast({ variant: 'destructive', title: 'No organization', description: 'Please select an organization first' });
       return null;
     }
@@ -117,8 +117,11 @@ export const useTradeDNA = () => {
     try {
       const payload = {
         ...data,
-        organization_id: organization.id,
-        updated_at: new Date().toISOString()
+        organization_id: organizationId,
+        updated_at: new Date().toISOString(),
+        // Cast nested objects to JSON-compatible format
+        scraped_content: data.scraped_content as any,
+        tradedna_profile: data.tradedna_profile as any
       };
 
       if (tradeDNA?.id) {
@@ -141,7 +144,7 @@ export const useTradeDNA = () => {
       } else {
         const { data: created, error } = await supabase
           .from('organization_tradedna')
-          .insert(payload)
+          .insert([payload])
           .select()
           .single();
 
@@ -170,7 +173,7 @@ export const useTradeDNA = () => {
     sample_emails?: string;
     additional_content?: string;
   }) => {
-    if (!organization?.id) {
+    if (!organizationId) {
       toast({ variant: 'destructive', title: 'No organization', description: 'Please select an organization first' });
       return null;
     }
@@ -179,8 +182,8 @@ export const useTradeDNA = () => {
     try {
       const { data, error } = await supabase.functions.invoke('analyze-brand-voice', {
         body: {
-          organization_id: organization.id,
-          business_name: tradeDNA?.business_name || organization.name,
+          organization_id: organizationId,
+          business_name: tradeDNA?.business_name || organizationSettings.name,
           content
         }
       });

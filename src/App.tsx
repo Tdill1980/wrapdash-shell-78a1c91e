@@ -45,6 +45,8 @@ import MightyChat from "./pages/MightyChat";
 import PortfolioUpload from "./pages/PortfolioUpload";
 import MightyMailTemplates from "./pages/MightyMailTemplates";
 import MightyMailTemplateEditor from "./pages/MightyMailTemplateEditor";
+import TradeDNA from "./pages/TradeDNA";
+import TradeDNAEdit from "./pages/TradeDNAEdit";
 
 const queryClient = new QueryClient();
 
@@ -112,7 +114,8 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-            
+            <Route path="/tradedna" element={<ProtectedRoute><TradeDNA /></ProtectedRoute>} />
+            <Route path="/tradedna/edit" element={<ProtectedRoute><TradeDNAEdit /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

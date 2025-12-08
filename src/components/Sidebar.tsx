@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Car,
   Inbox,
+  Dna,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
@@ -198,6 +199,18 @@ const navigationItems = [
   { name: "Product Admin", path: "/admin/products", icon: Settings },
   { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
   { name: "Vehicle Admin", path: "/admin/vehicles", icon: Car },
+  { 
+    name: "TradeDNA", 
+    path: "/tradedna", 
+    icon: Dna,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Trade</span>
+        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">DNA</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
 ];
 
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
