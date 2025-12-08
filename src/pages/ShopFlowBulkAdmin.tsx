@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { RefreshCw, Zap, Search, Package } from "lucide-react";
+import { RefreshCw, Zap, Search, Package, DollarSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -27,6 +27,7 @@ export default function ShopFlowBulkAdmin() {
   const [showTrackingDialog, setShowTrackingDialog] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
+  const [isBackfilling, setIsBackfilling] = useState(false);
 
   // Fetch all orders
   const { data: orders, isLoading, refetch } = useQuery({
@@ -214,6 +215,33 @@ export default function ShopFlowBulkAdmin() {
     }
   };
 
+  const handleBackfillOrderTotals = async () => {
+    setIsBackfilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-order-totals", {
+        body: {},
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Backfill complete",
+        description: `Updated ${data.updated} orders, ${data.failed} failed.`,
+      });
+
+      await refetch();
+    } catch (error: any) {
+      console.error("Backfill error:", error);
+      toast({
+        title: "Backfill failed",
+        description: error.message || "Failed to backfill order totals",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
   return (
     <MainLayout userName="Admin">
       <div className="space-y-6">
@@ -262,6 +290,20 @@ export default function ShopFlowBulkAdmin() {
               >
                 <Zap className="w-4 h-4" />
                 Mark In Production
+              </Button>
+              <Button
+                onClick={handleBackfillOrderTotals}
+                disabled={isBackfilling}
+                size="sm"
+                variant="outline"
+                className="gap-2"
+              >
+                {isBackfilling ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <DollarSign className="w-4 h-4" />
+                )}
+                Backfill Order Totals
               </Button>
               <Button
                 onClick={handleMarkShipped}
