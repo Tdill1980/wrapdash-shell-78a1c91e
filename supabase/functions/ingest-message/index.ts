@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface IngestMessagePayload {
   organization_id: string;
-  platform: 'instagram' | 'website' | 'email' | 'sms';
+  platform: 'instagram' | 'website' | 'email' | 'sms' | 'mightychat';
   sender_id?: string;
   sender_username?: string;
   sender_email?: string;
@@ -17,6 +17,15 @@ interface IngestMessagePayload {
   message_text: string;
   metadata?: Record<string, any>;
 }
+
+// Channel-specific tone adjustments
+const channelTone: Record<string, string> = {
+  instagram: "Fast, short, casual. Use emojis sparingly.",
+  website: "Friendly, clear, helpful. Professional but approachable.",
+  mightychat: "Professional yet warm. Concise responses.",
+  sms: "Very short and direct. No fluff.",
+  email: "Professional, complete sentences. Warm closing."
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -76,6 +85,12 @@ serve(async (req) => {
       if (existingContact) {
         contact = existingContact;
         console.log('[ingest-message] Found existing contact:', contact.id);
+        
+        // Update last contacted
+        await supabase
+          .from('contacts')
+          .update({ last_contacted_at: new Date().toISOString() })
+          .eq('id', contact.id);
       } else {
         // Create new contact
         const { data: newContact, error: contactError } = await supabase
@@ -110,14 +125,38 @@ serve(async (req) => {
       }
     }
 
-    // 4. Classify intent using AI
+    // 4. Load AI memory for continuation (Smart Quote Memory)
+    let memory: Record<string, any> = {};
+    if (contact) {
+      const { data: existingMemory } = await supabase
+        .from('workspace_ai_memory')
+        .select('*')
+        .eq('organization_id', body.organization_id)
+        .eq('contact_id', contact.id)
+        .maybeSingle();
+      
+      if (existingMemory) {
+        memory = existingMemory;
+        console.log('[ingest-message] Loaded memory:', memory.last_intent);
+      }
+    }
+
+    // 5. Classify intent using AI
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    let intent: { type: string; confidence: number; extractedData: { vehicle?: { year?: string; make?: string; model?: string }; wrapType?: string; budget?: string; urgency?: string } } = { type: 'general', confidence: 0, extractedData: {} };
+    let intent: { 
+      type: string; 
+      confidence: number; 
+      extractedData: { 
+        vehicle?: { year?: string; make?: string; model?: string }; 
+        wrapType?: string; 
+        budget?: string; 
+        urgency?: string 
+      };
+      continued?: boolean;
+    } = { type: 'general', confidence: 0, extractedData: {} };
 
     if (lovableApiKey) {
       try {
-        const brandVoicePrompt = generateBrandVoicePrompt(tradeDNA);
-        
         const classifyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -153,8 +192,7 @@ Return JSON only:
                 role: 'user',
                 content: body.message_text
               }
-            ],
-            temperature: 0.3
+            ]
           })
         });
 
@@ -172,22 +210,38 @@ Return JSON only:
       }
     }
 
+    // 6. Apply Smart Continuation Logic (D - Quote Mode Smart Memory)
+    if (memory?.last_intent === 'quote' && intent.type === 'general' && intent.confidence < 0.8) {
+      intent.type = 'quote';
+      intent.continued = true;
+      console.log('[ingest-message] Continuing quote flow from memory');
+    }
+    
+    // Merge extracted data with memory
+    if (memory?.last_vehicle && !intent.extractedData?.vehicle?.make) {
+      intent.extractedData.vehicle = memory.last_vehicle;
+    }
+    if (memory?.last_wrap_type && !intent.extractedData?.wrapType) {
+      intent.extractedData.wrapType = memory.last_wrap_type;
+    }
+
     // Update ingest log with intent
     await supabase
       .from('message_ingest_log')
       .update({ intent: intent.type, processed: true })
       .eq('id', ingestLog.id);
 
-    // 5. Generate AI response based on intent
+    // 7. Generate AI response based on intent with TradeDNA + Memory
     let aiReply = '';
     let nextAction = 'continue_conversation';
 
     if (lovableApiKey) {
       try {
         const brandVoicePrompt = generateBrandVoicePrompt(tradeDNA);
+        const tone = channelTone[body.platform] || channelTone.website;
         
         const responsePrompts: Record<string, string> = {
-          quote: `The customer wants a quote. Ask for their vehicle year/make/model if not provided. Be helpful and move toward creating a quote. Keep response short (1-2 sentences).`,
+          quote: `The customer wants a quote. ${intent.continued ? 'This is a continued conversation - use the memory data.' : ''} Ask for their vehicle year/make/model if not provided. Be helpful and move toward creating a quote. Keep response short (1-2 sentences).`,
           design: `The customer is interested in designs. Ask what style they're looking for or offer to show examples. Keep response short.`,
           support: `The customer needs support. Ask for their order number or name to look up their order. Be helpful.`,
           general: `The customer has a general inquiry. Be friendly and helpful, try to understand what they need.`
@@ -206,19 +260,28 @@ Return JSON only:
                 role: 'system',
                 content: `${brandVoicePrompt}
 
+CHANNEL TONE: ${tone}
+
+CONVERSATION MEMORY (what we know about this customer):
+${JSON.stringify(memory, null, 2)}
+
 ${responsePrompts[intent.type] || responsePrompts.general}
 
 Customer message: "${body.message_text}"
 Extracted data: ${JSON.stringify(intent.extractedData)}
 
-Respond in the brand's voice. Keep it conversational and short.`
+RULES:
+- Respond in the brand's voice
+- Keep it conversational and short (1-2 sentences max)
+- Ask only ONE question at a time
+- NEVER mention AI, scripts, or TradeDNA
+- If we have partial vehicle data in memory, continue from there`
               },
               {
                 role: 'user',
                 content: 'Generate a reply to the customer.'
               }
-            ],
-            temperature: 0.7
+            ]
           })
         });
 
@@ -232,11 +295,31 @@ Respond in the brand's voice. Keep it conversational and short.`
       }
     }
 
-    // 6. Determine next action based on intent and data
+    // 8. Save/Update AI Memory for continuation
+    if (contact) {
+      await supabase
+        .from('workspace_ai_memory')
+        .upsert({
+          organization_id: body.organization_id,
+          contact_id: contact.id,
+          last_intent: intent.type,
+          last_vehicle: intent.extractedData?.vehicle || memory?.last_vehicle || null,
+          last_wrap_type: intent.extractedData?.wrapType || memory?.last_wrap_type || null,
+          last_budget: intent.extractedData?.budget || memory?.last_budget || null,
+          ai_state: { ...memory?.ai_state, ...intent.extractedData },
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'organization_id,contact_id'
+        });
+      console.log('[ingest-message] Saved AI memory');
+    }
+
+    // 9. Determine next action based on intent and data
     if (intent.type === 'quote' && intent.extractedData?.vehicle?.make) {
       nextAction = 'create_quote_draft';
       
-      // Create AI action suggestion
+      // Create AI action suggestion for MCP
       await supabase.from('ai_actions').insert({
         organization_id: body.organization_id,
         action_type: 'create_quote',
@@ -244,7 +327,8 @@ Respond in the brand's voice. Keep it conversational and short.`
           contact_id: contact?.id,
           intent,
           message: body.message_text,
-          suggested_reply: aiReply
+          suggested_reply: aiReply,
+          vehicle: intent.extractedData.vehicle
         },
         priority: 'high'
       });
@@ -256,7 +340,7 @@ Respond in the brand's voice. Keep it conversational and short.`
       nextAction = 'track_order';
     }
 
-    // 7. Create/update conversation in MightyChat
+    // 10. Create/update conversation in MightyChat
     if (contact) {
       // Find or create conversation
       let { data: conversation } = await supabase
@@ -264,6 +348,7 @@ Respond in the brand's voice. Keep it conversational and short.`
         .select('*')
         .eq('contact_id', contact.id)
         .eq('channel', body.platform)
+        .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -277,7 +362,8 @@ Respond in the brand's voice. Keep it conversational and short.`
             channel: body.platform,
             subject: `${body.platform.toUpperCase()} Conversation`,
             status: 'open',
-            priority: intent.type === 'quote' ? 'high' : 'normal'
+            priority: intent.type === 'quote' ? 'high' : 'normal',
+            metadata: { intent: intent.type }
           })
           .select()
           .single();
@@ -293,7 +379,8 @@ Respond in the brand's voice. Keep it conversational and short.`
           content: body.message_text,
           sender_name: body.sender_username,
           sender_email: contactEmail,
-          sender_phone: contactPhone
+          sender_phone: contactPhone,
+          status: 'received'
         });
 
         // Update conversation
@@ -302,7 +389,8 @@ Respond in the brand's voice. Keep it conversational and short.`
           .update({
             last_message_at: new Date().toISOString(),
             unread_count: (conversation.unread_count || 0) + 1,
-            priority: intent.type === 'quote' ? 'high' : conversation.priority
+            priority: intent.type === 'quote' ? 'high' : conversation.priority,
+            metadata: { ...conversation.metadata, intent: intent.type }
           })
           .eq('id', conversation.id);
       }
@@ -314,7 +402,8 @@ Respond in the brand's voice. Keep it conversational and short.`
       contact_id: contact?.id,
       intent,
       reply: aiReply,
-      next_action: nextAction
+      next_action: nextAction,
+      memory_continued: intent.continued || false
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
