@@ -366,6 +366,50 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_actions: {
+        Row: {
+          action_payload: Json | null
+          action_type: string
+          created_at: string | null
+          id: string
+          organization_id: string | null
+          priority: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          action_payload?: Json | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          action_payload?: Json | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approveflow_3d: {
         Row: {
           created_at: string | null
@@ -659,6 +703,47 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_scripts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          script_json: Json
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          script_json?: Json
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          script_json?: Json
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_scripts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1520,6 +1605,98 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_generators: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          embed_code: string | null
+          fields: Json
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          qr_code_url: string | null
+          redirect_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          embed_code?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          qr_code_url?: string | null
+          redirect_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          embed_code?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          qr_code_url?: string | null
+          redirect_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_generators_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_sources: {
+        Row: {
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          source: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          source: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_sources_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       margin_settings: {
         Row: {
           created_at: string | null
@@ -1551,6 +1728,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "margin_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_ingest_log: {
+        Row: {
+          created_at: string | null
+          id: string
+          intent: string | null
+          message_text: string | null
+          organization_id: string | null
+          platform: string
+          processed: boolean | null
+          raw_payload: Json | null
+          sender_id: string | null
+          sender_username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          intent?: string | null
+          message_text?: string | null
+          organization_id?: string | null
+          platform: string
+          processed?: boolean | null
+          raw_payload?: Json | null
+          sender_id?: string | null
+          sender_username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          intent?: string | null
+          message_text?: string | null
+          organization_id?: string | null
+          platform?: string
+          processed?: boolean | null
+          raw_payload?: Json | null
+          sender_id?: string | null
+          sender_username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_ingest_log_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

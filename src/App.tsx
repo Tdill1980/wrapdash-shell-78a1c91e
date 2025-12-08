@@ -47,6 +47,9 @@ import MightyMailTemplates from "./pages/MightyMailTemplates";
 import MightyMailTemplateEditor from "./pages/MightyMailTemplateEditor";
 import TradeDNA from "./pages/TradeDNA";
 import TradeDNAEdit from "./pages/TradeDNAEdit";
+import ChatbotScripts from "./pages/ChatbotScripts";
+import LeadGeneratorPage from "./pages/LeadGenerator";
+import InstagramBot from "./pages/InstagramBot";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +119,9 @@ const App = () => (
             <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
             <Route path="/tradedna" element={<ProtectedRoute><TradeDNA /></ProtectedRoute>} />
             <Route path="/tradedna/edit" element={<ProtectedRoute><TradeDNAEdit /></ProtectedRoute>} />
+            <Route path="/tradedna/chatbot" element={<ProtectedRoute><ChatbotScripts /></ProtectedRoute>} />
+            <Route path="/lead-generator" element={<ProtectedRoute><LeadGeneratorPage /></ProtectedRoute>} />
+            <Route path="/instagram-bot" element={<ProtectedRoute><InstagramBot /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
