@@ -23,13 +23,16 @@ import {
   Phone,
   Plus,
   Eye,
-  Play
+  Play,
+  Wand2,
+  Loader2
 } from "lucide-react";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { AIDesignOpportunitiesWidget } from "@/components/orchestrator/AIDesignOpportunitiesWidget";
 
 interface Lead {
   id: string;
@@ -302,7 +305,8 @@ const Orchestrator = () => {
           </Card>
         )}
 
-        {/* Main Grid */}
+        {/* AI Design Opportunities - Design intent leads */}
+        <AIDesignOpportunitiesWidget leads={leads} organizationId={organizationId} />
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Leads Queue */}
           <Card>
