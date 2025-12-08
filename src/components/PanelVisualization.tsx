@@ -2,7 +2,13 @@ import { useState } from "react";
 import { X, Car } from "lucide-react";
 import { VehicleSQFTOptions } from "@/lib/vehicleSqft";
 import { getVehicleType, VehicleType } from "@/lib/vehicleTypeDetection";
-import { SedanSilhouette, SUVSilhouette, TruckSilhouette, VanSilhouette, TopDownView } from "@/components/vehicle-diagrams";
+import { 
+  TruckImageOverlay, 
+  SedanImageOverlay, 
+  SUVImageOverlay, 
+  VanImageOverlay,
+  TopDownViewPro 
+} from "@/components/vehicle-diagrams";
 import { PanelMeasurementsTable } from "@/components/vehicle-diagrams/PanelMeasurementsTable";
 
 interface PanelVisualizationProps {
@@ -44,8 +50,8 @@ export function PanelVisualization({
     setHoveredPanel(panel);
   };
 
-  // Get the appropriate silhouette component based on vehicle type
-  const renderSilhouette = () => {
+  // Get the appropriate image overlay component based on vehicle type
+  const renderVehicleImage = () => {
     const props = {
       selectedPanels,
       onPanelClick: handlePanelClick,
@@ -56,13 +62,13 @@ export function PanelVisualization({
 
     switch (vehicleType) {
       case 'suv':
-        return <SUVSilhouette {...props} />;
+        return <SUVImageOverlay {...props} />;
       case 'truck':
-        return <TruckSilhouette {...props} />;
+        return <TruckImageOverlay {...props} />;
       case 'van':
-        return <VanSilhouette {...props} />;
+        return <VanImageOverlay {...props} />;
       default:
-        return <SedanSilhouette {...props} />;
+        return <SedanImageOverlay {...props} />;
     }
   };
 
@@ -110,7 +116,7 @@ export function PanelVisualization({
             Side Profile View
           </div>
           <div className="bg-muted/20 rounded-lg p-4 border border-border">
-            {renderSilhouette()}
+            {renderVehicleImage()}
           </div>
           
           {/* Top-Down View */}
@@ -118,7 +124,7 @@ export function PanelVisualization({
             Top-Down View
           </div>
           <div className="bg-muted/20 rounded-lg p-4 border border-border flex justify-center">
-            <TopDownView
+            <TopDownViewPro
               vehicleType={vehicleType}
               selectedPanels={selectedPanels}
               onPanelClick={handlePanelClick}
