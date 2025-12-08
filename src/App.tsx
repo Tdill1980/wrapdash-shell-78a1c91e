@@ -120,10 +120,34 @@ const App = () => (
             <Route path="/admin/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
             <Route path="/tradedna" element={<ProtectedRoute><TradeDNA /></ProtectedRoute>} />
             <Route path="/tradedna/edit" element={<ProtectedRoute><TradeDNAEdit /></ProtectedRoute>} />
-            <Route path="/tradedna/chatbot" element={<ProtectedRoute><ChatbotScripts /></ProtectedRoute>} />
-            <Route path="/lead-generator" element={<ProtectedRoute><LeadGeneratorPage /></ProtectedRoute>} />
-            <Route path="/instagram-bot" element={<ProtectedRoute><InstagramBot /></ProtectedRoute>} />
-            <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
+            <Route path="/tradedna/chatbot" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ChatbotScripts />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/lead-generator" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <LeadGeneratorPage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/instagram-bot" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <InstagramBot />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/orchestrator" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Orchestrator />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
