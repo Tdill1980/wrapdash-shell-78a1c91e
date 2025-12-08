@@ -366,6 +366,50 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_actions: {
+        Row: {
+          action_payload: Json | null
+          action_type: string
+          created_at: string | null
+          id: string
+          organization_id: string | null
+          priority: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          action_payload?: Json | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          action_payload?: Json | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approveflow_3d: {
         Row: {
           created_at: string | null
@@ -444,6 +488,8 @@ export type Database = {
           file_url: string
           id: string
           project_id: string
+          sort_order: number | null
+          view_type: string | null
         }
         Insert: {
           created_at?: string | null
@@ -451,6 +497,8 @@ export type Database = {
           file_url: string
           id?: string
           project_id: string
+          sort_order?: number | null
+          view_type?: string | null
         }
         Update: {
           created_at?: string | null
@@ -458,6 +506,8 @@ export type Database = {
           file_url?: string
           id?: string
           project_id?: string
+          sort_order?: number | null
+          view_type?: string | null
         }
         Relationships: [
           {
@@ -564,6 +614,7 @@ export type Database = {
         Row: {
           color_info: Json | null
           created_at: string | null
+          current_version: number | null
           customer_email: string | null
           customer_id: string | null
           customer_name: string
@@ -581,6 +632,7 @@ export type Database = {
         Insert: {
           color_info?: Json | null
           created_at?: string | null
+          current_version?: number | null
           customer_email?: string | null
           customer_id?: string | null
           customer_name: string
@@ -598,6 +650,7 @@ export type Database = {
         Update: {
           color_info?: Json | null
           created_at?: string | null
+          current_version?: number | null
           customer_email?: string | null
           customer_id?: string | null
           customer_name?: string
@@ -659,6 +712,47 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_scripts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          script_json: Json
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          script_json?: Json
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          script_json?: Json
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_scripts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -735,8 +829,126 @@ export type Database = {
         }
         Relationships: []
       }
+      contacts: {
+        Row: {
+          company: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          last_contacted_at: string | null
+          metadata: Json | null
+          name: string
+          organization_id: string | null
+          phone: string | null
+          priority: string | null
+          source: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          metadata?: Json | null
+          name: string
+          organization_id?: string | null
+          phone?: string | null
+          priority?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_contacted_at?: string | null
+          metadata?: Json | null
+          name?: string
+          organization_id?: string | null
+          phone?: string | null
+          priority?: string | null
+          source?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          assigned_to: string | null
+          channel: string
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          metadata: Json | null
+          organization_id: string | null
+          priority: string | null
+          status: string | null
+          subject: string | null
+          unread_count: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          channel: string
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          priority?: string | null
+          status?: string | null
+          subject?: string | null
+          unread_count?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          channel?: string
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          priority?: string | null
+          status?: string | null
+          subject?: string | null
+          unread_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_hero_images: {
         Row: {
+          background_position_desktop: string | null
+          background_position_mobile: string | null
           created_at: string | null
           display_order: number | null
           id: string
@@ -748,6 +960,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          background_position_desktop?: string | null
+          background_position_mobile?: string | null
           created_at?: string | null
           display_order?: number | null
           id?: string
@@ -759,6 +973,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          background_position_desktop?: string | null
+          background_position_mobile?: string | null
           created_at?: string | null
           display_order?: number | null
           id?: string
@@ -959,6 +1175,33 @@ export type Database = {
           },
         ]
       }
+      email_bounces: {
+        Row: {
+          bounce_type: string
+          created_at: string
+          email: string
+          id: string
+          provider_data: Json | null
+          reason: string | null
+        }
+        Insert: {
+          bounce_type: string
+          created_at?: string
+          email: string
+          id?: string
+          provider_data?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          bounce_type?: string
+          created_at?: string
+          email?: string
+          id?: string
+          provider_data?: Json | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
       email_branding: {
         Row: {
           created_at: string | null
@@ -1101,6 +1344,69 @@ export type Database = {
           },
         ]
       }
+      email_sequence_enrollments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          customer_email: string
+          customer_name: string | null
+          emails_sent: number | null
+          enrolled_at: string
+          id: string
+          is_active: boolean | null
+          last_email_sent_at: string | null
+          quote_id: string | null
+          sequence_id: string | null
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          customer_email: string
+          customer_name?: string | null
+          emails_sent?: number | null
+          enrolled_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_email_sent_at?: string | null
+          quote_id?: string | null
+          sequence_id?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          customer_email?: string
+          customer_name?: string | null
+          emails_sent?: number | null
+          enrolled_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_email_sent_at?: string | null
+          quote_id?: string | null
+          sequence_id?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sequence_enrollments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sequence_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "email_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_sequences: {
         Row: {
           created_at: string | null
@@ -1144,6 +1450,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "email_sequences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          design_json: Json
+          html: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          design_json?: Json
+          html?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          design_json?: Json
+          html?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1202,6 +1558,333 @@ export type Database = {
           },
         ]
       }
+      email_unsubscribes: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          organization_id: string | null
+          reason: string | null
+          unsubscribed_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          organization_id?: string | null
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          organization_id?: string | null
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_unsubscribes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      launch_signups: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
+      lead_generators: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          embed_code: string | null
+          fields: Json
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          qr_code_url: string | null
+          redirect_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          embed_code?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          qr_code_url?: string | null
+          redirect_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          embed_code?: string | null
+          fields?: Json
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          qr_code_url?: string | null
+          redirect_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_generators_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_sources: {
+        Row: {
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          source: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          source: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_sources_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      margin_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          margin_percentage: number
+          organization_id: string | null
+          scope: string
+          scope_value: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          margin_percentage?: number
+          organization_id?: string | null
+          scope: string
+          scope_value?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          margin_percentage?: number
+          organization_id?: string | null
+          scope?: string
+          scope_value?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "margin_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_ingest_log: {
+        Row: {
+          created_at: string | null
+          id: string
+          intent: string | null
+          message_text: string | null
+          organization_id: string | null
+          platform: string
+          processed: boolean | null
+          raw_payload: Json | null
+          sender_id: string | null
+          sender_username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          intent?: string | null
+          message_text?: string | null
+          organization_id?: string | null
+          platform: string
+          processed?: boolean | null
+          raw_payload?: Json | null
+          sender_id?: string | null
+          sender_username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          intent?: string | null
+          message_text?: string | null
+          organization_id?: string | null
+          platform?: string
+          processed?: boolean | null
+          raw_payload?: Json | null
+          sender_id?: string | null
+          sender_username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_ingest_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          channel: string
+          content: string
+          conversation_id: string | null
+          created_at: string | null
+          direction: string
+          id: string
+          metadata: Json | null
+          sender_email: string | null
+          sender_name: string | null
+          sender_phone: string | null
+          status: string | null
+        }
+        Insert: {
+          channel: string
+          content: string
+          conversation_id?: string | null
+          created_at?: string | null
+          direction: string
+          id?: string
+          metadata?: Json | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+        }
+        Update: {
+          channel?: string
+          content?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          direction?: string
+          id?: string
+          metadata?: Json | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_phone?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orchestrator_insights: {
+        Row: {
+          context: Json | null
+          created_at: string | null
+          id: string
+          insight_text: string
+          insight_type: string
+          organization_id: string | null
+          priority: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          insight_text: string
+          insight_type: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          insight_text?: string
+          insight_type?: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orchestrator_insights_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string | null
@@ -1232,6 +1915,71 @@ export type Database = {
             foreignKeyName: "organization_members_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_tradedna: {
+        Row: {
+          business_category: string | null
+          business_name: string | null
+          created_at: string | null
+          facebook_page: string | null
+          id: string
+          instagram_handle: string | null
+          last_analyzed_at: string | null
+          organization_id: string | null
+          scraped_content: Json | null
+          tagline: string | null
+          tiktok_handle: string | null
+          tradedna_profile: Json | null
+          updated_at: string | null
+          version: number | null
+          website_url: string | null
+          youtube_channel: string | null
+        }
+        Insert: {
+          business_category?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          last_analyzed_at?: string | null
+          organization_id?: string | null
+          scraped_content?: Json | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          tradedna_profile?: Json | null
+          updated_at?: string | null
+          version?: number | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Update: {
+          business_category?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          last_analyzed_at?: string | null
+          organization_id?: string | null
+          scraped_content?: Json | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          tradedna_profile?: Json | null
+          updated_at?: string | null
+          version?: number | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_tradedna_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1280,6 +2028,122 @@ export type Database = {
             columns: ["affiliate_founder_id"]
             isOneToOne: false
             referencedRelation: "affiliate_founders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_jobs: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          finish: string | null
+          id: string
+          job_price: number | null
+          order_number: string | null
+          organization_id: string | null
+          shopflow_order_id: string | null
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          upload_token: string | null
+          user_id: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_name?: string | null
+          finish?: string | null
+          id?: string
+          job_price?: number | null
+          order_number?: string | null
+          organization_id?: string | null
+          shopflow_order_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          upload_token?: string | null
+          user_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_name?: string | null
+          finish?: string | null
+          id?: string
+          job_price?: number | null
+          order_number?: string | null
+          organization_id?: string | null
+          shopflow_order_id?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          upload_token?: string | null
+          user_id?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_jobs_shopflow_order_id_fkey"
+            columns: ["shopflow_order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_media: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          display_order: number | null
+          file_type: string | null
+          id: string
+          job_id: string
+          media_type: string | null
+          storage_path: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          file_type?: string | null
+          id?: string
+          job_id: string
+          media_type?: string | null
+          storage_path: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          file_type?: string | null
+          id?: string
+          job_id?: string
+          media_type?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_media_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -1346,6 +2210,66 @@ export type Database = {
           },
         ]
       }
+      quote_line_items: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          line_total: number
+          notes: string | null
+          panel_selections: Json | null
+          product_id: string | null
+          product_name: string
+          quantity: number | null
+          quote_id: string
+          sqft: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          line_total: number
+          notes?: string | null
+          panel_selections?: Json | null
+          product_id?: string | null
+          product_name: string
+          quantity?: number | null
+          quote_id: string
+          sqft?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          line_total?: number
+          notes?: string | null
+          panel_selections?: Json | null
+          product_id?: string | null
+          product_name?: string
+          quantity?: number | null
+          quote_id?: string
+          sqft?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_settings: {
         Row: {
           id: string
@@ -1369,6 +2293,14 @@ export type Database = {
       }
       quotes: {
         Row: {
+          ai_generated: boolean | null
+          ai_generated_at: string | null
+          ai_high_price: number | null
+          ai_labor_hours: number | null
+          ai_low_price: number | null
+          ai_message: string | null
+          ai_sqft_estimate: number | null
+          ai_vehicle_class: string | null
           auto_retarget: boolean | null
           click_count: number | null
           conversion_date: string | null
@@ -1379,12 +2311,18 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone: string | null
+          customer_price: number | null
           email_design: string | null
           email_tone: string | null
           engagement_level: string | null
           expires_at: string | null
           follow_up_count: number | null
           id: string
+          installation_cost: number | null
+          installation_description: string | null
+          installation_hours: number | null
+          installation_included: boolean | null
+          installation_rate: number | null
           labor_cost: number | null
           last_activity: string | null
           last_follow_up_sent: string | null
@@ -1394,6 +2332,7 @@ export type Database = {
           organization_id: string | null
           product_name: string | null
           quote_number: string
+          reseller_profit: number | null
           sqft: number | null
           status: string | null
           total_price: number
@@ -1404,9 +2343,18 @@ export type Database = {
           vehicle_model: string | null
           vehicle_year: string | null
           wc_sync_status: string | null
+          wholesale_cost: number | null
           woo_order_id: string | null
         }
         Insert: {
+          ai_generated?: boolean | null
+          ai_generated_at?: string | null
+          ai_high_price?: number | null
+          ai_labor_hours?: number | null
+          ai_low_price?: number | null
+          ai_message?: string | null
+          ai_sqft_estimate?: number | null
+          ai_vehicle_class?: string | null
           auto_retarget?: boolean | null
           click_count?: number | null
           conversion_date?: string | null
@@ -1417,12 +2365,18 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone?: string | null
+          customer_price?: number | null
           email_design?: string | null
           email_tone?: string | null
           engagement_level?: string | null
           expires_at?: string | null
           follow_up_count?: number | null
           id?: string
+          installation_cost?: number | null
+          installation_description?: string | null
+          installation_hours?: number | null
+          installation_included?: boolean | null
+          installation_rate?: number | null
           labor_cost?: number | null
           last_activity?: string | null
           last_follow_up_sent?: string | null
@@ -1432,6 +2386,7 @@ export type Database = {
           organization_id?: string | null
           product_name?: string | null
           quote_number: string
+          reseller_profit?: number | null
           sqft?: number | null
           status?: string | null
           total_price: number
@@ -1442,9 +2397,18 @@ export type Database = {
           vehicle_model?: string | null
           vehicle_year?: string | null
           wc_sync_status?: string | null
+          wholesale_cost?: number | null
           woo_order_id?: string | null
         }
         Update: {
+          ai_generated?: boolean | null
+          ai_generated_at?: string | null
+          ai_high_price?: number | null
+          ai_labor_hours?: number | null
+          ai_low_price?: number | null
+          ai_message?: string | null
+          ai_sqft_estimate?: number | null
+          ai_vehicle_class?: string | null
           auto_retarget?: boolean | null
           click_count?: number | null
           conversion_date?: string | null
@@ -1455,12 +2419,18 @@ export type Database = {
           customer_email?: string
           customer_name?: string
           customer_phone?: string | null
+          customer_price?: number | null
           email_design?: string | null
           email_tone?: string | null
           engagement_level?: string | null
           expires_at?: string | null
           follow_up_count?: number | null
           id?: string
+          installation_cost?: number | null
+          installation_description?: string | null
+          installation_hours?: number | null
+          installation_included?: boolean | null
+          installation_rate?: number | null
           labor_cost?: number | null
           last_activity?: string | null
           last_follow_up_sent?: string | null
@@ -1470,6 +2440,7 @@ export type Database = {
           organization_id?: string | null
           product_name?: string | null
           quote_number?: string
+          reseller_profit?: number | null
           sqft?: number | null
           status?: string | null
           total_price?: number
@@ -1480,6 +2451,7 @@ export type Database = {
           vehicle_model?: string | null
           vehicle_year?: string | null
           wc_sync_status?: string | null
+          wholesale_cost?: number | null
           woo_order_id?: string | null
         }
         Relationships: [
@@ -1540,12 +2512,15 @@ export type Database = {
           missing_file_list: Json | null
           notes: string | null
           order_number: string
+          order_source: string | null
+          order_total: number | null
           organization_id: string | null
           preflight_status: string | null
           priority: string | null
           product_image_url: string | null
           product_type: string
           shipped_at: string | null
+          source_organization_id: string | null
           status: string
           timeline: Json | null
           tracking_number: string | null
@@ -1554,6 +2529,7 @@ export type Database = {
           vehicle_info: Json | null
           woo_order_id: number | null
           woo_order_number: number | null
+          wpw_production_order_id: string | null
         }
         Insert: {
           affiliate_ref_code?: string | null
@@ -1570,12 +2546,15 @@ export type Database = {
           missing_file_list?: Json | null
           notes?: string | null
           order_number: string
+          order_source?: string | null
+          order_total?: number | null
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
           product_image_url?: string | null
           product_type: string
           shipped_at?: string | null
+          source_organization_id?: string | null
           status?: string
           timeline?: Json | null
           tracking_number?: string | null
@@ -1584,6 +2563,7 @@ export type Database = {
           vehicle_info?: Json | null
           woo_order_id?: number | null
           woo_order_number?: number | null
+          wpw_production_order_id?: string | null
         }
         Update: {
           affiliate_ref_code?: string | null
@@ -1600,12 +2580,15 @@ export type Database = {
           missing_file_list?: Json | null
           notes?: string | null
           order_number?: string
+          order_source?: string | null
+          order_total?: number | null
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
           product_image_url?: string | null
           product_type?: string
           shipped_at?: string | null
+          source_organization_id?: string | null
           status?: string
           timeline?: Json | null
           tracking_number?: string | null
@@ -1614,6 +2597,7 @@ export type Database = {
           vehicle_info?: Json | null
           woo_order_id?: number | null
           woo_order_number?: number | null
+          wpw_production_order_id?: string | null
         }
         Relationships: [
           {
@@ -1628,6 +2612,113 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopflow_orders_source_organization_id_fkey"
+            columns: ["source_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopflow_orders_wpw_production_order_id_fkey"
+            columns: ["wpw_production_order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          contact_id: string | null
+          conversation_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          order_id: string | null
+          organization_id: string | null
+          priority: string | null
+          quote_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id?: string | null
+          priority?: string | null
+          quote_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id?: string | null
+          priority?: string | null
+          quote_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -1730,6 +2821,72 @@ export type Database = {
           year?: string
         }
         Relationships: []
+      }
+      workspace_ai_memory: {
+        Row: {
+          ai_state: Json | null
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          last_budget: string | null
+          last_design_preview_urls: Json | null
+          last_design_style: string | null
+          last_intent: string | null
+          last_message_at: string | null
+          last_order_lookup: string | null
+          last_vehicle: Json | null
+          last_wrap_type: string | null
+          organization_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_budget?: string | null
+          last_design_preview_urls?: Json | null
+          last_design_style?: string | null
+          last_intent?: string | null
+          last_message_at?: string | null
+          last_order_lookup?: string | null
+          last_vehicle?: Json | null
+          last_wrap_type?: string | null
+          organization_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_budget?: string | null
+          last_design_preview_urls?: Json | null
+          last_design_style?: string | null
+          last_intent?: string | null
+          last_message_at?: string | null
+          last_order_lookup?: string | null
+          last_vehicle?: Json | null
+          last_wrap_type?: string | null
+          organization_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_ai_memory_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_ai_memory_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wrapbox_kits: {
         Row: {
