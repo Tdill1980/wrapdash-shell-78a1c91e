@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadTradeDNA } from "../_shared/tradedna-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messageContent, senderName, subject } = await req.json();
+    const { messageContent, senderName, subject, organizationId } = await req.json();
     
     if (!messageContent) {
       return new Response(
@@ -32,7 +33,11 @@ serve(async (req) => {
     console.log('Analyzing message for priority detection...');
     console.log('Message preview:', messageContent.substring(0, 100));
 
-    const systemPrompt = `You are an AI assistant that analyzes customer messages for a vehicle wrap business. Analyze the message and return a JSON object with:
+    // Load TradeDNA for industry context
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const businessCategory = tradeDNA.business_category || 'vehicle wrap business';
+
+    const systemPrompt = `You are an AI assistant that analyzes customer messages for a ${businessCategory}. Analyze the message and return a JSON object with:
 
 1. "priority": One of "urgent", "high", "normal", "low"
    - urgent: Words like "ASAP", "emergency", "urgent", "immediately", "rush order", deadline within 24-48 hours

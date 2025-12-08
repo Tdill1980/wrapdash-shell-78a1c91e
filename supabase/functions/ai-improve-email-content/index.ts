@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadTradeDNA, generateBrandVoicePrompt } from "../_shared/tradedna-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { currentHtml, improvementType = 'more_compelling', tone = 'installer' } = await req.json();
+    const { currentHtml, improvementType = 'more_compelling', tone = 'installer', organizationId } = await req.json();
 
     if (!currentHtml) {
       return new Response(
@@ -24,6 +25,10 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    // Load TradeDNA for brand voice
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const brandVoicePrompt = generateBrandVoicePrompt(tradeDNA);
 
     const toneDescriptions: Record<string, string> = {
       installer: 'Professional, technical, straightforward. Like talking shop with another installer.',
@@ -40,8 +45,10 @@ serve(async (req) => {
       clearer_cta: 'Improve the call-to-action. Make it clearer what the reader should do next.'
     };
 
-    const systemPrompt = `You are an expert email copywriter for a vehicle wrap business. 
+    const systemPrompt = `You are an expert email copywriter for ${tradeDNA.business_name || 'a vehicle wrap business'}. 
 Your job is to improve email content while maintaining the HTML structure.
+
+${brandVoicePrompt}
 
 TONE: ${toneDescriptions[tone] || toneDescriptions.installer}
 
