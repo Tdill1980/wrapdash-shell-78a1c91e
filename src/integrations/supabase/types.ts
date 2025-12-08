@@ -1832,6 +1832,50 @@ export type Database = {
           },
         ]
       }
+      orchestrator_insights: {
+        Row: {
+          context: Json | null
+          created_at: string | null
+          id: string
+          insight_text: string
+          insight_type: string
+          organization_id: string | null
+          priority: string | null
+          resolved: boolean | null
+          resolved_at: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          insight_text: string
+          insight_type: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          insight_text?: string
+          insight_type?: string
+          organization_id?: string | null
+          priority?: string | null
+          resolved?: boolean | null
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orchestrator_insights_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string | null
@@ -2744,6 +2788,69 @@ export type Database = {
           year?: string
         }
         Relationships: []
+      }
+      workspace_ai_memory: {
+        Row: {
+          ai_state: Json | null
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          last_budget: string | null
+          last_design_style: string | null
+          last_intent: string | null
+          last_message_at: string | null
+          last_order_lookup: string | null
+          last_vehicle: Json | null
+          last_wrap_type: string | null
+          organization_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_budget?: string | null
+          last_design_style?: string | null
+          last_intent?: string | null
+          last_message_at?: string | null
+          last_order_lookup?: string | null
+          last_vehicle?: Json | null
+          last_wrap_type?: string | null
+          organization_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_budget?: string | null
+          last_design_style?: string | null
+          last_intent?: string | null
+          last_message_at?: string | null
+          last_order_lookup?: string | null
+          last_vehicle?: Json | null
+          last_wrap_type?: string | null
+          organization_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_ai_memory_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_ai_memory_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wrapbox_kits: {
         Row: {
