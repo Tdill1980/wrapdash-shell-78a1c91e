@@ -1,7 +1,7 @@
 import { TradeDNAProfile } from '@/hooks/useTradeDNA';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, MessageSquare, Users, Zap, AlertTriangle, Quote } from 'lucide-react';
+import { Sparkles, MessageSquare, Users, Zap, AlertTriangle, Quote, Mail, MessageCircle, FileText, Settings } from 'lucide-react';
 
 interface WizardStepReviewProps {
   profile: TradeDNAProfile | undefined;
@@ -26,7 +26,7 @@ export const WizardStepReview = ({ profile }: WizardStepReviewProps) => {
         </div>
         <div>
           <h2 className="text-xl font-semibold text-foreground">Your TradeDNA Profile</h2>
-          <p className="text-sm text-muted-foreground">Review and save your brand voice</p>
+          <p className="text-sm text-muted-foreground">7-Stage Brand Voice Extraction Complete</p>
         </div>
       </div>
 
@@ -56,6 +56,12 @@ export const WizardStepReview = ({ profile }: WizardStepReviewProps) => {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Primary Tone</p>
                 <Badge variant="secondary">{profile.tone.primary}</Badge>
+              </div>
+            )}
+            {profile.tone?.energy_level && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Energy Level</p>
+                <Badge variant="outline">{profile.tone.energy_level}</Badge>
               </div>
             )}
             {profile.persona && (
@@ -109,6 +115,46 @@ export const WizardStepReview = ({ profile }: WizardStepReviewProps) => {
           </CardContent>
         </Card>
 
+        {/* Sentence Style - NEW */}
+        <Card className="bg-card/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <FileText className="w-4 h-4 text-primary" />
+              Sentence Style
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {profile.sentence_style?.length && (
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">Length:</p>
+                <Badge variant="outline" className="text-xs">{profile.sentence_style.length}</Badge>
+              </div>
+            )}
+            {profile.sentence_style?.cadence && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Cadence</p>
+                <p className="text-sm">{profile.sentence_style.cadence}</p>
+              </div>
+            )}
+            {profile.sentence_style?.complexity && (
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">Complexity:</p>
+                <Badge variant="outline" className="text-xs">{profile.sentence_style.complexity}</Badge>
+              </div>
+            )}
+            {profile.sentence_style?.examples && profile.sentence_style.examples.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Example Sentences</p>
+                <div className="space-y-1">
+                  {profile.sentence_style.examples.slice(0, 2).map((ex, i) => (
+                    <p key={i} className="text-xs italic text-muted-foreground">"{ex}"</p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Customer Profile */}
         <Card className="bg-card/50">
           <CardHeader className="pb-3">
@@ -132,6 +178,16 @@ export const WizardStepReview = ({ profile }: WizardStepReviewProps) => {
                     <li key={i}>{p}</li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {profile.customer_profile?.emotional_triggers && profile.customer_profile.emotional_triggers.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Emotional Triggers</p>
+                <div className="flex flex-wrap gap-1">
+                  {profile.customer_profile.emotional_triggers.map((t, i) => (
+                    <Badge key={i} variant="secondary" className="text-xs">{t}</Badge>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
@@ -158,10 +214,50 @@ export const WizardStepReview = ({ profile }: WizardStepReviewProps) => {
                 <p className="text-sm">{profile.sales_style.cta_style}</p>
               </div>
             )}
-            {profile.sales_style?.pressure && (
+            <div className="flex gap-2">
+              {profile.sales_style?.pressure && (
+                <Badge variant="outline" className="text-xs">Pressure: {profile.sales_style.pressure}</Badge>
+              )}
+              {profile.sales_style?.confidence && (
+                <Badge variant="outline" className="text-xs">Confidence: {profile.sales_style.confidence}</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Communication Rules - NEW */}
+        <Card className="bg-card/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Settings className="w-4 h-4 text-primary" />
+              Communication Rules
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {profile.communication_rules?.email && (
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Pressure Level</p>
-                <Badge variant="outline">{profile.sales_style.pressure}</Badge>
+                <div className="flex items-center gap-1 mb-1">
+                  <Mail className="w-3 h-3 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Email</p>
+                </div>
+                <p className="text-xs">Greeting: {profile.communication_rules.email.greeting}</p>
+                <p className="text-xs">Sign-off: {profile.communication_rules.email.sign_off}</p>
+              </div>
+            )}
+            {profile.communication_rules?.dm && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <MessageCircle className="w-3 h-3 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">DM</p>
+                </div>
+                <p className="text-xs">Emoji: {profile.communication_rules.dm.emoji_usage}</p>
+                <p className="text-xs">Casual: {profile.communication_rules.dm.casual_level}</p>
+              </div>
+            )}
+            {profile.communication_rules?.quote && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Quote Style</p>
+                <p className="text-xs italic">"{profile.communication_rules.quote.opening}"</p>
               </div>
             )}
           </CardContent>

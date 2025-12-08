@@ -3,6 +3,38 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/contexts/OrganizationContext';
 
+// Enhanced communication rules per channel
+export interface ChannelRules {
+  rules?: string[];
+}
+
+export interface EmailRules extends ChannelRules {
+  greeting?: string;
+  sign_off?: string;
+  max_length?: number;
+}
+
+export interface DMRules extends ChannelRules {
+  response_time_promise?: string;
+  emoji_usage?: string;
+  casual_level?: string;
+}
+
+export interface QuoteRules extends ChannelRules {
+  opening?: string;
+  closing?: string;
+}
+
+export interface ApproveFlowRules extends ChannelRules {
+  proof_intro?: string;
+  revision_response?: string;
+}
+
+export interface SupportRules extends ChannelRules {
+  tone?: string;
+  problem_solving_style?: string;
+}
+
 export interface TradeDNAProfile {
   tone?: {
     primary?: string;
@@ -34,12 +66,14 @@ export interface TradeDNAProfile {
     pain_points?: string[];
     desires?: string[];
     emotional_triggers?: string[];
+    objection_patterns?: string[];
   };
   communication_rules?: {
-    email?: { greeting?: string; sign_off?: string; max_length?: number };
-    dm?: { response_time_promise?: string; emoji_usage?: string; casual_level?: string };
-    quote?: { opening?: string; closing?: string };
-    approveflow?: { proof_intro?: string; revision_response?: string };
+    email?: EmailRules;
+    dm?: DMRules;
+    quote?: QuoteRules;
+    approveflow?: ApproveFlowRules;
+    support?: SupportRules;
   };
   do_not_do?: string[];
   brand_voice_summary?: string;
@@ -119,7 +153,6 @@ export const useTradeDNA = () => {
         ...data,
         organization_id: organizationId,
         updated_at: new Date().toISOString(),
-        // Cast nested objects to JSON-compatible format
         scraped_content: data.scraped_content as any,
         tradedna_profile: data.tradedna_profile as any
       };
@@ -198,7 +231,7 @@ export const useTradeDNA = () => {
           version: (tradeDNA?.version || 0) + 1
         });
         
-        toast({ title: 'Analysis complete', description: 'Your TradeDNA profile has been generated' });
+        toast({ title: 'Analysis complete', description: 'Your TradeDNA profile has been generated with 7-stage extraction' });
         return updated;
       }
 

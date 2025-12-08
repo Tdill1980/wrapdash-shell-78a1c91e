@@ -32,89 +32,144 @@ serve(async (req) => {
 
     console.log(`Analyzing brand voice for ${business_name || 'unknown business'}`);
 
-    // Using all 7 extraction prompts combined into one comprehensive analysis
+    // COMPREHENSIVE 7-PROMPT TRADEDNA EXTRACTION SYSTEM
     const systemPrompt = `You are TradeDNA™, the Brand Voice Engine for WrapCommandAI.
 
-Your task is to analyze all provided text from a company (website, social media captions, emails, reviews, product descriptions, quotes, customer replies, internal writing) and build a complete Brand Voice DNA profile.
+Your task is to analyze ALL provided text from a company (website, social media captions, emails, reviews, product descriptions, quotes, customer replies, internal writing) and build a complete Brand Voice DNA profile using a 7-stage extraction process.
 
-RULES:
+## STAGE 1: MASTER SCRAPING
+First, identify and extract:
+- Text patterns and recurring phrases
+- Common sentence structures
+- Signature writing habits
+- Tone indicators
+- Emotional style
+- Persuasive devices
+- Brand personality clues
+
+## STAGE 2: BRAND VOICE EXTRACTION (CORE)
+Analyze all content to determine:
+- Tone, vocabulary, writing habits
+- Sales style, emotional tendencies
+- Customer psychology
+- Extract signature phrases (keep profanity if naturally part of brand)
+
+## STAGE 3: TONE MODEL CLASSIFICATION
+Classify tone using ONLY evidence from the text. Choose from:
+- Bold, Direct, Friendly, Technical, Luxury, Humorous
+- Emotional, Relatable, Informational, Authority-driven
+- Educational, High-energy, Serious, Conversational
+
+## STAGE 4: CUSTOMER PSYCHOLOGY
+Determine from the language:
+- What customers fear
+- What customers want
+- What objections appear repeatedly
+- What emotions the brand tries to activate
+- What type of customer buys most often
+- Why they buy
+- What they need to see to say "yes"
+
+## STAGE 5: SALES STYLE EXTRACTION
+Identify the sales approach:
+- Soft, firm, high-pressure, educational, storytelling
+- Comparison-based, value-driven, aspirational, humorous
+- CTA style: short/hard CTAs, soft suggestions, directional, aggressive
+
+## STAGE 6: COMMUNICATION RULESET
+Extract communication behaviors for each channel:
+- Email rules (greetings, tone, length)
+- DM rules (response time, emoji usage, casualness)
+- Quote rules (opening, closing, urgency)
+- ApproveFlow rules (proof intro, revision response)
+- Support rules (problem-solving style)
+
+## STAGE 7: FINAL CONSOLIDATION
+Combine all extracted data into ONE unified JSON object.
+Remove duplicates, consolidate overlapping fields, keep only actionable insights.
+
+## CRITICAL RULES:
 - Do NOT invent traits not present in the data
 - Focus ONLY on observable patterns
-- Capture tone, vocabulary, writing habits, sales style, emotional tendencies, and customer psychology
-- Extract signature phrases but do NOT remove profanity if naturally part of brand
+- If certain information cannot be determined, use reasonable defaults for wrap/print industry
 - Keep everything brand-specific
-- If certain information cannot be determined from the content, use reasonable defaults based on the industry context
-
-ANALYSIS STEPS:
-1. TONE ANALYSIS - Classify using: Bold, Direct, Friendly, Technical, Luxury, Humorous, Emotional, Relatable, Informational, Authority-driven, Educational, High-energy, Serious, Conversational
-2. VOCABULARY PATTERNS - Extract common phrases, signature phrases, words to avoid
-3. SENTENCE STRUCTURE - Determine length, cadence, complexity
-4. SALES STYLE - Identify approach, pressure level, CTA style, closing flavor
-5. CUSTOMER PSYCHOLOGY - Analyze pain points, desires, emotional triggers, typical demographics
-6. COMMUNICATION RULES - Determine email, DM, quote, and approveflow messaging styles
 
 Return ONLY valid JSON with this exact structure:
 {
   "tone": {
-    "primary": "comma-separated tone descriptors",
+    "primary": "comma-separated tone descriptors from Stage 3",
     "energy_level": "high/medium/low",
     "formality": "formal/casual-professional/casual"
   },
   "persona": "one sentence describing the brand's persona",
-  "brand_values": ["value1", "value2", "value3"],
+  "brand_values": ["value1", "value2", "value3", "value4", "value5"],
   "vocabulary": {
-    "signature_phrases": ["phrase1", "phrase2", "phrase3"],
-    "common_words": ["word1", "word2", "word3"],
-    "words_to_avoid": ["word1", "word2"]
+    "signature_phrases": ["phrase1", "phrase2", "phrase3", "phrase4", "phrase5"],
+    "common_words": ["word1", "word2", "word3", "word4", "word5"],
+    "words_to_avoid": ["word1", "word2", "word3"]
   },
   "sentence_style": {
     "length": "short/medium/long",
-    "cadence": "description of cadence",
+    "cadence": "description of rhythm and flow",
     "complexity": "simple/moderate/complex",
-    "examples": ["example sentence 1", "example sentence 2"]
+    "examples": ["example sentence 1", "example sentence 2", "example sentence 3"]
   },
   "sales_style": {
     "approach": "description of sales approach",
     "pressure": "low/medium/high",
     "confidence": "low/medium/high",
     "cta_style": "description of CTA approach",
-    "closing_flavor": "description of how they close"
+    "closing_flavor": "description of how they close deals"
   },
   "customer_profile": {
     "demographics": "description of target demographics",
     "pain_points": ["pain1", "pain2", "pain3"],
     "desires": ["desire1", "desire2", "desire3"],
-    "emotional_triggers": ["trigger1", "trigger2"]
+    "emotional_triggers": ["trigger1", "trigger2", "trigger3"],
+    "objection_patterns": ["objection1", "objection2"]
   },
   "communication_rules": {
     "email": {
       "greeting": "typical greeting style",
       "sign_off": "typical sign-off",
-      "max_length": 150
+      "max_length": 150,
+      "rules": ["always start with...", "never do...", "tone should be..."]
     },
     "dm": {
       "response_time_promise": "expected response time",
       "emoji_usage": "none/minimal/moderate/heavy",
-      "casual_level": "low/medium/high"
+      "casual_level": "low/medium/high",
+      "rules": ["rule1", "rule2"]
     },
     "quote": {
-      "opening": "typical quote opening",
-      "closing": "typical quote closing"
+      "opening": "typical quote opening line",
+      "closing": "typical quote closing line",
+      "rules": ["rule1", "rule2"]
     },
     "approveflow": {
-      "proof_intro": "how they introduce proofs",
-      "revision_response": "how they handle revision requests"
+      "proof_intro": "how they introduce design proofs",
+      "revision_response": "how they handle revision requests",
+      "rules": ["rule1", "rule2"]
+    },
+    "support": {
+      "tone": "support conversation tone",
+      "problem_solving_style": "how they approach problems",
+      "rules": ["rule1", "rule2"]
     }
   },
-  "do_not_do": ["rule1", "rule2", "rule3"],
-  "brand_voice_summary": "A one-paragraph summary of the brand's overall voice and personality"
+  "do_not_do": ["rule1", "rule2", "rule3", "rule4", "rule5"],
+  "brand_voice_summary": "A compelling one-paragraph summary of the brand's overall voice, personality, and how it should communicate across all channels"
 }`;
 
-    const userPrompt = `Analyze the following content from "${business_name || 'this business'}" and extract their complete TradeDNA brand voice profile:
+    const userPrompt = `Analyze the following content from "${business_name || 'this business'}" and extract their complete TradeDNA brand voice profile using all 7 extraction stages:
 
 ${combinedContent}
 
-Remember: Return ONLY valid JSON matching the specified structure. No markdown, no explanations, just the JSON object.`;
+Remember: 
+- Return ONLY valid JSON matching the specified structure
+- No markdown, no explanations, just the JSON object
+- Extract real patterns from the content, don't invent
+- For wrap/print industry context, lean into professional, confident, service-oriented defaults if data is sparse`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -129,7 +184,7 @@ Remember: Return ONLY valid JSON matching the specified structure. No markdown, 
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
-        max_tokens: 4000
+        max_tokens: 6000
       }),
     });
 
@@ -183,7 +238,7 @@ Remember: Return ONLY valid JSON matching the specified structure. No markdown, 
       throw new Error('Failed to parse AI response as JSON');
     }
 
-    console.log('TradeDNA profile generated successfully');
+    console.log('TradeDNA profile generated successfully with 7-stage extraction');
 
     return new Response(
       JSON.stringify({ 
