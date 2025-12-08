@@ -137,3 +137,9 @@ verify_jwt = false
 
 [functions.ai-followup-engine]
 verify_jwt = false
+
+[functions.approveflow-export-pdf]
+verify_jwt = false
+
+[functions.approveflow-export-zip]
+verify_jwt = false
