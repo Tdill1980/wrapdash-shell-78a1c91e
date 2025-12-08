@@ -2744,6 +2744,75 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_dimensions: {
+        Row: {
+          back_height: number | null
+          back_sqft: number | null
+          back_width: number | null
+          corrected_sqft: number
+          hood_length: number | null
+          hood_sqft: number | null
+          hood_width: number | null
+          id: string
+          inserted_at: string | null
+          make: string
+          model: string
+          roof_length: number | null
+          roof_sqft: number | null
+          roof_width: number | null
+          side_height: number | null
+          side_sqft: number | null
+          side_width: number | null
+          total_sqft: number | null
+          year_end: number
+          year_start: number
+        }
+        Insert: {
+          back_height?: number | null
+          back_sqft?: number | null
+          back_width?: number | null
+          corrected_sqft: number
+          hood_length?: number | null
+          hood_sqft?: number | null
+          hood_width?: number | null
+          id?: string
+          inserted_at?: string | null
+          make: string
+          model: string
+          roof_length?: number | null
+          roof_sqft?: number | null
+          roof_width?: number | null
+          side_height?: number | null
+          side_sqft?: number | null
+          side_width?: number | null
+          total_sqft?: number | null
+          year_end: number
+          year_start: number
+        }
+        Update: {
+          back_height?: number | null
+          back_sqft?: number | null
+          back_width?: number | null
+          corrected_sqft?: number
+          hood_length?: number | null
+          hood_sqft?: number | null
+          hood_width?: number | null
+          id?: string
+          inserted_at?: string | null
+          make?: string
+          model?: string
+          roof_length?: number | null
+          roof_sqft?: number | null
+          roof_width?: number | null
+          side_height?: number | null
+          side_sqft?: number | null
+          side_width?: number | null
+          total_sqft?: number | null
+          year_end?: number
+          year_start?: number
+        }
+        Relationships: []
+      }
       vehicle_models: {
         Row: {
           angle_front: string | null
