@@ -1081,6 +1081,33 @@ export type Database = {
           },
         ]
       }
+      email_bounces: {
+        Row: {
+          bounce_type: string
+          created_at: string
+          email: string
+          id: string
+          provider_data: Json | null
+          reason: string | null
+        }
+        Insert: {
+          bounce_type: string
+          created_at?: string
+          email: string
+          id?: string
+          provider_data?: Json | null
+          reason?: string | null
+        }
+        Update: {
+          bounce_type?: string
+          created_at?: string
+          email?: string
+          id?: string
+          provider_data?: Json | null
+          reason?: string | null
+        }
+        Relationships: []
+      }
       email_branding: {
         Row: {
           created_at: string | null
@@ -1219,6 +1246,69 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_sequence_enrollments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          customer_email: string
+          customer_name: string | null
+          emails_sent: number | null
+          enrolled_at: string
+          id: string
+          is_active: boolean | null
+          last_email_sent_at: string | null
+          quote_id: string | null
+          sequence_id: string | null
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          customer_email: string
+          customer_name?: string | null
+          emails_sent?: number | null
+          enrolled_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_email_sent_at?: string | null
+          quote_id?: string | null
+          sequence_id?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          customer_email?: string
+          customer_name?: string | null
+          emails_sent?: number | null
+          enrolled_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_email_sent_at?: string | null
+          quote_id?: string | null
+          sequence_id?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sequence_enrollments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sequence_enrollments_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "email_sequences"
             referencedColumns: ["id"]
           },
         ]
@@ -1370,6 +1460,41 @@ export type Database = {
             columns: ["sequence_id"]
             isOneToOne: false
             referencedRelation: "email_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_unsubscribes: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          organization_id: string | null
+          reason: string | null
+          unsubscribed_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          organization_id?: string | null
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          organization_id?: string | null
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_unsubscribes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
