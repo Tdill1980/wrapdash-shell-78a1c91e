@@ -2147,6 +2147,7 @@ export type Database = {
           notes: string | null
           order_number: string
           order_source: string | null
+          order_total: number | null
           organization_id: string | null
           preflight_status: string | null
           priority: string | null
@@ -2180,6 +2181,7 @@ export type Database = {
           notes?: string | null
           order_number: string
           order_source?: string | null
+          order_total?: number | null
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null
@@ -2213,6 +2215,7 @@ export type Database = {
           notes?: string | null
           order_number?: string
           order_source?: string | null
+          order_total?: number | null
           organization_id?: string | null
           preflight_status?: string | null
           priority?: string | null

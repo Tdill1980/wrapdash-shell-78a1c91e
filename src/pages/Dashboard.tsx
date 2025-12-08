@@ -21,6 +21,7 @@ import {
   Clock,
   AlertCircle,
   Plus,
+  Calendar,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useProducts } from "@/hooks/useProducts";
+import { useDashboardStats, TimePeriod } from "@/hooks/useDashboardStats";
 import VoiceCommand from "@/components/VoiceCommand";
 import { getVehicleMakes, getVehicleModels, getVehicleSQFTOptions } from "@/lib/vehicleSqft";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
@@ -39,45 +41,20 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 import { isWPW } from "@/lib/wpwProducts";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const metrics = [
-  {
-    title: "Total Renders",
-    value: "1,284",
-    change: "+12%",
-    icon: Activity,
-  },
-  {
-    title: "Production Packs",
-    value: "847",
-    change: "+8%",
-    icon: Package,
-  },
-  {
-    title: "Active Jobs",
-    value: "23",
-    change: "+5%",
-    icon: FileText,
-  },
-  {
-    title: "Revenue",
-    value: "$84.2K",
-    change: "+18%",
-    icon: DollarSign,
-  },
-  {
-    title: "Approvals",
-    value: "156",
-    change: "+24%",
-    icon: CheckCircle,
-  },
-  {
-    title: "Customers",
-    value: "412",
-    change: "+15%",
-    icon: Users,
-  },
-];
+const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
+  today: "Today",
+  "7days": "Last 7 Days",
+  mtd: "Month to Date",
+  all: "All Time",
+};
 
 const adminModules = [
   {
@@ -123,6 +100,8 @@ export default function Dashboard() {
   const { data: designs, isLoading } = useDesignVault();
   const { orders: shopflowOrders, loading: shopflowLoading } = useShopFlow();
   const { products, settings, loading: productsLoading } = useProducts();
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("mtd");
+  const { stats, loading: statsLoading } = useDashboardStats(timePeriod);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isCarouselHovered, setIsCarouselHovered] = useState(false);
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
@@ -805,14 +784,18 @@ export default function Dashboard() {
                   <div className="text-sm font-semibold text-foreground">Total Renders</div>
                   <div className="text-xs text-muted-foreground">All visualizations</div>
                 </div>
-                <div className="text-2xl font-bold text-gradient">1,284</div>
+                <div className="text-2xl font-bold text-gradient">
+                  {statsLoading ? '...' : stats.totalRenders.toLocaleString()}
+                </div>
               </div>
               <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
                 <div>
-                  <div className="text-sm font-semibold text-foreground">Production Packs</div>
-                  <div className="text-xs text-muted-foreground">Ready to print</div>
+                  <div className="text-sm font-semibold text-foreground">Portfolio Jobs</div>
+                  <div className="text-xs text-muted-foreground">Completed work</div>
                 </div>
-                <div className="text-2xl font-bold text-gradient">847</div>
+                <div className="text-2xl font-bold text-gradient">
+                  {statsLoading ? '...' : stats.portfolioJobs}
+                </div>
               </div>
               <Button 
                 onClick={() => navigate("/designvault")}
@@ -939,23 +922,97 @@ export default function Dashboard() {
       </Card>
 
       {/* Metrics Cards Below */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          return (
-            <Card
-              key={metric.title}
-              className="dashboard-card p-3 hover:border-primary/30 transition-all"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <Icon className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs text-green-400 font-medium">{metric.change}</span>
-              </div>
-              <div className="dashboard-card-title text-xs text-muted-foreground mb-1">{metric.title}</div>
-              <div className="text-xl font-bold text-foreground">{metric.value}</div>
-            </Card>
-          );
-        })}
+      <div className="space-y-3">
+        {/* Time Period Selector */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+            <span className="w-1 h-4 bg-gradient-primary rounded-full"></span>
+            Performance Metrics
+          </h2>
+          <Select value={timePeriod} onValueChange={(v) => setTimePeriod(v as TimePeriod)}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <Calendar className="w-3 h-3 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="7days">Last 7 Days</SelectItem>
+              <SelectItem value="mtd">Month to Date</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* Revenue */}
+          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between mb-2">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <span className={`text-xs font-medium ${stats.revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {stats.revenueChange >= 0 ? '+' : ''}{stats.revenueChange}%
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground mb-1">Revenue</div>
+            <div className="text-xl font-bold text-foreground">
+              {statsLoading ? '...' : `$${(stats.revenue / 1000).toFixed(1)}K`}
+            </div>
+          </Card>
+
+          {/* Total Orders */}
+          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between mb-2">
+              <Package className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground mb-1">Total Orders</div>
+            <div className="text-xl font-bold text-foreground">
+              {statsLoading ? '...' : stats.totalOrders}
+            </div>
+          </Card>
+
+          {/* Active Jobs */}
+          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between mb-2">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground mb-1">Active Jobs</div>
+            <div className="text-xl font-bold text-foreground">
+              {statsLoading ? '...' : stats.activeJobs}
+            </div>
+          </Card>
+
+          {/* Total Renders */}
+          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between mb-2">
+              <Activity className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground mb-1">Total Renders</div>
+            <div className="text-xl font-bold text-foreground">
+              {statsLoading ? '...' : stats.totalRenders.toLocaleString()}
+            </div>
+          </Card>
+
+          {/* Approvals */}
+          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between mb-2">
+              <CheckCircle className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground mb-1">Pending Approvals</div>
+            <div className="text-xl font-bold text-foreground">
+              {statsLoading ? '...' : stats.pendingApprovals}
+            </div>
+          </Card>
+
+          {/* Customers */}
+          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between mb-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <div className="text-xs text-muted-foreground mb-1">Customers</div>
+            <div className="text-xl font-bold text-foreground">
+              {statsLoading ? '...' : stats.customers}
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Admin Modules */}
