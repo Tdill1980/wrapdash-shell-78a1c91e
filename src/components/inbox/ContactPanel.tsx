@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import type { Contact, Conversation } from "@/hooks/useInbox";
+import { ChatDesignActions } from "@/components/mightychat/ChatDesignActions";
 
 interface ContactPanelProps {
   contact: Contact | undefined;
@@ -140,6 +141,21 @@ export const ContactPanel = ({ contact, conversation }: ContactPanelProps) => {
               {contact.source}
             </div>
           </div>
+        </div>
+
+        <Separator className="my-4" />
+
+        {/* AI Design Actions */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            AI Design Tools
+          </h4>
+          <ChatDesignActions
+            contactId={contact.id}
+            contactName={contact.name}
+            contactEmail={contact.email || undefined}
+            lastVehicle={(contact.metadata as any)?.last_vehicle}
+          />
         </div>
 
         <Separator className="my-4" />

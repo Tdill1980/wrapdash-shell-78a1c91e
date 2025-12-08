@@ -2820,6 +2820,7 @@ export type Database = {
           created_at: string | null
           id: string
           last_budget: string | null
+          last_design_preview_urls: Json | null
           last_design_style: string | null
           last_intent: string | null
           last_message_at: string | null
@@ -2835,6 +2836,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_budget?: string | null
+          last_design_preview_urls?: Json | null
           last_design_style?: string | null
           last_intent?: string | null
           last_message_at?: string | null
@@ -2850,6 +2852,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_budget?: string | null
+          last_design_preview_urls?: Json | null
           last_design_style?: string | null
           last_intent?: string | null
           last_message_at?: string | null
