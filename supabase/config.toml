@@ -92,3 +92,21 @@ verify_jwt = false
 
 [functions.ai-generate-followup-sequence]
 verify_jwt = false
+
+[functions.execute-email-sequence]
+verify_jwt = false
+
+[functions.handle-email-unsubscribe]
+verify_jwt = false
+
+[functions.resend-bounce-webhook]
+verify_jwt = false
+
+[functions.enroll-quote-sequence]
+verify_jwt = false
+
+[functions.track-email-open]
+verify_jwt = false
+
+[functions.track-email-click]
+verify_jwt = false
