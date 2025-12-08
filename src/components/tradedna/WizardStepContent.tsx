@@ -1,6 +1,7 @@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { FileText, MessageSquare, Mail, ClipboardPaste } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileText, MessageSquare, Mail, ClipboardPaste, RefreshCw, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface WizardStepContentProps {
   data: {
@@ -10,9 +11,13 @@ interface WizardStepContentProps {
     additional_content: string;
   };
   onChange: (field: string, value: string) => void;
+  isScraping?: boolean;
+  onRescrape?: () => void;
 }
 
-export const WizardStepContent = ({ data, onChange }: WizardStepContentProps) => {
+export const WizardStepContent = ({ data, onChange, isScraping, onRescrape }: WizardStepContentProps) => {
+  const hasScrapedContent = data.website_text.length > 100;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-6">
@@ -21,30 +26,52 @@ export const WizardStepContent = ({ data, onChange }: WizardStepContentProps) =>
         </div>
         <div>
           <h2 className="text-xl font-semibold text-foreground">Content Collection</h2>
-          <p className="text-sm text-muted-foreground">Paste your existing content for AI analysis</p>
+          <p className="text-sm text-muted-foreground">
+            {isScraping ? 'Scraping your website...' : 'Paste your existing content for AI analysis'}
+          </p>
         </div>
       </div>
 
       <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 mb-6">
         <p className="text-sm text-muted-foreground">
           <strong className="text-foreground">Tip:</strong> The more content you provide, the more accurate your TradeDNA profile will be. 
-          Copy and paste text from your website, social media posts, emails, and other communications.
+          {hasScrapedContent && ' Website content was auto-scraped from your URL.'}
         </p>
       </div>
 
       <div className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="website_text" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Website Copy
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="website_text" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Website Copy
+              {hasScrapedContent && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+            </Label>
+            {onRescrape && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRescrape}
+                disabled={isScraping}
+                className="h-7 text-xs"
+              >
+                {isScraping ? (
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                )}
+                {isScraping ? 'Scraping...' : 'Re-scrape Website'}
+              </Button>
+            )}
+          </div>
           <Textarea
             id="website_text"
-            placeholder="Paste your homepage copy, about page, service descriptions, testimonials, etc."
+            placeholder={isScraping ? "Scraping website content..." : "Paste your homepage copy, about page, service descriptions, testimonials, etc."}
             value={data.website_text}
             onChange={(e) => onChange('website_text', e.target.value)}
             rows={5}
             className="bg-background/50 resize-none"
+            disabled={isScraping}
           />
           <p className="text-xs text-muted-foreground">Homepage, About, Services, FAQs, Reviews</p>
         </div>
