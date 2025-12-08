@@ -50,6 +50,7 @@ import TradeDNAEdit from "./pages/TradeDNAEdit";
 import ChatbotScripts from "./pages/ChatbotScripts";
 import LeadGeneratorPage from "./pages/LeadGenerator";
 import InstagramBot from "./pages/InstagramBot";
+import Orchestrator from "./pages/Orchestrator";
 
 const queryClient = new QueryClient();
 
@@ -122,6 +123,7 @@ const App = () => (
             <Route path="/tradedna/chatbot" element={<ProtectedRoute><ChatbotScripts /></ProtectedRoute>} />
             <Route path="/lead-generator" element={<ProtectedRoute><LeadGeneratorPage /></ProtectedRoute>} />
             <Route path="/instagram-bot" element={<ProtectedRoute><InstagramBot /></ProtectedRoute>} />
+            <Route path="/orchestrator" element={<ProtectedRoute><Orchestrator /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

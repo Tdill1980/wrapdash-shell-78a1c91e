@@ -18,12 +18,26 @@ import {
   Car,
   Inbox,
   Dna,
+  Gauge,
+  Instagram,
+  FileText,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { 
+    name: "Orchestrator", 
+    path: "/orchestrator", 
+    icon: Gauge,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Master</span>
+        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Control</span>
+      </span>
+    )
+  },
+  {
     name: "MightyChat", 
     path: "/mightychat", 
     icon: Inbox,
@@ -208,6 +222,28 @@ const navigationItems = [
         <span className="text-white">Trade</span>
         <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">DNA</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "Instagram Bot", 
+    path: "/instagram-bot", 
+    icon: Instagram,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Instagram</span>
+        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent"> Bot</span>
+      </span>
+    )
+  },
+  { 
+    name: "Lead Generator", 
+    path: "/lead-generator", 
+    icon: FileText,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Lead</span>
+        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Generator</span>
       </span>
     )
   },

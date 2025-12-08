@@ -118,7 +118,7 @@ serve(async (req) => {
       try {
         const brandVoicePrompt = generateBrandVoicePrompt(tradeDNA);
         
-        const classifyResponse = await fetch('https://api.lovable.dev/api/v1/chat/completions', {
+        const classifyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,
@@ -193,7 +193,7 @@ Return JSON only:
           general: `The customer has a general inquiry. Be friendly and helpful, try to understand what they need.`
         };
 
-        const replyResponse = await fetch('https://api.lovable.dev/api/v1/chat/completions', {
+        const replyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,
