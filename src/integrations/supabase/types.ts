@@ -1643,6 +1643,71 @@ export type Database = {
           },
         ]
       }
+      organization_tradedna: {
+        Row: {
+          business_category: string | null
+          business_name: string | null
+          created_at: string | null
+          facebook_page: string | null
+          id: string
+          instagram_handle: string | null
+          last_analyzed_at: string | null
+          organization_id: string | null
+          scraped_content: Json | null
+          tagline: string | null
+          tiktok_handle: string | null
+          tradedna_profile: Json | null
+          updated_at: string | null
+          version: number | null
+          website_url: string | null
+          youtube_channel: string | null
+        }
+        Insert: {
+          business_category?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          last_analyzed_at?: string | null
+          organization_id?: string | null
+          scraped_content?: Json | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          tradedna_profile?: Json | null
+          updated_at?: string | null
+          version?: number | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Update: {
+          business_category?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          facebook_page?: string | null
+          id?: string
+          instagram_handle?: string | null
+          last_analyzed_at?: string | null
+          organization_id?: string | null
+          scraped_content?: Json | null
+          tagline?: string | null
+          tiktok_handle?: string | null
+          tradedna_profile?: Json | null
+          updated_at?: string | null
+          version?: number | null
+          website_url?: string | null
+          youtube_channel?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_tradedna_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           affiliate_founder_id: string | null
