@@ -21,6 +21,7 @@ import {
   Gauge,
   Instagram,
   FileText,
+  MessageCircle,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
@@ -243,10 +244,21 @@ const navigationItems = [
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Lead</span>
-        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Generator</span>
-      </span>
-    )
-  },
+      <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Generator</span>
+    </span>
+  )
+},
+{ 
+  name: "TradeDNA Chatbot", 
+  path: "/tradedna/chatbot", 
+  icon: MessageCircle,
+  customRender: (
+    <span className="font-['Poppins',sans-serif] font-semibold">
+      <span className="text-white">TradeDNA</span>
+      <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Chatbot</span>
+    </span>
+  )
+},
 ];
 
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
