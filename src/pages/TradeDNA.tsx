@@ -9,8 +9,10 @@ import { WizardStepLinks } from '@/components/tradedna/WizardStepLinks';
 import { WizardStepContent } from '@/components/tradedna/WizardStepContent';
 import { WizardStepAnalysis } from '@/components/tradedna/WizardStepAnalysis';
 import { WizardStepReview } from '@/components/tradedna/WizardStepReview';
-import { ChevronLeft, ChevronRight, Sparkles, Download, Save, Edit } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, Download, Save, Edit, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const steps = [
   { id: 1, name: 'Identity', description: 'Business info' },
@@ -25,6 +27,7 @@ const TradeDNA = () => {
   const { tradeDNA, isLoading, isSaving, isAnalyzing, saveTradeDNA, analyzeBrandVoice, exportTradeDNA } = useTradeDNA();
   const [currentStep, setCurrentStep] = useState(1);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [isScraping, setIsScraping] = useState(false);
 
   // Form data
   const [identity, setIdentity] = useState({
@@ -89,8 +92,51 @@ const TradeDNA = () => {
     setContent(prev => ({ ...prev, [field]: value }));
   };
 
+  const scrapeWebsiteContent = async () => {
+    if (!links.website_url) return;
+    
+    setIsScraping(true);
+    try {
+      toast.info('Scraping website content...');
+      const { data, error } = await supabase.functions.invoke('scrape-tradedna-content', {
+        body: {
+          websiteUrl: links.website_url,
+          instagramHandle: links.instagram_handle,
+          facebookPage: links.facebook_page,
+          tiktokHandle: links.tiktok_handle,
+          youtubeChannel: links.youtube_channel
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.scrapedContent?.website) {
+        setContent(prev => ({
+          ...prev,
+          website_text: data.scrapedContent.website
+        }));
+        toast.success('Website content scraped successfully!');
+      }
+      
+      if (data?.errors?.length > 0) {
+        console.warn('Scrape warnings:', data.errors);
+      }
+    } catch (err) {
+      console.error('Scrape error:', err);
+      toast.error('Failed to scrape website. You can paste content manually.');
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
   const handleNext = async () => {
-    if (currentStep === 3) {
+    if (currentStep === 2) {
+      // Moving from Links to Content - auto-scrape if URL provided
+      setCurrentStep(3);
+      if (links.website_url && !content.website_text) {
+        await scrapeWebsiteContent();
+      }
+    } else if (currentStep === 3) {
       // Save identity and links, then run analysis
       await saveTradeDNA({
         ...identity,
@@ -207,7 +253,12 @@ const TradeDNA = () => {
                   <WizardStepLinks data={links} onChange={handleLinksChange} />
                 )}
                 {currentStep === 3 && (
-                  <WizardStepContent data={content} onChange={handleContentChange} />
+                  <WizardStepContent 
+                    data={content} 
+                    onChange={handleContentChange}
+                    isScraping={isScraping}
+                    onRescrape={links.website_url ? scrapeWebsiteContent : undefined}
+                  />
                 )}
                 {currentStep === 4 && (
                   <WizardStepAnalysis isAnalyzing={isAnalyzing} isComplete={analysisComplete} />
