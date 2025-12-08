@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { WebsiteChatWidget } from "@/components/chat/WebsiteChatWidget";
 import Dashboard from "./pages/Dashboard";
 import { Visualize as WrapCloser, InkFusion, DesignPanelPro, FadeWraps, WBTY } from "./modules/designproai";
 import DesignPanelProEnterprise from "./modules/designpanelpro-enterprise";
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <WebsiteChatWidget />
         </BrowserRouter>
       </TooltipProvider>
     </OrganizationProvider>
