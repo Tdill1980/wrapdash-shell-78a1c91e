@@ -17,6 +17,7 @@ import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getVehicleMakes, getVehicleModels, getVehicleYears } from "@/lib/vehicleSqft";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -68,6 +69,12 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
+  
+  // Cascading dropdown state
+  const [availableMakes] = useState<string[]>(getVehicleMakes());
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
+  const [customYear, setCustomYear] = useState(false);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -109,6 +116,35 @@ export default function MightyCustomer() {
     }
   }, [sqftOptions, vehicle]);
 
+  // Update available models when make changes
+  useEffect(() => {
+    if (customerData.vehicleMake) {
+      const models = getVehicleModels(customerData.vehicleMake);
+      setAvailableModels(models);
+      // Reset model and year if make changed and model not in list
+      if (!models.some(m => m.toLowerCase() === customerData.vehicleModel.toLowerCase())) {
+        setCustomerData(prev => ({ ...prev, vehicleModel: '', vehicleYear: '' }));
+        setAvailableYears([]);
+      }
+    } else {
+      setAvailableModels([]);
+      setAvailableYears([]);
+    }
+  }, [customerData.vehicleMake]);
+
+  // Update available years when model changes
+  useEffect(() => {
+    if (customerData.vehicleMake && customerData.vehicleModel) {
+      const years = getVehicleYears(customerData.vehicleMake, customerData.vehicleModel);
+      setAvailableYears(years);
+      // Reset year if model changed and year not in list
+      if (years.length > 0 && !years.includes(customerData.vehicleYear)) {
+        setCustomerData(prev => ({ ...prev, vehicleYear: '' }));
+      }
+      setCustomYear(false);
+    }
+  }, [customerData.vehicleMake, customerData.vehicleModel]);
+
   // Custom setSqft wrapper to track manual entries
   const handleSqftChange = (value: number) => {
     setSqft(value);
@@ -119,19 +155,21 @@ export default function MightyCustomer() {
     console.log('Voice transcript received:', transcript);
     console.log('Parsed data:', parsedData);
     
-    // Update customer data with parsed info
-    if (parsedData.customerName || parsedData.companyName || parsedData.phone || parsedData.email) {
-      setCustomerData(prev => ({
-        ...prev,
-        name: parsedData.customerName || prev.name,
-        company: parsedData.companyName || prev.company,
-        phone: parsedData.phone || prev.phone,
-        email: parsedData.email || prev.email,
-        vehicleYear: parsedData.year || prev.vehicleYear,
-        vehicleMake: parsedData.make || prev.vehicleMake,
-        vehicleModel: parsedData.model || prev.vehicleModel,
-      }));
-    }
+    // Update customer data with parsed info - check both flat and nested keys
+    const vehicleYear = parsedData.vehicleYear || parsedData.year || '';
+    const vehicleMake = parsedData.vehicleMake || parsedData.make || '';
+    const vehicleModel = parsedData.vehicleModel || parsedData.model || '';
+    
+    setCustomerData(prev => ({
+      ...prev,
+      name: parsedData.customerName || prev.name,
+      company: parsedData.companyName || prev.company,
+      phone: parsedData.phone || prev.phone,
+      email: parsedData.email || prev.email,
+      vehicleYear: vehicleYear || prev.vehicleYear,
+      vehicleMake: vehicleMake || prev.vehicleMake,
+      vehicleModel: vehicleModel || prev.vehicleModel,
+    }));
     
     // Update service type if parsed
     if (parsedData.serviceType) {
@@ -159,11 +197,21 @@ export default function MightyCustomer() {
       }
     }
     
-    // Handle finish from transcript
-    const lower = transcript.toLowerCase();
-    if (lower.includes("gloss")) setFinish("Gloss");
-    if (lower.includes("matte")) setFinish("Matte");
-    if (lower.includes("satin")) setFinish("Satin");
+    // Handle finish from transcript or parsed data
+    const finishValue = parsedData.finish || '';
+    if (finishValue) {
+      setFinish(finishValue);
+    } else {
+      const lower = transcript.toLowerCase();
+      if (lower.includes("gloss")) setFinish("Gloss");
+      if (lower.includes("matte")) setFinish("Matte");
+      if (lower.includes("satin")) setFinish("Satin");
+    }
+    
+    // Force re-render after state updates to trigger SQFT recalculation
+    setTimeout(() => {
+      setCustomerData(prev => ({ ...prev }));
+    }, 150);
   };
 
   const handleSendQuoteEmail = async () => {
@@ -531,41 +579,97 @@ export default function MightyCustomer() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Vehicle Year</Label>
-                <Input
-                  type="text"
-                  placeholder="2024"
-                  value={customerData.vehicleYear}
-                  onChange={(e) => {
-                    console.log('Year updated:', e.target.value);
-                    setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }));
-                  }}
-                />
-              </div>
+              {/* Vehicle Make Dropdown */}
               <div className="space-y-2">
                 <Label>Vehicle Make</Label>
-                <Input
-                  type="text"
-                  placeholder="Chevrolet"
+                <Select
                   value={customerData.vehicleMake}
-                  onChange={(e) => {
-                    console.log('Make updated:', e.target.value);
-                    setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }));
+                  onValueChange={(value) => {
+                    console.log('Make selected:', value);
+                    setCustomerData(prev => ({ ...prev, vehicleMake: value, vehicleModel: '', vehicleYear: '' }));
+                    setCustomYear(false);
                   }}
-                />
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select Make" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border border-border max-h-60">
+                    {availableMakes.map((make) => (
+                      <SelectItem key={make} value={make}>{make}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* Vehicle Model Dropdown */}
               <div className="space-y-2">
                 <Label>Vehicle Model</Label>
-                <Input
-                  type="text"
-                  placeholder="Tahoe"
+                <Select
                   value={customerData.vehicleModel}
-                  onChange={(e) => {
-                    console.log('Model updated:', e.target.value);
-                    setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }));
+                  onValueChange={(value) => {
+                    console.log('Model selected:', value);
+                    setCustomerData(prev => ({ ...prev, vehicleModel: value, vehicleYear: '' }));
+                    setCustomYear(false);
                   }}
-                />
+                  disabled={!customerData.vehicleMake}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder={customerData.vehicleMake ? "Select Model" : "Select Make first"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border border-border max-h-60">
+                    {availableModels.map((model) => (
+                      <SelectItem key={model} value={model}>{model}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Vehicle Year Dropdown with Custom Option */}
+              <div className="space-y-2">
+                <Label>Vehicle Year</Label>
+                {!customYear ? (
+                  <Select
+                    value={customerData.vehicleYear}
+                    onValueChange={(value) => {
+                      if (value === 'custom') {
+                        setCustomYear(true);
+                        setCustomerData(prev => ({ ...prev, vehicleYear: '' }));
+                      } else {
+                        console.log('Year selected:', value);
+                        setCustomerData(prev => ({ ...prev, vehicleYear: value }));
+                      }
+                    }}
+                    disabled={!customerData.vehicleModel}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue placeholder={customerData.vehicleModel ? "Select Year" : "Select Model first"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border border-border max-h-60">
+                      {availableYears.map((year) => (
+                        <SelectItem key={year} value={year}>{year}</SelectItem>
+                      ))}
+                      <SelectItem value="custom">Other Year...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Enter year (e.g., 2024)"
+                      value={customerData.vehicleYear}
+                      onChange={(e) => setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }))}
+                      className="flex-1"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCustomYear(false)}
+                      className="shrink-0"
+                    >
+                      Back
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
