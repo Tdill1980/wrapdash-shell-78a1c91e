@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -231,11 +232,22 @@ export default function MightyCustomer() {
 
     if (result) {
       setAiQuoteResult(result);
-      // If we didn't have sqft, use the AI estimate
+      
+      // Auto-fill form fields from AI result
       if (!sqftOptions && result.sqft) {
         setSqft(result.sqft);
         setIsManualSqft(true);
       }
+      
+      // Auto-set installation hours if not already set
+      if (result.labor_hours && customInstallationHours === 0) {
+        setCustomInstallationHours(result.labor_hours);
+      }
+      
+      toast({
+        title: "AI Quote Applied",
+        description: `Estimated ${result.vehicle_class} wrap: $${result.low_price.toLocaleString()} - $${result.high_price.toLocaleString()}`,
+      });
     }
   };
 
@@ -402,7 +414,7 @@ export default function MightyCustomer() {
         : wholesaleCost;
       const finalProfit = finalTotal - finalWholesale - (includeInstallation ? installationCost : 0);
 
-      // Insert quote header
+      // Insert quote header with AI tracking
       const { data: quote, error: quoteError } = await supabase.from("quotes").insert({
         quote_number: quoteNumber,
         organization_id: organizationId,
@@ -444,6 +456,15 @@ export default function MightyCustomer() {
         email_tone: emailTone,
         email_design: emailDesign,
         expires_at: expiresAt.toISOString(),
+        // AI quote tracking fields
+        ai_generated: !!aiQuoteResult,
+        ai_sqft_estimate: aiQuoteResult?.sqft || null,
+        ai_vehicle_class: aiQuoteResult?.vehicle_class || null,
+        ai_labor_hours: aiQuoteResult?.labor_hours || null,
+        ai_low_price: aiQuoteResult?.low_price || null,
+        ai_high_price: aiQuoteResult?.high_price || null,
+        ai_message: aiQuoteResult?.ai_message || null,
+        ai_generated_at: aiQuoteResult?.generated_at || null,
       }).select().single();
 
       if (quoteError) throw quoteError;
@@ -1344,9 +1365,14 @@ export default function MightyCustomer() {
               {/* AI Quote Result Display */}
               {aiQuoteResult && (
                 <div className="p-4 rounded-lg bg-gradient-to-br from-violet-950/50 to-purple-900/30 border border-violet-500/40 space-y-3">
-                  <div className="flex items-center gap-2 text-violet-300">
-                    <Sparkles className="h-4 w-4" />
-                    <span className="text-sm font-semibold">AI Quote Estimate</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-violet-300">
+                      <Sparkles className="h-4 w-4" />
+                      <span className="text-sm font-semibold">AI Quote Applied</span>
+                    </div>
+                    <Badge variant="outline" className="border-violet-500/40 text-violet-300 text-xs">
+                      Auto-filled
+                    </Badge>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2 text-sm">
@@ -1358,6 +1384,12 @@ export default function MightyCustomer() {
                     
                     <div className="text-muted-foreground">Labor Hours:</div>
                     <div className="text-right font-medium">{aiQuoteResult.labor_hours} hrs</div>
+                    
+                    <div className="text-muted-foreground">Material Cost:</div>
+                    <div className="text-right font-medium">${aiQuoteResult.material_cost?.toLocaleString()}</div>
+                    
+                    <div className="text-muted-foreground">Labor Cost:</div>
+                    <div className="text-right font-medium">${aiQuoteResult.labor_cost?.toLocaleString()}</div>
                   </div>
                   
                   <div className="pt-2 border-t border-violet-500/30">

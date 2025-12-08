@@ -266,6 +266,42 @@ const Orchestrator = () => {
           </Card>
         )}
 
+        {/* AI Quote Suggestions - Leads with vehicle data */}
+        {leads.filter(l => l.priority === 'high').length > 0 && (
+          <Card className="border-violet-500/50 bg-violet-500/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Sparkles className="w-5 h-5 text-violet-400" />
+                AI Quote Suggestions
+              </CardTitle>
+              <CardDescription>Leads ready for AI-powered quotes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {leads.filter(l => l.priority === 'high').slice(0, 3).map((lead) => (
+                  <div key={lead.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-violet-500/20">
+                    <div className="flex items-center gap-3">
+                      {getChannelIcon(lead.source)}
+                      <div>
+                        <p className="text-sm font-medium">{lead.name}</p>
+                        <p className="text-xs text-muted-foreground">{lead.email || lead.phone}</p>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                      onClick={() => navigate('/mighty-customer', { state: { customerName: lead.name, customerEmail: lead.email } })}
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Create AI Quote
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Leads Queue */}

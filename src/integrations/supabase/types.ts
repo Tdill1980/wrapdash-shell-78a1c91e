@@ -2284,6 +2284,14 @@ export type Database = {
       }
       quotes: {
         Row: {
+          ai_generated: boolean | null
+          ai_generated_at: string | null
+          ai_high_price: number | null
+          ai_labor_hours: number | null
+          ai_low_price: number | null
+          ai_message: string | null
+          ai_sqft_estimate: number | null
+          ai_vehicle_class: string | null
           auto_retarget: boolean | null
           click_count: number | null
           conversion_date: string | null
@@ -2330,6 +2338,14 @@ export type Database = {
           woo_order_id: string | null
         }
         Insert: {
+          ai_generated?: boolean | null
+          ai_generated_at?: string | null
+          ai_high_price?: number | null
+          ai_labor_hours?: number | null
+          ai_low_price?: number | null
+          ai_message?: string | null
+          ai_sqft_estimate?: number | null
+          ai_vehicle_class?: string | null
           auto_retarget?: boolean | null
           click_count?: number | null
           conversion_date?: string | null
@@ -2376,6 +2392,14 @@ export type Database = {
           woo_order_id?: string | null
         }
         Update: {
+          ai_generated?: boolean | null
+          ai_generated_at?: string | null
+          ai_high_price?: number | null
+          ai_labor_hours?: number | null
+          ai_low_price?: number | null
+          ai_message?: string | null
+          ai_sqft_estimate?: number | null
+          ai_vehicle_class?: string | null
           auto_retarget?: boolean | null
           click_count?: number | null
           conversion_date?: string | null
