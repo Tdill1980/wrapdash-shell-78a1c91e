@@ -20,7 +20,7 @@ import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getVehicleMakes, getVehicleModels, getVehicleYears, getVehicleSQFTOptions } from "@/lib/vehicleSqft";
+import { getVehicleMakes, getVehicleModels, getVehicleYears } from "@/lib/vehicleSqft";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { generateOrderNumber, generateQuoteNumber } from "@/lib/orderNumberGenerator";
 import { useLocation } from "react-router-dom";
@@ -941,14 +941,7 @@ export default function MightyCustomer() {
 
           {/* Vehicle Information & Auto-SQFT */}
           <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">Vehicle Information</Label>
-              {customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel && (
-                <Badge className={sqftOptions ? "bg-green-600 text-white" : "bg-amber-600 text-white"}>
-                  {customerData.vehicleYear} {customerData.vehicleMake} {customerData.vehicleModel}
-                </Badge>
-              )}
-            </div>
+            <Label className="text-lg font-semibold">Vehicle Information</Label>
             
             {/* Vehicle Lookup Status */}
             {customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel && (
@@ -960,7 +953,7 @@ export default function MightyCustomer() {
                 {sqftOptions ? (
                   <div className="flex items-center gap-2 text-sm">
                     <AlertCircle className="h-4 w-4" />
-                    Vehicle found: {customerData.vehicleYear} {customerData.vehicleMake} {customerData.vehicleModel} ({sqftOptions.withRoof} sq ft)
+                    Vehicle found: {customerData.vehicleYear} {customerData.vehicleMake} {customerData.vehicleModel}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-sm">
@@ -978,13 +971,13 @@ export default function MightyCustomer() {
                   value={customerData.vehicleMake}
                   onValueChange={(value) => {
                     console.log('Make updated:', value);
-                    setCustomerData(prev => ({ ...prev, vehicleMake: value, vehicleModel: '', vehicleYear: '' }));
+                    setCustomerData(prev => ({ ...prev, vehicleMake: value, vehicleModel: '' }));
                   }}
                 >
                   <SelectTrigger className="bg-background border-border">
                     <SelectValue placeholder="Select Make" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border-border z-50 max-h-60">
+                  <SelectContent className="bg-background border-border z-50">
                     {getVehicleMakes().map((make) => (
                       <SelectItem key={make} value={make}>{make}</SelectItem>
                     ))}
@@ -997,14 +990,14 @@ export default function MightyCustomer() {
                   value={customerData.vehicleModel}
                   onValueChange={(value) => {
                     console.log('Model updated:', value);
-                    setCustomerData(prev => ({ ...prev, vehicleModel: value, vehicleYear: '' }));
+                    setCustomerData(prev => ({ ...prev, vehicleModel: value }));
                   }}
                   disabled={!customerData.vehicleMake}
                 >
                   <SelectTrigger className="bg-background border-border">
                     <SelectValue placeholder="Select Model" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border-border z-50 max-h-60">
+                  <SelectContent className="bg-background border-border z-50">
                     {customerData.vehicleMake && getVehicleModels(customerData.vehicleMake).map((model) => (
                       <SelectItem key={model} value={model}>{model}</SelectItem>
                     ))}
@@ -1025,6 +1018,7 @@ export default function MightyCustomer() {
                       onValueChange={(value) => {
                         console.log('Year updated:', value);
                         if (value === "custom") {
+                          // Show custom input mode
                           setCustomerData(prev => ({ ...prev, vehicleYear: "" }));
                         } else {
                           setCustomerData(prev => ({ ...prev, vehicleYear: value }));
@@ -1057,11 +1051,10 @@ export default function MightyCustomer() {
                 })()}
               </div>
             </div>
-          </div>
 
-          {/* Wrap Type Selection */}
-          {sqftOptions && (
-            <div className="space-y-4">
+            {/* Wrap Type Selection */}
+            {sqftOptions && (
+              <div className="space-y-4">
                 {/* Show Panel Visualization Button */}
                 <div className="flex justify-end">
                   <Button
