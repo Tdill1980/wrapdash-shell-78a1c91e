@@ -33,6 +33,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { AIDesignOpportunitiesWidget } from "@/components/orchestrator/AIDesignOpportunitiesWidget";
+import { AIFollowUpsWidget } from "@/components/orchestrator/AIFollowUpsWidget";
 
 interface Lead {
   id: string;
@@ -307,6 +308,10 @@ const Orchestrator = () => {
 
         {/* AI Design Opportunities - Design intent leads */}
         <AIDesignOpportunitiesWidget leads={leads} organizationId={organizationId} />
+
+        {/* AI Follow-Ups Widget */}
+        <AIFollowUpsWidget />
+
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Leads Queue */}
           <Card>

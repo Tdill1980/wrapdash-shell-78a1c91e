@@ -24,6 +24,87 @@ interface DesignRequest {
   customer_email?: string;
 }
 
+// Generate AI image using Lovable AI gateway
+async function generateDesignImage(prompt: string): Promise<string | null> {
+  if (!LOVABLE_API_KEY) {
+    console.log("No LOVABLE_API_KEY, skipping image generation");
+    return null;
+  }
+
+  try {
+    console.log("Generating image with prompt:", prompt.substring(0, 100) + "...");
+    
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          { role: "user", content: prompt }
+        ],
+        modalities: ["image", "text"]
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Image generation failed:", response.status, await response.text());
+      return null;
+    }
+
+    const data = await response.json();
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (imageUrl) {
+      console.log("Image generated successfully");
+      return imageUrl;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Image generation error:", error);
+    return null;
+  }
+}
+
+// Upload base64 image to Supabase storage
+async function uploadImageToStorage(
+  supabase: any,
+  base64Data: string,
+  fileName: string
+): Promise<string | null> {
+  try {
+    // Extract base64 content (remove data:image/png;base64, prefix)
+    const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, "");
+    const imageBytes = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
+    
+    const filePath = `designs/${Date.now()}-${fileName}.png`;
+    
+    const { data, error } = await supabase.storage
+      .from("approveflow-files")
+      .upload(filePath, imageBytes, {
+        contentType: "image/png",
+        upsert: false
+      });
+
+    if (error) {
+      console.error("Storage upload error:", error);
+      return null;
+    }
+
+    const { data: publicUrl } = supabase.storage
+      .from("approveflow-files")
+      .getPublicUrl(filePath);
+
+    return publicUrl.publicUrl;
+  } catch (error) {
+    console.error("Upload error:", error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -136,6 +217,33 @@ Keep the tone ${brandVoice}. Make it exciting and visual.`;
       }
     }
 
+    // Generate AI images
+    const previewImages: string[] = [];
+    
+    // Generate 2D concept image
+    const conceptPrompt = `Professional 2D vehicle wrap concept art for a ${vehicle.year} ${vehicle.make} ${vehicle.model}. ${style} style design with ${designConcept.color_palette.join(", ")} colors. ${designConcept.design_elements.join(", ")}. High contrast, professional automotive graphics, clean lines, marketing-ready visualization. Ultra high resolution.`;
+    
+    const conceptImageBase64 = await generateDesignImage(conceptPrompt);
+    if (conceptImageBase64) {
+      const conceptUrl = await uploadImageToStorage(supabase, conceptImageBase64, "concept-2d");
+      if (conceptUrl) {
+        previewImages.push(conceptUrl);
+        console.log("2D concept uploaded:", conceptUrl);
+      }
+    }
+
+    // Generate 3D preview image
+    const preview3DPrompt = `Photorealistic 3D render of a ${vehicle.year} ${vehicle.make} ${vehicle.model} with a ${style} vehicle wrap. ${designConcept.color_palette.join(", ")} color scheme. Professional automotive photography, studio lighting, glossy finish, front 3/4 angle. Ultra high resolution.`;
+    
+    const preview3DBase64 = await generateDesignImage(preview3DPrompt);
+    if (preview3DBase64) {
+      const preview3DUrl = await uploadImageToStorage(supabase, preview3DBase64, "preview-3d");
+      if (preview3DUrl) {
+        previewImages.push(preview3DUrl);
+        console.log("3D preview uploaded:", preview3DUrl);
+      }
+    }
+
     // Generate order number for ApproveFlow
     const orderNumber = `AF-${Date.now().toString(36).toUpperCase()}`;
 
@@ -162,12 +270,30 @@ Keep the tone ${brandVoice}. Make it exciting and visual.`;
 
     console.log("Created ApproveFlow project:", project.id);
 
-    // Add initial chat message
+    // Add initial chat message with design concept
     await supabase.from("approveflow_chat").insert({
       project_id: project.id,
       sender: "designer",
       message: `🎨 **Design Concept: ${designConcept.design_title}**\n\n${designConcept.design_description}\n\n**Color Palette:** ${designConcept.color_palette.join(", ")}\n\n**Design Elements:** ${designConcept.design_elements.join(", ")}\n\nLet us know your thoughts!`,
     });
+
+    // Add design preview images as assets if generated
+    if (previewImages.length > 0) {
+      const assetInserts = previewImages.map((url, index) => ({
+        project_id: project.id,
+        file_url: url,
+        file_type: index === 0 ? "2d_concept" : "3d_preview",
+      }));
+      
+      await supabase.from("approveflow_assets").insert(assetInserts);
+
+      // Add images message to chat
+      await supabase.from("approveflow_chat").insert({
+        project_id: project.id,
+        sender: "system",
+        message: `📸 **Design Previews Generated**\n\n${previewImages.map((url, i) => `[${i === 0 ? '2D Concept' : '3D Preview'}](${url})`).join("\n")}`,
+      });
+    }
 
     // Update workspace AI memory if contact_id provided
     if (contact_id) {
@@ -177,12 +303,26 @@ Keep the tone ${brandVoice}. Make it exciting and visual.`;
           organization_id,
           contact_id,
           last_design_style: style,
-          last_design_preview_urls: [],
+          last_design_preview_urls: previewImages,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: "organization_id,contact_id"
         });
     }
+
+    // Create AI action for MCP visibility
+    await supabase.from("ai_actions").insert({
+      organization_id,
+      action_type: "design_ready",
+      action_payload: {
+        contact_id,
+        approveflow_id: project.id,
+        design_title: designConcept.design_title,
+        vehicle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+        preview_images: previewImages,
+      },
+      priority: "high",
+    });
 
     // Return success response
     return new Response(
@@ -190,7 +330,10 @@ Keep the tone ${brandVoice}. Make it exciting and visual.`;
         success: true,
         approveflow_id: project.id,
         order_number: orderNumber,
-        design_concept: designConcept,
+        design_concept: {
+          ...designConcept,
+          preview_images: previewImages,
+        },
         ai_message: designConcept.ai_message,
         portal_url: `/customer/${project.id}`,
       }),

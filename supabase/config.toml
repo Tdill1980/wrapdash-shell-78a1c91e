@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.ai-generate-quote]
 verify_jwt = false
+
+[functions.ai-followup-engine]
+verify_jwt = false
