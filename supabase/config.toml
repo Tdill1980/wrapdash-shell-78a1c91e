@@ -59,3 +59,12 @@ verify_jwt = false
 
 [functions.import-vehicle-dimensions]
 verify_jwt = false
+
+[functions.instagram-webhook]
+verify_jwt = false
+
+[functions.ingest-message]
+verify_jwt = false
+
+[functions.send-instagram-reply]
+verify_jwt = false

@@ -38,6 +38,7 @@ import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { MainLayout } from "@/layouts/MainLayout";
 import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
+import { QuoteRequestCard } from "@/components/dashboard/QuoteRequestCard";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -836,6 +837,9 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        
+        {/* Quote Request Card */}
+        <QuoteRequestCard />
         
         {/* MightyChat Unified Inbox Card */}
         <MightyChatCard />
