@@ -22,20 +22,17 @@ export function useQuoteEngine(
   installRatePerHour: number = 75,
   margin: number = 65,
   includeRoof: boolean = true,
-  selectedPanels: { sides: boolean; back: boolean; hood: boolean; roof: boolean } | null = null,
-  includeInstallation: boolean = false,
-  installationDescription: string = "",
-  installationHours: number = 0
+  selectedPanels: { sides: boolean; back: boolean; hood: boolean; roof: boolean } | null = null
 ) {
   const [sqft, setSqft] = useState<number>(0);
   const [sqftOptions, setSqftOptions] = useState<VehicleSQFTOptions | null>(null);
   const [panelCosts, setPanelCosts] = useState<PanelCosts>({ sides: 0, back: 0, hood: 0, roof: 0 });
   const [materialCost, setMaterialCost] = useState(0);
-  const [installationCost, setInstallationCost] = useState(0);
+  const [laborCost, setLaborCost] = useState(0);
   const [installHours, setInstallHours] = useState(0);
-  const [wholesaleCost, setWholesaleCost] = useState(0);
-  const [customerPrice, setCustomerPrice] = useState(0);
-  const [resellerProfit, setResellerProfit] = useState(0);
+  const [subtotal, setSubtotal] = useState(0);
+  const [marginAmount, setMarginAmount] = useState(0);
+  const [total, setTotal] = useState(0);
 
   // Auto-calculate SQFT when vehicle or roof option changes
   useEffect(() => {
@@ -93,17 +90,17 @@ export function useQuoteEngine(
   useEffect(() => {
     if (!product || sqft === 0) {
       setMaterialCost(0);
-      setInstallationCost(0);
+      setLaborCost(0);
       setInstallHours(0);
-      setWholesaleCost(0);
-      setCustomerPrice(0);
-      setResellerProfit(0);
+      setSubtotal(0);
+      setMarginAmount(0);
+      setTotal(0);
       return;
     }
 
     let material = 0;
 
-    // Calculate material cost based on pricing type (this is wholesale cost)
+    // Calculate material cost based on pricing type
     if (product.pricing_type === 'per_sqft' && product.price_per_sqft) {
       material = sqft * product.price_per_sqft * quantity;
     } else if (product.pricing_type === 'flat' && product.flat_price) {
@@ -111,7 +108,6 @@ export function useQuoteEngine(
     }
 
     setMaterialCost(material);
-    setWholesaleCost(material); // Wholesale is just material cost
 
     // Calculate install hours - panel-specific complexity
     let hours = 0;
@@ -127,22 +123,23 @@ export function useQuoteEngine(
     }
     setInstallHours(hours);
 
-    // Calculate installation cost (only if includeInstallation is true)
-    const installation = includeInstallation 
-      ? (installationHours || hours) * installRatePerHour 
-      : 0;
-    setInstallationCost(installation);
+    // Calculate labor cost
+    const labor = hours * installRatePerHour;
+    setLaborCost(labor);
 
-    // Calculate customer price with margin
-    const materialWithMargin = material * (1 + margin / 100);
-    const customerTotal = materialWithMargin + installation;
-    setCustomerPrice(customerTotal);
+    // Calculate subtotal
+    const sub = material + labor;
+    setSubtotal(sub);
 
-    // Calculate reseller profit (margin on material only)
-    const profit = materialWithMargin - material;
-    setResellerProfit(profit);
+    // Calculate margin amount
+    const marginCalc = sub * (margin / 100);
+    setMarginAmount(marginCalc);
 
-  }, [sqft, product, quantity, installRatePerHour, margin, selectedPanels, sqftOptions, includeInstallation, installationHours, installationDescription]);
+    // Calculate total
+    const totalCalc = sub + marginCalc;
+    setTotal(totalCalc);
+
+  }, [sqft, product, quantity, installRatePerHour, margin, selectedPanels, sqftOptions]);
 
   return {
     sqft,
@@ -150,10 +147,10 @@ export function useQuoteEngine(
     sqftOptions,
     panelCosts,
     materialCost,
-    installationCost,
+    laborCost,
     installHours,
-    wholesaleCost,
-    customerPrice,
-    resellerProfit,
+    subtotal,
+    marginAmount,
+    total,
   };
 }

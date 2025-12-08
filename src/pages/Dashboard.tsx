@@ -21,7 +21,6 @@ import {
   Clock,
   AlertCircle,
   Plus,
-  Calendar,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,30 +30,54 @@ import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useProducts } from "@/hooks/useProducts";
-import { useDashboardStats, TimePeriod } from "@/hooks/useDashboardStats";
+import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
 import VoiceCommand from "@/components/VoiceCommand";
-import { getVehicleMakes, getVehicleModels, getVehicleSQFTOptions } from "@/lib/vehicleSqft";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { MainLayout } from "@/layouts/MainLayout";
 import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
-import { isWPW } from "@/lib/wpwProducts";
-import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-const TIME_PERIOD_LABELS: Record<TimePeriod, string> = {
-  today: "Today",
-  "7days": "Last 7 Days",
-  mtd: "Month to Date",
-  all: "All Time",
-};
+const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
+
+const metrics = [
+  {
+    title: "Total Renders",
+    value: "1,284",
+    change: "+12%",
+    icon: Activity,
+  },
+  {
+    title: "Production Packs",
+    value: "847",
+    change: "+8%",
+    icon: Package,
+  },
+  {
+    title: "Active Jobs",
+    value: "23",
+    change: "+5%",
+    icon: FileText,
+  },
+  {
+    title: "Revenue",
+    value: "$84.2K",
+    change: "+18%",
+    icon: DollarSign,
+  },
+  {
+    title: "Approvals",
+    value: "156",
+    change: "+24%",
+    icon: CheckCircle,
+  },
+  {
+    title: "Customers",
+    value: "412",
+    change: "+15%",
+    icon: Users,
+  },
+];
 
 const adminModules = [
   {
@@ -100,14 +123,12 @@ export default function Dashboard() {
   const { data: designs, isLoading } = useDesignVault();
   const { orders: shopflowOrders, loading: shopflowLoading } = useShopFlow();
   const { products, settings, loading: productsLoading } = useProducts();
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("mtd");
-  const { stats, loading: statsLoading } = useDashboardStats(timePeriod);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isCarouselHovered, setIsCarouselHovered] = useState(false);
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
   // Quote Builder State
-  const [productCategory, setProductCategory] = useState<'wrap' | 'ppf' | 'tint' | 'all' | 'wpw'>('all');
+  const [productCategory, setProductCategory] = useState<'wrap' | 'ppf' | 'tint' | 'all'>('all');
   const [product, setProduct] = useState("");
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
@@ -127,36 +148,63 @@ export default function Dashboard() {
   // Filter products by category
   const filteredProducts = useMemo(() => {
     if (productCategory === 'all') return products;
-    if (productCategory === 'wpw') {
-      return products.filter(p => isWPW(p.woo_product_id));
-    }
-    // For non-WPW categories, show products in that category excluding WPW products
-    return products.filter(p => {
-      const categoryMatch = p.category.toLowerCase().includes(productCategory.toLowerCase());
-      const notWPW = !isWPW(p.woo_product_id);
-      return categoryMatch && notWPW;
-    });
+    return products.filter(p => p.category === productCategory);
   }, [products, productCategory]);
   
-  // Get vehicle data from helper functions
-  const vehicleMakes = getVehicleMakes();
+  // Parse vehicle dimensions data
+  const vehicleData = useMemo(() => {
+    const makes = Array.from(new Set(vehicleDimensionsData.map((v: any) => v.Make))).sort();
+    
+    const modelsByMake = vehicleDimensionsData.reduce((acc: any, v: any) => {
+      if (!acc[v.Make]) acc[v.Make] = new Set();
+      acc[v.Make].add(v.Model);
+      return acc;
+    }, {});
+    
+    // Convert sets to sorted arrays
+    Object.keys(modelsByMake).forEach(make => {
+      modelsByMake[make] = Array.from(modelsByMake[make]).sort();
+    });
+    
+    return { makes, modelsByMake, data: vehicleDimensionsData };
+  }, []);
   
   // Auto-fill sq ft when vehicle is selected
   useEffect(() => {
-    if (!vehicleYear || !vehicleMake || !vehicleModel) {
-      return;
+    if (vehicleMake && vehicleModel && vehicleYear) {
+      console.log(`🔍 Searching for: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
+      
+      const match = vehicleData.data.find((v: any) => {
+        const vehicleYearStr = v.Year.toString();
+        const yearInput = vehicleYear.toString();
+        
+        // Handle year ranges like "2018-2022"
+        let yearMatch = false;
+        if (vehicleYearStr.includes('-')) {
+          const [startYear, endYear] = vehicleYearStr.split('-').map((y: string) => parseInt(y.trim()));
+          const inputYear = parseInt(yearInput);
+          yearMatch = inputYear >= startYear && inputYear <= endYear;
+        } else {
+          yearMatch = vehicleYearStr === yearInput;
+        }
+        
+        // Case-insensitive make/model matching
+        const makeMatch = v.Make.toLowerCase() === vehicleMake.toLowerCase();
+        const modelMatch = v.Model.toLowerCase().includes(vehicleModel.toLowerCase()) || 
+                          vehicleModel.toLowerCase().includes(v.Model.toLowerCase());
+        
+        return yearMatch && makeMatch && modelMatch;
+      });
+      
+      if (match) {
+        const sqftValue = match["Corrected Sq Foot"] || match["Total Sq Foot"] || 0;
+        console.log(`✓ Match found! Setting sqft to ${sqftValue}`);
+        setSqFt(sqftValue);
+      } else {
+        console.log(`✗ No match found`);
+      }
     }
-    
-    const options = getVehicleSQFTOptions(vehicleYear, vehicleMake, vehicleModel);
-    
-    if (options) {
-      // Use the "Corrected Sq Foot" (with 10% for waste)
-      setSqFt(options.withRoof);
-      console.log(`✓ Auto-filled SQFT: ${options.withRoof} sq ft for ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
-    } else {
-      console.log(`✗ No SQFT data found for: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
-    }
-  }, [vehicleYear, vehicleMake, vehicleModel]);
+  }, [vehicleMake, vehicleModel, vehicleYear, vehicleData]);
   
   // Pricing calculation based on WPW products
   const selectedProduct = products.find(p => p.product_name === product);
@@ -180,6 +228,14 @@ export default function Dashboard() {
   };
   
   const latestDesigns = designs?.slice(0, 5) || [];
+
+  const productTypes = [
+    { name: "Full Wraps", gradient: "bg-gradient-primary" },
+    { name: "Partial Wraps", gradient: "bg-gradient-primary" },
+    { name: "Chrome Delete", gradient: "bg-gradient-primary" },
+    { name: "PPF", gradient: "bg-gradient-primary" },
+    { name: "Window Tint", gradient: "bg-gradient-primary" },
+  ];
 
   const nextSlide = () => {
     if (latestDesigns.length > 0) {
@@ -274,34 +330,39 @@ export default function Dashboard() {
           activeRendersCount={activeRendersCount}
         />
 
+      {/* Product Type Chips */}
+      <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+        {productTypes.map((product) => (
+          <button
+            key={product.name}
+            onClick={() => product.name === "Full Wraps" ? navigate("/visualize") : null}
+            className={`px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap ${product.gradient} text-white hover:opacity-90 transition-opacity`}
+          >
+            {product.name}
+          </button>
+        ))}
+      </div>
+
       {/* Two-Column Hero Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* LEFT: Quote Builder Card */}
         <Card className="dashboard-card">
-          <CardHeader className="pb-3">
-            <div className="flex flex-row items-start justify-between gap-2">
+          <CardHeader className="pb-3 relative">
+            <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="font-poppins text-xl sm:text-2xl font-bold leading-tight">
+                <CardTitle className="dashboard-card-title text-lg font-bold font-poppins">
                   <span className="text-foreground">Mighty</span>
-                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Customer</span>
-                  <span className="text-muted-foreground text-sm sm:text-lg align-super">™</span>
+                  <span className="text-gradient">Customer</span>
+                  <span className="text-muted-foreground text-sm align-super">™</span>
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
                   Quote & Order Builder
                 </p>
               </div>
-              <VoiceCommand onTranscript={(transcript, parsedData) => {
-                console.log('📝 Voice transcript:', transcript);
-                console.log('🔍 Parsed data:', parsedData);
-                
-                // Use parsedData with new field names
-                if (parsedData.vehicleYear) setVehicleYear(parsedData.vehicleYear);
-                if (parsedData.vehicleMake) setVehicleMake(parsedData.vehicleMake);
-                if (parsedData.vehicleModel) setVehicleModel(parsedData.vehicleModel);
-                if (parsedData.customerName) setCustomerName(parsedData.customerName);
-                if (parsedData.email) setCustomerEmail(parsedData.email);
-                if (parsedData.productType) setProduct(parsedData.productType);
-              }} />
+              {/* VoiceCommand Widget - positioned in corner */}
+              <div className="absolute top-3 right-3">
+                <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
@@ -309,20 +370,7 @@ export default function Dashboard() {
               {/* Category Filter Buttons */}
               <div>
                 <label className="text-xs text-muted-foreground mb-2 block">Product Category</label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={productCategory === 'wpw' ? 'ghost' : 'outline'}
-                    onClick={() => { setProductCategory('wpw'); setProduct(""); }}
-                    className={`text-xs py-1 h-auto font-semibold ${
-                      productCategory === 'wpw'
-                        ? '!bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E] text-white border-0 shadow-lg'
-                        : ''
-                    }`}
-                  >
-                    WePrintWraps.com
-                  </Button>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <Button
                     type="button"
                     size="sm"
@@ -406,7 +454,7 @@ export default function Dashboard() {
                         className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       >
                         <option value="">Make</option>
-                        {vehicleMakes.map((make: string) => (
+                        {vehicleData.makes.map((make: string) => (
                           <option key={make} value={make}>{make}</option>
                         ))}
                       </select>
@@ -417,7 +465,7 @@ export default function Dashboard() {
                         className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                       >
                         <option value="">Model</option>
-                        {vehicleMake && getVehicleModels(vehicleMake).map((model: string) => (
+                        {vehicleMake && vehicleData.modelsByMake[vehicleMake]?.map((model: string) => (
                           <option key={model} value={model}>{model}</option>
                         ))}
                       </select>
@@ -589,24 +637,9 @@ export default function Dashboard() {
               {/* Action Button */}
               <Button 
                 className="w-full bg-gradient-primary hover:opacity-90 text-white text-sm font-semibold"
-                onClick={() => navigate("/mighty-customer", {
-                  state: {
-                    productCategory,
-                    product,
-                    vehicleMake,
-                    vehicleModel,
-                    vehicleYear,
-                    quantity,
-                    finish,
-                    customerName,
-                    customerEmail,
-                    margin,
-                    sqFt,
-                    installHours,
-                  }
-                })}
+                onClick={() => navigate("/mighty-customer")}
               >
-                + Start Building Quote
+                + Add to Quote
               </Button>
             </div>
           </CardContent>
@@ -784,18 +817,14 @@ export default function Dashboard() {
                   <div className="text-sm font-semibold text-foreground">Total Renders</div>
                   <div className="text-xs text-muted-foreground">All visualizations</div>
                 </div>
-                <div className="text-2xl font-bold text-gradient">
-                  {statsLoading ? '...' : stats.totalRenders.toLocaleString()}
-                </div>
+                <div className="text-2xl font-bold text-gradient">1,284</div>
               </div>
               <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
                 <div>
-                  <div className="text-sm font-semibold text-foreground">Portfolio Jobs</div>
-                  <div className="text-xs text-muted-foreground">Completed work</div>
+                  <div className="text-sm font-semibold text-foreground">Production Packs</div>
+                  <div className="text-xs text-muted-foreground">Ready to print</div>
                 </div>
-                <div className="text-2xl font-bold text-gradient">
-                  {statsLoading ? '...' : stats.portfolioJobs}
-                </div>
+                <div className="text-2xl font-bold text-gradient">847</div>
               </div>
               <Button 
                 onClick={() => navigate("/designvault")}
@@ -806,9 +835,6 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-        
-        {/* MightyChat Quick Actions */}
-        <MightyChatCard />
         
         {/* UTIM Analytics Dashboard */}
         <UTIMAnalyticsDashboard />
@@ -922,97 +948,23 @@ export default function Dashboard() {
       </Card>
 
       {/* Metrics Cards Below */}
-      <div className="space-y-3">
-        {/* Time Period Selector */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-            <span className="w-1 h-4 bg-gradient-primary rounded-full"></span>
-            Performance Metrics
-          </h2>
-          <Select value={timePeriod} onValueChange={(v) => setTimePeriod(v as TimePeriod)}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <Calendar className="w-3 h-3 mr-1" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="7days">Last 7 Days</SelectItem>
-              <SelectItem value="mtd">Month to Date</SelectItem>
-              <SelectItem value="all">All Time</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {/* Revenue */}
-          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
-            <div className="flex items-start justify-between mb-2">
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
-              <span className={`text-xs font-medium ${stats.revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {stats.revenueChange >= 0 ? '+' : ''}{stats.revenueChange}%
-              </span>
-            </div>
-            <div className="text-xs text-muted-foreground mb-1">Revenue</div>
-            <div className="text-xl font-bold text-foreground">
-              {statsLoading ? '...' : `$${(stats.revenue / 1000).toFixed(1)}K`}
-            </div>
-          </Card>
-
-          {/* Total Orders */}
-          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
-            <div className="flex items-start justify-between mb-2">
-              <Package className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="text-xs text-muted-foreground mb-1">Total Orders</div>
-            <div className="text-xl font-bold text-foreground">
-              {statsLoading ? '...' : stats.totalOrders}
-            </div>
-          </Card>
-
-          {/* Active Jobs */}
-          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
-            <div className="flex items-start justify-between mb-2">
-              <FileText className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="text-xs text-muted-foreground mb-1">Active Jobs</div>
-            <div className="text-xl font-bold text-foreground">
-              {statsLoading ? '...' : stats.activeJobs}
-            </div>
-          </Card>
-
-          {/* Total Renders */}
-          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
-            <div className="flex items-start justify-between mb-2">
-              <Activity className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="text-xs text-muted-foreground mb-1">Total Renders</div>
-            <div className="text-xl font-bold text-foreground">
-              {statsLoading ? '...' : stats.totalRenders.toLocaleString()}
-            </div>
-          </Card>
-
-          {/* Approvals */}
-          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
-            <div className="flex items-start justify-between mb-2">
-              <CheckCircle className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="text-xs text-muted-foreground mb-1">Pending Approvals</div>
-            <div className="text-xl font-bold text-foreground">
-              {statsLoading ? '...' : stats.pendingApprovals}
-            </div>
-          </Card>
-
-          {/* Customers */}
-          <Card className="dashboard-card p-3 hover:border-primary/30 transition-all">
-            <div className="flex items-start justify-between mb-2">
-              <Users className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <div className="text-xs text-muted-foreground mb-1">Customers</div>
-            <div className="text-xl font-bold text-foreground">
-              {statsLoading ? '...' : stats.customers}
-            </div>
-          </Card>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <Card
+              key={metric.title}
+              className="dashboard-card p-3 hover:border-primary/30 transition-all"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <Icon className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs text-green-400 font-medium">{metric.change}</span>
+              </div>
+              <div className="dashboard-card-title text-xs text-muted-foreground mb-1">{metric.title}</div>
+              <div className="text-xl font-bold text-foreground">{metric.value}</div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Admin Modules */}

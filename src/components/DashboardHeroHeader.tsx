@@ -46,7 +46,7 @@ export function DashboardHeroHeader({
   const displayImages = getFilteredImages();
   const currentImage = displayImages[currentImageIndex] || null;
   const backgroundImage = currentImage?.image_url || broncoImage;
-  const heroTitle = currentImage?.title || "WrapCommand";
+  const heroTitle = currentImage?.title || "WrapCentral";
   const heroSubtitle = currentImage?.subtitle || "Your Command Center for Wrap Operations";
 
   const quickWins: QuickWinCard[] = [
@@ -85,15 +85,13 @@ export function DashboardHeroHeader({
     return (
       <div className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 bg-gradient-to-r from-black/60 via-black/30 to-transparent">
         {/* Background Image Layer */}
-              <div 
-                className="absolute inset-0 bg-cover opacity-80"
-                style={{
-                  backgroundImage: `url(${backgroundImage})`,
-                  backgroundPosition: window.innerWidth < 768 
-                    ? (currentImage?.background_position_mobile || 'center')
-                    : (currentImage?.background_position_desktop || 'center'),
-                }}
-              />
+        <div 
+          className="absolute inset-0 bg-cover bg-right-center opacity-80"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundPosition: 'right center',
+          }}
+        />
         
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-30% via-background/30 to-60% to-transparent" />
@@ -102,7 +100,7 @@ export function DashboardHeroHeader({
         <div className="relative z-10 px-4 sm:px-8 pt-4 pb-6 sm:pt-6 sm:pb-10">
           <div className="mb-4 sm:mb-6">
             <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2">
-              <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5 whitespace-nowrap" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+              <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
                 <span className="text-foreground">{heroTitle} </span>
                 <span className="text-gradient">Dashboard</span>
                 <span className="text-muted-foreground text-lg sm:text-2xl align-super">™</span>
@@ -158,12 +156,10 @@ export function DashboardHeroHeader({
             <div className="relative w-full bg-gradient-to-r from-black/60 via-black/30 to-transparent">
               {/* Background Image Layer */}
               <div 
-                className="absolute inset-0 bg-cover opacity-80"
+                className="absolute inset-0 bg-cover bg-right-center opacity-80"
                 style={{
                   backgroundImage: `url(${image.image_url})`,
-                  backgroundPosition: window.innerWidth < 768 
-                    ? (image.background_position_mobile || 'center')
-                    : (image.background_position_desktop || 'center'),
+                  backgroundPosition: 'right center',
                 }}
               />
               
@@ -174,8 +170,8 @@ export function DashboardHeroHeader({
               <div className="relative z-10 px-4 sm:px-8 pt-4 pb-6 sm:pt-6 sm:pb-10">
                 <div className="mb-4 sm:mb-6">
                   <div className="inline-block bg-gradient-to-r from-black/80 via-black/60 to-black/40 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-2">
-                    <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5 whitespace-nowrap" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                      <span className="text-foreground">{image.title || "WrapCommand"} </span>
+                    <h1 className="font-poppins text-2xl sm:text-4xl font-bold leading-tight mb-0.5" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+                      <span className="text-foreground">{image.title || "WrapCentral"} </span>
                       <span className="text-gradient">Dashboard</span>
                       <span className="text-muted-foreground text-lg sm:text-2xl align-super">™</span>
                     </h1>

@@ -1,17 +1,5 @@
 project_id = "wzwqhfbmymrengjqikjl"
 
-[functions.ai-generate-design]
-verify_jwt = false
-
-[functions.ai-generate-template]
-verify_jwt = false
-
-[functions.ai-improve-email-content]
-verify_jwt = false
-
-[functions.ai-generate-email-image]
-verify_jwt = false
-
 [functions.analyze-vinyl-swatch]
 verify_jwt = false
 
@@ -67,79 +55,4 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.ups-track]
-verify_jwt = false
-
-[functions.realtime-quote-session]
-verify_jwt = false
-
-[functions.parse-voice-quote]
-verify_jwt = false
-
-[functions.send-mightychat-email]
-verify_jwt = false
-
-[functions.ai-detect-priority]
-verify_jwt = false
-
-[functions.receive-email-webhook]
-verify_jwt = false
-
-[functions.seed-contacts-from-woo]
-verify_jwt = false
-
-[functions.process-portfolio-voice]
-verify_jwt = false
-
-[functions.ai-generate-email-content]
-verify_jwt = false
-
-[functions.ai-generate-followup-sequence]
-verify_jwt = false
-
-[functions.execute-email-sequence]
-verify_jwt = false
-
-[functions.handle-email-unsubscribe]
-verify_jwt = false
-
-[functions.resend-bounce-webhook]
-verify_jwt = false
-
-[functions.enroll-quote-sequence]
-verify_jwt = false
-
-[functions.track-email-open]
-verify_jwt = false
-
-[functions.track-email-click]
-verify_jwt = false
-
-[functions.analyze-brand-voice]
-verify_jwt = false
-
-[functions.backfill-order-totals]
-verify_jwt = true
-
-[functions.bulk-sync-orders]
-verify_jwt = false
-
-[functions.instagram-webhook]
-verify_jwt = false
-
-[functions.ingest-message]
-verify_jwt = false
-
-[functions.create-lead-quote]
-verify_jwt = false
-
-[functions.ai-generate-quote]
-verify_jwt = false
-
-[functions.ai-followup-engine]
-verify_jwt = false
-
-[functions.approveflow-export-pdf]
-verify_jwt = false
-
-[functions.approveflow-export-zip]
 verify_jwt = false

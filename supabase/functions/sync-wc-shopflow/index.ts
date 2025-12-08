@@ -276,9 +276,6 @@ serve(async (req) => {
         updatedTimeline[updatedCustomerStage] = new Date().toISOString();
       }
       
-      // Extract order total for revenue tracking
-      const orderTotal = parseFloat(payload.total || '0');
-      
       // Update existing order
       await supabase
         .from('shopflow_orders')
@@ -288,12 +285,11 @@ serve(async (req) => {
           timeline: updatedTimeline,
           files: updatedFiles,
           customer_email: customerEmail,
-          vehicle_info: orderInfo,
+        vehicle_info: orderInfo,
           affiliate_ref_code: affiliateRefCode,
           product_image_url: productImageUrl,
           woo_order_id: internalId ? parseInt(internalId) : null,
           woo_order_number: displayNumber ? parseInt(displayNumber) : null,
-          order_total: orderTotal, // Capture order total on update
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
@@ -354,25 +350,6 @@ serve(async (req) => {
       initialTimeline[initialCustomerStage] = new Date().toISOString();
     }
     
-    // Check if this is from a reseller organization (by email or affiliate code)
-    let sourceOrgId: string | null = null;
-    if (affiliateRefCode || customerEmail) {
-      const { data: sourceOrg } = await supabase
-        .from('organizations')
-        .select('id, subdomain')
-        .or(`affiliate_founder_id.eq.${affiliateRefCode},subdomain.ilike.%${customerEmail?.split('@')[1]}%`)
-        .maybeSingle();
-      
-      if (sourceOrg) {
-        sourceOrgId = sourceOrg.id;
-        console.log(`🔗 Reseller order detected from org: ${sourceOrg.subdomain}`);
-      }
-    }
-    
-    // Extract order total from WooCommerce payload
-    const orderTotal = parseFloat(payload.total || '0');
-    console.log(`💰 Order total: $${orderTotal}`);
-
     // Create new ShopFlow order
     const { data: newOrder, error: insertError } = await supabase
       .from('shopflow_orders')
@@ -392,43 +369,9 @@ serve(async (req) => {
         approveflow_project_id: approveflowProject?.id || null,
         priority: 'normal',
         affiliate_ref_code: affiliateRefCode,
-        organization_id: null, // WPW production order (main org)
-        source_organization_id: sourceOrgId, // Track reseller if applicable
-        order_source: sourceOrgId ? 'wpw_reseller' : 'woo_webhook',
-        order_total: orderTotal, // Capture WooCommerce order total for revenue tracking
       })
       .select()
       .single();
-
-    if (insertError) throw insertError;
-
-    console.log('✅ WPW production order created:', newOrder.id);
-
-    // If from reseller, update their pending order with WPW production link
-    if (sourceOrgId) {
-      const { data: pendingOrder } = await supabase
-        .from('shopflow_orders')
-        .select('id, order_number')
-        .eq('organization_id', sourceOrgId)
-        .eq('status', 'pending_wpw_checkout')
-        .eq('customer_email', customerEmail)
-        .maybeSingle();
-
-      if (pendingOrder) {
-        await supabase
-          .from('shopflow_orders')
-          .update({
-            status: 'design_requested',
-            customer_stage: 'order_received',
-            wpw_production_order_id: newOrder.id,
-            woo_order_id: internalId ? parseInt(internalId) : null,
-            woo_order_number: displayNumber ? parseInt(displayNumber) : null,
-          })
-          .eq('id', pendingOrder.id);
-        
-        console.log(`🔗 Linked reseller order ${pendingOrder.order_number} to WPW order ${orderNumber}`);
-      }
-    }
     
     // Track affiliate referral if ref code exists
     if (affiliateRefCode && customerEmail && newOrder) {

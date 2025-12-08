@@ -3,28 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import wrapCommandLogo from "@/assets/wrapcommand-logo-new.png";
 
 export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/");
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/");
       }
     });
 
@@ -35,18 +36,59 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
+    const ensureInitialAdmin = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const user = data.user;
+        if (!user) return;
+
+        // This will only succeed for the very first admin due to RLS policy
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: user.id, role: "admin" });
+
+        if (error) {
+          // Ignore RLS/duplicate errors once an admin already exists
+          console.warn("ensureInitialAdmin error (safe to ignore after first admin)", error);
+        }
+      } catch (err) {
+        console.warn("ensureInitialAdmin unexpected error", err);
+      }
+    };
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Welcome back",
-        description: "Signed in successfully",
-      });
+        await ensureInitialAdmin();
+
+        toast({
+          title: "Success",
+          description: "Logged in successfully",
+        });
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
+
+        if (error) throw error;
+
+        await ensureInitialAdmin();
+
+        toast({
+          title: "Success",
+          description: "Account created successfully",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -59,31 +101,20 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a0a0f] via-[#0d1117] to-[#0a0a0f] p-4">
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <Card className="w-full max-w-md bg-card/50 backdrop-blur-xl border-border/50 shadow-2xl relative z-10">
-        <CardContent className="pt-8 pb-8 px-8">
-          {/* Logo and Branding */}
-          <div className="flex flex-col items-center mb-8">
-            <img 
-              src={wrapCommandLogo} 
-              alt="WrapCommand" 
-              className="h-16 w-auto mb-3"
-            />
-            <span className="text-3xl font-bold bg-gradient-to-r from-[#00AFFF] via-[#008CFF] to-[#4EEAFF] bg-clip-text text-transparent">
-              AI
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="font-poppins">
+            <span className="text-foreground">Wrap</span>
+            <span className="text-gradient">
+              Command
             </span>
-            <p className="text-muted-foreground text-sm mt-2">
-              Command Your Wrap Business
-            </p>
-          </div>
-
-          {/* Login Form */}
+          </CardTitle>
+          <CardDescription>
+            {isLogin ? "Sign in to your account" : "Create a new account"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Input
@@ -92,7 +123,6 @@ export default function Auth() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-background/50 border-border/50 focus:border-primary/50"
               />
             </div>
             <div>
@@ -103,28 +133,42 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="bg-background/50 border-border/50 focus:border-primary/50"
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-[#00AFFF] via-[#008CFF] to-[#4EEAFF] hover:from-[#00BFFF] hover:via-[#009CFF] hover:to-[#5EFAFF] text-white font-semibold h-11" 
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Signing in...
+                  {isLogin ? "Signing in..." : "Signing up..."}
                 </>
               ) : (
-                "Sign In"
+                <>{isLogin ? "Sign In" : "Sign Up"}</>
               )}
             </Button>
           </form>
-
-          <p className="text-xs text-muted-foreground text-center mt-6">
-            Admin access only
-          </p>
+          <div className="mt-4 text-center space-y-2">
+            <Button
+              variant="link"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-muted-foreground"
+            >
+              {isLogin
+                ? "Don't have an account? Sign up"
+                : "Already have an account? Sign in"}
+            </Button>
+            {isLogin && (
+              <div>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm text-primary hover:underline p-0"
+                  onClick={() => navigate("/signup")}
+                >
+                  Want your own wrap shop? Create an organization →
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

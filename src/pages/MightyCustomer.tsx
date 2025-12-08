@@ -1,18 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import VoiceCommand, { type ParsedVoiceData } from "@/components/VoiceCommand";
-import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, PlusCircle, Sparkles, Loader2 } from "lucide-react";
-import { useAIQuoteGenerator, type AIQuoteResult } from "@/hooks/useAIQuoteGenerator";
+import VoiceCommand from "@/components/VoiceCommand";
+import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
@@ -20,13 +17,6 @@ import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getVehicleMakes, getVehicleModels, getVehicleYears } from "@/lib/vehicleSqft";
-import { useOrganization } from "@/contexts/OrganizationContext";
-import { generateOrderNumber, generateQuoteNumber } from "@/lib/orderNumberGenerator";
-import { useLocation } from "react-router-dom";
-import { EstimateLineItems, type LineItem } from "@/components/EstimateLineItems";
-import { EstimateBuilder } from "@/components/EstimateBuilder";
-import { AIDesignPanel } from "@/components/design/AIDesignPanel";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -42,10 +32,8 @@ const finishTypes = ["Gloss", "Satin", "Matte", "Gloss PPF", "Matte PPF"];
 
 export default function MightyCustomer() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
   const { products: allProducts, loading: productsLoading, settings } = useProducts();
-  const { organizationId, organizationSettings } = useOrganization();
 
   const [selectedService, setSelectedService] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -80,37 +68,6 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
-  const [quoteNotes, setQuoteNotes] = useState("");
-  
-  const [includeInstallation, setIncludeInstallation] = useState(false);
-  const [installationDescription, setInstallationDescription] = useState("");
-  const [customInstallationHours, setCustomInstallationHours] = useState(0);
-  const [customInstallationRate, setCustomInstallationRate] = useState(65);
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
-  const [aiQuoteResult, setAiQuoteResult] = useState<AIQuoteResult | null>(null);
-  
-  // AI Quote Generator
-  const { generateQuote, isGenerating: isAIGenerating } = useAIQuoteGenerator();
-
-  // Pre-populate from Dashboard navigation state
-  useEffect(() => {
-    if (location.state) {
-      const state = location.state as any;
-      if (state.productCategory) setSelectedService(state.productCategory);
-      if (state.product) {
-        const matchingProduct = allProducts.find(p => p.product_name === state.product);
-        if (matchingProduct) setSelectedProduct(matchingProduct);
-      }
-      if (state.vehicleMake) setCustomerData(prev => ({ ...prev, vehicleMake: state.vehicleMake }));
-      if (state.vehicleModel) setCustomerData(prev => ({ ...prev, vehicleModel: state.vehicleModel }));
-      if (state.vehicleYear) setCustomerData(prev => ({ ...prev, vehicleYear: state.vehicleYear }));
-      if (state.quantity) setQuantity(state.quantity);
-      if (state.finish) setFinish(state.finish);
-      if (state.customerName) setCustomerData(prev => ({ ...prev, name: state.customerName }));
-      if (state.customerEmail) setCustomerData(prev => ({ ...prev, email: state.customerEmail }));
-      if (state.margin) setMargin(state.margin);
-    }
-  }, [location.state, allProducts]);
 
   // Auto-SQFT Quote Engine
   const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
@@ -127,11 +84,11 @@ export default function MightyCustomer() {
     sqftOptions,
     panelCosts,
     materialCost,
-    installationCost,
+    laborCost,
     installHours,
-    wholesaleCost,
-    customerPrice,
-    resellerProfit,
+    subtotal,
+    marginAmount,
+    total,
   } = useQuoteEngine(
     selectedProduct,
     vehicle,
@@ -139,10 +96,7 @@ export default function MightyCustomer() {
     settings.install_rate_per_hour,
     margin,
     includeRoof,
-    wrapType === 'partial' ? selectedPanels : null,
-    includeInstallation,
-    installationDescription,
-    customInstallationHours
+    wrapType === 'partial' ? selectedPanels : null
   );
 
   // Track vehicle match status
@@ -161,95 +115,55 @@ export default function MightyCustomer() {
     setIsManualSqft(true);
   };
 
-  const handleRealtimeVehicle = (vehicle: { year: string; make: string; model: string }) => {
-    setCustomerData(prev => ({
-      ...prev,
-      vehicleYear: vehicle.year,
-      vehicleMake: vehicle.make,
-      vehicleModel: vehicle.model,
-    }));
-  };
-
-  const handleRealtimeCustomer = (customer: { name: string; company?: string; phone?: string; email?: string }) => {
-    setCustomerData(prev => ({
-      ...prev,
-      name: customer.name,
-      company: customer.company || prev.company,
-      phone: customer.phone || prev.phone,
-      email: customer.email || prev.email,
-    }));
-  };
-
-  const handleRealtimeService = (service: { type: string; panels?: string[] }) => {
-    const serviceTypeMap: { [key: string]: string } = {
-      full_wrap: "Full Wraps",
-      partial_wrap: "Partial Wraps",
-      color_change: "Full Wraps",
-      ppf: "PPF",
-      tint: "Window Tint"
-    };
+  const handleVoiceTranscript = (transcript: string, parsedData: any) => {
+    console.log('Voice transcript received:', transcript);
+    console.log('Parsed data:', parsedData);
     
-    const mappedService = serviceTypeMap[service.type];
-    if (mappedService) {
-      setSelectedService(mappedService);
+    // Update customer data with parsed info
+    if (parsedData.customerName || parsedData.companyName || parsedData.phone || parsedData.email) {
+      setCustomerData(prev => ({
+        ...prev,
+        name: parsedData.customerName || prev.name,
+        company: parsedData.companyName || prev.company,
+        phone: parsedData.phone || prev.phone,
+        email: parsedData.email || prev.email,
+        vehicleYear: parsedData.year || prev.vehicleYear,
+        vehicleMake: parsedData.make || prev.vehicleMake,
+        vehicleModel: parsedData.model || prev.vehicleModel,
+      }));
     }
     
-    if (service.type === "partial_wrap" && service.panels) {
-      setWrapType("partial");
-      const newPanels = {
-        sides: service.panels.includes("sides"),
-        back: service.panels.includes("back"),
-        hood: service.panels.includes("hood"),
-        roof: service.panels.includes("roof")
+    // Update service type if parsed
+    if (parsedData.serviceType) {
+      const serviceMap: Record<string, string> = {
+        "Printed Vinyl": "Full Wraps",
+        "Color Change": "Full Wraps", 
+        "PPF": "PPF",
+        "Tint": "Window Tint",
+        "Window Perf": "Window Perf",
+        "Wall Wrap": "Full Wraps"
       };
-      setSelectedPanels(newPanels);
-    } else if (service.type === "full_wrap") {
-      setWrapType("full");
-    }
-  };
-
-  // AI Auto-Fill Quote Handler
-  const handleAIAutoFill = async () => {
-    if (!vehicle) {
-      toast({
-        title: "Vehicle Required",
-        description: "Please enter vehicle year, make, and model first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const wrapTypeValue = wrapType === 'partial' ? 'partial_wrap' : 
-      selectedService.toLowerCase().includes('chrome') ? 'chrome' :
-      selectedService.toLowerCase().includes('ppf') ? 'ppf' :
-      selectedService.toLowerCase().includes('print') ? 'printed' : 'color_change';
-
-    const result = await generateQuote(
-      vehicle,
-      wrapTypeValue,
-      sqftOptions ? undefined : sqft, // Only override if no sqft from database
-      organizationId || undefined
-    );
-
-    if (result) {
-      setAiQuoteResult(result);
-      
-      // Auto-fill form fields from AI result
-      if (!sqftOptions && result.sqft) {
-        setSqft(result.sqft);
-        setIsManualSqft(true);
+      const mappedService = serviceMap[parsedData.serviceType];
+      if (mappedService) {
+        setSelectedService(mappedService);
       }
-      
-      // Auto-set installation hours if not already set
-      if (result.labor_hours && customInstallationHours === 0) {
-        setCustomInstallationHours(result.labor_hours);
-      }
-      
-      toast({
-        title: "AI Quote Applied",
-        description: `Estimated ${result.vehicle_class} wrap: $${result.low_price.toLocaleString()} - $${result.high_price.toLocaleString()}`,
-      });
     }
+    
+    // Set product if available
+    if (parsedData.productType && allProducts.length > 0) {
+      const matchingProduct = allProducts.find(p => 
+        p.product_name.toLowerCase().includes(parsedData.productType.toLowerCase())
+      );
+      if (matchingProduct) {
+        setSelectedProduct(matchingProduct);
+      }
+    }
+    
+    // Handle finish from transcript
+    const lower = transcript.toLowerCase();
+    if (lower.includes("gloss")) setFinish("Gloss");
+    if (lower.includes("matte")) setFinish("Matte");
+    if (lower.includes("satin")) setFinish("Satin");
   };
 
   const handleSendQuoteEmail = async () => {
@@ -262,13 +176,10 @@ export default function MightyCustomer() {
       return;
     }
 
-    const hasLineItems = lineItems.length > 0;
-    const hasSingleProduct = selectedProduct && customerPrice;
-    
-    if (!hasLineItems && !hasSingleProduct) {
+    if (!selectedProduct || !total) {
       toast({
         title: "Incomplete Quote",
-        description: "Add at least one product to the estimate",
+        description: "Please complete the quote before sending",
         variant: "destructive",
       });
       return;
@@ -283,11 +194,6 @@ export default function MightyCustomer() {
         .eq('email', customerData.email)
         .maybeSingle();
 
-      // Calculate totals based on line items or single product
-      const finalTotal = hasLineItems 
-        ? estimateTotal
-        : customerPrice + (includeInstallation ? installationCost : 0);
-
       const { data, error } = await supabase.functions.invoke("send-mightymail-quote", {
         body: {
           customerEmail: customerData.email,
@@ -296,23 +202,16 @@ export default function MightyCustomer() {
             vehicle_year: customerData.vehicleYear,
             vehicle_make: customerData.vehicleMake,
             vehicle_model: customerData.vehicleModel,
-            product_name: hasLineItems 
-              ? lineItems.map(i => i.product_name).join(', ')
-              : selectedProduct?.product_name,
-            sqft: hasLineItems 
-              ? lineItems.reduce((sum, i) => sum + i.sqft, 0)
-              : sqft,
-            material_cost: hasLineItems
-              ? lineItems.reduce((sum, i) => sum + i.line_total, 0)
-              : wholesaleCost,
-            installation_cost: includeInstallation ? installationCost : 0,
-            quote_total: finalTotal,
-            line_items: hasLineItems ? lineItems : null,
+            product_name: selectedProduct.product_name,
+            sqft: sqft,
+            material_cost: materialCost,
+            labor_cost: laborCost,
+            quote_total: total,
             portal_url: window.location.origin + "/mighty-customer",
           },
           tone: emailTone,
           design: emailDesign,
-          quoteId: null,
+          quoteId: null, // Will be set when quote is saved
           customerId: customer?.id || null,
         },
       });
@@ -335,48 +234,6 @@ export default function MightyCustomer() {
     }
   };
 
-  const handleAddToEstimate = () => {
-    if (!selectedProduct || !customerPrice || sqft <= 0) {
-      toast({
-        title: "Cannot Add Item",
-        description: "Please select a product and ensure pricing is calculated",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const newLineItem: LineItem = {
-      id: crypto.randomUUID(),
-      product_name: selectedProduct.product_name,
-      product_id: selectedProduct.id,
-      quantity,
-      sqft,
-      unit_price: selectedProduct.pricing_type === 'per_sqft' 
-        ? (selectedProduct.price_per_sqft || 0)
-        : (selectedProduct.flat_price || 0),
-      line_total: customerPrice,
-      panel_selections: wrapType === 'partial' ? selectedPanels : null,
-    };
-
-    setLineItems(prev => [...prev, newLineItem]);
-    
-    toast({
-      title: "✅ Added to Estimate",
-      description: `${selectedProduct.product_name} - $${customerPrice.toFixed(2)}`,
-    });
-
-    // Reset product selection for next item
-    setSelectedProduct(null);
-  };
-
-  const handleRemoveLineItem = (id: string) => {
-    setLineItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  // Calculate estimate totals
-  const estimateSubtotal = lineItems.reduce((sum, item) => sum + item.line_total, 0);
-  const estimateTotal = estimateSubtotal + (includeInstallation ? installationCost : 0);
-
   const handleSaveQuote = async () => {
     if (!customerData.name || !customerData.email) {
       toast({
@@ -387,14 +244,10 @@ export default function MightyCustomer() {
       return;
     }
 
-    // Allow saving with either line items OR a single selected product
-    const hasLineItems = lineItems.length > 0;
-    const hasSingleProduct = selectedProduct && customerPrice;
-    
-    if (!hasLineItems && !hasSingleProduct) {
+    if (!selectedProduct || !total) {
       toast({
-        title: "No Items",
-        description: "Add at least one product to the estimate",
+        title: "Incomplete Quote",
+        description: "Please complete the quote before saving",
         variant: "destructive",
       });
       return;
@@ -402,23 +255,12 @@ export default function MightyCustomer() {
 
     setIsSavingQuote(true);
     try {
-      const quoteNumber = generateQuoteNumber(organizationSettings.subdomain);
+      const quoteNumber = `WPW-${Date.now().toString().slice(-6)}`;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
 
-      // Calculate totals based on line items or single product
-      const finalTotal = hasLineItems 
-        ? estimateTotal
-        : customerPrice + (includeInstallation ? installationCost : 0);
-      const finalWholesale = hasLineItems
-        ? lineItems.reduce((sum, item) => sum + (item.unit_price * item.sqft), 0)
-        : wholesaleCost;
-      const finalProfit = finalTotal - finalWholesale - (includeInstallation ? installationCost : 0);
-
-      // Insert quote header with AI tracking
-      const { data: quote, error: quoteError } = await supabase.from("quotes").insert({
+      const { error } = await supabase.from("quotes").insert({
         quote_number: quoteNumber,
-        organization_id: organizationId,
         customer_name: customerData.name,
         customer_email: customerData.email,
         customer_phone: customerData.phone,
@@ -435,88 +277,31 @@ export default function MightyCustomer() {
           selectedPanels: wrapType === 'partial' ? selectedPanels : null,
           sqftOptions: sqftOptions
         }),
-        product_name: hasLineItems 
-          ? lineItems.map(i => i.product_name).join(', ')
-          : selectedProduct?.product_name,
-        sqft: hasLineItems 
-          ? lineItems.reduce((sum, i) => sum + i.sqft, 0)
-          : sqft,
-        wholesale_cost: finalWholesale,
-        customer_price: finalTotal,
-        reseller_profit: finalProfit,
+        product_name: selectedProduct.product_name,
+        sqft: sqft,
         material_cost: materialCost,
-        installation_included: includeInstallation,
-        installation_cost: includeInstallation ? installationCost : null,
-        installation_description: includeInstallation ? installationDescription : null,
-        installation_hours: includeInstallation ? (customInstallationHours || installHours) : null,
-        installation_rate: includeInstallation ? settings.install_rate_per_hour : null,
-        total_price: finalTotal,
+        labor_cost: laborCost,
+        total_price: total,
         margin: margin,
         status: "pending",
         auto_retarget: true,
         email_tone: emailTone,
         email_design: emailDesign,
         expires_at: expiresAt.toISOString(),
-        // AI quote tracking fields
-        ai_generated: !!aiQuoteResult,
-        ai_sqft_estimate: aiQuoteResult?.sqft || null,
-        ai_vehicle_class: aiQuoteResult?.vehicle_class || null,
-        ai_labor_hours: aiQuoteResult?.labor_hours || null,
-        ai_low_price: aiQuoteResult?.low_price || null,
-        ai_high_price: aiQuoteResult?.high_price || null,
-        ai_message: aiQuoteResult?.ai_message || null,
-        ai_generated_at: aiQuoteResult?.generated_at || null,
-      }).select().single();
+      });
 
-      if (quoteError) throw quoteError;
-
-      // Insert line items if we have them
-      if (hasLineItems && quote) {
-        const lineItemsToInsert = lineItems.map((item, index) => ({
-          quote_id: quote.id,
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          sqft: item.sqft,
-          unit_price: item.unit_price,
-          line_total: item.line_total,
-          panel_selections: item.panel_selections,
-          display_order: index,
-        }));
-
-        const { error: lineItemsError } = await supabase
-          .from("quote_line_items")
-          .insert(lineItemsToInsert);
-
-        if (lineItemsError) throw lineItemsError;
-      }
+      if (error) throw error;
 
       toast({
-        title: "✅ Estimate Saved!",
-        description: `Quote ${quoteNumber} saved for ${customerData.name} - Total: $${finalTotal.toFixed(2)}`,
-        duration: 5000,
+        title: "Quote Saved!",
+        description: `Quote ${quoteNumber} has been saved successfully`,
       });
-
-      // Reset form after successful save
-      setCustomerData({
-        name: "",
-        company: "",
-        phone: "",
-        email: "",
-        vehicleYear: "",
-        vehicleMake: "",
-        vehicleModel: "",
-      });
-      setSelectedProduct(null);
-      setSelectedService("");
-      setLineItems([]);
     } catch (error: any) {
       console.error("Error saving quote:", error);
       toast({
-        title: "Error Saving Quote",
-        description: error.message || "Failed to save quote. Please try again.",
+        title: "Error",
+        description: error.message || "Failed to save quote",
         variant: "destructive",
-        duration: 5000,
       });
     } finally {
       setIsSavingQuote(false);
@@ -533,27 +318,6 @@ export default function MightyCustomer() {
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
-    
-    // Auto-configure panels based on partial wrap product names
-    const productName = product.product_name.toLowerCase();
-    
-    if (productName.includes('hood only') || productName.includes('hood wrap')) {
-      setWrapType('partial');
-      setSelectedPanels({ sides: false, back: false, hood: true, roof: false });
-    } else if (productName.includes('roof only') || productName.includes('roof wrap')) {
-      setWrapType('partial');
-      setSelectedPanels({ sides: false, back: false, hood: false, roof: true });
-    } else if (productName.includes('pillars') || productName.includes('pillar')) {
-      setWrapType('partial');
-      setSelectedPanels({ sides: true, back: false, hood: false, roof: false });
-    } else if (productName.includes('accent') || productName.includes('custom panel')) {
-      setWrapType('partial');
-      setSelectedPanels({ sides: true, back: true, hood: false, roof: false });
-    } else if (product.category?.toLowerCase().includes('partial')) {
-      setWrapType('partial');
-    } else if (product.category?.toLowerCase().includes('full')) {
-      setWrapType('full');
-    }
   };
 
   const handleAddToCart = async (product: Product) => {
@@ -567,113 +331,30 @@ export default function MightyCustomer() {
       return;
     }
 
-    if (!customerData.name || !customerData.email) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter customer name and email",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setIsSending(true);
       
-      // Save pending order in subdomain's database BEFORE redirect
-      const pendingOrderNumber = generateOrderNumber(organizationSettings.subdomain);
-      
-      const { error: orderError } = await supabase.from("shopflow_orders").insert({
-        order_number: pendingOrderNumber,
-        organization_id: organizationId,
-        customer_name: customerData.name,
-        customer_email: customerData.email,
-        product_type: product.product_name,
-        status: "pending_wpw_checkout",
-        customer_stage: "awaiting_checkout",
-        vehicle_info: {
-          year: customerData.vehicleYear,
-          make: customerData.vehicleMake,
-          model: customerData.vehicleModel,
+      // Call server-side protected edge function
+      const { data, error } = await supabase.functions.invoke('add-to-woo-cart', {
+        body: {
+          product_id: product.woo_product_id,
+          quantity: quantity,
         },
-        order_source: "wpw_reseller",
-      });
-
-      if (orderError) throw orderError;
-
-      // Build WooCommerce cart URL with product + quantity
-      const wooCartUrl = `https://weprintwraps.com/cart/?add-to-cart=${product.woo_product_id}&quantity=${quantity}`;
-      
-      // Open WPW cart in new tab
-      window.open(wooCartUrl, '_blank');
-
-      toast({
-        title: "Opening WePrintWraps.com Cart",
-        description: `Order ${pendingOrderNumber} created. Complete checkout to finalize.`,
-      });
-    } catch (error) {
-      console.error("Cart error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create order. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const handleCreateOrder = async () => {
-    if (!customerData.name || !customerData.email) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter customer name and email",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedProduct) {
-      toast({
-        title: "Missing Product",
-        description: "Please select a product",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsSending(true);
-      const orderNumber = generateOrderNumber(organizationSettings.subdomain);
-      
-      const { error } = await supabase.from("shopflow_orders").insert({
-        order_number: orderNumber,
-        organization_id: organizationId,
-        customer_name: customerData.name,
-        customer_email: customerData.email,
-        product_type: selectedProduct.product_name,
-        status: "design_requested",
-        customer_stage: "order_received",
-        vehicle_info: {
-          year: customerData.vehicleYear,
-          make: customerData.vehicleMake,
-          model: customerData.vehicleModel,
-        },
-        order_source: "direct",
       });
 
       if (error) throw error;
 
       toast({
-        title: `Order ${orderNumber} Created`,
-        description: "Order created successfully!",
+        title: "Added to Cart",
+        description: `${product.product_name} added to your cart!`,
       });
       
-      navigate("/shopflow-internal");
-    } catch (error: any) {
-      console.error("Create order error:", error);
+      console.log("Added to cart:", data);
+    } catch (error) {
+      console.error("Cart error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create order",
+        description: "Failed to add item to cart. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -685,92 +366,14 @@ export default function MightyCustomer() {
     <MainLayout userName="Admin">
       <div className="w-full space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="font-poppins text-4xl sm:text-5xl font-bold leading-tight">
-            <span className="text-foreground">Mighty</span>
-            <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Customer</span>
-            <span className="text-muted-foreground text-xl sm:text-2xl align-super">™</span>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            MightyCustomer™
           </h1>
-          <p className="text-muted-foreground text-lg">Quote Builder & Order Management</p>
+          <p className="text-muted-foreground">Quote Builder & Order Management</p>
         </div>
 
         <Card className="dashboard-card p-6 space-y-6 relative">
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">AI Voice Assistant</Label>
-            <VoiceCommand
-              onTranscript={(transcript: string, parsedData: ParsedVoiceData) => {
-                console.log('📝 Voice transcript:', transcript);
-                console.log('🔍 Parsed data:', parsedData);
-                
-                // Update customer data - batch all vehicle fields together
-                const newCustomerData = {
-                  name: parsedData.customerName || customerData.name,
-                  company: parsedData.companyName || customerData.company,
-                  email: parsedData.email || customerData.email,
-                  phone: parsedData.phone || customerData.phone,
-                  vehicleYear: parsedData.vehicleYear || customerData.vehicleYear,
-                  vehicleMake: parsedData.vehicleMake || customerData.vehicleMake,
-                  vehicleModel: parsedData.vehicleModel || customerData.vehicleModel,
-                };
-                
-                setCustomerData(newCustomerData);
-                
-                // Force SQFT recalculation after voice input with slight delay
-                // This ensures React state updates are complete before useQuoteEngine re-runs
-                if (parsedData.vehicleYear || parsedData.vehicleMake || parsedData.vehicleModel) {
-                  setTimeout(() => {
-                    // Trigger a re-render by updating state
-                    setCustomerData(prev => ({ ...prev }));
-                    console.log('🔄 Forced SQFT recalculation after voice input');
-                  }, 150);
-                }
-                
-                // Update finish if detected
-                if (parsedData.finish) {
-                  const finishMap: Record<string, string> = {
-                    'gloss': 'Gloss',
-                    'matte': 'Matte', 
-                    'satin': 'Satin',
-                  };
-                  const mappedFinish = finishMap[parsedData.finish.toLowerCase()];
-                  if (mappedFinish) setFinish(mappedFinish);
-                }
-                
-                // Auto-select category based on service type
-                if (parsedData.serviceType) {
-                  const serviceType = parsedData.serviceType.toLowerCase();
-                  if (serviceType.includes('ppf') || serviceType.includes('protection')) {
-                    setSelectedService('PPF');
-                  } else if (serviceType.includes('tint') || serviceType.includes('window')) {
-                    setSelectedService('Window Tint');
-                  } else if (serviceType.includes('chrome')) {
-                    setSelectedService('Chrome Delete');
-                  } else if (serviceType.includes('partial')) {
-                    setSelectedService('Partial Wraps');
-                  } else if (serviceType.includes('wrap') || serviceType.includes('color')) {
-                    setSelectedService('Full Wraps');
-                  } else if (serviceType.includes('print')) {
-                    setSelectedService('WePrintWraps.com products');
-                  }
-                }
-                
-                // Auto-select product if brand mentioned
-                if (parsedData.productType && allProducts.length > 0) {
-                  const matchingProduct = allProducts.find(p => 
-                    p.product_name.toLowerCase().includes(parsedData.productType.toLowerCase())
-                  );
-                  if (matchingProduct) {
-                    setSelectedProduct(matchingProduct);
-                  }
-                }
-                
-                // Store notes
-                if (parsedData.notes) {
-                  setQuoteNotes(prev => prev ? `${prev}\n${parsedData.notes}` : parsedData.notes);
-                }
-              }}
-            />
-          </div>
-
+          <VoiceCommand onTranscript={handleVoiceTranscript} />
           <div className="space-y-4">
             <Label className="text-lg font-semibold">Select Category</Label>
             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -780,15 +383,15 @@ export default function MightyCustomer() {
                 return (
                   <Button
                     key={category}
-                    variant={isSelected ? "default" : "outline"}
+                    variant={isWPWCategory ? (isSelected ? "default" : "ghost") : (isSelected ? "default" : "outline")}
                     onClick={() => {
                       setSelectedService(category);
                       setSelectedProduct(null);
                       setActiveProductTab("regular");
                     }}
-                    className={`whitespace-nowrap px-6 font-semibold ${
+                    className={`whitespace-nowrap px-6 ${
                       isWPWCategory
-                        ? `bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E] text-white border-0 shadow-lg shadow-purple-500/50 ${isSelected ? 'ring-2 ring-white/50 scale-105' : 'hover:scale-105'} transition-all`
+                        ? `bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0 ${isSelected ? 'ring-2 ring-white/50' : ''}`
                         : ""
                     }`}
                   >
@@ -831,12 +434,7 @@ export default function MightyCustomer() {
               // Show only WePrintWraps products
               categoryFiltered = allProducts.filter(p => p.woo_product_id && isWPW(p.woo_product_id));
             } else {
-              // For non-WPW categories, show products in that category excluding WPW products
-              categoryFiltered = allProducts.filter(p => {
-                const categoryMatch = p.category.toLowerCase().includes(categoryKey.toLowerCase());
-                const notWPW = !isWPW(p.woo_product_id);
-                return categoryMatch && notWPW;
-              });
+              categoryFiltered = allProducts.filter(p => p.category === categoryKey);
             }
 
             return (
@@ -846,27 +444,6 @@ export default function MightyCustomer() {
                   {categoryFiltered.map((product) => {
                     const productIsWPW = product.woo_product_id && isWPW(product.woo_product_id);
                     const isSelected = selectedProduct?.id === product.id;
-                    
-                    // Calculate panel-specific SQFT and price for partial wrap products
-                    let panelSqft = 0;
-                    let panelPrice = 0;
-                    const productName = product.product_name.toLowerCase();
-                    
-                    if (sqftOptions && product.pricing_type === 'per_sqft' && product.price_per_sqft) {
-                      if (productName.includes('hood only') || productName.includes('hood wrap')) {
-                        panelSqft = sqftOptions.panels.hood;
-                        panelPrice = panelSqft * product.price_per_sqft;
-                      } else if (productName.includes('roof only') || productName.includes('roof wrap')) {
-                        panelSqft = sqftOptions.panels.roof;
-                        panelPrice = panelSqft * product.price_per_sqft;
-                      } else if (productName.includes('pillars') || productName.includes('pillar')) {
-                        panelSqft = sqftOptions.panels.sides;
-                        panelPrice = panelSqft * product.price_per_sqft;
-                      } else if (productName.includes('accent') || productName.includes('custom')) {
-                        panelSqft = sqftOptions.panels.sides + sqftOptions.panels.back;
-                        panelPrice = panelSqft * product.price_per_sqft;
-                      }
-                    }
                     
                     return (
                       <div key={product.id} className="relative">
@@ -892,17 +469,6 @@ export default function MightyCustomer() {
                               ? `$${product.price_per_sqft}/sqft`
                               : `$${product.flat_price} flat`}
                           </p>
-                          
-                          {/* Show calculated SQFT and price for partial wrap products */}
-                          {panelSqft > 0 && (
-                            <div className="mt-2 pt-2 border-t border-border/50">
-                              <div className="text-sm font-bold text-primary">{panelSqft} sq ft</div>
-                              <div className="text-xs text-green-400 font-semibold">
-                                Est. ${panelPrice.toFixed(2)}
-                              </div>
-                            </div>
-                          )}
-                          
                           {product.product_type === 'quote-only' && (
                             <span className="text-xs text-muted-foreground mt-1 block">
                               Quote Only
@@ -966,89 +532,40 @@ export default function MightyCustomer() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Vehicle Make</Label>
-                <Select
-                  value={customerData.vehicleMake}
-                  onValueChange={(value) => {
-                    console.log('Make updated:', value);
-                    setCustomerData(prev => ({ ...prev, vehicleMake: value, vehicleModel: '' }));
+                <Label>Vehicle Year</Label>
+                <Input
+                  type="text"
+                  placeholder="2024"
+                  value={customerData.vehicleYear}
+                  onChange={(e) => {
+                    console.log('Year updated:', e.target.value);
+                    setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }));
                   }}
-                >
-                  <SelectTrigger className="bg-background border-border">
-                    <SelectValue placeholder="Select Make" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border z-50">
-                    {getVehicleMakes().map((make) => (
-                      <SelectItem key={make} value={make}>{make}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vehicle Make</Label>
+                <Input
+                  type="text"
+                  placeholder="Chevrolet"
+                  value={customerData.vehicleMake}
+                  onChange={(e) => {
+                    console.log('Make updated:', e.target.value);
+                    setCustomerData(prev => ({ ...prev, vehicleMake: e.target.value }));
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Vehicle Model</Label>
-                <Select
+                <Input
+                  type="text"
+                  placeholder="Tahoe"
                   value={customerData.vehicleModel}
-                  onValueChange={(value) => {
-                    console.log('Model updated:', value);
-                    setCustomerData(prev => ({ ...prev, vehicleModel: value }));
+                  onChange={(e) => {
+                    console.log('Model updated:', e.target.value);
+                    setCustomerData(prev => ({ ...prev, vehicleModel: e.target.value }));
                   }}
-                  disabled={!customerData.vehicleMake}
-                >
-                  <SelectTrigger className="bg-background border-border">
-                    <SelectValue placeholder="Select Model" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border-border z-50">
-                    {customerData.vehicleMake && getVehicleModels(customerData.vehicleMake).map((model) => (
-                      <SelectItem key={model} value={model}>{model}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Vehicle Year</Label>
-                {(() => {
-                  const availableYears = customerData.vehicleMake && customerData.vehicleModel 
-                    ? getVehicleYears(customerData.vehicleMake, customerData.vehicleModel)
-                    : [];
-                  const hasYears = availableYears.length > 0;
-                  
-                  return hasYears ? (
-                    <Select
-                      value={customerData.vehicleYear}
-                      onValueChange={(value) => {
-                        console.log('Year updated:', value);
-                        if (value === "custom") {
-                          // Show custom input mode
-                          setCustomerData(prev => ({ ...prev, vehicleYear: "" }));
-                        } else {
-                          setCustomerData(prev => ({ ...prev, vehicleYear: value }));
-                        }
-                      }}
-                      disabled={!customerData.vehicleMake || !customerData.vehicleModel}
-                    >
-                      <SelectTrigger className="bg-background border-border">
-                        <SelectValue placeholder="Select Year" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border-border z-50 max-h-60">
-                        {availableYears.map((year) => (
-                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                        ))}
-                        <SelectItem value="custom">Other Year...</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      type="text"
-                      placeholder={customerData.vehicleMake && customerData.vehicleModel ? "Enter Year" : "Select Make & Model first"}
-                      value={customerData.vehicleYear}
-                      onChange={(e) => {
-                        console.log('Year updated:', e.target.value);
-                        setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }));
-                      }}
-                      disabled={!customerData.vehicleMake || !customerData.vehicleModel}
-                    />
-                  );
-                })()}
+                />
               </div>
             </div>
 
@@ -1387,189 +904,44 @@ export default function MightyCustomer() {
                 </div>
               </div>
             </div>
-
-            {/* AI Auto-Fill Quote Button */}
-            <div className="flex flex-col gap-3">
-              <Button
-                onClick={handleAIAutoFill}
-                disabled={!vehicle || isAIGenerating}
-                className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white shadow-lg shadow-purple-500/30"
-              >
-                {isAIGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating AI Quote...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    AI Auto-Fill Quote
-                  </>
-                )}
-              </Button>
-
-              {/* AI Quote Result Display */}
-              {aiQuoteResult && (
-                <div className="p-4 rounded-lg bg-gradient-to-br from-violet-950/50 to-purple-900/30 border border-violet-500/40 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-violet-300">
-                      <Sparkles className="h-4 w-4" />
-                      <span className="text-sm font-semibold">AI Quote Applied</span>
-                    </div>
-                    <Badge variant="outline" className="border-violet-500/40 text-violet-300 text-xs">
-                      Auto-filled
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="text-muted-foreground">Vehicle Class:</div>
-                    <div className="text-right font-medium capitalize">{aiQuoteResult.vehicle_class}</div>
-                    
-                    <div className="text-muted-foreground">Estimated SQFT:</div>
-                    <div className="text-right font-medium">{aiQuoteResult.sqft} sq ft</div>
-                    
-                    <div className="text-muted-foreground">Labor Hours:</div>
-                    <div className="text-right font-medium">{aiQuoteResult.labor_hours} hrs</div>
-                    
-                    <div className="text-muted-foreground">Material Cost:</div>
-                    <div className="text-right font-medium">${aiQuoteResult.material_cost?.toLocaleString()}</div>
-                    
-                    <div className="text-muted-foreground">Labor Cost:</div>
-                    <div className="text-right font-medium">${aiQuoteResult.labor_cost?.toLocaleString()}</div>
-                  </div>
-                  
-                  <div className="pt-2 border-t border-violet-500/30">
-                    <div className="flex justify-between items-center">
-                      <span className="text-violet-300 font-semibold">AI Price Range:</span>
-                      <span className="text-lg font-bold text-violet-200">
-                        ${aiQuoteResult.low_price.toLocaleString()} - ${aiQuoteResult.high_price.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {aiQuoteResult.ai_message && (
-                    <div className="pt-2 border-t border-violet-500/30">
-                      <p className="text-sm text-violet-200/80 italic">
-                        "{aiQuoteResult.ai_message}"
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* AI Design Tools Panel */}
-            {vehicle && (
-              <AIDesignPanel
-                vehicle={{
-                  year: customerData.vehicleYear,
-                  make: customerData.vehicleMake,
-                  model: customerData.vehicleModel,
-                }}
-                organizationId={organizationId || ""}
-                customerName={customerData.name}
-                customerEmail={customerData.email}
-              />
-            )}
           </div>
 
-          {/* Installation Toggle */}
-          <div className="space-y-4 pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">Include Installation</Label>
-              <Button
-                type="button"
-                variant={includeInstallation ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIncludeInstallation(!includeInstallation)}
-              >
-                {includeInstallation ? "✓ Included" : "Add Installation"}
-              </Button>
-            </div>
-            
-            {includeInstallation && (
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                <div className="space-y-2">
-                  <Label>Installation Description</Label>
-                  <Input
-                    type="text"
-                    placeholder="e.g., Full wrap - Avery SW900"
-                    value={installationDescription}
-                    onChange={(e) => setInstallationDescription(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Hours</Label>
-                    <Input
-                      type="number"
-                      placeholder={installHours.toString()}
-                      value={customInstallationHours || ""}
-                      onChange={(e) => setCustomInstallationHours(Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Rate/Hour</Label>
-                    <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
-                      <span className="text-sm">${settings.install_rate_per_hour}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Total</Label>
-                    <div className="flex items-center h-10 px-3 border rounded-md bg-primary/10 text-primary font-semibold">
-                      <span className="text-sm">${installationCost.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Quote Summary - Dual Pricing for Resellers */}
+          {/* Quote Summary */}
           {selectedProduct && sqft > 0 && (
             <div className="space-y-4 pt-4 border-t">
-              <Label className="text-lg font-semibold">Pricing (Reseller View)</Label>
+              <Label className="text-lg font-semibold">Quote Summary</Label>
               <div className="p-4 bg-gradient-to-br from-background to-muted/20 rounded-lg border space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">WPW Base Cost:</span>
-                  <span className="font-semibold">${wholesaleCost.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Material Cost:</span>
+                  <span className="font-semibold">${materialCost.toFixed(2)}</span>
                 </div>
                 
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Suggested Retail ({margin}%):</span>
-                  <span className="font-semibold">${(wholesaleCost * (1 + margin / 100)).toFixed(2)}</span>
+                  <span className="text-muted-foreground">
+                    Labor ({installHours}h × ${settings.install_rate_per_hour}/h):
+                  </span>
+                  <span className="font-semibold">${laborCost.toFixed(2)}</span>
                 </div>
                 
-                {includeInstallation && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Installation:</span>
-                    <span className="font-semibold">${installationCost.toFixed(2)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Margin ({margin}%):</span>
+                  <span className="font-semibold text-blue-400">${marginAmount.toFixed(2)}</span>
+                </div>
                 
                 <div className="pt-3 border-t border-border">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-lg font-bold">Customer Price:</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold">Total:</span>
                     <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-                      ${customerPrice.toFixed(2)}
+                      ${total.toFixed(2)}
                     </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm pt-2 border-t border-border/50">
-                    <span className="text-green-400 font-semibold">💰 Your Profit:</span>
-                    <span className="text-green-400 font-bold">${resellerProfit.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
-              
-              {/* Add to Estimate Button */}
-              <Button
-                onClick={handleAddToEstimate}
-                disabled={!selectedProduct || !customerPrice || sqft <= 0}
-                className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white"
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add to Estimate
-              </Button>
             </div>
           )}
 
@@ -1704,41 +1076,21 @@ export default function MightyCustomer() {
             </div>
           </div>
 
-          {/* ShopVOX-Style Estimate Builder */}
-          {lineItems.length > 0 && (
-            <EstimateBuilder
-              lineItems={lineItems}
-              onRemoveItem={handleRemoveLineItem}
-              onAddItem={() => setSelectedProduct(null)}
-              onCreateJob={handleCreateOrder}
-              customerData={{
-                name: customerData.name,
-                company: customerData.company,
-                email: customerData.email,
-                phone: customerData.phone,
-              }}
-              vehicleInfo={vehicle}
-              sqftOptions={sqftOptions}
-              installationCost={installationCost}
-              includeInstallation={includeInstallation}
-              status="draft"
-            />
-          )}
-
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleSaveQuote}
-              disabled={isSavingQuote || (lineItems.length === 0 && (!selectedProduct || !customerPrice)) || !customerData.name || !customerData.email}
-              className="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white shadow-lg"
+              variant="outline"
+              disabled={isSavingQuote || !selectedProduct || !total || !customerData.name || !customerData.email}
+              className="flex-1 border-primary/40 hover:bg-primary/10"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {isSavingQuote ? "Saving Estimate..." : lineItems.length > 0 ? `Save Estimate (${lineItems.length} items)` : "Save Estimate"}
+              {isSavingQuote ? "Saving..." : "Save Quote"}
             </Button>
             
             <Button
               onClick={() => setEmailPreviewOpen(true)}
               variant="outline"
-              disabled={lineItems.length === 0 && (!selectedProduct || !customerPrice)}
+              disabled={!selectedProduct || !total}
               className="flex-1 border-primary/40 hover:bg-primary/10"
             >
               <Mail className="mr-2 h-4 w-4" />
@@ -1747,7 +1099,7 @@ export default function MightyCustomer() {
 
             <Button
               onClick={handleSendQuoteEmail}
-              disabled={isSendingEmail || (lineItems.length === 0 && (!selectedProduct || !customerPrice)) || !customerData.email || !customerData.name}
+              disabled={isSendingEmail || !selectedProduct || !total || !customerData.email || !customerData.name}
               className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
             >
               <Mail className="mr-2 h-4 w-4" />
@@ -1774,20 +1126,19 @@ export default function MightyCustomer() {
               return productIsWPW ? (
                 <Button
                   onClick={() => handleAddToCart(selectedProduct)}
-                  disabled={isSending || sqft === 0 || !customerData.name || !customerData.email}
-                  className="flex-1 bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E] text-white"
+                  disabled={isSending || sqft === 0}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
-                  {isSending ? "Opening WPW Cart..." : "Order from WPW"}
+                  {isSending ? "Adding..." : "Add to Cart"}
                 </Button>
               ) : (
                 <Button
-                  onClick={handleCreateOrder}
-                  disabled={isSending || !customerData.name || !customerData.email}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900"
+                  disabled
+                  className="flex-1 bg-gray-600 cursor-not-allowed"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  {isSending ? "Creating..." : "Create Order"}
+                  <Lock className="mr-2 h-4 w-4" />
+                  Quote Only
                 </Button>
               );
             })()}
@@ -1804,9 +1155,9 @@ export default function MightyCustomer() {
             vehicleModel: customerData.vehicleModel,
             productName: selectedProduct?.product_name,
             sqft: sqft,
-            materialCost: wholesaleCost,
-            installationCost: includeInstallation ? installationCost : 0,
-            total: customerPrice,
+            materialCost: materialCost,
+            laborCost: laborCost,
+            total: total,
             portalUrl: window.location.origin + "/mighty-customer",
           }}
           tone={emailTone}

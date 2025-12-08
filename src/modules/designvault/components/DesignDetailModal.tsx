@@ -183,7 +183,7 @@ export const DesignDetailModal = ({
             <Button
               onClick={handleSendToWrapBox}
               disabled={isCreatingKit}
-              className="flex-1 bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E] text-white border-0 text-sm h-10"
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 text-sm h-10"
             >
               <Package className="w-4 h-4 mr-2" />
               Generate Print Pack

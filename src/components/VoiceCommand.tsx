@@ -1,37 +1,16 @@
-import { Mic, X, Sparkles, Timer, CheckCircle2 } from "lucide-react";
+import { Mic, X, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { useVoiceInput } from "@/hooks/useVoiceInput";
-import { supabase } from "@/integrations/supabase/client";
-
-export interface ParsedVoiceData {
-  customerName: string;
-  companyName: string;
-  email: string;
-  phone: string;
-  vehicleYear: string;
-  vehicleMake: string;
-  vehicleModel: string;
-  serviceType: string;
-  productType: string;
-  finish: string;
-  notes: string;
-}
 
 interface VoiceCommandProps {
-  onTranscript: (transcript: string, parsedData: ParsedVoiceData) => void;
+  onTranscript: (transcript: string, parsedData: any) => void;
 }
 
 export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
+  const [isRecording, setIsRecording] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isParsing, setIsParsing] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [lastTranscript, setLastTranscript] = useState<string | null>(null);
-  const [populatedFields, setPopulatedFields] = useState<string[]>([]);
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
 
   // Click outside to collapse
   useEffect(() => {
@@ -47,237 +26,127 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
     }
   }, [isExpanded]);
 
-  // Recording timer
-  useEffect(() => {
-    if (isRecording) {
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 100);
-      }, 100);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isRecording]);
-
-  const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const tenths = Math.floor((ms % 1000) / 100);
-    return `${seconds}.${tenths}s`;
+  const handleMouseDown = () => {
+    setIsRecording(true);
+    startRecording();
   };
 
-  const handleTouchStart = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setLastTranscript(null);
-    setPopulatedFields([]);
-    console.log('🎤 Starting voice recording...');
-    try {
-      await startRecording();
-      console.log('✅ Recording started successfully');
+  const handleMouseUp = () => {
+    setIsRecording(false);
+    stopRecording();
+  };
+
+  const startRecording = () => {
+    // Web Speech API implementation
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       toast({
-        title: "🎤 Recording Started",
-        description: "Speak now - release when done",
-      });
-    } catch (error) {
-      console.error('❌ Failed to start recording:', error);
-      toast({
-        title: "Microphone Error",
-        description: "Could not access microphone. Please check browser permissions.",
+        title: "Not Supported",
+        description: "Speech recognition not supported in this browser",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleTouchEnd = async (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!isRecording) {
-      console.log('⚠️ Not recording, skipping stop');
       return;
     }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
     
-    console.log(`⏹️ Stopping recording after ${recordingTime}ms...`);
-    try {
-      const transcript = await stopRecording();
-      console.log('📝 Transcription result:', transcript);
-      setLastTranscript(transcript);
-      
-      if (transcript && transcript.trim().length > 0) {
-        toast({
-          title: "🧠 AI Processing...",
-          description: `"${transcript.substring(0, 60)}${transcript.length > 60 ? '...' : ''}"`,
-        });
-        await parseVoiceInputWithAI(transcript);
-      } else {
-        console.warn('⚠️ No transcript received');
-        toast({
-          title: "No Speech Detected",
-          description: "Please try again and speak clearly into the microphone.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('❌ Voice input error:', error);
-      toast({
-        title: "Transcription Failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const parseVoiceInputWithAI = async (transcript: string) => {
-    console.log('🤖 AI parsing transcript:', transcript);
-    setIsParsing(true);
+    recognition.continuous = true;
+    recognition.interimResults = false;
     
-    try {
-      const { data, error } = await supabase.functions.invoke('parse-voice-quote', {
-        body: { transcript }
-      });
-
-      if (error) {
-        console.error('❌ AI parsing error:', error);
-        // Check for specific error types
-        const errorMsg = error.message?.toLowerCase() || '';
-        if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
-          toast({
-            title: "⏳ AI Busy",
-            description: "Rate limited - using backup parsing",
-            variant: "destructive",
-          });
-        } else if (errorMsg.includes('402') || errorMsg.includes('credits')) {
-          toast({
-            title: "💳 AI Credits",
-            description: "Credits exhausted - using backup parsing",
-            variant: "destructive",
-          });
-        }
-        fallbackParse(transcript);
-        return;
-      }
-
-      // Check for error in response body
-      if (data?.error) {
-        console.error('❌ AI response error:', data.error);
-        toast({
-          title: "AI Error",
-          description: data.error,
-          variant: "destructive",
-        });
-        fallbackParse(transcript);
-        return;
-      }
-
-      if (data?.parsedData) {
-        const parsed = data.parsedData;
-        console.log('✅ AI parsed data:', parsed);
-        
-        const parsedData: ParsedVoiceData = {
-          customerName: parsed.customerName || '',
-          companyName: parsed.companyName || '',
-          email: parsed.email || '',
-          phone: parsed.phone || '',
-          vehicleYear: parsed.vehicleYear || '',
-          vehicleMake: parsed.vehicleMake || '',
-          vehicleModel: parsed.vehicleModel || '',
-          serviceType: parsed.serviceType || '',
-          productType: parsed.productType || '',
-          finish: parsed.finish || '',
-          notes: parsed.notes || '',
-        };
-
-        onTranscript(transcript, parsedData);
-        
-        // Build a list of populated fields for confirmation
-        const fields: string[] = [];
-        if (parsedData.customerName) fields.push('Customer Name');
-        if (parsedData.companyName) fields.push('Company');
-        if (parsedData.email) fields.push('Email');
-        if (parsedData.phone) fields.push('Phone');
-        if (parsedData.vehicleYear) fields.push('Year');
-        if (parsedData.vehicleMake) fields.push('Make');
-        if (parsedData.vehicleModel) fields.push('Model');
-        if (parsedData.serviceType) fields.push('Service');
-        if (parsedData.finish) fields.push('Finish');
-        if (parsedData.notes) fields.push('Notes');
-        
-        setPopulatedFields(fields);
-        
-        // Show success toast with populated fields count
-        toast({
-          title: `✅ ${fields.length} Fields Populated`,
-          description: fields.length > 0 
-            ? fields.slice(0, 5).join(', ') + (fields.length > 5 ? ` +${fields.length - 5} more` : '')
-            : "Transcript captured in notes",
-        });
-      } else {
-        fallbackParse(transcript);
-      }
-    } catch (error) {
-      console.error('❌ AI parsing failed:', error);
-      fallbackParse(transcript);
-    } finally {
-      setIsParsing(false);
-    }
-  };
-
-  // Fallback regex parsing if AI fails
-  const fallbackParse = (transcript: string) => {
-    console.log('⚠️ Using fallback regex parsing');
-    const lower = transcript.toLowerCase();
-    
-    const yearMatch = lower.match(/(\d{4})/);
-    const makeMatch = lower.match(/(ford|chevy|chevrolet|toyota|honda|bmw|tesla|dodge|ram|gmc|jeep|buick|cadillac|lincoln|acura|lexus|infiniti|nissan|mazda|subaru|volkswagen|audi|mercedes|porsche|volvo|kia|hyundai|genesis|land rover|jaguar|mini|fiat|chrysler|alfa romeo)/i);
-    const emailMatch = transcript.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-    const phoneMatch = transcript.match(/(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/);
-    
-    // Detect finish
-    let finish = '';
-    if (lower.includes('gloss')) finish = 'Gloss';
-    else if (lower.includes('matte')) finish = 'Matte';
-    else if (lower.includes('satin')) finish = 'Satin';
-    
-    const parsedData: ParsedVoiceData = {
-      customerName: '',
-      companyName: '',
-      email: emailMatch ? emailMatch[1] : '',
-      phone: phoneMatch ? phoneMatch[1] : '',
-      vehicleYear: yearMatch ? yearMatch[1] : '',
-      vehicleMake: makeMatch ? makeMatch[1] : '',
-      vehicleModel: '',
-      serviceType: '',
-      productType: '',
-      finish: finish,
-      notes: transcript,
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[event.results.length - 1][0].transcript;
+      parseVoiceInput(transcript);
     };
 
-    const fields: string[] = [];
-    if (parsedData.email) fields.push('Email');
-    if (parsedData.phone) fields.push('Phone');
-    if (parsedData.vehicleYear) fields.push('Year');
-    if (parsedData.vehicleMake) fields.push('Make');
-    if (parsedData.finish) fields.push('Finish');
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      
+      let title = "Voice Command Error";
+      let description = "Could not process voice input";
+      
+      if (event.error === 'not-allowed') {
+        title = "Microphone Access Denied";
+        description = "Please allow microphone access in your browser settings and try again";
+      } else if (event.error === 'no-speech') {
+        title = "No Speech Detected";
+        description = "Hold the button and speak clearly";
+      }
+      
+      toast({
+        title,
+        description,
+        variant: "destructive",
+      });
+    };
+
+    (window as any).currentRecognition = recognition;
+    recognition.start();
+  };
+
+  const stopRecording = () => {
+    if ((window as any).currentRecognition) {
+      (window as any).currentRecognition.stop();
+    }
+  };
+
+  const parseVoiceInput = (transcript: string) => {
+    const lower = transcript.toLowerCase();
     
-    setPopulatedFields(fields);
+    // Parse vehicle info
+    const yearMatch = lower.match(/(\d{4})/);
+    const makeMatch = lower.match(/(ford|chevy|chevrolet|toyota|honda|bmw|tesla|dodge|ram|tahoe|silverado|f-150|f150)/i);
+    const modelMatch = lower.match(/(?:ford|chevy|chevrolet|toyota|honda|bmw|tesla|dodge|ram)\s+([a-z0-9\-]+)/i);
+    
+    // Parse customer info
+    const nameMatch = lower.match(/customer\s+([a-z\s]+?)(?:\s+company|\s+full|\s+phone|\s+email|$)/i);
+    const companyMatch = lower.match(/company(?:\s+name)?\s+([a-z'\s]+?)(?:\s+phone|\s+email|\s+also|$)/i);
+    const phoneMatch = lower.match(/phone\s*([\d\-]+)/i);
+    const emailMatch = lower.match(/email\s+([\w\.\-]+@[\w\.\-]+)/i);
+    
+    // Parse service type
+    let serviceType = "Printed Vinyl";
+    if (lower.includes("color change")) serviceType = "Color Change";
+    if (lower.includes("ppf") || lower.includes("paint protection")) serviceType = "PPF";
+    if (lower.includes("tint")) serviceType = "Tint";
+    if (lower.includes("window perf")) serviceType = "Window Perf";
+    if (lower.includes("wall wrap")) serviceType = "Wall Wrap";
+    
+    // Parse product type
+    let productType = "";
+    if (lower.includes("printed wrap") || lower.includes("full printed wrap")) {
+      productType = "WPW Printed Wrap (Avery)";
+    }
+    
+    // Parse add-ons
+    const addOns = [];
+    if (lower.includes("ppf") && lower.includes("hood")) addOns.push("PPF Hood Only");
+    if (lower.includes("roof wrap")) addOns.push("Roof Wrap");
+    if (lower.includes("install")) addOns.push("Installation");
+    
+    const parsedData = {
+      year: yearMatch ? yearMatch[1] : "",
+      make: makeMatch ? makeMatch[1] : "",
+      model: modelMatch ? modelMatch[1] : "",
+      customerName: nameMatch ? nameMatch[1].trim() : "",
+      companyName: companyMatch ? companyMatch[1].trim() : "",
+      phone: phoneMatch ? phoneMatch[1] : "",
+      email: emailMatch ? emailMatch[1] : "",
+      serviceType,
+      productType,
+      addOns,
+      description: transcript,
+    };
+
     onTranscript(transcript, parsedData);
     
     toast({
-      title: `⚠️ Basic Parsing (${fields.length} fields)`,
-      description: "AI unavailable - using pattern matching",
+      title: "Voice Command Processed",
+      description: "Quote fields populated from voice input",
     });
   };
 
   return (
-    <div ref={containerRef} className="relative z-10">
+    <div ref={containerRef} className="absolute top-4 right-4 z-50">
       {!isExpanded ? (
         // Collapsed Badge
         <button
@@ -320,86 +189,34 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
           {/* Content */}
           <div className="p-4 space-y-3">
             <p className="text-xs text-white/70 text-center">
-              Hold the button and speak all quote details
+              Hold the button and speak your quote details
             </p>
             
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
               <p className="text-[11px] text-white/80 text-center leading-relaxed">
-                💡 Example: "Quote for John Smith at ABC Wraps, email john@abc.com, phone 555-1234, 2024 Chevy Silverado, full wrap, gloss black, 3M film, needs it by Friday"
+                💡 Say: "2024 Chevy Tahoe full wrap customer John Smith phone 555-1234"
               </p>
             </div>
 
-            {/* Recording Timer Display */}
-            {isRecording && (
-              <div className="flex items-center justify-center gap-2 py-2 bg-red-500/20 rounded-lg border border-red-500/30 animate-pulse">
-                <Timer className="h-4 w-4 text-red-400" />
-                <span className="text-sm font-mono text-red-400">{formatTime(recordingTime)}</span>
-                <div className="flex gap-0.5">
-                  <span className="w-1 h-3 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1 h-3 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '100ms' }} />
-                  <span className="w-1 h-3 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '200ms' }} />
-                </div>
-              </div>
-            )}
-
-            {/* Last Transcript Preview */}
-            {lastTranscript && !isRecording && !isProcessing && !isParsing && (
-              <div className="bg-white/5 border border-white/10 rounded-lg p-2">
-                <p className="text-[10px] text-white/50 mb-1">Last transcript:</p>
-                <p className="text-xs text-white/80 line-clamp-2">"{lastTranscript}"</p>
-              </div>
-            )}
-
-            {/* Populated Fields Confirmation */}
-            {populatedFields.length > 0 && !isRecording && !isProcessing && !isParsing && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2">
-                <div className="flex items-center gap-1 mb-1">
-                  <CheckCircle2 className="h-3 w-3 text-green-400" />
-                  <p className="text-[10px] text-green-400 font-medium">Fields populated:</p>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {populatedFields.map((field, i) => (
-                    <span key={i} className="px-1.5 py-0.5 bg-green-500/20 text-[10px] text-green-300 rounded">
-                      {field}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <button
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              onMouseDown={handleTouchStart}
-              onMouseUp={handleTouchEnd}
-              onMouseLeave={(e) => { if (isRecording) handleTouchEnd(e); }}
-              disabled={isProcessing || isParsing}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleMouseDown}
+              onTouchEnd={handleMouseUp}
               className={`
                 w-full px-6 py-3 rounded-lg font-semibold text-white text-sm
                 transition-all duration-200 shadow-lg
                 ${isRecording 
-                  ? 'bg-gradient-to-r from-red-500 to-red-600 scale-105 shadow-red-500/50' 
-                  : isProcessing || isParsing
-                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 animate-pulse'
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 scale-105 shadow-red-500/50 animate-pulse' 
                   : 'bg-gradient-to-r from-primary to-accent hover:scale-105 hover:shadow-primary/50'
                 }
-                disabled:opacity-50 disabled:cursor-not-allowed
               `}
             >
               <div className="flex items-center justify-center gap-2">
                 <Mic className="h-4 w-4" />
-                <span>
-                  {isParsing ? '🧠 AI Parsing...' : isProcessing ? '⏳ Transcribing...' : isRecording ? `🎤 Recording ${formatTime(recordingTime)}` : '🎙️ Hold & Speak'}
-                </span>
+                <span>{isRecording ? '🎤 Listening...' : '🎙️ Hold & Speak'}</span>
               </div>
             </button>
-
-            {/* Minimum recording hint */}
-            {!isRecording && !isProcessing && !isParsing && (
-              <p className="text-[10px] text-white/40 text-center">
-                Hold for at least 0.3 seconds
-              </p>
-            )}
           </div>
         </div>
       )}

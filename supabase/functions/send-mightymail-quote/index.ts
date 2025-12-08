@@ -281,8 +281,8 @@ function renderEmailTemplate(
               ${data.vehicle_make ? `<div class="quote-row"><span>Vehicle</span><span>${data.vehicle_year || ""} ${data.vehicle_make} ${data.vehicle_model || ""}</span></div>` : ""}
               ${data.product_name ? `<div class="quote-row"><span>Product</span><span>${data.product_name}</span></div>` : ""}
               ${data.sqft ? `<div class="quote-row"><span>Coverage</span><span>${data.sqft} sq ft</span></div>` : ""}
-              <div class="quote-row"><span>Wrap Package</span><span>$${Number(data.material_cost || 0).toFixed(2)}</span></div>
-              ${data.installation_cost && Number(data.installation_cost) > 0 ? `<div class="quote-row"><span>Professional Installation</span><span>$${Number(data.installation_cost).toFixed(2)}</span></div>` : ""}
+              ${data.material_cost ? `<div class="quote-row"><span>Material Cost</span><span>$${Number(data.material_cost).toFixed(2)}</span></div>` : ""}
+              ${data.labor_cost ? `<div class="quote-row"><span>Labor Cost</span><span>$${Number(data.labor_cost).toFixed(2)}</span></div>` : ""}
               <div class="quote-row"><span>Total</span><span>$${Number(data.quote_total).toFixed(2)}</span></div>
             </div>
             

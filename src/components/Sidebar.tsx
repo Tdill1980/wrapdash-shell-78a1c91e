@@ -16,40 +16,11 @@ import {
   Mail,
   TrendingUp,
   Car,
-  Inbox,
-  Dna,
-  Gauge,
-  Instagram,
-  FileText,
-  MessageCircle,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
 const navigationItems = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { 
-    name: "Orchestrator", 
-    path: "/orchestrator", 
-    icon: Gauge,
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Master</span>
-        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Control</span>
-      </span>
-    )
-  },
-  {
-    name: "MightyChat", 
-    path: "/mightychat", 
-    icon: Inbox,
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Mighty</span>
-        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
   { 
     name: "InkFusion™", 
     path: "/inkfusion", 
@@ -159,18 +130,7 @@ const navigationItems = [
     )
   },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
-  { 
-    name: "MightyPortfolio", 
-    path: "/portfolio", 
-    icon: Briefcase,
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Mighty</span>
-        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Portfolio</span>
-        <span className="text-[8px] align-super text-muted-foreground">AI™</span>
-      </span>
-    )
-  },
+  { name: "Portfolio", path: "/portfolio", icon: Briefcase },
   { 
     name: "Affiliate Dashboard", 
     path: "/affiliate/dashboard", 
@@ -214,61 +174,16 @@ const navigationItems = [
   { name: "Product Admin", path: "/admin/products", icon: Settings },
   { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
   { name: "Vehicle Admin", path: "/admin/vehicles", icon: Car },
-  { 
-    name: "TradeDNA", 
-    path: "/tradedna", 
-    icon: Dna,
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Trade</span>
-        <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">DNA</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "Instagram Bot", 
-    path: "/instagram-bot", 
-    icon: Instagram,
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Instagram</span>
-        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent"> Bot</span>
-      </span>
-    )
-  },
-  { 
-    name: "Lead Generator", 
-    path: "/lead-generator", 
-    icon: FileText,
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Lead</span>
-      <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Generator</span>
-    </span>
-  )
-},
-{ 
-  name: "TradeDNA Chatbot", 
-  path: "/tradedna/chatbot", 
-  icon: MessageCircle,
-  customRender: (
-    <span className="font-['Poppins',sans-serif] font-semibold">
-      <span className="text-white">TradeDNA</span>
-      <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Chatbot</span>
-    </span>
-  )
-},
 ];
 
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
   return (
     <aside className="flex flex-col w-full h-full bg-sidebar border-r border-sidebar-border">
-      <div className="px-6 py-10 border-b border-sidebar-border">
+      <div className="px-3 py-8 border-b border-sidebar-border">
         <img 
           src={logo} 
           alt="WrapCommand AI" 
-          className="w-full h-28 object-contain" 
+          className="w-full h-24 object-contain" 
         />
       </div>
       

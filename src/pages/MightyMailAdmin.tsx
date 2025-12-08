@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Mail, Palette, PenTool, Settings2, Upload, LayoutTemplate, Sparkles } from "lucide-react";
+import { Mail, Palette, PenTool, Settings2, Upload } from "lucide-react";
 import SequenceManager from "@/components/mightymail/SequenceManager";
 import BrandingManager from "@/components/mightymail/BrandingManager";
 import CSVUploader from "@/components/mightymail/CSVUploader";
@@ -7,7 +7,6 @@ import EmailStyles from "@/components/mightymail/EmailStyles";
 import ToneStyles from "@/components/mightymail/ToneStyles";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
-import { AIEmailGenerator } from "@/components/mightymail/AIEmailGenerator";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 
@@ -30,24 +29,13 @@ export default function MightyMailAdmin() {
           <span className="text-xs px-2 py-1 rounded bg-gradient-to-r from-[#00AFFF]/20 to-[#4EEAFF]/20 text-[#00AFFF] border border-[#00AFFF]/30">
             ✓ Connected to Resend
           </span>
-          <span className="text-xs px-2 py-1 rounded bg-gradient-to-r from-[#833AB4]/20 to-[#E1306C]/20 text-[#E1306C] border border-[#E1306C]/30">
-            ✓ AI Powered
-          </span>
         </div>
       </div>
 
-      <Tabs defaultValue="ai-generator" className="w-full">
-        <TabsList className="grid grid-cols-9 w-full bg-[#16161E]">
-          <TabsTrigger value="ai-generator">
-            <Sparkles size={16} className="mr-2" /> AI Generator
-          </TabsTrigger>
-
+      <Tabs defaultValue="quotes" className="w-full">
+        <TabsList className="grid grid-cols-7 w-full bg-[#16161E]">
           <TabsTrigger value="quotes" onClick={() => navigate("/admin/mightymail/quotes")}>
             <Mail size={16} className="mr-2" /> Quotes
-          </TabsTrigger>
-
-          <TabsTrigger value="templates" onClick={() => navigate("/admin/mightymail/templates")}>
-            <LayoutTemplate size={16} className="mr-2" /> Templates
           </TabsTrigger>
 
           <TabsTrigger value="performance">
@@ -74,10 +62,6 @@ export default function MightyMailAdmin() {
             <Upload size={16} className="mr-2" /> CSV Upload
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="ai-generator">
-          <AIEmailGenerator />
-        </TabsContent>
 
         <TabsContent value="quotes">
           <div className="text-muted-foreground space-y-4">

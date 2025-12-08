@@ -10,8 +10,6 @@ export interface DashboardHeroImage {
   time_of_day?: 'morning' | 'afternoon' | 'night' | 'all';
   display_order: number;
   is_active: boolean;
-  background_position_desktop?: string;
-  background_position_mobile?: string;
   created_at: string;
   updated_at: string;
 }

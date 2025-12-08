@@ -38,8 +38,6 @@ import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
-import ProofSheet from "@/components/approveflow/ProofSheet";
-import CustomerApprovalPanel from "@/components/approveflow/CustomerApprovalPanel";
 
 export default function ApproveFlow() {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
@@ -518,20 +516,6 @@ export default function ApproveFlow() {
           </div>
         </CardContent>
       </Card>
-
-      {/* AI Proof Sheet - Multi-View Mockups */}
-      <ProofSheet 
-        project={project} 
-        assets={assets}
-      />
-
-      {/* Customer Approval Panel */}
-      <CustomerApprovalPanel
-        projectId={project.id}
-        projectStatus={project.status}
-        onApprove={() => window.location.reload()}
-        onRequestRevision={() => window.location.reload()}
-      />
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* LEFT: Design Requirements, Chat & Upload */}

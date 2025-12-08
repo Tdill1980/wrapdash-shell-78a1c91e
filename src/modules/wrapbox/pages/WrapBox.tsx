@@ -13,7 +13,7 @@ export default function WrapBox() {
       <div>
           <h1 className="text-3xl font-bold font-poppins">
             <span className="text-foreground">Wrap</span>
-            <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Box</span>
+            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Box</span>
             <span className="text-muted-foreground text-sm align-super">™</span>
           </h1>
         <p className="text-sm text-muted-foreground mt-1">

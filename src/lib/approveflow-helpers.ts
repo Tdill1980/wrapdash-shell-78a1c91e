@@ -56,8 +56,8 @@ export async function createApproveFlowProjectFromQuote(
       },
     });
 
-    // Send customer welcome email via Klaviyo
-    const SEND_CUSTOMER_EMAILS = true; // Enabled for production
+    // Send customer welcome email via Klaviyo (disabled by default for testing)
+    const SEND_CUSTOMER_EMAILS = false; // Toggle this to enable customer emails
     
     if (SEND_CUSTOMER_EMAILS && quoteData.customerEmail) {
       const customerPortalUrl = `${window.location.origin}/customer/${project.id}`;
