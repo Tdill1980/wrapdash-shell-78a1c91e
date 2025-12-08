@@ -217,37 +217,10 @@ Keep the tone ${brandVoice}. Make it exciting and visual.`;
       }
     }
 
-    // Generate AI images
-    const previewImages: string[] = [];
-    
-    // Generate 2D concept image
-    const conceptPrompt = `Professional 2D vehicle wrap concept art for a ${vehicle.year} ${vehicle.make} ${vehicle.model}. ${style} style design with ${designConcept.color_palette.join(", ")} colors. ${designConcept.design_elements.join(", ")}. High contrast, professional automotive graphics, clean lines, marketing-ready visualization. Ultra high resolution.`;
-    
-    const conceptImageBase64 = await generateDesignImage(conceptPrompt);
-    if (conceptImageBase64) {
-      const conceptUrl = await uploadImageToStorage(supabase, conceptImageBase64, "concept-2d");
-      if (conceptUrl) {
-        previewImages.push(conceptUrl);
-        console.log("2D concept uploaded:", conceptUrl);
-      }
-    }
-
-    // Generate 3D preview image
-    const preview3DPrompt = `Photorealistic 3D render of a ${vehicle.year} ${vehicle.make} ${vehicle.model} with a ${style} vehicle wrap. ${designConcept.color_palette.join(", ")} color scheme. Professional automotive photography, studio lighting, glossy finish, front 3/4 angle. Ultra high resolution.`;
-    
-    const preview3DBase64 = await generateDesignImage(preview3DPrompt);
-    if (preview3DBase64) {
-      const preview3DUrl = await uploadImageToStorage(supabase, preview3DBase64, "preview-3d");
-      if (preview3DUrl) {
-        previewImages.push(preview3DUrl);
-        console.log("3D preview uploaded:", preview3DUrl);
-      }
-    }
-
     // Generate order number for ApproveFlow
     const orderNumber = `AF-${Date.now().toString(36).toUpperCase()}`;
 
-    // Create ApproveFlow project
+    // Create ApproveFlow project first
     const { data: project, error: projectError } = await supabase
       .from("approveflow_projects")
       .insert({
@@ -259,6 +232,7 @@ Keep the tone ${brandVoice}. Make it exciting and visual.`;
         organization_id,
         vehicle_info: vehicle,
         design_instructions: `Style: ${style}\n${notes || ""}`,
+        current_version: 1,
       })
       .select()
       .single();
@@ -277,21 +251,56 @@ Keep the tone ${brandVoice}. Make it exciting and visual.`;
       message: `🎨 **Design Concept: ${designConcept.design_title}**\n\n${designConcept.design_description}\n\n**Color Palette:** ${designConcept.color_palette.join(", ")}\n\n**Design Elements:** ${designConcept.design_elements.join(", ")}\n\nLet us know your thoughts!`,
     });
 
-    // Add design preview images as assets if generated
-    if (previewImages.length > 0) {
-      const assetInserts = previewImages.map((url, index) => ({
-        project_id: project.id,
-        file_url: url,
-        file_type: index === 0 ? "2d_concept" : "3d_preview",
-      }));
-      
-      await supabase.from("approveflow_assets").insert(assetInserts);
+    // Generate 5-view AI proof mockups with studio lighting
+    const basePrompt = `Studio-lit professional vehicle wrap mockup. Neutral light grey background, 
+clean soft floor shadow, realistic reflections, OEM accuracy. 
+Wrap style: ${designConcept.design_title}. 
+Colors: ${designConcept.color_palette.join(", ")}. 
+Elements: ${designConcept.design_elements.join(", ")}.`;
 
-      // Add images message to chat
+    const views = [
+      { type: "driver_side", label: "Driver Side", prompt: `Driver side profile of a ${vehicle.year} ${vehicle.make} ${vehicle.model}. ${basePrompt}`, sort: 1 },
+      { type: "passenger_side", label: "Passenger Side", prompt: `Passenger side profile of a ${vehicle.year} ${vehicle.make} ${vehicle.model}. ${basePrompt}`, sort: 2 },
+      { type: "front", label: "Front View", prompt: `Front straight-on angle of ${vehicle.year} ${vehicle.make} ${vehicle.model}. ${basePrompt}`, sort: 3 },
+      { type: "rear", label: "Rear View", prompt: `Rear straight-on view of ${vehicle.year} ${vehicle.make} ${vehicle.model}. ${basePrompt}`, sort: 4 },
+      { type: "hero_3_4", label: "3/4 Hero Angle", prompt: `3/4 angled studio view (front-left) of ${vehicle.year} ${vehicle.make} ${vehicle.model}. ${basePrompt}`, sort: 5 },
+    ];
+
+    const previewImages: string[] = [];
+    const assetInserts: any[] = [];
+
+    for (const v of views) {
+      console.log(`Generating ${v.label} view...`);
+      const base64 = await generateDesignImage(v.prompt);
+      if (!base64) {
+        console.log(`Failed to generate ${v.label} view, continuing...`);
+        continue;
+      }
+
+      const url = await uploadImageToStorage(supabase, base64, `${v.type}-${Date.now()}`);
+      if (url) {
+        previewImages.push(url);
+        assetInserts.push({
+          project_id: project.id,
+          file_url: url,
+          file_type: "ai_mockup",
+          view_type: v.type,
+          sort_order: v.sort,
+        });
+        console.log(`${v.label} view uploaded: ${url}`);
+      }
+    }
+
+    // Insert all view assets
+    if (assetInserts.length > 0) {
+      await supabase.from("approveflow_assets").insert(assetInserts);
+      console.log(`Inserted ${assetInserts.length} proof view assets`);
+
+      // Add proof sheet message to chat
       await supabase.from("approveflow_chat").insert({
         project_id: project.id,
         sender: "system",
-        message: `📸 **Design Previews Generated**\n\n${previewImages.map((url, i) => `[${i === 0 ? '2D Concept' : '3D Preview'}](${url})`).join("\n")}`,
+        message: `📄 **AI Proof Sheet Generated**\n\n${assetInserts.length} professional views ready for review:\n${assetInserts.map(a => `• ${a.view_type.replace(/_/g, ' ')}`).join('\n')}`,
       });
     }
 
