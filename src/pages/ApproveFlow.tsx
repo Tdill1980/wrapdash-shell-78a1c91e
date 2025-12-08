@@ -38,6 +38,7 @@ import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
+import ProofSheet from "@/components/approveflow/ProofSheet";
 
 export default function ApproveFlow() {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
@@ -516,6 +517,26 @@ export default function ApproveFlow() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Proof Sheet - Multi-View Mockups */}
+      <ProofSheet 
+        project={project} 
+        assets={assets}
+        onDownloadPdf={() => {
+          // TODO: Implement PDF download via edge function
+          toast({
+            title: "Coming Soon",
+            description: "PDF export will be available soon",
+          });
+        }}
+        onDownloadZip={() => {
+          // TODO: Implement ZIP download via edge function
+          toast({
+            title: "Coming Soon", 
+            description: "ZIP download will be available soon",
+          });
+        }}
+      />
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* LEFT: Design Requirements, Chat & Upload */}

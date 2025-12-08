@@ -488,6 +488,8 @@ export type Database = {
           file_url: string
           id: string
           project_id: string
+          sort_order: number | null
+          view_type: string | null
         }
         Insert: {
           created_at?: string | null
@@ -495,6 +497,8 @@ export type Database = {
           file_url: string
           id?: string
           project_id: string
+          sort_order?: number | null
+          view_type?: string | null
         }
         Update: {
           created_at?: string | null
@@ -502,6 +506,8 @@ export type Database = {
           file_url?: string
           id?: string
           project_id?: string
+          sort_order?: number | null
+          view_type?: string | null
         }
         Relationships: [
           {
@@ -608,6 +614,7 @@ export type Database = {
         Row: {
           color_info: Json | null
           created_at: string | null
+          current_version: number | null
           customer_email: string | null
           customer_id: string | null
           customer_name: string
@@ -625,6 +632,7 @@ export type Database = {
         Insert: {
           color_info?: Json | null
           created_at?: string | null
+          current_version?: number | null
           customer_email?: string | null
           customer_id?: string | null
           customer_name: string
@@ -642,6 +650,7 @@ export type Database = {
         Update: {
           color_info?: Json | null
           created_at?: string | null
+          current_version?: number | null
           customer_email?: string | null
           customer_id?: string | null
           customer_name?: string
