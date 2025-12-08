@@ -43,7 +43,8 @@ const defaultFields: FormField[] = [
 ];
 
 const LeadGeneratorPage = () => {
-  const { currentOrganization: organization } = useOrganization();
+  const { organizationId } = useOrganization();
+  const organization = { id: organizationId };
   const { toast } = useToast();
   const [generators, setGenerators] = useState<LeadGenerator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +95,7 @@ const LeadGeneratorPage = () => {
           organization_id: organization.id,
           name: newName,
           description: newDescription,
-          fields: newFields as unknown as Record<string, unknown>,
+          fields: JSON.parse(JSON.stringify(newFields)),
           redirect_url: newRedirectUrl,
           embed_code: embedCode,
           is_active: true
