@@ -1,5 +1,8 @@
 project_id = "wzwqhfbmymrengjqikjl"
 
+[functions.ai-generate-design]
+verify_jwt = false
+
 [functions.ai-generate-template]
 verify_jwt = false
 

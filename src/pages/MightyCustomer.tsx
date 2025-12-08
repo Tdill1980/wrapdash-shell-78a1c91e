@@ -26,6 +26,7 @@ import { generateOrderNumber, generateQuoteNumber } from "@/lib/orderNumberGener
 import { useLocation } from "react-router-dom";
 import { EstimateLineItems, type LineItem } from "@/components/EstimateLineItems";
 import { EstimateBuilder } from "@/components/EstimateBuilder";
+import { AIDesignPanel } from "@/components/design/AIDesignPanel";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -1411,6 +1412,20 @@ export default function MightyCustomer() {
                 </div>
               )}
             </div>
+
+            {/* AI Design Tools Panel */}
+            {vehicle && (
+              <AIDesignPanel
+                vehicle={{
+                  year: customerData.vehicleYear,
+                  make: customerData.vehicleMake,
+                  model: customerData.vehicleModel,
+                }}
+                organizationId={organizationId || ""}
+                customerName={customerData.name}
+                customerEmail={customerData.email}
+              />
+            )}
           </div>
 
           {/* Installation Toggle */}
