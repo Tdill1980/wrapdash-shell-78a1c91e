@@ -20,7 +20,7 @@ import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getVehicleMakes, getVehicleModels } from "@/lib/vehicleSqft";
+import { getVehicleMakes, getVehicleModels, getVehicleYears } from "@/lib/vehicleSqft";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { generateOrderNumber, generateQuoteNumber } from "@/lib/orderNumberGenerator";
 import { useLocation } from "react-router-dom";
@@ -701,17 +701,28 @@ export default function MightyCustomer() {
                 console.log('📝 Voice transcript:', transcript);
                 console.log('🔍 Parsed data:', parsedData);
                 
-                // Update customer data
-                setCustomerData(prev => ({
-                  ...prev,
-                  name: parsedData.customerName || prev.name,
-                  company: parsedData.companyName || prev.company,
-                  email: parsedData.email || prev.email,
-                  phone: parsedData.phone || prev.phone,
-                  vehicleYear: parsedData.vehicleYear || prev.vehicleYear,
-                  vehicleMake: parsedData.vehicleMake || prev.vehicleMake,
-                  vehicleModel: parsedData.vehicleModel || prev.vehicleModel,
-                }));
+                // Update customer data - batch all vehicle fields together
+                const newCustomerData = {
+                  name: parsedData.customerName || customerData.name,
+                  company: parsedData.companyName || customerData.company,
+                  email: parsedData.email || customerData.email,
+                  phone: parsedData.phone || customerData.phone,
+                  vehicleYear: parsedData.vehicleYear || customerData.vehicleYear,
+                  vehicleMake: parsedData.vehicleMake || customerData.vehicleMake,
+                  vehicleModel: parsedData.vehicleModel || customerData.vehicleModel,
+                };
+                
+                setCustomerData(newCustomerData);
+                
+                // Force SQFT recalculation after voice input with slight delay
+                // This ensures React state updates are complete before useQuoteEngine re-runs
+                if (parsedData.vehicleYear || parsedData.vehicleMake || parsedData.vehicleModel) {
+                  setTimeout(() => {
+                    // Trigger a re-render by updating state
+                    setCustomerData(prev => ({ ...prev }));
+                    console.log('🔄 Forced SQFT recalculation after voice input');
+                  }, 150);
+                }
                 
                 // Update finish if detected
                 if (parsedData.finish) {
@@ -995,15 +1006,49 @@ export default function MightyCustomer() {
               </div>
               <div className="space-y-2">
                 <Label>Vehicle Year</Label>
-                <Input
-                  type="text"
-                  placeholder="2024"
-                  value={customerData.vehicleYear}
-                  onChange={(e) => {
-                    console.log('Year updated:', e.target.value);
-                    setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }));
-                  }}
-                />
+                {(() => {
+                  const availableYears = customerData.vehicleMake && customerData.vehicleModel 
+                    ? getVehicleYears(customerData.vehicleMake, customerData.vehicleModel)
+                    : [];
+                  const hasYears = availableYears.length > 0;
+                  
+                  return hasYears ? (
+                    <Select
+                      value={customerData.vehicleYear}
+                      onValueChange={(value) => {
+                        console.log('Year updated:', value);
+                        if (value === "custom") {
+                          // Show custom input mode
+                          setCustomerData(prev => ({ ...prev, vehicleYear: "" }));
+                        } else {
+                          setCustomerData(prev => ({ ...prev, vehicleYear: value }));
+                        }
+                      }}
+                      disabled={!customerData.vehicleMake || !customerData.vehicleModel}
+                    >
+                      <SelectTrigger className="bg-background border-border">
+                        <SelectValue placeholder="Select Year" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border z-50 max-h-60">
+                        {availableYears.map((year) => (
+                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                        ))}
+                        <SelectItem value="custom">Other Year...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type="text"
+                      placeholder={customerData.vehicleMake && customerData.vehicleModel ? "Enter Year" : "Select Make & Model first"}
+                      value={customerData.vehicleYear}
+                      onChange={(e) => {
+                        console.log('Year updated:', e.target.value);
+                        setCustomerData(prev => ({ ...prev, vehicleYear: e.target.value }));
+                      }}
+                      disabled={!customerData.vehicleMake || !customerData.vehicleModel}
+                    />
+                  );
+                })()}
               </div>
             </div>
 
