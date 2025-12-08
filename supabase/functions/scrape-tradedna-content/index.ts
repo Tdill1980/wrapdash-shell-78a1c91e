@@ -51,17 +51,45 @@ serve(async (req) => {
       }
     }
 
-    // Scrape Instagram (public profile bio - limited without API)
+    // Scrape Instagram using Graph API
     if (instagramHandle) {
-      try {
-        const handle = instagramHandle.replace('@', '').replace('https://instagram.com/', '').replace('https://www.instagram.com/', '');
-        console.log("Checking Instagram:", handle);
-        // Note: Instagram requires authentication for most data
-        // We can only get limited public info
-        results.instagram = `Instagram handle: @${handle} (Full scraping requires Instagram API access)`;
-      } catch (e) {
-        const error = e instanceof Error ? e.message : "Unknown error";
-        errors.push(`Instagram: ${error}`);
+      const accessToken = Deno.env.get("INSTAGRAM_ACCESS_TOKEN");
+      if (accessToken) {
+        try {
+          const handle = instagramHandle.replace('@', '').replace('https://instagram.com/', '').replace('https://www.instagram.com/', '');
+          console.log("Fetching Instagram data for:", handle);
+          
+          // Get user media captions from Instagram Graph API
+          const mediaResponse = await fetch(
+            `https://graph.instagram.com/me/media?fields=caption,timestamp,media_type&access_token=${accessToken}&limit=20`
+          );
+          
+          if (mediaResponse.ok) {
+            const mediaData = await mediaResponse.json();
+            const captions = mediaData.data
+              ?.filter((post: any) => post.caption)
+              ?.map((post: any) => post.caption)
+              ?.join('\n\n---\n\n') || '';
+            
+            if (captions) {
+              results.instagram = captions;
+              console.log("Instagram captions fetched, count:", mediaData.data?.length);
+            } else {
+              results.instagram = `Instagram @${handle} connected but no captions found`;
+            }
+          } else {
+            const errorText = await mediaResponse.text();
+            console.error("Instagram API error:", errorText);
+            errors.push(`Instagram API error: ${mediaResponse.status}`);
+          }
+        } catch (e) {
+          const error = e instanceof Error ? e.message : "Unknown error";
+          console.error("Instagram fetch error:", error);
+          errors.push(`Instagram: ${error}`);
+        }
+      } else {
+        const handle = instagramHandle.replace('@', '');
+        results.instagram = `Instagram handle: @${handle} (Add INSTAGRAM_ACCESS_TOKEN for full content)`;
       }
     }
 
