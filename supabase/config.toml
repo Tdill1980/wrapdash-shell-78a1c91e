@@ -113,3 +113,9 @@ verify_jwt = false
 
 [functions.analyze-brand-voice]
 verify_jwt = false
+
+[functions.backfill-order-totals]
+verify_jwt = true
+
+[functions.bulk-sync-orders]
+verify_jwt = false
