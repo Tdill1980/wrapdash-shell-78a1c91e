@@ -186,3 +186,43 @@ export function getVehicleModels(make: string): string[] {
   
   return Array.from(new Set(models)).sort();
 }
+
+/**
+ * Get available years for a specific make/model combination
+ * Parses year ranges like "2008-2017" into individual years
+ */
+export function getVehicleYears(make: string, model: string): number[] {
+  if (!vehicleDimensionsData?.vehicles) return [];
+  
+  const normalizedMake = make.trim().toLowerCase();
+  const normalizedModel = model.trim().toLowerCase();
+  
+  const matchingVehicles = vehicleDimensionsData.vehicles.filter((v: any) => {
+    const vehicleMake = v.Make.toLowerCase();
+    const vehicleModel = v.Model.toLowerCase();
+    const makeMatch = vehicleMake === normalizedMake;
+    const modelMatch = vehicleModel.includes(normalizedModel) || normalizedModel.includes(vehicleModel);
+    return makeMatch && modelMatch;
+  });
+  
+  const years: number[] = [];
+  
+  for (const v of matchingVehicles) {
+    const yearStr = v.Year.toString();
+    if (yearStr.includes('-')) {
+      // Parse year range like "2008-2017"
+      const [startYear, endYear] = yearStr.split('-').map((y: string) => parseInt(y.trim()));
+      for (let y = startYear; y <= endYear; y++) {
+        years.push(y);
+      }
+    } else {
+      const singleYear = parseInt(yearStr);
+      if (!isNaN(singleYear)) {
+        years.push(singleYear);
+      }
+    }
+  }
+  
+  // Deduplicate and sort descending (newest first)
+  return [...new Set(years)].sort((a, b) => b - a);
+}
