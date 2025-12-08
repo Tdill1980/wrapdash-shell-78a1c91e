@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.create-lead-quote]
 verify_jwt = false
+
+[functions.ai-generate-quote]
+verify_jwt = false

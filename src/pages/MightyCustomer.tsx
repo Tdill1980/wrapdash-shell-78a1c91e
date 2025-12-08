@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand, { type ParsedVoiceData } from "@/components/VoiceCommand";
-import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, PlusCircle } from "lucide-react";
+import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, PlusCircle, Sparkles, Loader2 } from "lucide-react";
+import { useAIQuoteGenerator, type AIQuoteResult } from "@/hooks/useAIQuoteGenerator";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
@@ -84,6 +85,10 @@ export default function MightyCustomer() {
   const [customInstallationHours, setCustomInstallationHours] = useState(0);
   const [customInstallationRate, setCustomInstallationRate] = useState(65);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [aiQuoteResult, setAiQuoteResult] = useState<AIQuoteResult | null>(null);
+  
+  // AI Quote Generator
+  const { generateQuote, isGenerating: isAIGenerating } = useAIQuoteGenerator();
 
   // Pre-populate from Dashboard navigation state
   useEffect(() => {
@@ -201,6 +206,38 @@ export default function MightyCustomer() {
     }
   };
 
+  // AI Auto-Fill Quote Handler
+  const handleAIAutoFill = async () => {
+    if (!vehicle) {
+      toast({
+        title: "Vehicle Required",
+        description: "Please enter vehicle year, make, and model first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const wrapTypeValue = wrapType === 'partial' ? 'partial_wrap' : 
+      selectedService.toLowerCase().includes('chrome') ? 'chrome' :
+      selectedService.toLowerCase().includes('ppf') ? 'ppf' :
+      selectedService.toLowerCase().includes('print') ? 'printed' : 'color_change';
+
+    const result = await generateQuote(
+      vehicle,
+      wrapTypeValue,
+      sqftOptions ? undefined : sqft, // Only override if no sqft from database
+      organizationId || undefined
+    );
+
+    if (result) {
+      setAiQuoteResult(result);
+      // If we didn't have sqft, use the AI estimate
+      if (!sqftOptions && result.sqft) {
+        setSqft(result.sqft);
+        setIsManualSqft(true);
+      }
+    }
+  };
 
   const handleSendQuoteEmail = async () => {
     if (!customerData.email || !customerData.name) {
@@ -1282,6 +1319,65 @@ export default function MightyCustomer() {
                   <span className="text-sm text-muted-foreground font-medium">sq ft</span>
                 </div>
               </div>
+            </div>
+
+            {/* AI Auto-Fill Quote Button */}
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={handleAIAutoFill}
+                disabled={!vehicle || isAIGenerating}
+                className="w-full bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white shadow-lg shadow-purple-500/30"
+              >
+                {isAIGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating AI Quote...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    AI Auto-Fill Quote
+                  </>
+                )}
+              </Button>
+
+              {/* AI Quote Result Display */}
+              {aiQuoteResult && (
+                <div className="p-4 rounded-lg bg-gradient-to-br from-violet-950/50 to-purple-900/30 border border-violet-500/40 space-y-3">
+                  <div className="flex items-center gap-2 text-violet-300">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="text-sm font-semibold">AI Quote Estimate</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="text-muted-foreground">Vehicle Class:</div>
+                    <div className="text-right font-medium capitalize">{aiQuoteResult.vehicle_class}</div>
+                    
+                    <div className="text-muted-foreground">Estimated SQFT:</div>
+                    <div className="text-right font-medium">{aiQuoteResult.sqft} sq ft</div>
+                    
+                    <div className="text-muted-foreground">Labor Hours:</div>
+                    <div className="text-right font-medium">{aiQuoteResult.labor_hours} hrs</div>
+                  </div>
+                  
+                  <div className="pt-2 border-t border-violet-500/30">
+                    <div className="flex justify-between items-center">
+                      <span className="text-violet-300 font-semibold">AI Price Range:</span>
+                      <span className="text-lg font-bold text-violet-200">
+                        ${aiQuoteResult.low_price.toLocaleString()} - ${aiQuoteResult.high_price.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {aiQuoteResult.ai_message && (
+                    <div className="pt-2 border-t border-violet-500/30">
+                      <p className="text-sm text-violet-200/80 italic">
+                        "{aiQuoteResult.ai_message}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
