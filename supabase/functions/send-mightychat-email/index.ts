@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadTradeDNA } from "../_shared/tradedna-loader.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -20,6 +21,7 @@ interface SendEmailRequest {
   subject: string;
   content: string;
   senderName?: string;
+  organizationId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -39,8 +41,13 @@ const handler = async (req: Request): Promise<Response> => {
       recipientName,
       subject, 
       content,
-      senderName = "WrapCommand"
+      senderName = "WrapCommand",
+      organizationId
     }: SendEmailRequest = await req.json();
+
+    // Load TradeDNA for brand styling
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const businessName = tradeDNA.business_name || "WePrintWraps";
 
     console.log("📧 Sending email via MightyChat:", {
       conversationId,
@@ -84,18 +91,18 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: `${actualSenderName} <${FROM_EMAIL}>`,
       to: [recipientEmail],
-      subject: subject || "Message from WePrintWraps",
+      subject: subject || `Message from ${businessName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #405DE6, #833AB4, #E1306C); padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">WePrintWraps</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">${businessName}</h1>
           </div>
           <div style="padding: 30px; background: #f9f9f9;">
             <p style="color: #333; font-size: 16px; line-height: 1.6;">Hi ${recipientName || "there"},</p>
             <div style="color: #333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${content}</div>
           </div>
           <div style="padding: 20px; background: #333; text-align: center;">
-            <p style="color: #888; font-size: 12px; margin: 0;">Sent via MightyChat™ by WePrintWraps</p>
+            <p style="color: #888; font-size: 12px; margin: 0;">Sent via MightyChat™ by ${businessName}</p>
           </div>
         </div>
       `,

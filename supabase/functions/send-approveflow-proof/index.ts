@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { loadTradeDNA } from "../_shared/tradedna-loader.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -18,6 +19,7 @@ interface ProofEmailRequest {
   proofUrl: string;
   renderUrls?: Record<string, string>;
   portalUrl: string;
+  organizationId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -33,10 +35,15 @@ const handler = async (req: Request): Promise<Response> => {
       orderNumber, 
       proofUrl, 
       renderUrls,
-      portalUrl 
+      portalUrl,
+      organizationId
     }: ProofEmailRequest = await req.json();
 
     console.log('Sending proof email to:', customerEmail);
+
+    // Load TradeDNA for brand styling
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const businessName = tradeDNA.business_name || "Your Wrap Provider";
 
     // Build render images HTML if available
     let renderImagesHtml = '';
@@ -99,7 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
 
             <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
               Best regards,<br>
-              <strong>The Design Team</strong>
+              <strong>The ${businessName} Design Team</strong>
             </p>
           </div>
 

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadTradeDNA } from "../_shared/tradedna-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript } = await req.json();
+    const { transcript, organizationId } = await req.json();
     
     if (!transcript || transcript.trim().length < 3) {
       console.log('❌ Transcript too short or empty:', transcript);
@@ -31,7 +32,12 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-const systemPrompt = `You are a voice transcript parser for a vehicle wrap quote system. Extract ALL structured data from natural speech.
+    // Load TradeDNA for industry vocabulary
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const businessCategory = tradeDNA.business_category || 'vehicle wrap';
+    const commonWords = tradeDNA.tradedna_profile?.vocabulary?.common_words || ['wrap', 'print', 'quality'];
+
+const systemPrompt = `You are a voice transcript parser for a ${businessCategory} quote system. Extract ALL structured data from natural speech.
 
 IMPORTANT: Return a FLAT JSON object with these exact keys (NOT nested categories):
 {

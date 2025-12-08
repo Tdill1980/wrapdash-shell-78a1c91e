@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadTradeDNA, generateBrandVoicePrompt } from "../_shared/tradedna-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { description, tone = 'installer', templateType = 'general', includeHeader = true, includeHeroImage = true, includeCta = true } = await req.json();
+    const { description, tone = 'installer', templateType = 'general', includeHeader = true, includeHeroImage = true, includeCta = true, organizationId } = await req.json();
 
     if (!description) {
       return new Response(
@@ -25,13 +26,19 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Load TradeDNA for brand voice
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const brandVoicePrompt = generateBrandVoicePrompt(tradeDNA);
+
     const toneDescriptions: Record<string, string> = {
       installer: 'Professional, technical, straightforward tone. Like talking shop with another installer.',
       luxury: 'Elegant, sophisticated, premium feel. Emphasizes quality and exclusivity.',
       hype: 'Bold, exciting, energetic! Uses action words and creates urgency.'
     };
 
-    const systemPrompt = `You are an expert email template designer for a vehicle wrap business. Generate a complete Unlayer-compatible email template JSON structure.
+    const systemPrompt = `You are an expert email template designer for ${tradeDNA.business_name || 'a vehicle wrap business'}. Generate a complete Unlayer-compatible email template JSON structure.
+
+${brandVoicePrompt}
 
 TONE: ${toneDescriptions[tone] || toneDescriptions.installer}
 TEMPLATE TYPE: ${templateType}

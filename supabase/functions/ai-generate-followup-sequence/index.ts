@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadTradeDNA, generateBrandVoicePrompt } from "../_shared/tradedna-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,7 @@ interface FollowupRequest {
   productName?: string;
   totalPrice?: number;
   tone?: 'installer' | 'luxury' | 'hype';
+  organizationId?: string;
 }
 
 interface FollowupEmail {
@@ -36,7 +38,8 @@ serve(async (req) => {
       vehicleInfo,
       productName,
       totalPrice,
-      tone = 'installer'
+      tone = 'installer',
+      organizationId
     }: FollowupRequest = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -44,13 +47,21 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Load TradeDNA for brand voice
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const brandVoicePrompt = generateBrandVoicePrompt(tradeDNA);
+
     const toneDescriptions = {
       installer: 'professional wrap installer - friendly, knowledgeable, focused on quality and craftsmanship',
       luxury: 'high-end luxury brand - refined, exclusive, premium experience focused',
       hype: 'energetic and bold - exciting, urgent, action-oriented with enthusiasm'
     };
 
-    const systemPrompt = `You are an expert email copywriter for a vehicle wrap business. Your tone is ${toneDescriptions[tone]}.
+    const systemPrompt = `You are an expert email copywriter for ${tradeDNA.business_name || 'a vehicle wrap business'}. Your tone is ${toneDescriptions[tone]}.
+
+${brandVoicePrompt}
+
+Generate a 4-email follow-up sequence for a customer who received a quote but hasn't responded. Each email should be unique with escalating urgency.
 
 Generate a 4-email follow-up sequence for a customer who received a quote but hasn't responded. Each email should be unique with escalating urgency.
 

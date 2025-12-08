@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadTradeDNA, generateBrandVoicePrompt } from "../_shared/tradedna-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,7 +21,8 @@ interface EmailGenerationRequest {
   tone: 'installer' | 'luxury' | 'hype';
   emailType: 'quote_initial' | 'quote_followup' | 'proof_ready' | 'order_confirmation' | 'shipping_notification' | 'custom';
   customPrompt?: string;
-  previousEmails?: number; // Number of previous follow-ups sent
+  previousEmails?: number;
+  organizationId?: string; // For TradeDNA lookup
 }
 
 interface EmailGenerationResponse {
@@ -91,15 +93,22 @@ serve(async (req) => {
       tone, 
       emailType,
       customPrompt,
-      previousEmails = 0
+      previousEmails = 0,
+      organizationId
     } = request;
+
+    // Load TradeDNA for brand voice
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const brandVoicePrompt = generateBrandVoicePrompt(tradeDNA);
 
     // Build context string
     const vehicleStr = vehicle ? `${vehicle.year || ''} ${vehicle.make || ''} ${vehicle.model || ''}`.trim() : 'their vehicle';
     const priceStr = price ? `$${price.toLocaleString()}` : '';
     const productStr = product || 'wrap service';
 
-    const systemPrompt = `You are an expert email copywriter for a premium vehicle wrap and automotive customization business called WePrintWraps.
+    const systemPrompt = `You are an expert email copywriter for ${tradeDNA.business_name || 'a premium vehicle wrap and automotive customization business'}.
+
+${brandVoicePrompt}
 
 ${toneInstructions[tone]}
 

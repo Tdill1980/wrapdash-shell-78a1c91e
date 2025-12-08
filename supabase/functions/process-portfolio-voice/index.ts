@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadTradeDNA } from "../_shared/tradedna-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript } = await req.json();
+    const { transcript, organizationId } = await req.json();
     
     if (!transcript) {
       throw new Error('No transcript provided');
@@ -24,6 +25,10 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
+    // Load TradeDNA for brand context
+    const tradeDNA = await loadTradeDNA(organizationId);
+    const businessCategory = tradeDNA.business_category || 'vehicle wrap';
+
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -34,7 +39,7 @@ serve(async (req) => {
         model: 'google/gemini-2.5-flash',
         messages: [{
           role: 'user',
-          content: `Extract portfolio job data from this voice transcript. The user is describing a vehicle wrap job they completed.
+          content: `Extract portfolio job data from this voice transcript. The user is describing a ${businessCategory} job they completed.
 
 Transcript: "${transcript}"
 
