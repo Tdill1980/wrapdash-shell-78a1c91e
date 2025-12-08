@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.track-email-click]
 verify_jwt = false
+
+[functions.analyze-brand-voice]
+verify_jwt = false
