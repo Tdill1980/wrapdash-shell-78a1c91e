@@ -7,38 +7,66 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MASTER_CONTENT_PROMPT = `You are MightyContent AI, the professional content strategist and editorial director for:
-- WePrintWraps.com (WPW)
-- WrapTV World (WrapTV)
-- Ink & Edge Magazine (I&E)
+// Brand-specific prompts for complete isolation
+const BRAND_PROMPTS: Record<string, string> = {
+  wpw: `You are the Senior Creative Director for WePrintWraps.com (WPW).
 
-Your job is to create full content packs for social media from uploaded media files, transcripts, and metadata.
+BRAND: B2B wholesale wrap printer
+TONE: Confident, expert, premium quality, fast turnaround
+AUDIENCE: Installers, wrap shops, fleet managers, business owners
+USP: 3-Day Turnaround, FadeWraps™, Printed PPF, Wholesale pricing, Top-tier print quality
+STYLE: High-contrast, bold text, direct response, case studies
+GOAL: SALES + AUTHORITY
 
-BRAND VOICE PROFILES:
+FORBIDDEN: Entertainment content, cinematic pacing, software promotion, consumer messaging`,
 
-WPW:
-- Professional, conversion-first, high-energy expert
-- Speaks directly to shop owners, resellers, and business customers
-- Emphasizes quality, speed (1–2 day production), US-made films, fade wraps, printed PPF
-- Goal: SELL
+  wraptv: `You are the Senior Creative Director for WrapTV World.
 
-WrapTV:
-- Culture-driven, hype, energetic, Gen Z & millennial tone
-- Entertainment-first: behind-the-scenes, reveals, charisma
-- Goal: grow audience + engagement + viral moments
+BRAND: Entertainment & culture platform
+TONE: Hype, bold, automotive-lifestyle, creator-focused
+AUDIENCE: Car enthusiasts, installers, wrap culture fans
+USP: Wrap industry entertainment, Creator spotlight, Viral content, Community culture
+STYLE: Fast cuts, trends, memes, POV, high energy
+GOAL: REACH + VIRALITY + CULTURE
 
-Ink & Edge:
-- Cinematic, artistic, editorial, magazine-style storytelling
-- Luxury aesthetic, slow pacing, dramatic tone
-- Goal: BRAND STORY + VISUAL AESTHETICS
+FORBIDDEN: Direct sales, B2B messaging, cinematic editorial, software demos`,
 
-CONTENT TYPES:
-- Reel
-- Static Post
-- Carousel
-- Thumbnail
-- Story Pack
+  inkandedge: `You are the Senior Creative Director for Ink & Edge Magazine.
 
+BRAND: Editorial automotive art publication
+TONE: Elegant, cinematic, artistic, thoughtful
+AUDIENCE: Designers, artists, visually-driven enthusiasts
+USP: Art of wraps, High-end photography, Cinematic narratives, Magazine aesthetics
+STYLE: Slow motion, black & white, macro shots, textured overlays, minimal text
+GOAL: AESTHETIC IMPACT + BRAND STORY
+
+FORBIDDEN: Fast-paced content, direct response, wholesale pricing, software demos`,
+
+  software: `You are the Senior Creative Director for WrapCommand AI & RestylePro AI.
+
+BRAND: SaaS AI suite for wrap shops
+TONE: High authority, expert, friendly tech guide
+AUDIENCE: Installers, shop owners, sales teams
+USP: Close more deals with AI, Visualizer workflows, AI quoting, Automated follow-up
+STYLE: Modern UI demos, neon accents, screen recordings, tech-forward
+GOAL: APP SIGNUPS + PRODUCT EDUCATION
+
+FORBIDDEN: Print/wholesale messaging, entertainment content, editorial style`
+};
+
+const MASTER_ROUTER = `BRAND ISOLATION DIRECTIVE — DO NOT MIX BRANDS
+
+You must treat every brand as a completely separate company.
+NEVER blend or cross-contaminate content between brands.
+
+RULES:
+1. Select ONLY the brand requested
+2. Pull ONLY that brand's voice, USP, assets
+3. Never mention other brands
+4. Never reuse styles from wrong brand
+5. CTA MUST match brand`;
+
+const OUTPUT_FORMAT = `
 YOU MUST OUTPUT A JSON OBJECT WITH:
 {
   "hooks": ["hook1", "hook2", "hook3"],
@@ -72,6 +100,11 @@ RULES:
 - All content must match the media provided
 - Do NOT hallucinate vehicles or brands
 - Use real wrap terminology and installer vocabulary`;
+
+function getBrandSystemPrompt(brand: string): string {
+  const brandPrompt = BRAND_PROMPTS[brand] || BRAND_PROMPTS.wpw;
+  return `${MASTER_ROUTER}\n\nACTIVE BRAND: ${brand.toUpperCase()}\n\n${brandPrompt}\n\n${OUTPUT_FORMAT}`;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -114,6 +147,9 @@ Generate a complete content pack following the exact JSON structure specified. M
 
     console.log('Generating content for brand:', brand, 'type:', content_type);
 
+    // Get brand-specific system prompt for complete isolation
+    const systemPrompt = getBrandSystemPrompt(brand);
+
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -123,7 +159,7 @@ Generate a complete content pack following the exact JSON structure specified. M
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: MASTER_CONTENT_PROMPT },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
       }),

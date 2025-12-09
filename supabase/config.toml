@@ -81,6 +81,12 @@ verify_jwt = false
 [functions.generate-social-content]
 verify_jwt = false
 
+[functions.content-ingest]
+verify_jwt = false
+
+[functions.content-analysis]
+verify_jwt = false
+
 [functions.sync-instagram-media]
 verify_jwt = false
 
