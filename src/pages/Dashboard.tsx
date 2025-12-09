@@ -345,6 +345,9 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* MightyChat - Prominent Unified Inbox */}
+      <MightyChatCard />
+
       {/* Two-Column Hero Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* LEFT: Quote Builder Card */}
@@ -840,9 +843,6 @@ export default function Dashboard() {
         
         {/* Quote Request Card */}
         <QuoteRequestCard />
-        
-        {/* MightyChat Unified Inbox Card */}
-        <MightyChatCard />
         
         {/* UTIM Analytics Dashboard */}
         <UTIMAnalyticsDashboard />
