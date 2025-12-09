@@ -217,7 +217,35 @@ serve(async (req) => {
       console.log("Message saved successfully");
 
       // ---------------------------------------------------------------------
-      // 8. RETURN IG REQUIRED 200 OK (DO NOT CHANGE)
+      // 8. ROUTE THROUGH INGEST-MESSAGE FOR AI PROCESSING
+      // ---------------------------------------------------------------------
+      try {
+        const ingestResponse = await fetch(`${SUPABASE_URL}/functions/v1/ingest-message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          },
+          body: JSON.stringify({
+            platform: 'instagram',
+            sender_id: senderId,
+            sender_username: usernameDisplay,
+            message_text: text,
+            conversation_id: conversation.id,
+            contact_id: contact.id
+          })
+        });
+        
+        const ingestResult = await ingestResponse.json();
+        console.log("Ingest result:", JSON.stringify(ingestResult));
+        
+        // AI reply is sent by ingest-message via send-instagram-reply
+      } catch (ingestErr) {
+        console.error("Ingest-message error:", ingestErr);
+      }
+
+      // ---------------------------------------------------------------------
+      // 9. RETURN IG REQUIRED 200 OK (DO NOT CHANGE)
       // ---------------------------------------------------------------------
       return new Response("EVENT_RECEIVED", { status: 200 });
     }

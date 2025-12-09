@@ -32,12 +32,14 @@ serve(async (req) => {
 
     if (logError) console.error("Log insert error:", logError);
 
-    // 2. Classify intent via AI
+    // 2. Classify intent AND extract vehicle info via AI
     const classifyPrompt = `Analyze this customer message and return JSON only:
 {
   "type": "quote" | "design" | "support" | "general",
   "vehicle": { "year": string | null, "make": string | null, "model": string | null },
-  "urgency": "high" | "normal" | "low"
+  "wrap_type": "full" | "partial" | "color_change" | "ppf" | "commercial" | null,
+  "urgency": "high" | "normal" | "low",
+  "needs_vehicle_info": boolean
 }
 
 Message: "${body.message_text}"`;
@@ -57,7 +59,7 @@ Message: "${body.message_text}"`;
       }),
     });
 
-    let parsed = { type: "general", vehicle: {}, urgency: "normal" };
+    let parsed: any = { type: "general", vehicle: {}, urgency: "normal", needs_vehicle_info: true, wrap_type: null };
     try {
       const classifyData = await classifyRes.json();
       const content = classifyData.choices?.[0]?.message?.content || "{}";
@@ -131,14 +133,34 @@ Message: "${body.message_text}"`;
       console.log("📝 Quote request created in ai_actions");
     }
 
-    // 6. Generate AI reply
-    const replyPrompt = `You are WrapCommandAI, a friendly wrap shop assistant.
-Rules:
-- Keep replies under 30 words
-- If they want a quote, ask for vehicle YEAR, MAKE, MODEL
-- If design inquiry, ask what style they prefer
-- If support, ask for order number
-- Be helpful and professional`;
+    // 6. Generate AI reply with intent-specific prompts
+    const intentPrompts: Record<string, string> = {
+      quote: parsed.needs_vehicle_info 
+        ? "Ask for their vehicle YEAR, MAKE, and MODEL. Be friendly and quick."
+        : "They provided vehicle info. Confirm details and mention you'll prepare a quote.",
+      design: "Ask what style they're looking for (color change, printed graphics, partial wrap, etc). Offer to show examples.",
+      support: "Ask for their order number so you can help track it.",
+      general: "Answer their question helpfully. Guide toward getting a quote if appropriate."
+    };
+
+    const replyPrompt = `You are WPW AI TEAM - the friendly AI assistant for WePrintWraps.com.
+
+BRAND VOICE:
+- High-energy wrap industry pro
+- Professional but friendly
+- Quick and helpful
+
+INTENT: ${parsed.type}
+${intentPrompts[parsed.type] || intentPrompts.general}
+
+${parsed.vehicle?.year ? `Vehicle detected: ${parsed.vehicle.year} ${parsed.vehicle.make} ${parsed.vehicle.model}` : ''}
+${parsed.wrap_type ? `Wrap type: ${parsed.wrap_type}` : ''}
+
+RULES:
+- Keep replies under 35 words
+- Use 1-2 emojis max
+- Be direct and helpful
+- If they want pricing, give ballparks: partial $500-1500, full $1500-4000`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
