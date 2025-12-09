@@ -2135,6 +2135,53 @@ export type Database = {
           },
         ]
       }
+      instagram_tokens: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          instagram_user_id: string | null
+          instagram_username: string | null
+          last_refreshed_at: string | null
+          organization_id: string | null
+          token_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          instagram_user_id?: string | null
+          instagram_username?: string | null
+          last_refreshed_at?: string | null
+          organization_id?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          instagram_user_id?: string | null
+          instagram_username?: string | null
+          last_refreshed_at?: string | null
+          organization_id?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       launch_signups: {
         Row: {
           created_at: string | null
