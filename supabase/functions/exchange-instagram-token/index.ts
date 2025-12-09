@@ -18,23 +18,25 @@ serve(async (req) => {
       throw new Error("short_lived_token is required");
     }
 
-    const appId = Deno.env.get("INSTAGRAM_APP_ID");
     const appSecret = Deno.env.get("INSTAGRAM_APP_SECRET");
 
-    if (!appId || !appSecret) {
-      throw new Error("INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET must be configured");
+    if (!appSecret) {
+      throw new Error("INSTAGRAM_APP_SECRET must be configured");
     }
 
-    console.log("🔄 Exchanging short-lived token for long-lived token...");
+    console.log("🔄 Exchanging short-lived token for long-lived token via Instagram Graph API...");
 
-    // Exchange for long-lived token
-    const exchangeUrl = `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${short_lived_token}`;
+    // Use Instagram Graph API endpoint for token exchange (not Facebook endpoint)
+    // This is for tokens from Instagram Graph API / Business accounts
+    const exchangeUrl = `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${appSecret}&access_token=${short_lived_token}`;
 
     const response = await fetch(exchangeUrl);
     const result = await response.json();
 
+    console.log("📥 Meta API response status:", response.status);
+
     if (!response.ok || result.error) {
-      console.error("❌ Meta API error:", result.error?.message || result);
+      console.error("❌ Meta API error:", result.error?.message || JSON.stringify(result));
       throw new Error(result.error?.message || "Failed to exchange token");
     }
 
