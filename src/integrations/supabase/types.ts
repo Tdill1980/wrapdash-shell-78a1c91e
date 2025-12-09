@@ -939,6 +939,402 @@ export type Database = {
           },
         ]
       }
+      content_affiliate_uploads: {
+        Row: {
+          affiliate_id: string
+          brand: string | null
+          content_file_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          organization_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          brand?: string | null
+          content_file_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          brand?: string | null
+          content_file_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_affiliate_uploads_content_file_id_fkey"
+            columns: ["content_file_id"]
+            isOneToOne: false
+            referencedRelation: "content_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_affiliate_uploads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_calendar: {
+        Row: {
+          brand: string
+          caption: string | null
+          content_project_id: string | null
+          content_type: string
+          created_at: string
+          engagement_stats: Json | null
+          hashtags: string[] | null
+          id: string
+          organization_id: string | null
+          platform: string
+          post_url: string | null
+          posted_at: string | null
+          scheduled_date: string
+          scheduled_time: string
+          status: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          caption?: string | null
+          content_project_id?: string | null
+          content_type: string
+          created_at?: string
+          engagement_stats?: Json | null
+          hashtags?: string[] | null
+          id?: string
+          organization_id?: string | null
+          platform: string
+          post_url?: string | null
+          posted_at?: string | null
+          scheduled_date: string
+          scheduled_time?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          caption?: string | null
+          content_project_id?: string | null
+          content_type?: string
+          created_at?: string
+          engagement_stats?: Json | null
+          hashtags?: string[] | null
+          id?: string
+          organization_id?: string | null
+          platform?: string
+          post_url?: string | null
+          posted_at?: string | null
+          scheduled_date?: string
+          scheduled_time?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_calendar_content_project_id_fkey"
+            columns: ["content_project_id"]
+            isOneToOne: false
+            referencedRelation: "content_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_calendar_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_files: {
+        Row: {
+          ai_labels: Json | null
+          brand: string
+          created_at: string
+          dominant_colors: string[] | null
+          duration_seconds: number | null
+          file_size_bytes: number | null
+          file_type: string
+          file_url: string
+          id: string
+          metadata: Json | null
+          organization_id: string | null
+          original_filename: string | null
+          processing_status: string | null
+          source: string
+          source_id: string | null
+          tags: string[] | null
+          thumbnail_url: string | null
+          transcript: string | null
+          updated_at: string
+          uploader_id: string | null
+          vehicle_info: Json | null
+        }
+        Insert: {
+          ai_labels?: Json | null
+          brand?: string
+          created_at?: string
+          dominant_colors?: string[] | null
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          original_filename?: string | null
+          processing_status?: string | null
+          source?: string
+          source_id?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          transcript?: string | null
+          updated_at?: string
+          uploader_id?: string | null
+          vehicle_info?: Json | null
+        }
+        Update: {
+          ai_labels?: Json | null
+          brand?: string
+          created_at?: string
+          dominant_colors?: string[] | null
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          metadata?: Json | null
+          organization_id?: string | null
+          original_filename?: string | null
+          processing_status?: string | null
+          source?: string
+          source_id?: string | null
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          transcript?: string | null
+          updated_at?: string
+          uploader_id?: string | null
+          vehicle_info?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_files_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_generation_queue: {
+        Row: {
+          attempts: number | null
+          brand: string
+          completed_at: string | null
+          content_file_id: string | null
+          created_at: string
+          generation_type: string | null
+          id: string
+          last_error: string | null
+          organization_id: string | null
+          priority: number | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          brand: string
+          completed_at?: string | null
+          content_file_id?: string | null
+          created_at?: string
+          generation_type?: string | null
+          id?: string
+          last_error?: string | null
+          organization_id?: string | null
+          priority?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          brand?: string
+          completed_at?: string | null
+          content_file_id?: string | null
+          created_at?: string
+          generation_type?: string | null
+          id?: string
+          last_error?: string | null
+          organization_id?: string | null
+          priority?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_generation_queue_content_file_id_fkey"
+            columns: ["content_file_id"]
+            isOneToOne: false
+            referencedRelation: "content_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_generation_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_projects: {
+        Row: {
+          ai_brief: string | null
+          ai_output: Json | null
+          brand: string
+          canva_export_json: Json | null
+          content_file_ids: string[] | null
+          created_at: string
+          created_by: string | null
+          goal: string | null
+          id: string
+          organization_id: string | null
+          platform: string | null
+          project_type: string
+          published_at: string | null
+          published_url: string | null
+          scheduled_for: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_brief?: string | null
+          ai_output?: Json | null
+          brand?: string
+          canva_export_json?: Json | null
+          content_file_ids?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          goal?: string | null
+          id?: string
+          organization_id?: string | null
+          platform?: string | null
+          project_type?: string
+          published_at?: string | null
+          published_url?: string | null
+          scheduled_for?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_brief?: string | null
+          ai_output?: Json | null
+          brand?: string
+          canva_export_json?: Json | null
+          content_file_ids?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          goal?: string | null
+          id?: string
+          organization_id?: string | null
+          platform?: string | null
+          project_type?: string
+          published_at?: string | null
+          published_url?: string | null
+          scheduled_for?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_sync_sources: {
+        Row: {
+          access_token: string | null
+          account_name: string | null
+          created_at: string
+          folder_path: string | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          organization_id: string | null
+          refresh_token: string | null
+          source_type: string
+          sync_cursor: string | null
+          sync_status: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_name?: string | null
+          created_at?: string
+          folder_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id?: string | null
+          refresh_token?: string | null
+          source_type: string
+          sync_cursor?: string | null
+          sync_status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_name?: string | null
+          created_at?: string
+          folder_path?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          organization_id?: string | null
+          refresh_token?: string | null
+          source_type?: string
+          sync_cursor?: string | null
+          sync_status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_sync_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           assigned_to: string | null
