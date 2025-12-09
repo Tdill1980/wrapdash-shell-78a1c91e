@@ -400,7 +400,10 @@ export default function ContentBox() {
     uploadFile,
     generateContent,
     syncInstagram,
-    generateCalendar
+    generateCalendar,
+    processVideo,
+    generateAd,
+    repurposeContent
   } = useContentBox();
 
   const [selectedFiles, setSelectedFiles] = useState<ContentFile[]>([]);
@@ -455,8 +458,15 @@ export default function ContentBox() {
   const handleVideoProcess = async (action: string, params: Record<string, unknown>) => {
     setProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success(`Video ${action} processing started!`);
+      const result = await processVideo.mutateAsync({
+        action,
+        file_id: params.file_id as string,
+        file_url: params.file_url as string,
+        trim_start: params.trim_start as number,
+        trim_end: params.trim_end as number,
+        brand: params.brand as string
+      });
+      return result;
     } finally {
       setProcessing(false);
     }
@@ -465,8 +475,16 @@ export default function ContentBox() {
   const handleAdGenerate = async (params: Record<string, unknown>) => {
     setProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success("Ad variations generated!");
+      const result = await generateAd.mutateAsync({
+        brand: params.brand as string || 'wpw',
+        objective: params.objective as string || params.ad_type as string,
+        platform: params.platform as string,
+        format: params.format as string,
+        media_urls: params.media_urls as string[],
+        headline: params.headline as string,
+        cta: params.cta as string
+      });
+      return result;
     } finally {
       setProcessing(false);
     }
@@ -475,8 +493,15 @@ export default function ContentBox() {
   const handleRepurpose = async (params: Record<string, unknown>) => {
     setProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success("Content repurposing started!");
+      const result = await repurposeContent.mutateAsync({
+        brand: params.brand as string || 'wpw',
+        source_url: params.source_url as string || params.file_url as string,
+        source_type: params.source_type as string || 'video',
+        source_transcript: params.source_transcript as string,
+        target_formats: params.target_formats as string[] || params.formats as string[],
+        enhancements: params.enhancements as string[]
+      });
+      return result;
     } finally {
       setProcessing(false);
     }
