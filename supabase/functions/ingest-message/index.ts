@@ -133,6 +133,22 @@ Message: "${body.message_text}"`;
       console.log("📝 Quote request created in ai_actions");
     }
 
+    // 5b. Fetch REAL pricing from database for AI responses
+    const { data: products } = await supabase
+      .from("products")
+      .select("product_name, price_per_sqft, flat_price")
+      .eq("is_active", true)
+      .order("display_order");
+
+    // Build pricing context from real database values
+    const keyPricing = products?.slice(0, 8).map(p => {
+      if (p.flat_price) return `${p.product_name}: $${p.flat_price}`;
+      if (p.price_per_sqft) return `${p.product_name}: $${p.price_per_sqft}/sqft`;
+      return null;
+    }).filter(Boolean).join(", ") || "";
+
+    console.log("💰 Real pricing loaded:", keyPricing);
+
     // 6. Generate AI reply with intent-specific prompts
     const intentPrompts: Record<string, string> = {
       quote: parsed.needs_vehicle_info 
@@ -156,11 +172,15 @@ ${intentPrompts[parsed.type] || intentPrompts.general}
 ${parsed.vehicle?.year ? `Vehicle detected: ${parsed.vehicle.year} ${parsed.vehicle.make} ${parsed.vehicle.model}` : ''}
 ${parsed.wrap_type ? `Wrap type: ${parsed.wrap_type}` : ''}
 
+ACTUAL PRICING (use these exact numbers if asked about pricing):
+${keyPricing}
+
 RULES:
 - Keep replies under 35 words
 - Use 1-2 emojis max
 - Be direct and helpful
-- If they want pricing, give ballparks: partial $500-1500, full $1500-4000`;
+- Direct them to weprintwraps.com for instant quotes
+- NEVER make up prices - only use the pricing listed above or say "get an instant quote on our website"`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
