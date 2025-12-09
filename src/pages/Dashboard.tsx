@@ -21,6 +21,7 @@ import {
   Clock,
   AlertCircle,
   Plus,
+  Video,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { QuoteRequestCard } from "@/components/dashboard/QuoteRequestCard";
+import { ContentFactoryCard } from "@/components/dashboard/ContentFactoryCard";
 
 const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
@@ -117,6 +119,12 @@ const adminModules = [
     subtitle: "Full admin access",
     icon: Settings,
     route: "/settings",
+  },
+  {
+    name: "AI Content Factory",
+    subtitle: "Create content",
+    icon: Video,
+    route: "/contentbox",
   },
 ];
 
@@ -843,6 +851,9 @@ export default function Dashboard() {
         
         {/* Quote Request Card */}
         <QuoteRequestCard />
+        
+        {/* AI Content Factory Card */}
+        <ContentFactoryCard />
         
         {/* UTIM Analytics Dashboard */}
         <UTIMAnalyticsDashboard />
