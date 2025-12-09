@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, MessageCircle, Phone, Send, ArrowLeft } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Send, ArrowLeft } from "lucide-react";
+import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
+import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
 
 interface Conversation {
   id: string;
@@ -27,6 +30,10 @@ interface Message {
   channel: string;
   created_at: string | null;
   sender_name: string | null;
+  metadata: {
+    avatar_url?: string;
+    username?: string;
+  } | null;
 }
 
 export default function MightyChat() {
@@ -73,17 +80,14 @@ export default function MightyChat() {
         .order("created_at", { ascending: true });
       
       if (msgs) {
-        setMessages(msgs);
+        setMessages(msgs as Message[]);
       }
-    }
-  };
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case "email": return <Mail className="w-4 h-4" />;
-      case "instagram": return <MessageCircle className="w-4 h-4 text-pink-500" />;
-      case "sms": return <Phone className="w-4 h-4" />;
-      default: return <MessageCircle className="w-4 h-4" />;
+      // Mark as read
+      await supabase
+        .from("conversations")
+        .update({ unread_count: 0 })
+        .eq("id", id);
     }
   };
 
@@ -107,6 +111,19 @@ export default function MightyChat() {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
+  const getMessageAvatar = (msg: Message) => {
+    const metadata = msg.metadata || {};
+    return metadata.avatar_url || null;
+  };
+
+  const getMessageInitials = (msg: Message) => {
+    const name = msg.sender_name || "?";
+    if (name.startsWith("@")) {
+      return name.slice(1, 3).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
@@ -117,9 +134,9 @@ export default function MightyChat() {
           <p className="text-muted-foreground">Unified Inbox: DM, Email, SMS</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-          {/* Conversation List */}
-          <Card className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
+          {/* Conversation List - 3 cols */}
+          <Card className="lg:col-span-3">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Conversations</CardTitle>
             </CardHeader>
@@ -142,12 +159,12 @@ export default function MightyChat() {
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        {getChannelIcon(conv.channel)}
-                        <span className="font-medium flex-1 truncate">
+                        <ChannelBadge channel={conv.channel} size="sm" />
+                        <span className="font-medium flex-1 truncate text-sm">
                           {conv.subject || `${conv.channel} conversation`}
                         </span>
                         {(conv.unread_count ?? 0) > 0 && (
-                          <Badge variant="destructive" className="text-xs">
+                          <Badge variant="destructive" className="text-xs h-5 min-w-[20px] flex items-center justify-center">
                             {conv.unread_count}
                           </Badge>
                         )}
@@ -167,8 +184,8 @@ export default function MightyChat() {
             </CardContent>
           </Card>
 
-          {/* Message Thread */}
-          <Card className="lg:col-span-2">
+          {/* Message Thread - 6 cols */}
+          <Card className="lg:col-span-6">
             {selectedConversation ? (
               <>
                 <CardHeader className="border-b pb-3">
@@ -181,10 +198,11 @@ export default function MightyChat() {
                     >
                       <ArrowLeft className="w-4 h-4" />
                     </Button>
-                    {getChannelIcon(selectedConversation.channel)}
-                    <CardTitle className="text-lg">
+                    <ChannelIcon channel={selectedConversation.channel} className="w-5 h-5" />
+                    <CardTitle className="text-lg flex-1">
                       {selectedConversation.subject || `${selectedConversation.channel} conversation`}
                     </CardTitle>
+                    <ChannelBadge channel={selectedConversation.channel} size="md" />
                   </div>
                 </CardHeader>
                 <CardContent className="p-0 flex flex-col h-[calc(100vh-350px)]">
@@ -192,26 +210,36 @@ export default function MightyChat() {
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`mb-4 ${
-                          msg.direction === "outbound" ? "text-right" : "text-left"
+                        className={`mb-4 flex ${
+                          msg.direction === "outbound" ? "justify-end" : "justify-start"
                         }`}
                       >
-                        <div
-                          className={`inline-block max-w-[80%] p-3 rounded-lg ${
-                            msg.direction === "outbound"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          {msg.sender_name && (
-                            <div className="text-xs opacity-70 mb-1">
+                        {msg.direction === "inbound" && (
+                          <Avatar className="w-8 h-8 mr-2 flex-shrink-0">
+                            <AvatarImage src={getMessageAvatar(msg) || undefined} />
+                            <AvatarFallback className="text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
+                              {getMessageInitials(msg)}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className={`max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
+                          {msg.sender_name && msg.direction === "inbound" && (
+                            <div className="text-xs text-muted-foreground mb-1">
                               {msg.sender_name}
                             </div>
                           )}
-                          <p className="text-sm">{msg.content}</p>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {formatTime(msg.created_at)}
+                          <div
+                            className={`inline-block p-3 rounded-lg ${
+                              msg.direction === "outbound"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <p className="text-sm">{msg.content}</p>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {formatTime(msg.created_at)}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -243,6 +271,14 @@ export default function MightyChat() {
               </div>
             )}
           </Card>
+
+          {/* Contact Sidebar - 3 cols */}
+          <div className="lg:col-span-3 hidden lg:block">
+            <ContactSidebar 
+              contactId={selectedConversation?.contact_id || null}
+              channel={selectedConversation?.channel || ""}
+            />
+          </div>
         </div>
       </div>
     </MainLayout>
