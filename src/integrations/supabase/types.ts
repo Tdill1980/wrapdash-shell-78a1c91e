@@ -188,6 +188,60 @@ export type Database = {
           },
         ]
       }
+      affiliate_media: {
+        Row: {
+          affiliate_id: string
+          brand: string
+          created_at: string
+          id: string
+          notes: string | null
+          organization_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
+          status: string
+          storage_path: string
+          tags: string[] | null
+          type: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          affiliate_id: string
+          brand?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          storage_path: string
+          tags?: string[] | null
+          type?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          affiliate_id?: string
+          brand?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          status?: string
+          storage_path?: string
+          tags?: string[] | null
+          type?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       affiliate_payout_invoices: {
         Row: {
           commission_ids: string[]
