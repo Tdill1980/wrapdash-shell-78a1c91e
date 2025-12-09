@@ -11,13 +11,16 @@ import {
   Wand2,
   Instagram,
   Facebook,
-  Play
+  Play,
+  Copy,
+  CheckCircle
 } from "lucide-react";
-import { ContentFile } from "@/hooks/useContentBox";
+import { ContentFile, AdGenerationResult } from "@/hooks/useContentBox";
+import { toast } from "sonner";
 
 interface AdCreatorProps {
   selectedFiles: ContentFile[];
-  onGenerate: (params: Record<string, unknown>) => Promise<void>;
+  onGenerate: (params: Record<string, unknown>) => Promise<AdGenerationResult>;
   generating: boolean;
 }
 
@@ -47,6 +50,32 @@ export function AdCreator({ selectedFiles, onGenerate, generating }: AdCreatorPr
   const [format, setFormat] = useState<string>('video_ad');
   const [headline, setHeadline] = useState('');
   const [cta, setCta] = useState('Shop Now');
+  const [result, setResult] = useState<AdGenerationResult | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    try {
+      const data = await onGenerate({
+        brand: selectedFiles[0]?.brand || 'wpw',
+        objective: adType,
+        platform,
+        format,
+        media_urls: selectedFiles.map(f => f.file_url),
+        headline: headline || undefined,
+        cta,
+      });
+      setResult(data);
+    } catch (error) {
+      console.error('Ad generation failed:', error);
+    }
+  };
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(key);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
 
   if (selectedFiles.length === 0) {
     return (
@@ -197,14 +226,7 @@ export function AdCreator({ selectedFiles, onGenerate, generating }: AdCreatorPr
         className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
         size="lg"
         disabled={generating}
-        onClick={() => onGenerate({
-          ad_type: adType,
-          platform,
-          format,
-          headline: headline || undefined,
-          cta,
-          media_urls: selectedFiles.map(f => f.file_url),
-        })}
+        onClick={handleGenerate}
       >
         {generating ? (
           <>
@@ -218,6 +240,100 @@ export function AdCreator({ selectedFiles, onGenerate, generating }: AdCreatorPr
           </>
         )}
       </Button>
+
+      {/* Results Display */}
+      {result && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              Ad Variations Generated
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Headlines */}
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">Headlines</p>
+              <div className="space-y-2">
+                {result.headlines.map((h, i) => (
+                  <div key={i} className="flex items-center justify-between bg-muted p-2 rounded">
+                    <span className="text-sm text-foreground">{h}</span>
+                    <Button size="sm" variant="ghost" onClick={() => copyToClipboard(h, `headline-${i}`)}>
+                      {copiedIndex === `headline-${i}` ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Hooks */}
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">Video Hooks</p>
+              <div className="space-y-2">
+                {result.hooks.map((h, i) => (
+                  <div key={i} className="flex items-center justify-between bg-muted p-2 rounded">
+                    <span className="text-sm text-foreground">{h}</span>
+                    <Button size="sm" variant="ghost" onClick={() => copyToClipboard(h, `hook-${i}`)}>
+                      {copiedIndex === `hook-${i}` ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Platform Captions */}
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">Platform Captions</p>
+              <div className="space-y-2">
+                {Object.entries(result.captions).map(([plat, caption]) => (
+                  <div key={plat} className="bg-muted p-2 rounded">
+                    <div className="flex items-center justify-between mb-1">
+                      <Badge variant="secondary" className="text-[10px]">{plat}</Badge>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(caption, `caption-${plat}`)}>
+                        {copiedIndex === `caption-${plat}` ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{caption}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA Variations */}
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">CTA Variations</p>
+              <div className="flex flex-wrap gap-2">
+                {result.cta_variations.map((c, i) => (
+                  <Badge 
+                    key={i} 
+                    className="cursor-pointer hover:bg-primary/80"
+                    onClick={() => copyToClipboard(c, `cta-${i}`)}
+                  >
+                    {c}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Carousel Slides */}
+            {result.carousel_slides && result.carousel_slides.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Carousel Slides</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {result.carousel_slides.map((slide, i) => (
+                    <div key={i} className="bg-muted p-3 rounded">
+                      <Badge variant="outline" className="text-[10px] mb-2">Slide {i + 1}</Badge>
+                      <p className="text-sm font-medium text-foreground">{slide.headline}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{slide.body}</p>
+                      <Button size="sm" className="mt-2 w-full text-xs">{slide.cta}</Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

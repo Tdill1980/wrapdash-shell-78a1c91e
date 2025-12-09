@@ -1,26 +1,28 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { 
   Scissors, 
   Wand2, 
   Type, 
-  Music, 
   Sparkles,
   Loader2,
   Play,
   Pause,
   SkipBack,
   SkipForward,
-  Volume2
+  Volume2,
+  Download,
+  Copy,
+  CheckCircle
 } from "lucide-react";
-import { ContentFile } from "@/hooks/useContentBox";
+import { ContentFile, VideoProcessResult } from "@/hooks/useContentBox";
+import { toast } from "sonner";
 
 interface AIVideoEditorProps {
   selectedFile: ContentFile | null;
-  onProcess: (action: string, params: Record<string, unknown>) => Promise<void>;
+  onProcess: (action: string, params: Record<string, unknown>) => Promise<VideoProcessResult>;
   processing: boolean;
 }
 
@@ -28,6 +30,8 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
   const [trimStart, setTrimStart] = useState([0]);
   const [trimEnd, setTrimEnd] = useState([100]);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
+  const [result, setResult] = useState<VideoProcessResult | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const actions = [
     {
@@ -40,21 +44,54 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
       id: 'add_captions',
       name: 'Auto Captions',
       icon: <Type className="w-5 h-5" />,
-      description: 'Generate and overlay animated captions',
-    },
-    {
-      id: 'add_music',
-      name: 'Add Music',
-      icon: <Music className="w-5 h-5" />,
-      description: 'Add royalty-free background music',
+      description: 'Generate and download SRT/VTT caption files',
     },
     {
       id: 'enhance',
       name: 'AI Enhance',
       icon: <Sparkles className="w-5 h-5" />,
-      description: 'Color correct, stabilize, and enhance quality',
+      description: 'Get color, pacing, and enhancement suggestions',
     },
   ];
+
+  const handleProcess = async () => {
+    if (!selectedAction || !selectedFile) return;
+    
+    try {
+      const data = await onProcess(selectedAction, {
+        file_id: selectedFile.id,
+        file_url: selectedFile.file_url,
+        trim_start: trimStart[0],
+        trim_end: trimEnd[0],
+        brand: selectedFile.brand
+      });
+      setResult(data);
+    } catch (error) {
+      console.error('Processing failed:', error);
+    }
+  };
+
+  const downloadCaptions = (format: 'srt' | 'vtt') => {
+    if (!result) return;
+    const content = format === 'srt' ? result.captions_srt : result.captions_vtt;
+    if (!content) return;
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `captions.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Downloaded captions.${format}`);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (!selectedFile) {
     return (
@@ -161,7 +198,7 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
       </Card>
 
       {/* AI Actions */}
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-3">
         {actions.map((action) => (
           <Card 
             key={action.id}
@@ -191,11 +228,7 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
         className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
         size="lg"
         disabled={!selectedAction || processing}
-        onClick={() => selectedAction && onProcess(selectedAction, {
-          file_id: selectedFile.id,
-          trim_start: trimStart[0],
-          trim_end: trimEnd[0],
-        })}
+        onClick={handleProcess}
       >
         {processing ? (
           <>
@@ -209,6 +242,97 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
           </>
         )}
       </Button>
+
+      {/* Results Display */}
+      {result && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              AI Processing Complete
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Captions */}
+            {result.captions_srt && (
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Caption Files</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => downloadCaptions('srt')}>
+                    <Download className="w-4 h-4 mr-1" /> SRT
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => downloadCaptions('vtt')}>
+                    <Download className="w-4 h-4 mr-1" /> VTT
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Transcript */}
+            {result.transcript && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-foreground">Transcript</p>
+                  <Button size="sm" variant="ghost" onClick={() => copyToClipboard(result.transcript!)}>
+                    {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg max-h-32 overflow-y-auto">
+                  {result.transcript}
+                </p>
+              </div>
+            )}
+
+            {/* Beat Sheet */}
+            {result.beat_sheet && result.beat_sheet.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Beat Sheet</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {result.beat_sheet.map((beat, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs bg-muted p-2 rounded">
+                      <span className="text-primary font-mono">{beat.timestamp}</span>
+                      <span className="text-muted-foreground">{beat.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Cut Recommendations */}
+            {result.cut_recommendations && result.cut_recommendations.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Recommended Cuts</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {result.cut_recommendations.map((cut, i) => (
+                    <div key={i} className="text-xs bg-muted p-2 rounded">
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary font-mono">{cut.start} → {cut.end}</span>
+                        <span className="text-green-500">Score: {cut.score}/10</span>
+                      </div>
+                      <p className="text-muted-foreground mt-1">{cut.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Enhancement Suggestions */}
+            {result.enhancement_suggestions && result.enhancement_suggestions.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Enhancement Suggestions</p>
+                <ul className="space-y-1">
+                  {result.enhancement_suggestions.map((suggestion, i) => (
+                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                      <Sparkles className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

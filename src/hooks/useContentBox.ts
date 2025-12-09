@@ -66,6 +66,36 @@ export interface ContentCalendarEntry {
   updated_at: string;
 }
 
+export interface VideoProcessResult {
+  action: string;
+  transcript?: string;
+  captions_srt?: string;
+  captions_vtt?: string;
+  beat_sheet?: Array<{ timestamp: string; description: string; type: string }>;
+  cut_recommendations?: Array<{ start: string; end: string; reason: string; score: number }>;
+  trim_recommendation?: { start: string; end: string; reason: string };
+  enhancement_suggestions?: string[];
+}
+
+export interface AdGenerationResult {
+  headlines: string[];
+  hooks: string[];
+  captions: Record<string, string>;
+  cta_variations: string[];
+  carousel_slides?: Array<{ headline: string; body: string; cta: string }>;
+}
+
+export interface RepurposeResult {
+  formats: Record<string, {
+    script: string;
+    hook: string;
+    caption: string;
+    hashtags: string[];
+    thumbnail_titles: string[];
+    duration_recommendation: string;
+  }>;
+}
+
 export function useContentBox() {
   const queryClient = useQueryClient();
 
@@ -123,18 +153,18 @@ export function useContentBox() {
       tags?: string[];
     }) => {
       const fileName = `${Date.now()}-${file.name}`;
-      const filePath = `content/${brand}/${fileName}`;
+      const filePath = `${brand}/${fileName}`;
 
-      // Upload to storage
+      // Upload to media-library bucket
       const { error: uploadError } = await supabase.storage
-        .from("shopflow-files")
+        .from("media-library")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from("shopflow-files")
+        .from("media-library")
         .getPublicUrl(filePath);
 
       // Determine file type
@@ -170,7 +200,110 @@ export function useContentBox() {
     },
   });
 
-  // Generate content mutation
+  // AI Video Processing mutation
+  const processVideo = useMutation({
+    mutationFn: async ({
+      action,
+      file_id,
+      file_url,
+      trim_start,
+      trim_end,
+      brand = 'wpw'
+    }: {
+      action: string;
+      file_id: string;
+      file_url: string;
+      trim_start?: number;
+      trim_end?: number;
+      brand?: string;
+    }): Promise<VideoProcessResult> => {
+      const { data, error } = await supabase.functions.invoke("ai-video-process", {
+        body: { action, file_id, file_url, trim_start, trim_end, brand }
+      });
+
+      if (error) throw error;
+      return data as VideoProcessResult;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["content-files"] });
+      toast.success(`Video processed: ${data.action}`);
+    },
+    onError: (error) => {
+      toast.error(`Video processing failed: ${error.message}`);
+    },
+  });
+
+  // AI Ad Generation mutation
+  const generateAd = useMutation({
+    mutationFn: async ({
+      brand,
+      objective,
+      platform,
+      format,
+      media_urls,
+      media_context,
+      headline,
+      cta
+    }: {
+      brand: string;
+      objective: string;
+      platform: string;
+      format: string;
+      media_urls: string[];
+      media_context?: string;
+      headline?: string;
+      cta?: string;
+    }): Promise<AdGenerationResult> => {
+      const { data, error } = await supabase.functions.invoke("ai-generate-ad", {
+        body: { brand, objective, platform, format, media_urls, media_context, headline, cta }
+      });
+
+      if (error) throw error;
+      return data as AdGenerationResult;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content-projects"] });
+      toast.success("Ad variations generated!");
+    },
+    onError: (error) => {
+      toast.error(`Ad generation failed: ${error.message}`);
+    },
+  });
+
+  // AI Repurpose Content mutation
+  const repurposeContent = useMutation({
+    mutationFn: async ({
+      brand,
+      source_url,
+      source_type,
+      source_transcript,
+      target_formats,
+      enhancements
+    }: {
+      brand: string;
+      source_url: string;
+      source_type: string;
+      source_transcript?: string;
+      target_formats: string[];
+      enhancements?: string[];
+    }): Promise<RepurposeResult> => {
+      const { data, error } = await supabase.functions.invoke("ai-repurpose-content", {
+        body: { brand, source_url, source_type, source_transcript, target_formats, enhancements }
+      });
+
+      if (error) throw error;
+      return data as RepurposeResult;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content-projects"] });
+      toast.success("Content repurposed to multiple formats!");
+    },
+    onError: (error) => {
+      toast.error(`Repurposing failed: ${error.message}`);
+    },
+  });
+
+  // Generate content mutation (legacy)
   const generateContent = useMutation({
     mutationFn: async ({
       brand,
@@ -265,6 +398,10 @@ export function useContentBox() {
     uploadFile,
     generateContent,
     syncInstagram,
-    generateCalendar
+    generateCalendar,
+    // New AI functions
+    processVideo,
+    generateAd,
+    repurposeContent
   };
 }

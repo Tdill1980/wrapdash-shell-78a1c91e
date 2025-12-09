@@ -8,19 +8,21 @@ import {
   Wand2, 
   Loader2,
   Image,
-  Video,
   Square,
   RectangleVertical,
   RectangleHorizontal,
   Smartphone,
-  Monitor,
-  LayoutGrid
+  LayoutGrid,
+  Copy,
+  CheckCircle,
+  Download
 } from "lucide-react";
-import { ContentFile } from "@/hooks/useContentBox";
+import { ContentFile, RepurposeResult } from "@/hooks/useContentBox";
+import { toast } from "sonner";
 
 interface ContentRepurposerProps {
   selectedFile: ContentFile | null;
-  onRepurpose: (params: Record<string, unknown>) => Promise<void>;
+  onRepurpose: (params: Record<string, unknown>) => Promise<RepurposeResult>;
   processing: boolean;
 }
 
@@ -46,6 +48,8 @@ const ENHANCEMENTS = [
 export function ContentRepurposer({ selectedFile, onRepurpose, processing }: ContentRepurposerProps) {
   const [selectedFormats, setSelectedFormats] = useState<string[]>(['reel', 'story']);
   const [selectedEnhancements, setSelectedEnhancements] = useState<string[]>(['auto_captions']);
+  const [result, setResult] = useState<RepurposeResult | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const toggleFormat = (formatId: string) => {
     setSelectedFormats(prev => 
@@ -61,6 +65,43 @@ export function ContentRepurposer({ selectedFile, onRepurpose, processing }: Con
         ? prev.filter(e => e !== enhId)
         : [...prev, enhId]
     );
+  };
+
+  const handleRepurpose = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      const data = await onRepurpose({
+        brand: selectedFile.brand,
+        source_url: selectedFile.file_url,
+        source_type: selectedFile.file_type,
+        source_transcript: selectedFile.transcript || undefined,
+        target_formats: selectedFormats,
+        enhancements: selectedEnhancements
+      });
+      setResult(data);
+    } catch (error) {
+      console.error('Repurposing failed:', error);
+    }
+  };
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const downloadContentPack = () => {
+    if (!result) return;
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'content-pack.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded content pack");
   };
 
   if (!selectedFile) {
@@ -193,12 +234,7 @@ export function ContentRepurposer({ selectedFile, onRepurpose, processing }: Con
         className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
         size="lg"
         disabled={selectedFormats.length === 0 || processing}
-        onClick={() => onRepurpose({
-          file_id: selectedFile.id,
-          file_url: selectedFile.file_url,
-          formats: selectedFormats,
-          enhancements: selectedEnhancements,
-        })}
+        onClick={handleRepurpose}
       >
         {processing ? (
           <>
@@ -212,6 +248,87 @@ export function ContentRepurposer({ selectedFile, onRepurpose, processing }: Con
           </>
         )}
       </Button>
+
+      {/* Results Display */}
+      {result && result.formats && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                Content Repurposed
+              </CardTitle>
+              <Button size="sm" variant="outline" onClick={downloadContentPack}>
+                <Download className="w-4 h-4 mr-1" /> Export Pack
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Object.entries(result.formats).map(([formatId, content]) => (
+              <div key={formatId} className="bg-muted p-3 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <Badge variant="secondary">{formatId.toUpperCase()}</Badge>
+                  <span className="text-xs text-muted-foreground">{content.duration_recommendation}</span>
+                </div>
+                
+                {/* Hook */}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-foreground">Hook</span>
+                    <Button size="sm" variant="ghost" className="h-6" onClick={() => copyToClipboard(content.hook, `${formatId}-hook`)}>
+                      {copiedKey === `${formatId}-hook` ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{content.hook}</p>
+                </div>
+
+                {/* Script */}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-foreground">Script</span>
+                    <Button size="sm" variant="ghost" className="h-6" onClick={() => copyToClipboard(content.script, `${formatId}-script`)}>
+                      {copiedKey === `${formatId}-script` ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-3">{content.script}</p>
+                </div>
+
+                {/* Caption */}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-foreground">Caption</span>
+                    <Button size="sm" variant="ghost" className="h-6" onClick={() => copyToClipboard(content.caption, `${formatId}-caption`)}>
+                      {copiedKey === `${formatId}-caption` ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{content.caption}</p>
+                </div>
+
+                {/* Hashtags */}
+                <div className="flex flex-wrap gap-1">
+                  {content.hashtags.slice(0, 5).map((tag, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px]">{tag}</Badge>
+                  ))}
+                </div>
+
+                {/* Thumbnail Titles */}
+                {content.thumbnail_titles && content.thumbnail_titles.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <span className="text-xs font-medium text-foreground">Thumbnail Titles</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {content.thumbnail_titles.map((title, i) => (
+                        <Badge key={i} className="text-[10px] cursor-pointer" onClick={() => copyToClipboard(title, `${formatId}-thumb-${i}`)}>
+                          {title}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
