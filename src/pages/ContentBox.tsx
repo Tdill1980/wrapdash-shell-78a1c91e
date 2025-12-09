@@ -138,6 +138,10 @@ function GeneratorModal({
   const [goal, setGoal] = useState('sell');
   const [platform, setPlatform] = useState('instagram');
   const [additionalContext, setAdditionalContext] = useState('');
+  const [autoTransform, setAutoTransform] = useState(false);
+
+  // Check for potential brand mismatches
+  const hasMismatch = selectedFiles.some(f => f.brand !== brand);
 
   if (!open) return null;
 
@@ -165,8 +169,45 @@ function GeneratorModal({
               {BRANDS.filter(b => b.value !== 'all').map((b) => (
                 <option key={b.value} value={b.value}>{b.label}</option>
               ))}
+              <option value="software">WrapCommand AI / RestylePro</option>
             </select>
           </div>
+
+          {/* Auto-Transform Toggle */}
+          {hasMismatch && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-amber-400">Brand Mismatch Detected</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Some selected media was tagged for a different brand
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs text-muted-foreground">Auto-Transform</span>
+                  <button
+                    type="button"
+                    onClick={() => setAutoTransform(!autoTransform)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      autoTransform ? 'bg-primary' : 'bg-muted-foreground/30'
+                    }`}
+                  >
+                    <span 
+                      className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        autoTransform ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </label>
+              </div>
+              {autoTransform && (
+                <p className="text-xs text-primary mt-2 flex items-center gap-1">
+                  <Wand2 className="w-3 h-3" />
+                  Content will be automatically transformed to match {brand.toUpperCase()} brand style
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium">Content Type</label>
@@ -229,7 +270,8 @@ function GeneratorModal({
                 platform,
                 media_urls: selectedFiles.map(f => f.file_url),
                 tags: selectedFiles.flatMap(f => f.tags || []),
-                additional_context: additionalContext
+                additional_context: additionalContext,
+                auto_transform: autoTransform
               })}
               className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
               disabled={generating}
