@@ -13,8 +13,6 @@ import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge"
 import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
 import { toast } from "sonner";
 
-const [sendingMessage, setSendingMessage] = useState(false);
-
 interface Conversation {
   id: string;
   channel: string;

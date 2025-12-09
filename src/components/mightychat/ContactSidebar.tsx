@@ -249,7 +249,7 @@ export function ContactSidebar({ contactId, channel }: ContactSidebarProps) {
             variant="outline" 
             size="sm" 
             className="w-full justify-start"
-            onClick={() => window.location.href = `/mightycustomer?customer=${encodeURIComponent(contact.name)}&email=${encodeURIComponent(contact.email || '')}`}
+            onClick={() => window.location.href = `/mighty-customer?customer=${encodeURIComponent(contact.name)}&email=${encodeURIComponent(contact.email || '')}`}
           >
             <FileText className="w-4 h-4 mr-2" />
             Create Quote
