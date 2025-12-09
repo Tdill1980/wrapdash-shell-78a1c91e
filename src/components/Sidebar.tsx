@@ -16,6 +16,7 @@ import {
   Mail,
   TrendingUp,
   Car,
+  Film,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
@@ -131,6 +132,18 @@ const navigationItems = [
   },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase },
+  { 
+    name: "ContentBox AI", 
+    path: "/contentbox", 
+    icon: Film,
+    customRender: (
+      <span className="font-medium">
+        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">ContentBox</span>
+        <span className="text-white"> AI</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
   { 
     name: "Affiliate Dashboard", 
     path: "/affiliate/dashboard", 
