@@ -41,6 +41,7 @@ import { AffiliateCard, AffiliateDashboard, AffiliateAdmin, AffiliateSignup } fr
 import AffiliatePayments from "./modules/affiliate/pages/AffiliatePayments";
 import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
+import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -87,7 +88,8 @@ const App = () => (
             <Route path="/admin/products" element={<ProductAdmin />} />
             <Route path="/admin/designvault" element={<DesignVaultAdmin />} />
             <Route path="/admin/dashboard-hero" element={<DashboardHeroAdmin />} />
-          <Route path="/admin/vehicles" element={<VehicleAdmin />} />
+            <Route path="/admin/website-agent" element={<WebsiteAgentAdmin />} />
+            <Route path="/admin/vehicles" element={<VehicleAdmin />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />
