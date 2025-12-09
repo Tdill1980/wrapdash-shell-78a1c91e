@@ -29,6 +29,7 @@ import MightyMailQuotes from "./pages/MightyMailQuotes";
 import MightyMailPerformance from "./pages/MightyMailPerformance";
 import MightyMailAI from "./pages/MightyMailAI";
 import AIPipeline from "./pages/AIPipeline";
+import ContentBox from "./pages/ContentBox";
 import MightyChat from "./pages/MightyChat";
 import Portfolio from "./pages/Portfolio";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
@@ -88,6 +89,7 @@ const App = () => (
             <Route path="/mightymail-ai" element={<MightyMailAI />} />
             <Route path="/ai-pipeline" element={<AIPipeline />} />
             <Route path="/mightychat" element={<MightyChat />} />
+            <Route path="/contentbox" element={<ContentBox />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />
