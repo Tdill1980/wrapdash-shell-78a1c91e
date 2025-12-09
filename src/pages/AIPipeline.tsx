@@ -1,15 +1,19 @@
 import { MainLayout } from '@/layouts/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { 
   MessageSquare, Mail, Instagram, Globe, Users, 
-  FileText, Zap, TrendingUp, ArrowRight, CheckCircle
+  FileText, Zap, TrendingUp, ArrowRight, CheckCircle,
+  Car, ExternalLink, Clock
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 export default function AIPipeline() {
+  const navigate = useNavigate();
+  
   // Fetch pipeline stats
   const { data: stats } = useQuery({
     queryKey: ['ai-pipeline-stats'],
@@ -53,6 +57,61 @@ export default function AIPipeline() {
       return data || [];
     },
   });
+
+  // Fetch pending tasks by type for Kanban
+  const { data: pendingTasks } = useQuery({
+    queryKey: ['pipeline-tasks'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*, contacts(*)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return data || [];
+    },
+  });
+
+  // Group tasks by type
+  const tasksByType = {
+    quote: pendingTasks?.filter((t: any) => t.title?.toLowerCase().includes('quote')) || [],
+    design: pendingTasks?.filter((t: any) => t.title?.toLowerCase().includes('design')) || [],
+    followup: pendingTasks?.filter((t: any) => !t.title?.toLowerCase().includes('quote') && !t.title?.toLowerCase().includes('design')) || [],
+  };
+
+  const TaskCard = ({ task }: { task: any }) => (
+    <Card className="mb-2 hover:border-primary/50 transition-colors cursor-pointer">
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{task.title}</p>
+            <p className="text-xs text-muted-foreground truncate">{task.contacts?.name || 'Unknown'}</p>
+          </div>
+          <Badge variant="outline" className="text-xs shrink-0">
+            {task.priority || 'normal'}
+          </Badge>
+        </div>
+        {task.description && (
+          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{task.description}</p>
+        )}
+        <div className="flex items-center gap-2 mt-2">
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            className="h-7 text-xs"
+            onClick={() => navigate(`/mighty-customer?contact=${task.contact_id}`)}
+          >
+            <ExternalLink className="w-3 h-3 mr-1" />
+            Open
+          </Button>
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {new Date(task.created_at).toLocaleDateString()}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <MainLayout>
@@ -166,6 +225,63 @@ export default function AIPipeline() {
               <CheckCircle className="w-8 h-8 mx-auto mb-2 text-pink-400" />
               <div className="text-2xl font-bold">{stats?.tasks || 0}</div>
               <p className="text-xs text-muted-foreground">Pending Tasks</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Task Board (Kanban) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Needs Quote Column */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="w-4 h-4 text-cyan-400" />
+                Needs Quote
+                <Badge variant="secondary" className="ml-auto">{tasksByType.quote.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="max-h-[400px] overflow-y-auto">
+              {tasksByType.quote.length > 0 ? (
+                tasksByType.quote.map((task: any) => <TaskCard key={task.id} task={task} />)
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No quote tasks</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Needs Design Column */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Car className="w-4 h-4 text-purple-400" />
+                Needs Design
+                <Badge variant="secondary" className="ml-auto">{tasksByType.design.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="max-h-[400px] overflow-y-auto">
+              {tasksByType.design.length > 0 ? (
+                tasksByType.design.map((task: any) => <TaskCard key={task.id} task={task} />)
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No design tasks</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Follow-up Column */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-yellow-400" />
+                Follow-up Needed
+                <Badge variant="secondary" className="ml-auto">{tasksByType.followup.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="max-h-[400px] overflow-y-auto">
+              {tasksByType.followup.length > 0 ? (
+                tasksByType.followup.map((task: any) => <TaskCard key={task.id} task={task} />)
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No follow-up tasks</p>
+              )}
             </CardContent>
           </Card>
         </div>
