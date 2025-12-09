@@ -46,6 +46,7 @@ import AffiliateContentUpload from "./modules/affiliate/pages/ContentUpload";
 import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
 import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
+import InstagramTokenExchange from "./pages/InstagramTokenExchange";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -109,6 +110,7 @@ const App = () => (
             <Route path="/affiliate/upload" element={<AffiliateContentUpload />} />
             <Route path="/affiliate/admin" element={<AffiliateAdmin />} />
             <Route path="/affiliate/payments" element={<AffiliatePayments />} />
+            <Route path="/instagram-token" element={<InstagramTokenExchange />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
