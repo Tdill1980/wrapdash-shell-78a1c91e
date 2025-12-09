@@ -1348,6 +1348,98 @@ export type Database = {
           },
         ]
       }
+      email_flow_steps: {
+        Row: {
+          ai_generated: boolean | null
+          body_html: string
+          body_text: string | null
+          created_at: string
+          delay_hours: number
+          flow_id: string
+          id: string
+          preview_text: string | null
+          step_number: number
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          body_html: string
+          body_text?: string | null
+          created_at?: string
+          delay_hours?: number
+          flow_id: string
+          id?: string
+          preview_text?: string | null
+          step_number?: number
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean | null
+          body_html?: string
+          body_text?: string | null
+          created_at?: string
+          delay_hours?: number
+          flow_id?: string
+          id?: string
+          preview_text?: string | null
+          step_number?: number
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_flow_steps_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "email_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_flows: {
+        Row: {
+          brand: string | null
+          created_at: string
+          description: string | null
+          flow_type: string
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          stats: Json | null
+          trigger: string
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          description?: string | null
+          flow_type?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          stats?: Json | null
+          trigger?: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          description?: string | null
+          flow_type?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          stats?: Json | null
+          trigger?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_retarget_customers: {
         Row: {
           created_at: string | null
