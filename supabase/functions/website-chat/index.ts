@@ -166,13 +166,37 @@ serve(async (req) => {
       }
     }
 
-    // Generate AI response using Lovable AI
+    // Detect intent type
+    const intentPatterns = {
+      quote_request: ['quote', 'price', 'cost', 'how much', 'pricing', 'estimate'],
+      design_request: ['design', 'create', 'custom', 'mockup', 'render', 'visualize'],
+      order_status: ['order', 'tracking', 'where is', 'status', 'shipped', 'delivery'],
+      product_question: ['material', 'vinyl', 'ppf', 'film', 'brand', 'quality', 'warranty'],
+    };
+
+    let detectedIntent = 'general';
+    for (const [intent, keywords] of Object.entries(intentPatterns)) {
+      if (keywords.some(kw => lowerMessage.includes(kw))) {
+        detectedIntent = intent;
+        break;
+      }
+    }
+
+    // Generate AI response using Lovable AI with intent-specific prompting
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     let aiReply = "Thanks for reaching out! Our team will get back to you shortly. In the meantime, feel free to check out our wrap gallery at weprintwraps.com!";
 
     if (lovableApiKey) {
       try {
-        const aiResponse = await fetch('https://api.lovable.dev/v1/chat/completions', {
+        const intentPrompts: Record<string, string> = {
+          quote_request: `The customer wants a quote. Ask for their vehicle YEAR, MAKE, and MODEL if not provided. Be helpful about pricing ranges.`,
+          design_request: `The customer wants a design. Ask what style they're looking for (color change, printed graphics, partial wrap, etc).`,
+          order_status: `The customer wants order status. Ask for their order number so you can help track it.`,
+          product_question: `The customer has a product question. Answer knowledgeably about wrap materials, PPF, and installation.`,
+          general: `Answer the customer's general question helpfully.`,
+        };
+
+        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,
@@ -191,18 +215,15 @@ BRAND VOICE:
 - Knowledgeable about wrap materials, installation, and design
 - Helpful and solution-oriented
 
-CAPABILITIES:
-- Answer questions about vehicle wraps, pricing ballparks, materials
-- Help visitors understand the wrap process
-- Collect project details (vehicle type, wrap style, timeline)
-- Direct serious inquiries to get a quote
+INTENT: ${detectedIntent}
+${intentPrompts[detectedIntent] || intentPrompts.general}
 
 GUIDELINES:
 - Keep responses concise (2-3 sentences max)
 - Be helpful but don't make specific price promises
-- For detailed quotes, encourage them to share vehicle details
+- For quotes, typical ranges: partial wraps $500-1500, full wraps $1500-4000 for materials
 - Reference weprintwraps.com for galleries and more info
-- If asked about pricing, give general ranges and offer to help with a custom quote
+- Always try to move toward collecting vehicle info for quotes
 
 ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
               },
@@ -215,9 +236,11 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
           })
         });
 
-        const aiData = await aiResponse.json();
-        if (aiData.choices?.[0]?.message?.content) {
-          aiReply = aiData.choices[0].message.content;
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          if (aiData.choices?.[0]?.message?.content) {
+            aiReply = aiData.choices[0].message.content;
+          }
         }
       } catch (aiError) {
         console.error('[website-chat] AI generation error:', aiError);
@@ -278,7 +301,7 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
         platform: 'website',
         sender_id: session_id,
         message_text,
-        intent: hasWrapIntent ? 'quote_request' : 'general',
+        intent: detectedIntent,
         processed: true,
         raw_payload: { org, agent, mode, page_url, referrer }
       });
@@ -288,6 +311,7 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
     return new Response(JSON.stringify({ 
       reply: aiReply,
       conversation_id: conversationId,
+      intent: detectedIntent,
       has_wrap_intent: hasWrapIntent
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
