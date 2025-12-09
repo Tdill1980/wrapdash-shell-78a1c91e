@@ -13,6 +13,8 @@ import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge"
 import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
 import { toast } from "sonner";
 
+const [sendingMessage, setSendingMessage] = useState(false);
+
 interface Conversation {
   id: string;
   channel: string;
@@ -126,6 +128,7 @@ export default function MightyChat() {
   };
 
   const [backfillLoading, setBackfillLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const handleBackfillProfiles = async () => {
     setBackfillLoading(true);
@@ -141,6 +144,74 @@ export default function MightyChat() {
       toast.error("Failed to backfill Instagram profiles");
     } finally {
       setBackfillLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    setSendingMessage(true);
+    const messageText = newMessage.trim();
+    setNewMessage("");
+
+    try {
+      // Get the contact to find Instagram sender ID
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("metadata")
+        .eq("id", selectedConversation.contact_id)
+        .single();
+
+      const instagramSenderId = (contact?.metadata as any)?.instagram_sender_id;
+
+      if (selectedConversation.channel === "instagram" && instagramSenderId) {
+        // Send via Instagram DM
+        const { error } = await supabase.functions.invoke("send-instagram-reply", {
+          body: {
+            recipient: instagramSenderId,
+            message: messageText
+          }
+        });
+
+        if (error) throw error;
+      }
+
+      // Save message to database
+      const { data: savedMsg, error: dbError } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: selectedConversation.id,
+          channel: selectedConversation.channel,
+          content: messageText,
+          direction: "outbound",
+          status: "sent",
+          sender_name: "You"
+        })
+        .select()
+        .single();
+
+      if (dbError) throw dbError;
+
+      // Update conversation
+      await supabase
+        .from("conversations")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", selectedConversation.id);
+
+      // Add to local messages
+      if (savedMsg) {
+        setMessages(prev => [...prev, savedMsg as Message]);
+      }
+
+      if (selectedConversation.channel === "instagram") {
+        toast.success("Reply sent via Instagram DM");
+      }
+    } catch (err) {
+      console.error("Send message error:", err);
+      toast.error("Failed to send message");
+      setNewMessage(messageText); // Restore message on error
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -283,14 +354,19 @@ export default function MightyChat() {
                         placeholder="Type a message..."
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
+                        disabled={sendingMessage}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" && newMessage.trim()) {
-                            // TODO: Send message
+                          if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
+                            handleSendMessage();
                           }
                         }}
                       />
-                      <Button size="icon">
-                        <Send className="w-4 h-4" />
+                      <Button 
+                        size="icon" 
+                        onClick={handleSendMessage}
+                        disabled={sendingMessage || !newMessage.trim()}
+                      >
+                        <Send className={`w-4 h-4 ${sendingMessage ? "animate-pulse" : ""}`} />
                       </Button>
                     </div>
                   </div>
