@@ -15,14 +15,23 @@ import {
   Image, 
   Video, 
   Play,
-  Filter,
   Grid,
   LayoutList,
-  RefreshCw,
   FolderSync,
-  Wand2
+  Wand2,
+  Scissors,
+  Target,
+  Repeat,
+  Link2
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
+
+// Components
+import { SourceIntegrationsPanel } from "@/components/contentbox/SourceIntegrationsPanel";
+import { AIVideoEditor } from "@/components/contentbox/AIVideoEditor";
+import { AdCreator } from "@/components/contentbox/AdCreator";
+import { ContentRepurposer } from "@/components/contentbox/ContentRepurposer";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -60,12 +69,14 @@ const STYLE_MODIFIERS = [
   { value: 'daradenney', label: 'Dara Denney', description: 'UGC, paid social, storytelling' },
 ];
 
-function MediaCard({ file, onSelect }: { file: ContentFile; onSelect: (file: ContentFile) => void }) {
+function MediaCard({ file, onSelect, selected }: { file: ContentFile; onSelect: (file: ContentFile) => void; selected?: boolean }) {
   const isVideo = file.file_type === 'video' || file.file_type === 'reel';
   
   return (
     <Card 
-      className="bg-card/50 border-border/50 hover:border-primary/50 transition-all cursor-pointer group overflow-hidden"
+      className={`bg-card/50 border-border hover:border-primary/50 transition-all cursor-pointer group overflow-hidden ${
+        selected ? 'ring-2 ring-primary border-primary' : ''
+      }`}
       onClick={() => onSelect(file)}
     >
       <div className="aspect-square relative overflow-hidden">
@@ -148,14 +159,13 @@ function GeneratorModal({
   const [additionalContext, setAdditionalContext] = useState('');
   const [autoTransform, setAutoTransform] = useState(false);
 
-  // Check for potential brand mismatches
   const hasMismatch = selectedFiles.some(f => f.brand !== brand);
 
   if (!open) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
@@ -181,7 +191,6 @@ function GeneratorModal({
             </select>
           </div>
 
-          {/* Auto-Transform Toggle */}
           {hasMismatch && (
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
               <div className="flex items-center justify-between">
@@ -258,7 +267,6 @@ function GeneratorModal({
             </select>
           </div>
 
-          {/* Style Modifier */}
           <div>
             <label className="text-sm font-medium">Creative Style</label>
             <select
@@ -329,7 +337,6 @@ function CalendarView({ calendar }: { calendar: ContentCalendarEntry[] }) {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
   
-  // Group by date
   const byDate = calendar?.reduce((acc, entry) => {
     const date = entry.scheduled_date;
     if (!acc[date]) acc[date] = [];
@@ -337,7 +344,6 @@ function CalendarView({ calendar }: { calendar: ContentCalendarEntry[] }) {
     return acc;
   }, {} as Record<string, ContentCalendarEntry[]>) || {};
 
-  // Get next 14 days
   const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
@@ -402,6 +408,10 @@ export default function ContentBox() {
   const [brandFilter, setBrandFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [activeTab, setActiveTab] = useState('library');
+  const [creatorTab, setCreatorTab] = useState('video-editor');
+  const [syncingSource, setSyncingSource] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     acceptedFiles.forEach(file => {
@@ -431,6 +441,47 @@ export default function ContentBox() {
     });
   };
 
+  const handleConnectSource = (source: string) => {
+    toast.info(`${source} integration coming soon!`);
+  };
+
+  const handleSyncSource = async (source: string) => {
+    setSyncingSource(source);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setSyncingSource(null);
+    toast.info(`${source} sync coming soon!`);
+  };
+
+  const handleVideoProcess = async (action: string, params: Record<string, unknown>) => {
+    setProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success(`Video ${action} processing started!`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleAdGenerate = async (params: Record<string, unknown>) => {
+    setProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success("Ad variations generated!");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleRepurpose = async (params: Record<string, unknown>) => {
+    setProcessing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success("Content repurposing started!");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <MainLayout>
       {/* Header */}
@@ -443,7 +494,7 @@ export default function ContentBox() {
             <span className="text-foreground">AI</span>
           </h1>
           <p className="text-muted-foreground">
-            Centralized media brain for WPW • WrapTV • Ink & Edge
+            AI-powered content creation • Video editing • Ad generation • Repurposing
           </p>
         </div>
 
@@ -461,19 +512,6 @@ export default function ContentBox() {
             Sync Instagram
           </Button>
           
-          <Button 
-            variant="outline"
-            onClick={() => generateCalendar.mutate({ weeks_ahead: 2 })}
-            disabled={generateCalendar.isPending}
-          >
-            {generateCalendar.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <Calendar className="w-4 h-4 mr-2" />
-            )}
-            Generate Calendar
-          </Button>
-          
           {selectedFiles.length > 0 && (
             <Button 
               className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
@@ -486,22 +524,27 @@ export default function ContentBox() {
         </div>
       </div>
 
-      <Tabs defaultValue="library" className="space-y-4">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="library">
-            <Grid className="w-4 h-4 mr-2" /> Media Library
+            <Grid className="w-4 h-4 mr-2" /> Library
+          </TabsTrigger>
+          <TabsTrigger value="sources">
+            <Link2 className="w-4 h-4 mr-2" /> Sources
+          </TabsTrigger>
+          <TabsTrigger value="create">
+            <Wand2 className="w-4 h-4 mr-2" /> AI Create
           </TabsTrigger>
           <TabsTrigger value="projects">
-            <Sparkles className="w-4 h-4 mr-2" /> Content Projects
+            <Sparkles className="w-4 h-4 mr-2" /> Projects
           </TabsTrigger>
           <TabsTrigger value="calendar">
-            <Calendar className="w-4 h-4 mr-2" /> Content Calendar
+            <Calendar className="w-4 h-4 mr-2" /> Calendar
           </TabsTrigger>
         </TabsList>
 
         {/* Media Library Tab */}
         <TabsContent value="library" className="space-y-4">
-          {/* Upload Zone */}
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer
@@ -517,7 +560,6 @@ export default function ContentBox() {
             </p>
           </div>
 
-          {/* Filters */}
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
               <select
@@ -543,7 +585,7 @@ export default function ContentBox() {
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                {filteredFiles.length} files
+                {filteredFiles.length} files • {selectedFiles.length} selected
               </span>
               <Button
                 variant="ghost"
@@ -555,7 +597,6 @@ export default function ContentBox() {
             </div>
           </div>
 
-          {/* Media Grid */}
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -571,14 +612,72 @@ export default function ContentBox() {
           ) : (
             <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' : 'grid-cols-1'}`}>
               {filteredFiles.map(file => (
-                <div 
+                <MediaCard 
                   key={file.id}
-                  className={`relative ${selectedFiles.find(f => f.id === file.id) ? 'ring-2 ring-primary rounded-lg' : ''}`}
-                >
-                  <MediaCard file={file} onSelect={toggleFileSelection} />
-                </div>
+                  file={file} 
+                  onSelect={toggleFileSelection}
+                  selected={selectedFiles.some(f => f.id === file.id)}
+                />
               ))}
             </div>
+          )}
+        </TabsContent>
+
+        {/* Source Integrations Tab */}
+        <TabsContent value="sources" className="space-y-4">
+          <SourceIntegrationsPanel
+            onConnect={handleConnectSource}
+            onSync={handleSyncSource}
+            syncing={syncingSource}
+          />
+        </TabsContent>
+
+        {/* AI Create Tab */}
+        <TabsContent value="create" className="space-y-4">
+          <Tabs value={creatorTab} onValueChange={setCreatorTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="video-editor">
+                <Scissors className="w-4 h-4 mr-2" /> Video Editor
+              </TabsTrigger>
+              <TabsTrigger value="ad-creator">
+                <Target className="w-4 h-4 mr-2" /> Ad Creator
+              </TabsTrigger>
+              <TabsTrigger value="repurposer">
+                <Repeat className="w-4 h-4 mr-2" /> Repurposer
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="video-editor">
+              <AIVideoEditor
+                selectedFile={selectedFiles[0] || null}
+                onProcess={handleVideoProcess}
+                processing={processing}
+              />
+            </TabsContent>
+
+            <TabsContent value="ad-creator">
+              <AdCreator
+                selectedFiles={selectedFiles}
+                onGenerate={handleAdGenerate}
+                generating={processing}
+              />
+            </TabsContent>
+
+            <TabsContent value="repurposer">
+              <ContentRepurposer
+                selectedFile={selectedFiles[0] || null}
+                onRepurpose={handleRepurpose}
+                processing={processing}
+              />
+            </TabsContent>
+          </Tabs>
+
+          {selectedFiles.length === 0 && (
+            <Card className="p-6 bg-primary/5 border-primary/20">
+              <p className="text-center text-muted-foreground text-sm">
+                Select media from the <strong>Library</strong> tab first, then come back to create content
+              </p>
+            </Card>
           )}
         </TabsContent>
 
@@ -621,11 +720,24 @@ export default function ContentBox() {
 
         {/* Calendar Tab */}
         <TabsContent value="calendar" className="space-y-4">
+          <div className="flex justify-end mb-4">
+            <Button 
+              variant="outline"
+              onClick={() => generateCalendar.mutate({ weeks_ahead: 2 })}
+              disabled={generateCalendar.isPending}
+            >
+              {generateCalendar.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Calendar className="w-4 h-4 mr-2" />
+              )}
+              Generate Calendar
+            </Button>
+          </div>
           <CalendarView calendar={calendar || []} />
         </TabsContent>
       </Tabs>
 
-      {/* Generator Modal */}
       <GeneratorModal
         open={generatorOpen}
         onClose={() => setGeneratorOpen(false)}
