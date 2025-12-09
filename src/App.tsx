@@ -27,6 +27,7 @@ import MightyMail from "./pages/MightyMail";
 import MightyMailAdmin from "./pages/MightyMailAdmin";
 import MightyMailQuotes from "./pages/MightyMailQuotes";
 import MightyMailPerformance from "./pages/MightyMailPerformance";
+import MightyChat from "./pages/MightyChat";
 import Portfolio from "./pages/Portfolio";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import ProductAdmin from "./pages/ProductAdmin";
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/admin/mightymail" element={<MightyMailAdmin />} />
             <Route path="/admin/mightymail/quotes" element={<MightyMailQuotes />} />
             <Route path="/admin/mightymail/performance" element={<MightyMailPerformance />} />
+            <Route path="/mightychat" element={<MightyChat />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />
