@@ -95,3 +95,12 @@ verify_jwt = false
 
 [functions.generate-content-calendar]
 verify_jwt = false
+
+[functions.ai-video-process]
+verify_jwt = false
+
+[functions.ai-generate-ad]
+verify_jwt = false
+
+[functions.ai-repurpose-content]
+verify_jwt = false
