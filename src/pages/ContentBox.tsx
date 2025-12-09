@@ -53,6 +53,13 @@ const PLATFORMS = [
   { value: 'facebook', label: 'Facebook' },
 ];
 
+const STYLE_MODIFIERS = [
+  { value: 'none', label: 'No Style Modifier', description: 'Pure brand voice' },
+  { value: 'garyvee', label: 'Gary Vee', description: 'Raw, authentic, founder POV' },
+  { value: 'sabrisuby', label: 'Sabri Suby', description: 'Direct response, conversion-focused' },
+  { value: 'daradenney', label: 'Dara Denney', description: 'UGC, paid social, storytelling' },
+];
+
 function MediaCard({ file, onSelect }: { file: ContentFile; onSelect: (file: ContentFile) => void }) {
   const isVideo = file.file_type === 'video' || file.file_type === 'reel';
   
@@ -137,6 +144,7 @@ function GeneratorModal({
   const [contentType, setContentType] = useState('reel');
   const [goal, setGoal] = useState('sell');
   const [platform, setPlatform] = useState('instagram');
+  const [styleModifier, setStyleModifier] = useState('none');
   const [additionalContext, setAdditionalContext] = useState('');
   const [autoTransform, setAutoTransform] = useState(false);
 
@@ -250,6 +258,29 @@ function GeneratorModal({
             </select>
           </div>
 
+          {/* Style Modifier */}
+          <div>
+            <label className="text-sm font-medium">Creative Style</label>
+            <select
+              className="w-full mt-1 bg-muted text-foreground p-2 rounded-md border border-border"
+              value={styleModifier}
+              onChange={(e) => setStyleModifier(e.target.value)}
+            >
+              {STYLE_MODIFIERS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label} — {s.description}
+                </option>
+              ))}
+            </select>
+            {styleModifier !== 'none' && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {styleModifier === 'garyvee' && '🔥 Raw, punchy founder energy with cultural insight'}
+                {styleModifier === 'sabrisuby' && '💰 Hardcore direct-response with PAS framework'}
+                {styleModifier === 'daradenney' && '✨ Modern UGC storytelling optimized for paid social'}
+              </p>
+            )}
+          </div>
+
           <div>
             <label className="text-sm font-medium">Additional Context (optional)</label>
             <textarea
@@ -268,6 +299,7 @@ function GeneratorModal({
                 content_type: contentType,
                 goal,
                 platform,
+                style: styleModifier,
                 media_urls: selectedFiles.map(f => f.file_url),
                 tags: selectedFiles.flatMap(f => f.tags || []),
                 additional_context: additionalContext,

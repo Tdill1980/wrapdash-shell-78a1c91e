@@ -235,7 +235,140 @@ ROUTING RULES:
 
 When generating content, first identify the brand, then apply ONLY that brand's creative framework.`;
 
+// ========== STYLE MODIFIER PROMPTS ==========
+// These modify pacing, structure, and persuasion WITHOUT overriding brand voice
+
+export const GARY_VEE_STYLE = `## STYLE MODIFIER: GARY VEE
+
+Apply this style while keeping brand rules intact:
+
+CORE ENERGY:
+- Raw, authentic, punchy statements
+- Values > tactics
+- Short, emotional truths
+- Conversational tone with conviction
+- Fast-paced delivery
+- Emotional leadership + cultural insight
+- "Here's the truth…" energy
+- Documentation over creation
+- Behind-the-scenes authenticity
+
+STRUCTURE:
+- Open with a bold truth or hot take
+- 2-3 rapid-fire value statements
+- Close with actionable insight or motivation
+- Pattern: Truth → Context → Action
+
+LANGUAGE PATTERNS:
+- "Look..."
+- "Here's the thing..."
+- "I don't care what anyone says..."
+- "The only thing that matters is..."
+- "You're sleeping on..."
+- "This is what nobody talks about..."
+
+PACING:
+- Fast cuts, minimal pauses
+- Punchy 2-5 word statements
+- Stack multiple takes quickly
+- Energy escalates through piece
+
+USE FOR: Founder POV reels, raw shop-floor clips, motivation/industry truths, viral hot takes, culture commentary`;
+
+export const SABRI_SUBY_STYLE = `## STYLE MODIFIER: SABRI SUBY
+
+Apply this style while keeping brand rules intact:
+
+CORE ENERGY:
+- Hardcore direct-response marketing
+- Problem → Agitation → Solution → CTA (PAS framework)
+- Objection removal built into copy
+- Social proof punch-ins
+- Authority stacking
+- Urgency frameworks
+- Pattern interruptions
+- Benefit-driven body text
+
+STRUCTURE:
+- HOOK: Pattern interrupt in <3 seconds
+- PROBLEM: Name their exact pain point
+- AGITATE: Twist the knife, make pain vivid
+- SOLUTION: Position product as the answer
+- PROOF: Social proof / authority stack
+- CTA: Clear, urgent, specific action
+
+LANGUAGE PATTERNS:
+- "Are you tired of..."
+- "What if I told you..."
+- "Here's what nobody else will tell you..."
+- "The #1 mistake [audience] makes..."
+- "In the next 60 seconds..."
+- "Stop scrolling if you..."
+- "[Number] reasons why..."
+
+PACING:
+- Hook MUST land in first 1-2 seconds
+- Rapid benefit stacking
+- Objection → Counter pattern
+- Urgency builds to CTA
+- No fluff, every word earns its place
+
+USE FOR: WPW ads, sales funnels, lead gen reels, high-intent UGC ads, conversion-focused static graphics`;
+
+export const DARA_DENNEY_STYLE = `## STYLE MODIFIER: DARA DENNEY
+
+Apply this style while keeping brand rules intact:
+
+CORE ENERGY:
+- Modern paid-social ad psychology
+- UGC storytelling frameworks
+- Testimonial/native vibes
+- Soft, relatable CTAs
+- Natural voiceover feel
+- Authentic creator energy
+- Optimized for CPM reduction
+
+STRUCTURE:
+- Open with relatable hook
+- Share personal journey/struggle
+- Discovery moment ("Then I found...")
+- Product demo/benefit showcase
+- Soft CTA or "I just had to share"
+
+UGC STORY FRAMEWORKS:
+- "I didn't think this would work…"
+- "If you're like me…"
+- "Before I found X…"
+- "I was so skeptical, but..."
+- "Okay I need to tell you about..."
+- "This changed everything for me..."
+- "POV: You just discovered..."
+
+LANGUAGE PATTERNS:
+- Conversational, friend-to-friend
+- First person narrative
+- Vulnerable moments
+- "No but seriously..."
+- "I literally can't stop using..."
+- "Game changer" reveals
+
+PACING:
+- Natural, not rushed
+- Pause for emphasis on key benefits
+- Quick product demo moments
+- Hook optimized for Meta/TikTok scroll-stop
+
+USE FOR: SaaS ads (WrapCommandAI), WPW ad creatives, lifestyle promos, influencer-style ads, UGC campaigns`;
+
 export type BrandType = 'wpw' | 'wraptv' | 'inkandedge' | 'software';
+export type StyleType = 'garyvee' | 'sabrisuby' | 'daradenney' | 'none';
+
+export const STYLE_OPTIONS = [
+  { value: 'none', label: 'No Style Modifier', description: 'Pure brand voice' },
+  { value: 'garyvee', label: 'Gary Vee', description: 'Raw, authentic, founder POV' },
+  { value: 'sabrisuby', label: 'Sabri Suby', description: 'Direct response, conversion-focused' },
+  { value: 'daradenney', label: 'Dara Denney', description: 'UGC, paid social, storytelling' },
+] as const;
 
 export function getBrandPrompt(brand: BrandType): string {
   switch (brand) {
@@ -252,6 +385,27 @@ export function getBrandPrompt(brand: BrandType): string {
   }
 }
 
-export function getFullSystemPrompt(brand: BrandType): string {
-  return `${MASTER_ROUTER_PROMPT}\n\n---\n\nACTIVE BRAND: ${brand.toUpperCase()}\n\n${getBrandPrompt(brand)}`;
+export function getStylePrompt(style: StyleType): string {
+  switch (style) {
+    case 'garyvee':
+      return GARY_VEE_STYLE;
+    case 'sabrisuby':
+      return SABRI_SUBY_STYLE;
+    case 'daradenney':
+      return DARA_DENNEY_STYLE;
+    case 'none':
+    default:
+      return '';
+  }
+}
+
+export function getFullSystemPrompt(brand: BrandType, style: StyleType = 'none'): string {
+  const basePrompt = `${MASTER_ROUTER_PROMPT}\n\n---\n\nACTIVE BRAND: ${brand.toUpperCase()}\n\n${getBrandPrompt(brand)}`;
+  
+  if (style !== 'none') {
+    const stylePrompt = getStylePrompt(style);
+    return `${basePrompt}\n\n---\n\n${stylePrompt}\n\nIMPORTANT: Apply the ${style.toUpperCase()} style modifier to structure, pacing, and persuasion while keeping ALL brand voice, CTAs, and restrictions intact. The brand rules are NON-NEGOTIABLE.`;
+  }
+  
+  return basePrompt;
 }

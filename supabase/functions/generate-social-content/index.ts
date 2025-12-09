@@ -54,6 +54,86 @@ GOAL: APP SIGNUPS + PRODUCT EDUCATION
 FORBIDDEN: Print/wholesale messaging, entertainment content, editorial style`
 };
 
+// Style modifier prompts - apply ON TOP of brand voice
+const STYLE_MODIFIERS: Record<string, string> = {
+  garyvee: `## STYLE MODIFIER: GARY VEE
+
+Apply this style while keeping brand rules intact:
+
+CORE ENERGY:
+- Raw, authentic, punchy statements
+- Values > tactics
+- Short, emotional truths
+- Conversational tone with conviction
+- Fast-paced delivery
+- "Here's the truth…" energy
+- Documentation over creation
+
+STRUCTURE:
+- Open with a bold truth or hot take
+- 2-3 rapid-fire value statements
+- Close with actionable insight or motivation
+- Pattern: Truth → Context → Action
+
+LANGUAGE PATTERNS:
+- "Look...", "Here's the thing...", "I don't care what anyone says..."
+- "The only thing that matters is...", "You're sleeping on..."
+
+PACING: Fast cuts, punchy 2-5 word statements, energy escalates`,
+
+  sabrisuby: `## STYLE MODIFIER: SABRI SUBY
+
+Apply this style while keeping brand rules intact:
+
+CORE ENERGY:
+- Hardcore direct-response marketing
+- Problem → Agitation → Solution → CTA (PAS framework)
+- Objection removal built into copy
+- Social proof punch-ins
+- Authority stacking
+- Urgency frameworks
+
+STRUCTURE:
+- HOOK: Pattern interrupt in <3 seconds
+- PROBLEM: Name their exact pain point
+- AGITATE: Twist the knife, make pain vivid
+- SOLUTION: Position product as the answer
+- PROOF: Social proof / authority stack
+- CTA: Clear, urgent, specific action
+
+LANGUAGE PATTERNS:
+- "Are you tired of...", "What if I told you..."
+- "The #1 mistake [audience] makes...", "Stop scrolling if you..."
+
+PACING: Hook in 1-2 seconds, rapid benefit stacking, urgency builds to CTA`,
+
+  daradenney: `## STYLE MODIFIER: DARA DENNEY
+
+Apply this style while keeping brand rules intact:
+
+CORE ENERGY:
+- Modern paid-social ad psychology
+- UGC storytelling frameworks
+- Testimonial/native vibes
+- Soft, relatable CTAs
+- Natural voiceover feel
+- Optimized for CPM reduction
+
+STRUCTURE:
+- Open with relatable hook
+- Share personal journey/struggle
+- Discovery moment ("Then I found...")
+- Product demo/benefit showcase
+- Soft CTA or "I just had to share"
+
+UGC STORY FRAMEWORKS:
+- "I didn't think this would work…"
+- "If you're like me…", "Before I found X…"
+- "POV: You just discovered..."
+
+PACING: Natural, not rushed, pause for emphasis on key benefits`
+};
+
 const MASTER_ROUTER = `BRAND ISOLATION DIRECTIVE — DO NOT MIX BRANDS
 
 You must treat every brand as a completely separate company.
@@ -91,7 +171,8 @@ YOU MUST OUTPUT A JSON OBJECT WITH:
     "hook_b": "variant b",
     "caption_a": "variant a",
     "caption_b": "variant b"
-  }
+  },
+  "style_applied": "style modifier name or none"
 }
 
 RULES:
@@ -101,9 +182,16 @@ RULES:
 - Do NOT hallucinate vehicles or brands
 - Use real wrap terminology and installer vocabulary`;
 
-function getBrandSystemPrompt(brand: string): string {
+function getBrandSystemPrompt(brand: string, style?: string): string {
   const brandPrompt = BRAND_PROMPTS[brand] || BRAND_PROMPTS.wpw;
-  return `${MASTER_ROUTER}\n\nACTIVE BRAND: ${brand.toUpperCase()}\n\n${brandPrompt}\n\n${OUTPUT_FORMAT}`;
+  let prompt = `${MASTER_ROUTER}\n\nACTIVE BRAND: ${brand.toUpperCase()}\n\n${brandPrompt}\n\n${OUTPUT_FORMAT}`;
+  
+  // Apply style modifier if provided
+  if (style && style !== 'none' && STYLE_MODIFIERS[style]) {
+    prompt += `\n\n---\n\n${STYLE_MODIFIERS[style]}\n\nIMPORTANT: Apply the ${style.toUpperCase()} style modifier to structure, pacing, and persuasion while keeping ALL brand voice, CTAs, and restrictions intact. The brand rules are NON-NEGOTIABLE.`;
+  }
+  
+  return prompt;
 }
 
 serve(async (req) => {
@@ -117,6 +205,7 @@ serve(async (req) => {
       content_type = 'reel',
       goal = 'sell',
       platform = 'instagram',
+      style = 'none',
       media_urls = [],
       transcript = '',
       tags = [],
@@ -130,10 +219,12 @@ serve(async (req) => {
     }
 
     // Build the user prompt with all context
+    const styleNote = style && style !== 'none' ? `\nSTYLE MODIFIER: ${style.toUpperCase()} — Apply this creator's structure and pacing while maintaining brand voice.` : '';
+    
     const userPrompt = `Generate a ${content_type.toUpperCase()} content pack for ${brand.toUpperCase()}.
 
 PLATFORM: ${platform}
-GOAL: ${goal}
+GOAL: ${goal}${styleNote}
 
 MEDIA CONTEXT:
 - URLs: ${media_urls.join(', ') || 'No media provided'}
@@ -145,10 +236,10 @@ ADDITIONAL CONTEXT: ${additional_context}
 
 Generate a complete content pack following the exact JSON structure specified. Make it scroll-stopping and conversion-focused for the ${brand} brand voice.`;
 
-    console.log('Generating content for brand:', brand, 'type:', content_type);
+    console.log('Generating content for brand:', brand, 'type:', content_type, 'style:', style);
 
-    // Get brand-specific system prompt for complete isolation
-    const systemPrompt = getBrandSystemPrompt(brand);
+    // Get brand-specific system prompt with optional style modifier
+    const systemPrompt = getBrandSystemPrompt(brand, style);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
