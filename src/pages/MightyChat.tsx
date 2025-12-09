@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, RefreshCw } from "lucide-react";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
 import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
+import { toast } from "sonner";
 
 interface Conversation {
   id: string;
@@ -124,14 +125,44 @@ export default function MightyChat() {
     return name.slice(0, 2).toUpperCase();
   };
 
+  const [backfillLoading, setBackfillLoading] = useState(false);
+
+  const handleBackfillProfiles = async () => {
+    setBackfillLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-instagram-profiles");
+      
+      if (error) throw error;
+      
+      toast.success(`Updated ${data.updated} of ${data.total} Instagram contacts`);
+      loadConversations();
+    } catch (err) {
+      console.error("Backfill error:", err);
+      toast.error("Failed to backfill Instagram profiles");
+    } finally {
+      setBackfillLoading(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">
-            Mighty<span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>™
-          </h1>
-          <p className="text-muted-foreground">Unified Inbox: DM, Email, SMS</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">
+              Mighty<span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>™
+            </h1>
+            <p className="text-muted-foreground">Unified Inbox: DM, Email, SMS</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleBackfillProfiles}
+            disabled={backfillLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${backfillLoading ? "animate-spin" : ""}`} />
+            {backfillLoading ? "Updating..." : "Refresh IG Profiles"}
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
