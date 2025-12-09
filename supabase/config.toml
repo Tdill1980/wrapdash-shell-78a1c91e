@@ -68,3 +68,12 @@ verify_jwt = false
 
 [functions.send-instagram-reply]
 verify_jwt = false
+
+[functions.send-mightymail-test]
+verify_jwt = false
+
+[functions.generate-email-flow]
+verify_jwt = false
+
+[functions.website-chat]
+verify_jwt = false
