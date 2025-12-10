@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.hybrid-generate-content]
 verify_jwt = false
+
+[functions.ai-weekly-plan]
+verify_jwt = false
