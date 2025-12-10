@@ -238,8 +238,8 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
   }
 
   return (
-    <div className="space-y-6">
-      {/* Video Preview */}
+    <div className="space-y-4 sm:space-y-6">
+      {/* Video Preview - Responsive */}
       <Card className="bg-black overflow-hidden">
         <div className="aspect-video relative">
           <video
@@ -247,24 +247,24 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
             className="w-full h-full object-contain"
             controls={false}
           />
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-            <div className="flex items-center justify-center gap-4 mb-3">
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20">
-                <SkipBack className="w-5 h-5" />
+          <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-3">
+              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
+                <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
-              <Button size="icon" className="bg-white text-black hover:bg-white/90">
-                <Play className="w-5 h-5" />
+              <Button size="icon" className="bg-white text-black hover:bg-white/90 h-10 w-10 sm:h-12 sm:w-12">
+                <Play className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20">
-                <SkipForward className="w-5 h-5" />
+              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
+                <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20">
-                <Volume2 className="w-5 h-5" />
+              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
+                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </div>
             
             {/* Timeline */}
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
@@ -280,15 +280,15 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
         </div>
       </Card>
 
-      {/* Trim Controls */}
+      {/* Trim Controls - Mobile Friendly */}
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 px-3 sm:px-6">
           <CardTitle className="text-sm flex items-center gap-2">
             <Scissors className="w-4 h-4" />
             Trim Video
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-3 sm:px-6">
           <div>
             <label className="text-xs text-muted-foreground">Start Point</label>
             <Slider
@@ -296,7 +296,7 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
               onValueChange={setTrimStart}
               max={100}
               step={1}
-              className="mt-2"
+              className="mt-2 touch-none"
             />
           </div>
           <div>
@@ -306,7 +306,7 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
               onValueChange={setTrimEnd}
               max={100}
               step={1}
-              className="mt-2"
+              className="mt-2 touch-none"
             />
           </div>
           <p className="text-xs text-muted-foreground">
@@ -315,8 +315,8 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
         </CardContent>
       </Card>
 
-      {/* AI Actions */}
-      <div className="grid gap-3 md:grid-cols-3">
+      {/* AI Actions - Responsive Grid */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
         {actions.map((action) => (
           <Card 
             key={action.id}
@@ -327,14 +327,14 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
             }`}
             onClick={() => setSelectedAction(action.id)}
           >
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+            <CardContent className="py-3 sm:py-4 px-3 sm:px-4">
+              <div className="flex items-center sm:items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
                   {action.icon}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-foreground text-sm">{action.name}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-2">{action.description}</p>
                 </div>
               </div>
             </CardContent>
@@ -343,19 +343,19 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
       </div>
 
       <Button
-        className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+        className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C] h-11 sm:h-12"
         size="lg"
         disabled={!selectedAction || processing}
         onClick={handleProcess}
       >
         {processing ? (
           <>
-            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin mr-2" />
             Processing...
           </>
         ) : (
           <>
-            <Wand2 className="w-5 h-5 mr-2" />
+            <Wand2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Apply {selectedAction ? actions.find(a => a.id === selectedAction)?.name : 'Edit'}
           </>
         )}
@@ -409,8 +409,8 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
 
       {/* ========== CREATOMATE RENDER SECTION ========== */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 px-3 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Video className="w-4 h-4 text-primary" />
               Render Reel with Creatomate
@@ -421,9 +421,9 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
             Add text overlays and music, then render a polished reel
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Text Overlays */}
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="space-y-4 px-3 sm:px-6">
+          {/* Text Overlays - Stack on mobile */}
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="headline" className="text-xs">Headline (Text-1)</Label>
               <Input
@@ -431,7 +431,7 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
                 placeholder="Your Text Here"
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
-                className="bg-background"
+                className="bg-background h-10"
               />
             </div>
             <div className="space-y-2">
@@ -441,7 +441,7 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
                 placeholder="Create & Automate Video"
                 value={subtext}
                 onChange={(e) => setSubtext(e.target.value)}
-                className="bg-background"
+                className="bg-background h-10"
               />
             </div>
           </div>

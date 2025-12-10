@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Upload, Image, Video, Music, Folder, 
-  Grid3X3, List, Filter, X, Play, Download, Trash2
+  Grid3X3, List, X, Play, Download, Trash2, Camera
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,12 +93,12 @@ export function MediaLibrary({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Media Library</h2>
-        <Button onClick={() => setShowUploader(true)}>
-          <Upload className="w-4 h-4 mr-2" />
-          Upload
+      {/* Header - Mobile Responsive */}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg sm:text-xl font-semibold">Media Library</h2>
+        <Button onClick={() => setShowUploader(true)} size="sm" className="sm:size-default">
+          <Upload className="w-4 h-4 sm:mr-2" />
+          <span className="hidden sm:inline">Upload</span>
         </Button>
       </div>
 
@@ -110,21 +110,22 @@ export function MediaLibrary({
         />
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      {/* Filters - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+        {/* Search */}
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search files, tags, or use AI search..."
+            placeholder="Search files..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-10"
           />
           {searchQuery && (
             <Button
               variant="ghost"
               size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
               onClick={() => setSearchQuery("")}
             >
               <X className="w-4 h-4" />
@@ -132,58 +133,68 @@ export function MediaLibrary({
           )}
         </div>
 
-        <Tabs value={filterType} onValueChange={setFilterType}>
-          <TabsList>
-            {FILTER_TYPES.map((type) => (
-              <TabsTrigger key={type.id} value={type.id} className="gap-2">
-                <type.icon className="w-4 h-4" />
-                {type.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        {/* Type Filters - Scrollable on mobile */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <Tabs value={filterType} onValueChange={setFilterType}>
+            <TabsList className="h-10">
+              {FILTER_TYPES.map((type) => (
+                <TabsTrigger 
+                  key={type.id} 
+                  value={type.id} 
+                  className="gap-1.5 px-2.5 sm:px-3 min-w-[44px]"
+                >
+                  <type.icon className="w-4 h-4" />
+                  <span className="hidden sm:inline text-sm">{type.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
-        <div className="flex gap-1">
-          <Button
-            variant={viewMode === "grid" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("grid")}
-          >
-            <Grid3X3 className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="w-4 h-4" />
-          </Button>
+          {/* View Mode Toggle */}
+          <div className="flex gap-1 flex-shrink-0">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              className="h-10 w-10 p-0"
+              onClick={() => setViewMode("grid")}
+            >
+              <Grid3X3 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              className="h-10 w-10 p-0"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Selected Count */}
+      {/* Selected Count - Mobile Responsive */}
       {selectedFiles.length > 0 && (
-        <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-primary/10 rounded-lg">
           <span className="text-sm">
             {selectedFiles.length} file(s) selected
           </span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline">
-              <Download className="w-4 h-4 mr-1" />
-              Download
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" className="h-9">
+              <Download className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Download</span>
             </Button>
-            <Button size="sm" variant="destructive">
-              <Trash2 className="w-4 h-4 mr-1" />
-              Delete
+            <Button size="sm" variant="destructive" className="h-9">
+              <Trash2 className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Delete</span>
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedFiles([])}>
+            <Button size="sm" variant="ghost" className="h-9" onClick={() => setSelectedFiles([])}>
               Clear
             </Button>
           </div>
         </div>
       )}
 
-      {/* Files Grid/List */}
+      {/* Files Grid/List - Mobile Responsive */}
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">
           Loading media files...
@@ -192,14 +203,16 @@ export function MediaLibrary({
         <Card>
           <CardContent className="py-12 text-center">
             <Folder className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No files found</p>
-            <Button className="mt-4" onClick={() => setShowUploader(true)}>
+            <p className="text-muted-foreground mb-4">No files found</p>
+            <Button className="w-full sm:w-auto" onClick={() => setShowUploader(true)}>
+              <Upload className="w-4 h-4 mr-2" />
               Upload Your First File
             </Button>
           </CardContent>
         </Card>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        /* 2 columns on mobile, 4 on tablet, 6 on desktop */
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
           {filteredFiles.map((file) => (
             <MediaCard
               key={file.id}
@@ -215,14 +228,14 @@ export function MediaLibrary({
           {filteredFiles.map((file) => (
             <div
               key={file.id}
-              className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
+              className={`flex items-center gap-3 sm:gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
                 selectedFiles.includes(file.id)
                   ? "border-primary bg-primary/5"
                   : "border-border hover:bg-accent"
               }`}
               onClick={() => handleFileSelect(file)}
             >
-              <div className="w-16 h-16 rounded bg-muted flex items-center justify-center overflow-hidden">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                 {file.thumbnail_url || file.file_type === "image" ? (
                   <img
                     src={file.thumbnail_url || file.file_url}
@@ -230,12 +243,12 @@ export function MediaLibrary({
                     className="w-full h-full object-cover"
                   />
                 ) : file.file_type === "video" ? (
-                  <Play className="w-6 h-6 text-muted-foreground" />
+                  <Play className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                 ) : (
-                  <Music className="w-6 h-6 text-muted-foreground" />
+                  <Music className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
                 )}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">
                   {file.original_filename || "Untitled"}
                 </p>
@@ -250,8 +263,9 @@ export function MediaLibrary({
                   )}
                 </div>
               </div>
+              {/* Hide tags on mobile to save space */}
               {file.tags && file.tags.length > 0 && (
-                <div className="flex gap-1">
+                <div className="hidden sm:flex gap-1">
                   {file.tags.slice(0, 3).map((tag) => (
                     <Badge key={tag} variant="outline" className="text-xs">
                       {tag}

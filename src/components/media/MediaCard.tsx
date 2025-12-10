@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Play, Image, Video, Music, Check } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MediaFile {
   id: string;
@@ -23,6 +24,7 @@ interface MediaCardProps {
 }
 
 export function MediaCard({ file, selected, onClick, selectionMode }: MediaCardProps) {
+  const isMobile = useIsMobile();
   const isImage = file.file_type === "image";
   const isVideo = file.file_type === "video";
   const isAudio = file.file_type === "audio";
@@ -43,8 +45,8 @@ export function MediaCard({ file, selected, onClick, selectionMode }: MediaCardP
       }`}
       onClick={() => onClick(file, "select")}
     >
-      {/* THUMBNAIL */}
-      <div className="w-full h-40 bg-muted overflow-hidden">
+      {/* THUMBNAIL - Taller on mobile for better touch targets */}
+      <div className="w-full h-32 sm:h-40 bg-muted overflow-hidden">
         {file.thumbnail_url || (isImage && file.file_url) ? (
           <img 
             src={file.thumbnail_url || file.file_url} 
@@ -53,15 +55,15 @@ export function MediaCard({ file, selected, onClick, selectionMode }: MediaCardP
           />
         ) : isVideo ? (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-            <Video className="w-12 h-12 text-muted-foreground" />
+            <Video className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
           </div>
         ) : isAudio ? (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
-            <Music className="w-12 h-12 text-muted-foreground" />
+            <Music className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
           </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Image className="w-12 h-12 text-muted-foreground" />
+            <Image className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
           </div>
         )}
       </div>
@@ -80,37 +82,43 @@ export function MediaCard({ file, selected, onClick, selectionMode }: MediaCardP
         </div>
       )}
 
-      {/* HOVER ACTIONS */}
+      {/* HOVER/TAP ACTIONS - Always visible on mobile, hover on desktop */}
       {!selectionMode && (
-        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center gap-2">
+        <div 
+          className={`absolute inset-0 bg-black/60 flex flex-col justify-center items-center gap-2 p-2 transition-opacity ${
+            isMobile 
+              ? "opacity-100" 
+              : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
           <Button
             size="sm"
             variant="secondary"
-            className="w-28"
+            className="w-full max-w-[120px] h-9 text-xs sm:text-sm"
             onClick={(e) => { e.stopPropagation(); onClick(file, "reel"); }}
           >
-            <Video className="w-4 h-4 mr-2" />
-            Use in Reel
+            <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+            Reel
           </Button>
 
           <Button
             size="sm"
             variant="secondary"
-            className="w-28"
+            className="w-full max-w-[120px] h-9 text-xs sm:text-sm"
             onClick={(e) => { e.stopPropagation(); onClick(file, "static"); }}
           >
-            <Image className="w-4 h-4 mr-2" />
-            Use in Static
+            <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+            Static
           </Button>
 
           <Button
             size="sm"
             variant="secondary"
-            className="w-28"
+            className="w-full max-w-[120px] h-9 text-xs sm:text-sm"
             onClick={(e) => { e.stopPropagation(); onClick(file, "hybrid"); }}
           >
-            <Play className="w-4 h-4 mr-2" />
-            Use in Hybrid
+            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+            Hybrid
           </Button>
         </div>
       )}
