@@ -92,6 +92,9 @@ export default function ReelBuilder() {
   const [isAutoProcessing, setIsAutoProcessing] = useState(false);
   const [showPostRenderModal, setShowPostRenderModal] = useState(false);
   const [savedVideoUrl, setSavedVideoUrl] = useState<string | null>(null);
+  const [extractedInspoStyle, setExtractedInspoStyle] = useState<any>(null);
+  const [suggestedHook, setSuggestedHook] = useState<string | null>(null);
+  const [suggestedCta, setSuggestedCta] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Handle play/pause with ref
@@ -140,8 +143,16 @@ export default function ReelBuilder() {
 
       setClips(newClips);
       setReelConcept(result.reel_concept);
+      setSuggestedHook(result.suggested_hook);
+      setSuggestedCta(result.suggested_cta);
+      
+      // Store extracted visual style for rendering
+      if (result.extracted_style) {
+        setExtractedInspoStyle(result.extracted_style);
+        console.log("Using inspo style:", result.extracted_style);
+      }
 
-      // Apply the suggested hook as overlay
+      // Apply the suggested hook as overlay with inspo colors
       if (result.suggested_hook) {
         overlaysEngine.addOverlay({
           text: result.suggested_hook,
@@ -149,12 +160,12 @@ export default function ReelBuilder() {
           position: "top-center",
           start: 0,
           end: 3,
-          color: "#E1306C",
+          color: result.extracted_style?.text_color || "#E1306C",
         });
       }
 
       toast.success(`AI created reel with ${newClips.length} clips!`, {
-        description: result.reel_concept,
+        description: `${result.reel_concept}${result.extracted_style ? ' • Style matched from your inspo!' : ''}`,
       });
     }
     setIsAutoProcessing(false);
@@ -245,10 +256,11 @@ export default function ReelBuilder() {
     await videoRender.startRender({
       videoUrl: clipUrls[0], // Primary video
       additionalClips: clipUrls.slice(1), // Additional clips for concatenation
-      headline: autoCreateState?.suggestedHook || reelConcept || clips[0]?.suggestedOverlay || undefined,
-      subtext: autoCreateState?.suggestedCta || undefined,
+      headline: suggestedHook || autoCreateState?.suggestedHook || reelConcept || clips[0]?.suggestedOverlay || undefined,
+      subtext: suggestedCta || autoCreateState?.suggestedCta || undefined,
       musicUrl: audioUrl || undefined,
       overlays: allOverlays.length > 0 ? allOverlays : undefined,
+      inspoStyle: extractedInspoStyle || undefined,
     });
   };
 

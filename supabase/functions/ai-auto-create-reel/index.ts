@@ -8,6 +8,19 @@ const corsHeaders = {
 
 const AI_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
+interface InspoStyle {
+  font_style: string;
+  font_weight: string;
+  text_color: string;
+  text_shadow: boolean;
+  text_position: string;
+  background_style: string;
+  accent_color: string;
+  text_animation: string;
+  hook_format: string;
+  emoji_usage: boolean;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -21,14 +34,15 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Step 1: Fetch user's inspiration files if use_inspo is true
+    // Step 1: Fetch user's inspiration files and analyze visual styles
     let inspoContext = "";
     let inspoHooks: string[] = [];
+    let extractedStyle: InspoStyle | null = null;
     
     if (use_inspo !== false) {
       const { data: inspoFiles } = await supabase
         .from("content_files")
-        .select("id, original_filename, tags, ai_labels, metadata")
+        .select("id, file_url, original_filename, tags, ai_labels, metadata, file_type")
         .or("content_category.eq.inspiration,content_category.eq.raw,tags.cs.{inspo}")
         .order("created_at", { ascending: false })
         .limit(10);
@@ -36,7 +50,76 @@ serve(async (req) => {
       if (inspoFiles && inspoFiles.length > 0) {
         console.log(`Found ${inspoFiles.length} inspo files to learn from`);
         
-        // Extract style patterns from inspo
+        // Find image inspo files to analyze visually
+        const imageInspoFiles = inspoFiles.filter(f => 
+          f.file_type === 'image' || 
+          f.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+        );
+        
+        // VISION ANALYSIS: Analyze actual inspo images to extract visual styles
+        if (imageInspoFiles.length > 0) {
+          console.log(`Analyzing ${imageInspoFiles.length} inspo images with AI vision...`);
+          
+          const imageUrls = imageInspoFiles.slice(0, 3).map(f => f.file_url).filter(Boolean);
+          
+          if (imageUrls.length > 0) {
+            try {
+              const visionRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${AI_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: "google/gemini-2.5-flash",
+                  messages: [
+                    {
+                      role: "user",
+                      content: [
+                        {
+                          type: "text",
+                          text: `Analyze these social media content images and extract the EXACT visual style for text overlays. Return JSON ONLY with these fields:
+{
+  "font_style": "bold-condensed" | "script" | "sans-serif" | "impact" | "modern-thin" | "handwritten",
+  "font_weight": "bold" | "black" | "regular" | "light",
+  "text_color": "#HEXCODE of main text color",
+  "text_shadow": true/false (if text has shadow/glow),
+  "text_position": "center" | "top" | "bottom" | "split-top-bottom",
+  "background_style": "none" | "solid-box" | "gradient-box" | "outline-only",
+  "accent_color": "#HEXCODE of accent/highlight color",
+  "text_animation": "none" | "pop-in" | "slide-up" | "scale-bounce",
+  "hook_format": "all-caps" | "mixed-case" | "sentence-case",
+  "emoji_usage": true/false
+}
+
+Look at: font family used, text weight, colors, shadows, positioning, any boxes behind text. Be precise about hex colors.`
+                        },
+                        ...imageUrls.map(url => ({
+                          type: "image_url",
+                          image_url: { url }
+                        }))
+                      ]
+                    }
+                  ],
+                }),
+              });
+
+              if (visionRes.ok) {
+                const visionJson = await visionRes.json();
+                const styleContent = visionJson.choices?.[0]?.message?.content || "{}";
+                const jsonMatch = styleContent.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  extractedStyle = JSON.parse(jsonMatch[0]);
+                  console.log("Extracted inspo style:", extractedStyle);
+                }
+              }
+            } catch (visionErr) {
+              console.warn("Vision analysis failed:", visionErr);
+            }
+          }
+        }
+        
+        // Extract text patterns from inspo
         const inspoPatterns = inspoFiles.map(f => {
           const labels = f.ai_labels as Record<string, any> || {};
           return {
@@ -59,6 +142,17 @@ serve(async (req) => {
         inspoContext = `
 STYLE INSPIRATION FROM USER'S LIBRARY:
 ${JSON.stringify(inspoPatterns, null, 2)}
+
+${extractedStyle ? `VISUAL STYLE EXTRACTED FROM THEIR IMAGES:
+- Font: ${extractedStyle.font_style} ${extractedStyle.font_weight}
+- Text Color: ${extractedStyle.text_color}
+- Accent Color: ${extractedStyle.accent_color}
+- Text Has Shadow: ${extractedStyle.text_shadow}
+- Text Position: ${extractedStyle.text_position}
+- Hook Format: ${extractedStyle.hook_format}
+- Uses Emojis: ${extractedStyle.emoji_usage}
+
+MATCH THIS STYLE EXACTLY for all overlays and hooks!` : ''}
 
 Use these patterns for text overlays and hook style. Match the energy, pacing, and overlay text style from their inspo.
 ${inspoHooks.length > 0 ? `Example hooks from their inspo: ${inspoHooks.slice(0, 5).join(", ")}` : ""}
@@ -85,10 +179,13 @@ Given a list of videos with metadata (filename, duration, tags, category), you m
 5. Suggest trim points (start/end) for each clip - aim for 4-8 seconds per clip
 6. Total reel should be 15-30 seconds
 
-For overlays, create punchy text that matches the user's inspo style:
-${inspoHooks.length > 0 ? `- Match style of: ${inspoHooks.slice(0, 3).join(", ")}` : `- Hook overlay (clip 1): "WAIT FOR IT", "Watch this", "POV:"
+For overlays, create punchy text that MATCHES THE USER'S INSPO STYLE:
+${extractedStyle ? `- Use ${extractedStyle.hook_format} format
+- ${extractedStyle.emoji_usage ? 'Include emojis like in their examples' : 'No emojis - keep it clean like their examples'}
+- Position text at ${extractedStyle.text_position}` : `- Hook overlay (clip 1): "WAIT FOR IT", "Watch this", "POV:"
 - Value overlay (clips 2-3): "Satisfying", "Before vs After", specific callout
 - CTA overlay (last clip): "Follow for more", "Link in bio"`}
+${inspoHooks.length > 0 ? `- Match style of: ${inspoHooks.slice(0, 3).join(", ")}` : ''}
 
 Return JSON ONLY:
 {
@@ -99,11 +196,11 @@ Return JSON ONLY:
       "trim_start": 0,
       "trim_end": 5.5,
       "reason": "Strong hook - dramatic reveal",
-      "suggested_overlay": "Text matching their inspo style"
+      "suggested_overlay": "Text matching their inspo style exactly"
     }
   ],
   "reel_concept": "Concept description",
-  "suggested_hook": "Hook text matching their style",
+  "suggested_hook": "Hook text matching their exact style",
   "suggested_cta": "CTA matching their brand",
   "music_vibe": "upbeat_energy",
   "estimated_virality": 85,
@@ -227,6 +324,8 @@ Return JSON ONLY:
       selected_videos: enrichedVideos,
       total_analyzed: videos.length,
       inspo_files_used: inspoContext ? true : false,
+      // Include extracted style for render function to use
+      extracted_style: extractedStyle,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

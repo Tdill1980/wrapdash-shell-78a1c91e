@@ -19,6 +19,19 @@ interface OverlayItem {
   duration: number;
 }
 
+interface InspoStyle {
+  font_style?: string;
+  font_weight?: string;
+  text_color?: string;
+  text_shadow?: boolean;
+  text_position?: string;
+  background_style?: string;
+  accent_color?: string;
+  text_animation?: string;
+  hook_format?: string;
+  emoji_usage?: boolean;
+}
+
 interface RenderRequest {
   action: 'start' | 'status';
   // For 'start' action
@@ -30,6 +43,7 @@ interface RenderRequest {
   organization_id?: string;
   music_url?: string;
   overlays?: OverlayItem[];
+  inspo_style?: InspoStyle;
   // For 'status' action
   render_id?: string;
 }
@@ -115,7 +129,8 @@ serve(async (req) => {
         template_id, 
         organization_id,
         music_url,
-        overlays: requestOverlays
+        overlays: requestOverlays,
+        inspo_style
       } = body;
 
       if (!video_url) {
@@ -137,7 +152,7 @@ serve(async (req) => {
       }
 
       // Build modifications object
-      const modifications: Record<string, string | number> = {
+      const modifications: Record<string, string | number | boolean> = {
         'Video.source': video_url,
       };
 
@@ -170,14 +185,45 @@ serve(async (req) => {
         modifications['Audio.source'] = music_url;
       }
 
-      // Apply brand colors if available from merged overlays OR brand_defaults
-      const overlays = voiceProfile?.merged?.overlays || voiceProfile?.brand_defaults?.brand_overlays;
-      if (overlays) {
-        if (overlays.primary_color) {
-          modifications['Text-1.fill_color'] = overlays.primary_color;
+      // APPLY INSPO STYLE - Use extracted visual style from user's inspo images
+      if (inspo_style) {
+        console.log('[render-video-reel] Applying inspo style:', inspo_style);
+        
+        // Apply text color from inspo
+        if (inspo_style.text_color) {
+          modifications['Text-1.fill_color'] = inspo_style.text_color;
+          modifications['Overlay-1.fill_color'] = inspo_style.text_color;
+          modifications['Overlay-2.fill_color'] = inspo_style.text_color;
         }
-        if (overlays.secondary_color) {
-          modifications['Text-2.fill_color'] = overlays.secondary_color;
+        
+        // Apply accent color
+        if (inspo_style.accent_color) {
+          modifications['Text-2.fill_color'] = inspo_style.accent_color;
+        }
+        
+        // Apply text shadow if detected in inspo
+        if (inspo_style.text_shadow) {
+          modifications['Text-1.shadow_blur'] = 8;
+          modifications['Text-1.shadow_color'] = 'rgba(0,0,0,0.7)';
+          modifications['Text-2.shadow_blur'] = 8;
+          modifications['Text-2.shadow_color'] = 'rgba(0,0,0,0.7)';
+        }
+        
+        // Apply font weight
+        if (inspo_style.font_weight === 'black' || inspo_style.font_weight === 'bold') {
+          modifications['Text-1.font_weight'] = '900';
+          modifications['Text-2.font_weight'] = '700';
+        }
+      } else {
+        // Fallback: Apply brand colors if available from merged overlays OR brand_defaults
+        const overlays = voiceProfile?.merged?.overlays || voiceProfile?.brand_defaults?.brand_overlays;
+        if (overlays) {
+          if (overlays.primary_color) {
+            modifications['Text-1.fill_color'] = overlays.primary_color;
+          }
+          if (overlays.secondary_color) {
+            modifications['Text-2.fill_color'] = overlays.secondary_color;
+          }
         }
       }
 
