@@ -149,3 +149,9 @@ verify_jwt = false
 
 [functions.yt-generate-shorts]
 verify_jwt = false
+
+[functions.yt-analyze]
+verify_jwt = false
+
+[functions.yt-scene-detect]
+verify_jwt = false

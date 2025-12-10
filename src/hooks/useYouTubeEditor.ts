@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface Scene {
   id: number;
-  type: "hook" | "value" | "reveal" | "cta";
+  type: "hook" | "value" | "reveal" | "cta" | "testimonial" | "filler";
   start: string;
   end: string;
   score: number;
+  text?: string;
+  energy_level?: "low" | "medium" | "high";
 }
 
 export interface GeneratedShort {
@@ -13,6 +17,15 @@ export interface GeneratedShort {
   title: string;
   duration: string;
   hookStrength: "Weak" | "Medium" | "Strong";
+  start?: number;
+  end?: number;
+  hook?: string;
+  virality_score?: number;
+  ad_potential?: boolean;
+  overlay_suggestions?: string[];
+  caption_suggestions?: string[];
+  cta?: string;
+  music_suggestion?: string;
 }
 
 export interface AnalysisData {
@@ -22,7 +35,17 @@ export interface AnalysisData {
   shorts: number;
   hookScore: number;
   productMentions: number;
+  chapters?: { time: string; title: string }[];
 }
+
+export type ProcessingStatus = 
+  | "idle" 
+  | "uploading" 
+  | "transcribing" 
+  | "analyzing" 
+  | "generating_shorts" 
+  | "complete" 
+  | "failed";
 
 export function useYouTubeEditor() {
   const [videoUrl, setVideoUrl] = useState("");
@@ -31,18 +54,21 @@ export function useYouTubeEditor() {
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
   const [selectedShort, setSelectedShort] = useState<GeneratedShort | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>("idle");
+  const [transcript, setTranscript] = useState<string | null>(null);
 
-  // Placeholder stats
-  const analysis: AnalysisData = {
+  // Placeholder stats for demo mode
+  const [analysis, setAnalysis] = useState<AnalysisData>({
     duration: "24:17",
     scenes: 38,
     spikes: 7,
     shorts: 8,
     hookScore: 92,
     productMentions: 3,
-  };
+  });
 
-  const demoScenes: Scene[] = [
+  const [demoScenes, setDemoScenes] = useState<Scene[]>([
     { id: 1, type: "hook", start: "0:00", end: "0:06", score: 92 },
     { id: 2, type: "value", start: "0:06", end: "0:18", score: 74 },
     { id: 3, type: "reveal", start: "0:18", end: "0:23", score: 89 },
@@ -51,31 +77,146 @@ export function useYouTubeEditor() {
     { id: 6, type: "hook", start: "0:45", end: "0:52", score: 88 },
     { id: 7, type: "reveal", start: "0:52", end: "1:05", score: 95 },
     { id: 8, type: "cta", start: "1:05", end: "1:12", score: 76 },
-  ];
+  ]);
 
-  const shorts: GeneratedShort[] = Array.from({ length: 8 }).map((_, i) => ({
-    id: `short_${i + 1}`,
-    title: `Short Clip #${i + 1}`,
-    duration: `${Math.floor(Math.random() * 8 + 5)}.${Math.floor(Math.random() * 9)}s`,
-    hookStrength: (["Weak", "Medium", "Strong"] as const)[Math.floor(Math.random() * 3)],
-  }));
+  const [shorts, setShorts] = useState<GeneratedShort[]>(
+    Array.from({ length: 8 }).map((_, i) => ({
+      id: `short_${i + 1}`,
+      title: `Short Clip #${i + 1}`,
+      duration: `${Math.floor(Math.random() * 8 + 5)}.${Math.floor(Math.random() * 9)}s`,
+      hookStrength: (["Weak", "Medium", "Strong"] as const)[Math.floor(Math.random() * 3)],
+    }))
+  );
 
-  const analyze = () => {
+  // Poll for job status
+  const pollJobStatus = useCallback(async (id: string) => {
+    const { data, error } = await supabase
+      .from("youtube_editor_jobs")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("Failed to poll job status:", error);
+      return null;
+    }
+
+    return data;
+  }, []);
+
+  // Demo analyze function
+  const analyze = useCallback(() => {
     setIsAnalyzing(true);
+    setProcessingStatus("analyzing");
+    
     setTimeout(() => {
       setIsAnalyzing(false);
       setIsAnalyzed(true);
+      setProcessingStatus("complete");
+      toast.success("Video analysis complete!");
     }, 1500);
-  };
+  }, []);
 
-  const reset = () => {
+  // Real upload and analyze function
+  const uploadAndAnalyze = useCallback(async (fileUrl: string, organizationId?: string) => {
+    setIsAnalyzing(true);
+    setProcessingStatus("uploading");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("yt-analyze", {
+        body: { file_url: fileUrl, organization_id: organizationId }
+      });
+
+      if (error) throw error;
+
+      setJobId(data.job_id);
+      setProcessingStatus("transcribing");
+      toast.success("Upload started! Processing video...");
+
+      // Start polling for status
+      const pollInterval = setInterval(async () => {
+        const job = await pollJobStatus(data.job_id);
+        if (job) {
+          setProcessingStatus(job.processing_status as ProcessingStatus);
+          
+          if (job.processing_status === "complete") {
+            clearInterval(pollInterval);
+            setIsAnalyzing(false);
+            setIsAnalyzed(true);
+            
+            // Update UI with real data
+            const analysisData = job.analysis_data as Record<string, unknown> | null;
+            const generatedShorts = job.generated_shorts as unknown[] | null;
+            
+            if (analysisData && typeof analysisData === 'object') {
+              setAnalysis({
+                duration: String(analysisData.duration_estimate || "0:00"),
+                scenes: Array.isArray(analysisData.scenes) ? analysisData.scenes.length : 0,
+                spikes: Number(analysisData.energy_spikes) || 0,
+                shorts: Array.isArray(generatedShorts) ? generatedShorts.length : 0,
+                hookScore: Number(analysisData.hook_score) || 0,
+                productMentions: Number(analysisData.product_mentions) || 0,
+                chapters: analysisData.chapters as { time: string; title: string }[] | undefined,
+              });
+              if (Array.isArray(analysisData.scenes)) {
+                setDemoScenes(analysisData.scenes as Scene[]);
+              }
+            }
+            
+            if (Array.isArray(generatedShorts)) {
+              setShorts(generatedShorts.map((s: unknown) => {
+                const short = s as Record<string, unknown>;
+                return {
+                  id: String(short.id || ''),
+                  title: String(short.title || ''),
+                  duration: `${Number(short.duration)?.toFixed(1) || 0}s`,
+                  hookStrength: Number(short.hook_strength) > 80 ? "Strong" : Number(short.hook_strength) > 50 ? "Medium" : "Weak",
+                  start: Number(short.start) || undefined,
+                  end: Number(short.end) || undefined,
+                  hook: String(short.hook || ''),
+                  virality_score: Number(short.virality_score) || undefined,
+                  ad_potential: Boolean(short.ad_potential),
+                  overlay_suggestions: short.overlay_suggestions as string[] | undefined,
+                  caption_suggestions: short.caption_suggestions as string[] | undefined,
+                  cta: String(short.cta || ''),
+                  music_suggestion: String(short.music_suggestion || ''),
+                };
+              }));
+            }
+            
+            if (job.transcript) {
+              setTranscript(job.transcript);
+            }
+            
+            toast.success("Analysis complete!");
+          } else if (job.processing_status === "failed") {
+            clearInterval(pollInterval);
+            setIsAnalyzing(false);
+            setProcessingStatus("failed");
+            toast.error("Analysis failed");
+          }
+        }
+      }, 3000);
+
+    } catch (err) {
+      console.error("Upload failed:", err);
+      setIsAnalyzing(false);
+      setProcessingStatus("failed");
+      toast.error("Failed to start analysis");
+    }
+  }, [pollJobStatus]);
+
+  const reset = useCallback(() => {
     setVideoUrl("");
     setUploadedFile(null);
     setIsAnalyzing(false);
     setIsAnalyzed(false);
     setSelectedScene(null);
     setSelectedShort(null);
-  };
+    setJobId(null);
+    setProcessingStatus("idle");
+    setTranscript(null);
+  }, []);
 
   return {
     videoUrl,
@@ -85,6 +226,7 @@ export function useYouTubeEditor() {
     isAnalyzing,
     isAnalyzed,
     analyze,
+    uploadAndAnalyze,
     reset,
     analysis,
     demoScenes,
@@ -93,5 +235,8 @@ export function useYouTubeEditor() {
     setSelectedScene,
     selectedShort,
     setSelectedShort,
+    jobId,
+    processingStatus,
+    transcript,
   };
 }
