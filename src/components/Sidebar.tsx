@@ -18,6 +18,7 @@ import {
   Car,
   Film,
   Image,
+  BarChart3,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
@@ -153,6 +154,17 @@ const navigationItems = [
       <span className="font-medium">
         <span className="text-white">Ad </span>
         <span className="bg-gradient-to-r from-[#405DE6] to-[#E1306C] bg-clip-text text-transparent">Vault</span>
+      </span>
+    )
+  },
+  { 
+    name: "Paid Ads Performance", 
+    path: "/paid-ads-performance", 
+    icon: BarChart3,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Paid Ads </span>
+        <span className="bg-gradient-to-r from-[#405DE6] to-[#E1306C] bg-clip-text text-transparent">Performance</span>
       </span>
     )
   },

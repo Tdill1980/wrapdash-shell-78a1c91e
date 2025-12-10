@@ -51,6 +51,7 @@ import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
 import InstagramTokenExchange from "./pages/InstagramTokenExchange";
 import AICorrectionsAdmin from "./pages/AICorrectionsAdmin";
 import AdVault from "./pages/AdVault";
+import PaidAdsPerformance from "./pages/PaidAdsPerformance";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -98,6 +99,7 @@ const App = () => (
             <Route path="/content-creator" element={<ContentCreator />} />
             <Route path="/content-schedule" element={<ContentSchedule />} />
             <Route path="/ad-vault" element={<AdVault />} />
+            <Route path="/paid-ads-performance" element={<PaidAdsPerformance />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />
