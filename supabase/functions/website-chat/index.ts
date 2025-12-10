@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkCorrections, loadKnowledgeContext } from "../_shared/knowledge-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,13 @@ const WRAP_INTENT_KEYWORDS = [
   'color change', 'ppf', 'protection', 'design', 'custom', 'fleet', 'commercial',
   'install', 'shop', 'appointment', 'schedule'
 ];
+
+// Regex patterns to extract vehicle info
+const VEHICLE_PATTERNS = {
+  year: /\b(19|20)\d{2}\b/,
+  make: /\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|vw|subaru|mazda|hyundai|kia|lexus|acura|infiniti|cadillac|buick|lincoln|chrysler|pontiac|saturn|hummer|mini|porsche|jaguar|land rover|volvo|saab|mitsubishi|suzuki)\b/i,
+  model: /\b(f-?150|f-?250|f-?350|silverado|sierra|ram|tacoma|tundra|camry|accord|civic|altima|mustang|camaro|challenger|charger|corvette|wrangler|bronco|explorer|expedition|tahoe|suburban|yukon|escalade|navigator|pilot|highlander|4runner|rav4|crv|cr-v|forester|outback|model\s?[3sxy]|cybertruck)\b/i,
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -33,6 +41,23 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Check for corrections FIRST (prevents hallucinations)
+    const correctionOverride = await checkCorrections(supabase, message_text);
+    
+    // Load knowledge context for grounding
+    const knowledgeContext = await loadKnowledgeContext(supabase, message_text);
+
+    // Extract vehicle info from message
+    const lowerMessage = message_text.toLowerCase();
+    const extractedVehicle = {
+      year: message_text.match(VEHICLE_PATTERNS.year)?.[0] || null,
+      make: message_text.match(VEHICLE_PATTERNS.make)?.[0] || null,
+      model: message_text.match(VEHICLE_PATTERNS.model)?.[0] || null,
+    };
+    
+    const hasCompleteVehicle = extractedVehicle.year && extractedVehicle.make && extractedVehicle.model;
+    console.log('[website-chat] Extracted vehicle:', extractedVehicle, 'Complete:', hasCompleteVehicle);
 
     // Find or create contact based on session
     let contactId: string | null = null;
@@ -130,7 +155,6 @@ serve(async (req) => {
       .eq('id', conversationId);
 
     // Check for wrap intent (hot lead detection)
-    const lowerMessage = message_text.toLowerCase();
     const hasWrapIntent = WRAP_INTENT_KEYWORDS.some(kw => lowerMessage.includes(kw));
 
     if (hasWrapIntent) {
@@ -182,6 +206,62 @@ serve(async (req) => {
       }
     }
 
+    // If correction override exists, use it directly (no AI generation)
+    if (correctionOverride) {
+      console.log('[website-chat] Using correction override');
+      
+      // Insert correction response message
+      await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        channel: 'website',
+        direction: 'outbound',
+        content: correctionOverride,
+        sender_name: 'WPW AI TEAM',
+        metadata: { ai_generated: true, agent, from_correction: true }
+      });
+
+      return new Response(JSON.stringify({ 
+        reply: correctionOverride,
+        conversation_id: conversationId,
+        intent: detectedIntent,
+        has_wrap_intent: hasWrapIntent,
+        from_correction: true
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // AUTO-QUOTE: If we have complete vehicle info and it's a quote request, generate auto-quote
+    let autoQuoteResult = null;
+    if (hasCompleteVehicle && (detectedIntent === 'quote_request' || hasWrapIntent)) {
+      console.log('[website-chat] Triggering auto-quote for:', extractedVehicle);
+      
+      try {
+        const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/ai-auto-quote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`
+          },
+          body: JSON.stringify({
+            vehicleYear: extractedVehicle.year,
+            vehicleMake: extractedVehicle.make,
+            vehicleModel: extractedVehicle.model,
+            customerName: `Website Visitor (${session_id.substring(0, 8)})`,
+            conversationId: conversationId,
+            autoEmail: false // Don't email anonymous visitors
+          })
+        });
+
+        if (quoteResponse.ok) {
+          autoQuoteResult = await quoteResponse.json();
+          console.log('[website-chat] Auto-quote generated:', autoQuoteResult);
+        }
+      } catch (quoteError) {
+        console.error('[website-chat] Auto-quote error:', quoteError);
+      }
+    }
+
     // Generate AI response using Lovable AI with intent-specific prompting
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     let aiReply = "Thanks for reaching out! Our team will get back to you shortly. In the meantime, feel free to check out our wrap gallery at weprintwraps.com!";
@@ -189,7 +269,9 @@ serve(async (req) => {
     if (lovableApiKey) {
       try {
         const intentPrompts: Record<string, string> = {
-          quote_request: `The customer wants a quote. Ask for their vehicle YEAR, MAKE, and MODEL if not provided. Be helpful about pricing ranges.`,
+          quote_request: hasCompleteVehicle && autoQuoteResult?.success
+            ? `You just generated a quote! Tell them the price: ${autoQuoteResult.quote.formattedPrice} for the ${autoQuoteResult.quote.vehicle}. Ask for their email to send detailed quote.`
+            : `The customer wants a quote. Ask for their vehicle YEAR, MAKE, and MODEL if not provided. Be helpful about pricing ranges.`,
           design_request: `The customer wants a design. Ask what style they're looking for (color change, printed graphics, partial wrap, etc).`,
           order_status: `The customer wants order status. Ask for their order number so you can help track it.`,
           product_question: `The customer has a product question. Answer knowledgeably about wrap materials, PPF, and installation.`,
@@ -218,12 +300,15 @@ BRAND VOICE:
 INTENT: ${detectedIntent}
 ${intentPrompts[detectedIntent] || intentPrompts.general}
 
+${autoQuoteResult?.success ? `AUTO-QUOTE GENERATED: ${autoQuoteResult.quote.formattedPrice} for ${autoQuoteResult.quote.vehicle} (${autoQuoteResult.quote.sqft} sqft)` : ''}
+
 GUIDELINES:
 - Keep responses concise (2-3 sentences max)
-- Be helpful but don't make specific price promises
+- Be helpful but don't make specific price promises unless auto-quote was generated
 - For quotes, typical ranges: partial wraps $500-1500, full wraps $1500-4000 for materials
 - Reference weprintwraps.com for galleries and more info
 - Always try to move toward collecting vehicle info for quotes
+${knowledgeContext}
 
 ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
               },
@@ -312,7 +397,8 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       reply: aiReply,
       conversation_id: conversationId,
       intent: detectedIntent,
-      has_wrap_intent: hasWrapIntent
+      has_wrap_intent: hasWrapIntent,
+      auto_quote: autoQuoteResult?.success ? autoQuoteResult.quote : null
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
