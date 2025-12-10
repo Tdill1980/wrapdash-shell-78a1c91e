@@ -770,6 +770,39 @@ export type Database = {
           },
         ]
       }
+      brand_profiles: {
+        Row: {
+          brand_ad_examples: Json | null
+          brand_id: string
+          brand_name: string
+          brand_overlays: Json | null
+          brand_voice: Json | null
+          created_at: string | null
+          style_modifiers: Json | null
+          subdomain: string
+        }
+        Insert: {
+          brand_ad_examples?: Json | null
+          brand_id?: string
+          brand_name: string
+          brand_overlays?: Json | null
+          brand_voice?: Json | null
+          created_at?: string | null
+          style_modifiers?: Json | null
+          subdomain: string
+        }
+        Update: {
+          brand_ad_examples?: Json | null
+          brand_id?: string
+          brand_name?: string
+          brand_overlays?: Json | null
+          brand_voice?: Json | null
+          created_at?: string | null
+          style_modifiers?: Json | null
+          subdomain?: string
+        }
+        Relationships: []
+      }
       chatbot_scripts: {
         Row: {
           created_at: string | null
@@ -1390,6 +1423,50 @@ export type Database = {
             foreignKeyName: "conversations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_voice_profiles: {
+        Row: {
+          ad_angle_preferences: Json | null
+          content_examples: Json | null
+          created_at: string | null
+          id: string
+          organization_id: string | null
+          persona: Json | null
+          style_preference: string | null
+          trade_dna: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          ad_angle_preferences?: Json | null
+          content_examples?: Json | null
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          persona?: Json | null
+          style_preference?: string | null
+          trade_dna?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          ad_angle_preferences?: Json | null
+          content_examples?: Json | null
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          persona?: Json | null
+          style_preference?: string | null
+          trade_dna?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_voice_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
