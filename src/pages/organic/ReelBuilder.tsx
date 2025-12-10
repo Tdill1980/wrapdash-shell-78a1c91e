@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   Plus,
   Play,
   Pause,
-  Scissors,
   Wand2,
   Music,
   Type,
@@ -16,8 +16,16 @@ import {
   Trash2,
   Clock,
   Zap,
+  Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useReelBeatSync } from "@/hooks/useReelBeatSync";
+import { useReelCaptions, CaptionStyle } from "@/hooks/useReelCaptions";
+import { useReelOverlays, BrandPackId } from "@/hooks/useReelOverlays";
+import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
+import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
+import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
+import { toast } from "sonner";
 
 interface Clip {
   id: string;
@@ -26,6 +34,7 @@ interface Clip {
   thumbnail?: string;
   trimStart: number;
   trimEnd: number;
+  speed?: number;
 }
 
 export default function ReelBuilder() {
@@ -33,15 +42,21 @@ export default function ReelBuilder() {
   const [clips, setClips] = useState<Clip[]>([]);
   const [selectedClip, setSelectedClip] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("clip");
+
+  const beatSync = useReelBeatSync();
+  const captionsEngine = useReelCaptions();
+  const overlaysEngine = useReelOverlays();
 
   const handleAddClips = () => {
-    // Placeholder - will trigger file picker
     const newClip: Clip = {
       id: `clip-${Date.now()}`,
       name: `Clip ${clips.length + 1}`,
       duration: 5,
       trimStart: 0,
       trimEnd: 5,
+      speed: 1,
     };
     setClips([...clips, newClip]);
   };
@@ -51,8 +66,34 @@ export default function ReelBuilder() {
     if (selectedClip === id) setSelectedClip(null);
   };
 
+  const handleAnalyzeBeats = async () => {
+    if (!audioUrl) return;
+    const result = await beatSync.analyzeMusic(audioUrl);
+    if (result) {
+      toast.success(`Detected ${result.bpm} BPM with ${result.beats.length} beats`);
+    }
+  };
+
+  const handleApplyBeatSync = () => {
+    const syncedClips = beatSync.applyBeatSync(clips);
+    setClips(syncedClips as Clip[]);
+    toast.success("Beat sync applied to clips!");
+  };
+
+  const handleGenerateCaptions = async (style: CaptionStyle) => {
+    const captions = await captionsEngine.generateCaptions("", style);
+    if (captions.length > 0) {
+      toast.success(`Generated ${captions.length} captions`);
+    }
+  };
+
+  const handleApplyBrandPack = (packId: BrandPackId) => {
+    overlaysEngine.applyBrandPack(packId, totalDuration);
+    toast.success(`Applied ${packId.toUpperCase()} overlay pack`);
+  };
+
   const totalDuration = clips.reduce(
-    (acc, clip) => acc + (clip.trimEnd - clip.trimStart),
+    (acc, clip) => acc + (clip.trimEnd - clip.trimStart) / (clip.speed || 1),
     0
   );
 
@@ -110,11 +151,7 @@ export default function ReelBuilder() {
                         className="absolute z-10"
                         onClick={() => setIsPlaying(!isPlaying)}
                       >
-                        {isPlaying ? (
-                          <Pause className="w-6 h-6" />
-                        ) : (
-                          <Play className="w-6 h-6" />
-                        )}
+                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
                       </Button>
                     </>
                   )}
@@ -143,9 +180,7 @@ export default function ReelBuilder() {
                     onClick={handleAddClips}
                   >
                     <Plus className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      Click to add clips or drag & drop videos here
-                    </p>
+                    <p className="text-sm text-muted-foreground">Click to add clips</p>
                   </div>
                 ) : (
                   <div className="flex gap-2 overflow-x-auto pb-2">
@@ -183,12 +218,6 @@ export default function ReelBuilder() {
                         </div>
                       </div>
                     ))}
-                    <div
-                      className="shrink-0 w-24 rounded-lg border-2 border-dashed border-border hover:border-primary/50 cursor-pointer flex items-center justify-center aspect-[9/16]"
-                      onClick={handleAddClips}
-                    >
-                      <Plus className="w-6 h-6 text-muted-foreground" />
-                    </div>
                   </div>
                 )}
               </CardContent>
@@ -205,8 +234,7 @@ export default function ReelBuilder() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-sm">AI Sequence Suggestion</h3>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Start with Clip 2 for a stronger hook, move Clip 1 to mid-section,
-                        and add a "Wait for it..." overlay at 0.4s for maximum retention.
+                        Start with Clip 2 for a stronger hook and add overlays for maximum retention.
                       </p>
                       <Button size="sm" variant="secondary" className="mt-3">
                         <Zap className="w-3 h-3 mr-1" />
@@ -219,79 +247,50 @@ export default function ReelBuilder() {
             )}
           </div>
 
-          {/* Right: Clip Editor */}
+          {/* Right: Editor Panels */}
           <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">
-                  {selectedClip ? "Edit Clip" : "Clip Settings"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedClip ? (
-                  <>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Trim Start</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        className="w-full mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Trim End</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        defaultValue={100}
-                        className="w-full mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Speed</label>
-                      <div className="flex gap-2 mt-1">
-                        {["0.5x", "1x", "1.5x", "2x"].map((speed) => (
-                          <Button
-                            key={speed}
-                            size="sm"
-                            variant={speed === "1x" ? "default" : "outline"}
-                            className="flex-1"
-                          >
-                            {speed}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Select a clip to edit
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="w-full grid grid-cols-4">
+                <TabsTrigger value="clip" className="text-xs"><Wand2 className="w-3 h-3" /></TabsTrigger>
+                <TabsTrigger value="audio" className="text-xs"><Music className="w-3 h-3" /></TabsTrigger>
+                <TabsTrigger value="captions" className="text-xs"><Type className="w-3 h-3" /></TabsTrigger>
+                <TabsTrigger value="overlays" className="text-xs"><Palette className="w-3 h-3" /></TabsTrigger>
+              </TabsList>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Audio & Overlays</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Music className="w-4 h-4 mr-2" />
-                  Add Music Track
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Type className="w-4 h-4 mr-2" />
-                  Add Text Overlay
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Apply Inspo Style
-                </Button>
-              </CardContent>
-            </Card>
+              <TabsContent value="clip" className="mt-4">
+                <Card>
+                  <CardHeader><CardTitle className="text-sm">{selectedClip ? "Edit Clip" : "Select Clip"}</CardTitle></CardHeader>
+                  <CardContent>
+                    {selectedClip ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-xs text-muted-foreground">Speed</label>
+                          <div className="flex gap-2 mt-1">
+                            {["0.5x", "1x", "1.5x", "2x"].map((speed) => (
+                              <Button key={speed} size="sm" variant={speed === "1x" ? "default" : "outline"} className="flex-1">{speed}</Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">Select a clip to edit</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="audio" className="mt-4">
+                <BeatSyncPanel audioUrl={audioUrl} beats={beatSync.beats} bpm={beatSync.bpm} loading={beatSync.loading} onSelectAudio={() => setAudioUrl("https://example.com/audio.mp3")} onAnalyze={handleAnalyzeBeats} onApplyBeatSync={handleApplyBeatSync} />
+              </TabsContent>
+
+              <TabsContent value="captions" className="mt-4">
+                <CaptionsPanel captions={captionsEngine.captions} settings={captionsEngine.settings} loading={captionsEngine.loading} onGenerateCaptions={handleGenerateCaptions} onUpdateSettings={captionsEngine.updateSettings} onRemoveCaption={captionsEngine.removeCaption} />
+              </TabsContent>
+
+              <TabsContent value="overlays" className="mt-4">
+                <BrandOverlayPanel overlays={overlaysEngine.overlays} activePack={overlaysEngine.activePack} totalDuration={totalDuration} onApplyPack={handleApplyBrandPack} onAddOverlay={() => overlaysEngine.addOverlay({ text: "Custom", style: "modern", position: "center", start: 0, end: 3, color: "#E1306C" })} onRemoveOverlay={overlaysEngine.removeOverlay} onClearOverlays={overlaysEngine.clearOverlays} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
