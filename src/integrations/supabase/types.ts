@@ -1502,6 +1502,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           channel: string
+          chat_state: Json | null
           contact_id: string | null
           created_at: string | null
           id: string
@@ -1516,6 +1517,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           channel: string
+          chat_state?: Json | null
           contact_id?: string | null
           created_at?: string | null
           id?: string
@@ -1530,6 +1532,7 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           channel?: string
+          chat_state?: Json | null
           contact_id?: string | null
           created_at?: string | null
           id?: string
