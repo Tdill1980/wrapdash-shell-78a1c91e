@@ -49,6 +49,7 @@ import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
 import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
 import InstagramTokenExchange from "./pages/InstagramTokenExchange";
+import AICorrectionsAdmin from "./pages/AICorrectionsAdmin";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -102,6 +103,7 @@ const App = () => (
             <Route path="/admin/dashboard-hero" element={<DashboardHeroAdmin />} />
             <Route path="/admin/website-agent" element={<WebsiteAgentAdmin />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
+            <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />

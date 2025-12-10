@@ -464,6 +464,50 @@ export type Database = {
           },
         ]
       }
+      ai_corrections: {
+        Row: {
+          approved_response: string
+          category: string | null
+          created_at: string | null
+          flagged_response: string | null
+          id: string
+          is_active: boolean | null
+          organization_id: string | null
+          trigger_phrase: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_response: string
+          category?: string | null
+          created_at?: string | null
+          flagged_response?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          trigger_phrase: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_response?: string
+          category?: string | null
+          created_at?: string | null
+          flagged_response?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          trigger_phrase?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_corrections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approveflow_3d: {
         Row: {
           created_at: string | null
@@ -2338,6 +2382,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "instagram_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_items: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          organization_id: string | null
+          question: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          answer: string
+          category: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          organization_id?: string | null
+          question?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          organization_id?: string | null
+          question?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_items_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
