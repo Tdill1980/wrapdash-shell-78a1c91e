@@ -1159,6 +1159,8 @@ export type Database = {
           height: number | null
           id: string
           metadata: Json | null
+          mux_asset_id: string | null
+          mux_playback_id: string | null
           organization_id: string | null
           original_filename: string | null
           processing_status: string | null
@@ -1186,6 +1188,8 @@ export type Database = {
           height?: number | null
           id?: string
           metadata?: Json | null
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
           organization_id?: string | null
           original_filename?: string | null
           processing_status?: string | null
@@ -1213,6 +1217,8 @@ export type Database = {
           height?: number | null
           id?: string
           metadata?: Json | null
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
           organization_id?: string | null
           original_filename?: string | null
           processing_status?: string | null
