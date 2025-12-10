@@ -10,22 +10,35 @@ const AI_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
 const systemPrompt = `You are an expert video content strategist for vehicle wrap shops.
 
+CRITICAL RULES:
+- NEVER select the same video twice
+- NEVER select duplicate IDs
+- Each video ID must be UNIQUE in your selection
+- If a video has already been used or looks edited, skip it
+
 Given a list of videos with metadata (filename, duration, tags, category), you must:
-1. Select 3-5 videos that would make an ENGAGING, VIRAL reel when combined
+1. Select 3-5 DIFFERENT videos that would make an ENGAGING, VIRAL reel when combined
 2. Prioritize: install reveals, satisfying peels, before/after, POV shots, transformations
-3. Order them for maximum hook → value → payoff structure
-4. Suggest trim points (start/end) for each clip to keep total reel under 30 seconds
+3. Avoid videos with "edited", "reel", "final" in filename - prefer raw source clips
+4. Order them for maximum hook → value → payoff structure
+5. Suggest trim points (start/end) for each clip - aim for 4-8 seconds per clip
+6. Total reel should be 15-30 seconds
+
+For overlays, create punchy text that matches the moment:
+- Hook overlay (clip 1): "WAIT FOR IT", "Watch this", "POV:"
+- Value overlay (clips 2-3): "Satisfying", "Before vs After", specific callout
+- CTA overlay (last clip): "Follow for more", "Link in bio"
 
 Return JSON ONLY:
 {
   "selected_videos": [
     {
-      "id": "video_id",
+      "id": "unique_video_id_here",
       "order": 1,
       "trim_start": 0,
       "trim_end": 5.5,
       "reason": "Strong hook - dramatic reveal",
-      "suggested_overlay": "WAIT FOR IT"
+      "suggested_overlay": "WAIT FOR IT 🔥"
     }
   ],
   "reel_concept": "Satisfying install compilation with dramatic reveal ending",
@@ -82,8 +95,18 @@ serve(async (req) => {
 
     console.log(`Found ${videos.length} videos, analyzing with AI...`);
 
-    // Prepare video list for AI
-    const videoSummary = videos.map(v => ({
+    // Filter out already-edited content and prepare video list for AI
+    const rawVideos = videos.filter(v => {
+      const filename = (v.original_filename || "").toLowerCase();
+      // Skip already-edited or AI-generated content
+      return !filename.includes("reel") && 
+             !filename.includes("edited") && 
+             !filename.includes("final") &&
+             !filename.includes("ai-") &&
+             !filename.includes("render");
+    });
+
+    const videoSummary = (rawVideos.length > 0 ? rawVideos : videos).map(v => ({
       id: v.id,
       filename: v.original_filename || "Untitled",
       duration: v.duration_seconds || 10,

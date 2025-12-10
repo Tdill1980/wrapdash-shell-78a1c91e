@@ -13,15 +13,23 @@ const corsHeaders = {
 const CREATOMATE_API_URL = 'https://api.creatomate.com/v2/renders';
 const DEFAULT_TEMPLATE_ID = 'b99d8a90-2a85-4ec7-83c4-dfe060ceeedd';
 
+interface OverlayItem {
+  text: string;
+  time: number;
+  duration: number;
+}
+
 interface RenderRequest {
   action: 'start' | 'status';
   // For 'start' action
   video_url?: string;
+  additional_clips?: string[];
   headline?: string;
   subtext?: string;
   template_id?: string;
   organization_id?: string;
   music_url?: string;
+  overlays?: OverlayItem[];
   // For 'status' action
   render_id?: string;
 }
@@ -101,11 +109,13 @@ serve(async (req) => {
     if (action === 'start') {
       const { 
         video_url, 
+        additional_clips,
         headline, 
         subtext, 
         template_id, 
         organization_id,
-        music_url 
+        music_url,
+        overlays: requestOverlays
       } = body;
 
       if (!video_url) {
@@ -127,9 +137,16 @@ serve(async (req) => {
       }
 
       // Build modifications object
-      const modifications: Record<string, string> = {
+      const modifications: Record<string, string | number> = {
         'Video.source': video_url,
       };
+
+      // Add additional clips if provided (for multi-clip templates)
+      if (additional_clips && additional_clips.length > 0) {
+        additional_clips.forEach((clipUrl, idx) => {
+          modifications[`Video-${idx + 2}.source`] = clipUrl;
+        });
+      }
 
       // Add text overlays
       if (headline) {
@@ -137,6 +154,15 @@ serve(async (req) => {
       }
       if (subtext) {
         modifications['Text-2.text'] = subtext;
+      }
+
+      // Add dynamic overlays from request (AI-generated)
+      if (requestOverlays && requestOverlays.length > 0) {
+        requestOverlays.forEach((overlay, idx) => {
+          modifications[`Overlay-${idx + 1}.text`] = overlay.text;
+          modifications[`Overlay-${idx + 1}.time`] = overlay.time;
+          modifications[`Overlay-${idx + 1}.duration`] = overlay.duration;
+        });
       }
 
       // Add music if provided
