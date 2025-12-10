@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { 
   Scissors, 
   Wand2, 
@@ -15,9 +18,15 @@ import {
   Volume2,
   Download,
   Copy,
-  CheckCircle
+  CheckCircle,
+  Video,
+  ExternalLink
 } from "lucide-react";
 import { ContentFile, VideoProcessResult } from "@/hooks/useContentBox";
+import { useVideoRender } from "@/hooks/useVideoRender";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { MusicPicker } from "./MusicPicker";
+import { BrandVoiceIndicator } from "./BrandVoiceIndicator";
 import { toast } from "sonner";
 
 interface AIVideoEditorProps {
@@ -32,6 +41,21 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [result, setResult] = useState<VideoProcessResult | null>(null);
   const [copied, setCopied] = useState(false);
+  
+  // Creatomate render state
+  const [headline, setHeadline] = useState("");
+  const [subtext, setSubtext] = useState("");
+  const [selectedMusicUrl, setSelectedMusicUrl] = useState<string | null>(null);
+  
+  const { organizationId } = useOrganization();
+  const { 
+    status: renderStatus, 
+    progress: renderProgress, 
+    outputUrl, 
+    isRendering, 
+    startRender, 
+    reset: resetRender 
+  } = useVideoRender();
 
   const actions = [
     {
@@ -53,6 +77,21 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
       description: 'Get color, pacing, and enhancement suggestions',
     },
   ];
+
+  const handleRenderReel = async () => {
+    if (!selectedFile?.file_url) {
+      toast.error("No video selected");
+      return;
+    }
+
+    await startRender({
+      videoUrl: selectedFile.file_url,
+      headline: headline || undefined,
+      subtext: subtext || undefined,
+      organizationId: organizationId || undefined,
+      musicUrl: selectedMusicUrl || undefined,
+    });
+  };
 
   const handleProcess = async () => {
     if (!selectedAction || !selectedFile) return;
@@ -242,6 +281,135 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
           </>
         )}
       </Button>
+
+      {/* ========== CREATOMATE RENDER SECTION ========== */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" />
+              Render Reel with Creatomate
+            </CardTitle>
+            <BrandVoiceIndicator />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Add text overlays and music, then render a polished reel
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Text Overlays */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="headline" className="text-xs">Headline (Text-1)</Label>
+              <Input
+                id="headline"
+                placeholder="Your Text Here"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subtext" className="text-xs">Subtext (Text-2)</Label>
+              <Input
+                id="subtext"
+                placeholder="Create & Automate Video"
+                value={subtext}
+                onChange={(e) => setSubtext(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+          </div>
+
+          {/* Music Picker */}
+          <MusicPicker
+            selectedUrl={selectedMusicUrl}
+            onSelect={setSelectedMusicUrl}
+          />
+
+          {/* Render Progress */}
+          {isRendering && (
+            <div className="space-y-2 p-4 rounded-lg bg-background/50 border border-border/50">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  Rendering video...
+                </span>
+                <span className="text-muted-foreground">{renderProgress}%</span>
+              </div>
+              <Progress value={renderProgress} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                This may take 1-2 minutes depending on video length
+              </p>
+            </div>
+          )}
+
+          {/* Render Complete */}
+          {renderStatus === 'succeeded' && outputUrl && (
+            <div className="space-y-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+              <div className="flex items-center gap-2 text-green-500">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-medium">Render Complete!</span>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1 bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+                  asChild
+                >
+                  <a href={outputUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download MP4
+                  </a>
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href={outputUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Render Failed */}
+          {renderStatus === 'failed' && (
+            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+              <p className="text-sm text-destructive">
+                Render failed. Please try again or check your video file.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={resetRender}
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
+
+          {/* Render Button */}
+          {renderStatus !== 'succeeded' && (
+            <Button
+              className="w-full bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E]"
+              size="lg"
+              disabled={isRendering || !selectedFile}
+              onClick={handleRenderReel}
+            >
+              {isRendering ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Rendering...
+                </>
+              ) : (
+                <>
+                  <Video className="w-5 h-5 mr-2" />
+                  Render Reel
+                </>
+              )}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Results Display */}
       {result && (
