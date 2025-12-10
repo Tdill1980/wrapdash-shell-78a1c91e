@@ -17,24 +17,33 @@ import {
   Clock,
   Zap,
   Palette,
+  Layers,
+  Scissors,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
 import { useReelCaptions, CaptionStyle } from "@/hooks/useReelCaptions";
 import { useReelOverlays, BrandPackId } from "@/hooks/useReelOverlays";
+import { useEditorBrain } from "@/hooks/useEditorBrain";
 import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
 import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
 import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
+import { MediaLibraryModal } from "@/components/media/MediaLibraryModal";
+import { MediaFile } from "@/components/media/MediaLibrary";
 import { toast } from "sonner";
 
 interface Clip {
   id: string;
   name: string;
+  url: string;
   duration: number;
   thumbnail?: string;
   trimStart: number;
   trimEnd: number;
   speed?: number;
+  hookScore?: number;
+  energyLevel?: number;
 }
 
 export default function ReelBuilder() {
@@ -44,21 +53,27 @@ export default function ReelBuilder() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("clip");
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
 
   const beatSync = useReelBeatSync();
   const captionsEngine = useReelCaptions();
   const overlaysEngine = useReelOverlays();
+  const editorBrain = useEditorBrain();
 
-  const handleAddClips = () => {
-    const newClip: Clip = {
-      id: `clip-${Date.now()}`,
-      name: `Clip ${clips.length + 1}`,
-      duration: 5,
+  const handleAddClipsFromLibrary = (files: MediaFile[]) => {
+    const videoFiles = files.filter((f) => f.file_type === "video");
+    const newClips: Clip[] = videoFiles.map((file) => ({
+      id: file.id,
+      name: file.original_filename || "Untitled",
+      url: file.file_url,
+      duration: file.duration_seconds || 10,
+      thumbnail: file.thumbnail_url || undefined,
       trimStart: 0,
-      trimEnd: 5,
+      trimEnd: file.duration_seconds || 10,
       speed: 1,
-    };
-    setClips([...clips, newClip]);
+    }));
+    setClips((prev) => [...prev, ...newClips]);
+    toast.success(`Added ${newClips.length} clip(s)`);
   };
 
   const handleRemoveClip = (id: string) => {
@@ -114,8 +129,26 @@ export default function ReelBuilder() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Sparkles className="w-4 h-4 mr-1.5" />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => editorBrain.extractBestScenes(clips, setClips)}
+              disabled={clips.length === 0 || editorBrain.isAnalyzing}
+            >
+              <Scissors className="w-4 h-4 mr-1.5" />
+              Best Scenes
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => editorBrain.autoSequence(clips, setClips)}
+              disabled={clips.length < 2 || editorBrain.isSequencing}
+            >
+              {editorBrain.isSequencing ? (
+                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : (
+                <Layers className="w-4 h-4 mr-1.5" />
+              )}
               AI Sequence
             </Button>
             <Button
@@ -167,7 +200,7 @@ export default function ReelBuilder() {
                     <Clock className="w-4 h-4" />
                     Timeline
                   </CardTitle>
-                  <Button size="sm" variant="outline" onClick={handleAddClips}>
+                  <Button size="sm" variant="outline" onClick={() => setShowLibraryModal(true)}>
                     <Plus className="w-4 h-4 mr-1" />
                     Add Clips
                   </Button>
@@ -177,7 +210,7 @@ export default function ReelBuilder() {
                 {clips.length === 0 ? (
                   <div
                     className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={handleAddClips}
+                    onClick={() => setShowLibraryModal(true)}
                   >
                     <Plus className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">Click to add clips</p>
@@ -294,6 +327,15 @@ export default function ReelBuilder() {
           </div>
         </div>
       </div>
+
+      {/* Media Library Modal */}
+      <MediaLibraryModal
+        open={showLibraryModal}
+        onClose={() => setShowLibraryModal(false)}
+        multiSelect
+        onMultiSelect={handleAddClipsFromLibrary}
+        filterType="video"
+      />
     </div>
   );
 }
