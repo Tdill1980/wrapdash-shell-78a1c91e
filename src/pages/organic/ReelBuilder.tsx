@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +25,8 @@ import {
   Brain,
   Download,
   ChevronDown,
+  Upload,
+  Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
@@ -105,7 +108,10 @@ export default function ReelBuilder() {
   const [suggestedHook, setSuggestedHook] = useState<string | null>(null);
   const [suggestedCta, setSuggestedCta] = useState<string | null>(null);
   const [selectedDaraFormat, setSelectedDaraFormat] = useState<DaraFormat | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const uploadVideoRef = useRef<HTMLVideoElement>(null);
 
   // Handle play/pause with ref
   const handlePlayPause = () => {
@@ -126,6 +132,108 @@ export default function ReelBuilder() {
   const smartAssist = useSmartAssist();
   const videoRender = useVideoRender();
   const autoCreateReel = useAutoCreateReel();
+
+  // Single video upload handler - uploads video, then AI analyzes and finds best scenes
+  const handleVideoUpload = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    toast.info("Uploading video...");
+
+    try {
+      // Upload to Supabase storage
+      const fileName = `reel-source-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('media-library')
+        .upload(`uploads/${fileName}`, file, { contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('media-library')
+        .getPublicUrl(`uploads/${fileName}`);
+
+      const videoUrl = urlData.publicUrl;
+      setUploadedVideoUrl(videoUrl);
+
+      // Get video duration
+      const videoDuration = await new Promise<number>((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          resolve(video.duration);
+        };
+        video.onerror = () => resolve(60); // Default 60s if can't read
+        video.src = videoUrl;
+      });
+
+      toast.success("Video uploaded! AI analyzing...");
+      setIsAutoProcessing(true);
+
+      // Call AI to analyze this single video and find best scenes
+      const result = await autoCreateReel.autoCreate({
+        videoUrl: videoUrl,
+        videoDuration: videoDuration,
+        daraFormat: selectedDaraFormat as DaraFormatType | undefined,
+      });
+
+      if (result && result.selected_videos && result.selected_videos.length > 0) {
+        // Convert AI scene cuts into clips (all from same source video)
+        const newClips: Clip[] = result.selected_videos
+          .sort((a, b) => a.order - b.order)
+          .map((scene) => ({
+            id: scene.id,
+            name: scene.reason || `Scene ${scene.order}`,
+            url: videoUrl, // All clips use the same source video
+            duration: (scene.trim_end || 5) - (scene.trim_start || 0),
+            trimStart: scene.trim_start || 0,
+            trimEnd: scene.trim_end || 5,
+            speed: 1,
+            suggestedOverlay: scene.suggested_overlay,
+            reason: scene.reason,
+          }));
+
+        setClips(newClips);
+        setReelConcept(result.reel_concept);
+        setSuggestedHook(result.suggested_hook);
+        setSuggestedCta(result.suggested_cta);
+
+        // Apply hook overlay
+        if (result.suggested_hook) {
+          overlaysEngine.addOverlay({
+            text: result.suggested_hook,
+            style: "modern",
+            position: "top-center",
+            start: 0,
+            end: 3,
+            color: "#E1306C",
+          });
+        }
+
+        toast.success(`AI found ${newClips.length} best scenes!`, {
+          description: result.reel_concept,
+        });
+      } else {
+        toast.error("AI couldn't find good scenes. Try a different video.");
+      }
+    } catch (error) {
+      console.error("Upload/analysis failed:", error);
+      toast.error("Failed to process video");
+    } finally {
+      setIsUploading(false);
+      setIsAutoProcessing(false);
+    }
+  }, [selectedDaraFormat, autoCreateReel, overlaysEngine]);
+
+  // Dropzone for single video upload
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handleVideoUpload,
+    accept: { 'video/*': ['.mp4', '.mov', '.webm', '.avi'] },
+    maxFiles: 1,
+    disabled: isUploading || isAutoProcessing,
+  });
 
   // AI Auto-Create handler - uses inspo styles, format, and picks best videos
   const handleAIAutoCreate = async (format?: DaraFormat) => {
@@ -587,41 +695,84 @@ export default function ReelBuilder() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Preview + Timeline */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Preview */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="aspect-[9/16] max-h-[400px] mx-auto bg-black rounded-xl flex items-center justify-center relative overflow-hidden">
-                  {clips.length === 0 ? (
-                    <div className="text-center text-muted-foreground">
-                      <Play className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Add clips to preview</p>
-                    </div>
-                  ) : (
-                    <>
-                      <video
-                        ref={videoRef}
-                        key={selectedClip || clips[0]?.id}
-                        src={selectedClip ? clips.find(c => c.id === selectedClip)?.url : clips[0]?.url}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loop
-                        muted
-                        playsInline
-                        onEnded={() => setIsPlaying(false)}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="absolute z-10"
-                        onClick={handlePlayPause}
-                      >
-                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Video Upload Zone - Shows when no clips */}
+            {clips.length === 0 && (
+              <Card className="border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
+                <CardContent className="p-6">
+                  <div
+                    {...getRootProps()}
+                    className={cn(
+                      "aspect-[9/16] max-h-[400px] mx-auto rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all",
+                      isDragActive 
+                        ? "bg-primary/20 border-2 border-primary scale-[1.02]" 
+                        : "bg-background/50 hover:bg-primary/10",
+                      (isUploading || isAutoProcessing) && "pointer-events-none opacity-60"
+                    )}
+                  >
+                    <input {...getInputProps()} />
+                    {isUploading || isAutoProcessing ? (
+                      <div className="text-center space-y-3">
+                        <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                        <p className="font-semibold text-foreground">
+                          {isUploading ? "Uploading..." : "AI Analyzing Video..."}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Finding best scenes for your reel</p>
+                      </div>
+                    ) : isDragActive ? (
+                      <div className="text-center">
+                        <Video className="w-16 h-16 mx-auto text-primary mb-3" />
+                        <p className="font-semibold text-primary">Drop video here</p>
+                      </div>
+                    ) : (
+                      <div className="text-center space-y-4">
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center mx-auto">
+                          <Upload className="w-10 h-10 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-lg text-foreground">Drop a video here</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            AI will find the best scenes automatically
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <span>Powered by Dara Denney AI</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Preview - Shows when clips exist */}
+            {clips.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="aspect-[9/16] max-h-[400px] mx-auto bg-black rounded-xl flex items-center justify-center relative overflow-hidden">
+                    <video
+                      ref={videoRef}
+                      key={selectedClip || clips[0]?.id}
+                      src={selectedClip ? clips.find(c => c.id === selectedClip)?.url : clips[0]?.url}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loop
+                      muted
+                      playsInline
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="absolute z-10"
+                      onClick={handlePlayPause}
+                    >
+                      {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Timeline */}
             <Card>
