@@ -1,7 +1,7 @@
 // Creatomate Video Render Edge Function
 // Renders videos using Creatomate API with brand-specific overlays
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { loadVoiceProfile } from "../_shared/voice-engine-loader.ts";
 
@@ -144,16 +144,14 @@ serve(async (req) => {
         modifications['Audio.source'] = music_url;
       }
 
-      // Apply brand colors if available
-      if (voiceProfile?.merged?.overlays) {
-        const { primary_color, secondary_color } = voiceProfile.merged.overlays;
-        // These would map to your Creatomate template's color elements
-        // Adjust element names based on your actual template
-        if (primary_color) {
-          modifications['Text-1.fill_color'] = primary_color;
+      // Apply brand colors if available from merged overlays OR brand_defaults
+      const overlays = voiceProfile?.merged?.overlays || voiceProfile?.brand_defaults?.brand_overlays;
+      if (overlays) {
+        if (overlays.primary_color) {
+          modifications['Text-1.fill_color'] = overlays.primary_color;
         }
-        if (secondary_color) {
-          modifications['Text-2.fill_color'] = secondary_color;
+        if (overlays.secondary_color) {
+          modifications['Text-2.fill_color'] = overlays.secondary_color;
         }
       }
 
