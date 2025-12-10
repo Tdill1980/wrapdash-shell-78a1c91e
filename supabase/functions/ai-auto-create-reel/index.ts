@@ -21,13 +21,81 @@ interface InspoStyle {
   emoji_usage: boolean;
 }
 
+// Dara Denney Format Configurations
+const DARA_FORMAT_PROMPTS: Record<string, string> = {
+  grid_style: `
+FORMAT: 📊 GRID STYLE AD
+- Psychology: Completes subconscious loop - eyes trail left-to-right, top-to-bottom
+- Select 4 product shots that work in a 2x2 grid
+- Overlay: Value-based messaging OR specific routine/outcome
+- Example hooks: "The perfect set", "All you need", "Mix & match"
+- Clip duration: 2-3s each, total 8-12s`,
+
+  egc_warehouse: `
+FORMAT: 📦 EGC WAREHOUSE CONTENT  
+- Psychology: Employee-generated content builds authenticity
+- Show behind-the-scenes: packing, workspace, production
+- POV shots work great
+- Example hooks: "POV:", "Day in the life", "Watch me pack"
+- Clip duration: 3-5s each, raw authentic energy`,
+
+  founders_objection: `
+FORMAT: 💬 FOUNDERS + OBJECTION HANDLER
+- Psychology: Founder credibility + addressing anxiety = trust
+- Structure: Lo-fi founder video handling common objection
+- Address: price, quality, timeline objections directly
+- Example hooks: "Is it worth it?", "Why so expensive?", "Does this work?"
+- One longer clip, 15-30s, authentic energy`,
+
+  creator_testimonial: `
+FORMAT: ⭐ CREATOR TESTIMONIAL
+- Psychology: Social proof from real people. Single > compilations
+- Structure: One creator giving authentic testimonial
+- Use reaction opening hooks
+- Trigger words: "this", "look", "watch"
+- Example hooks: "I can't believe...", "This changed...", "Watch what happens"
+- One clip, 15-45s`,
+
+  text_heavy: `
+FORMAT: 📝 TEXT HEAVY AD
+- Psychology: Text creates curiosity gaps. Crushes during sales
+- Bold text overlays drive narrative, video supports
+- Example hooks: "3 things you need", "Don't miss this", "The truth about"
+- Clip duration: 2-3s each, 4 clips total
+- TEXT IS THE STAR - video is background`,
+
+  negative_marketing: `
+FORMAT: 😬 NEGATIVE MARKETING
+- Psychology: Negative emotions are powerful triggers
+- Use trigger words: regret, embarrassed, hate
+- 1-star review style or negative hook that flips positive
+- Example hooks: "I regret...", "Don't make this mistake", "I was so embarrassed"
+- 3 clips, 3-5s each`,
+
+  ugly_ads: `
+FORMAT: 📱 UGLY ADS / LO-FI
+- Psychology: Authenticity > polish. Meta recommends this for Reels
+- Raw, unpolished: post-it notes, one-take videos, POV shots
+- Think: how would you explain this to a friend?
+- Example hooks: "POV:", "Okay so", "Real talk"
+- One clip, 10-30s, ZERO polish`,
+
+  brandformance: `
+FORMAT: 🚀 BRANDFORMANCE
+- Psychology: Organic content that works gets amplified
+- Select content that feels organic/authentic
+- Don't over-edit - keep the original energy
+- Example hooks: "Y'all loved this", "This went viral", "Had to share"
+- One clip, 15-60s`
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { organization_id, filter_category, max_videos, use_inspo } = await req.json();
+    const { organization_id, filter_category, max_videos, use_inspo, dara_format } = await req.json();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -160,8 +228,20 @@ ${inspoHooks.length > 0 ? `Example hooks from their inspo: ${inspoHooks.slice(0,
       }
     }
 
+    // Get format-specific prompt if a Dara format is selected
+    const formatPrompt = dara_format && DARA_FORMAT_PROMPTS[dara_format] 
+      ? DARA_FORMAT_PROMPTS[dara_format] 
+      : "";
+
     // Step 2: Build dynamic system prompt based on inspo + DARA DENNEY RULES
     const systemPrompt = `You are Dara Denney - the world's best performance creative strategist. You create scroll-stopping reels that CONVERT.
+
+${formatPrompt ? `
+═══════════════════════════════════════════════════════════════
+🎬 SELECTED AD FORMAT:
+═══════════════════════════════════════════════════════════════
+${formatPrompt}
+` : ''}
 
 ═══════════════════════════════════════════════════════════════
 🎯 DARA DENNEY'S IRON RULES FOR VIRAL REELS:
@@ -175,10 +255,11 @@ ${inspoHooks.length > 0 ? `Example hooks from their inspo: ${inspoHooks.slice(0,
    - "Watch this"
    - "Before → After"
 
-2. TEXT MUST BE SHORT ENOUGH TO FIT ON SCREEN
-   - Max 15 characters per line
-   - Split long phrases into 2 lines
-   - Leave breathing room at edges
+2. TEXT MUST FIT ON SCREEN - TRUNCATE AT WORD BOUNDARIES
+   - Max 12 characters for hooks
+   - Max 15 characters for other overlays
+   - If text is too long, CUT WORDS not letters
+   - NEVER cut a word in the middle
 
 3. SCROLL-STOPPING STRUCTURE:
    - Clip 1 (0-3s): HOOK - create curiosity gap
@@ -213,16 +294,25 @@ Given a list of videos with metadata (filename, duration, tags, category), you m
 6. Total reel should be 12-20 seconds (shorter = better engagement)
 
 ═══════════════════════════════════════════════════════════════
-TEXT OVERLAY RULES (CRITICAL - TEXT MUST FIT ON SCREEN):
+TEXT OVERLAY RULES (CRITICAL - TEXT MUST FIT):
 ═══════════════════════════════════════════════════════════════
 ${extractedStyle ? `- Use ${extractedStyle.hook_format} format
 - ${extractedStyle.emoji_usage ? 'Use 1 emoji max' : 'No emojis - keep it clean'}
 - Position: ${extractedStyle.text_position}` : ''}
 
 OVERLAY FORMAT - FOLLOW EXACTLY:
-- Hook overlay: MAX 4 WORDS (e.g., "Wait for it", "POV:", "Watch this")
-- Value overlay: MAX 3 WORDS (e.g., "So satisfying", "The reveal")
-- CTA overlay: MAX 4 WORDS (e.g., "Follow for more")
+- Hook: MAX 12 CHARS (e.g., "Wait for it", "POV:", "Watch this")  
+- Value: MAX 15 CHARS (e.g., "So satisfying", "The reveal")
+- CTA: MAX 15 CHARS (e.g., "Follow for more")
+
+EXAMPLES OF GOOD SHORT HOOKS:
+- "POV:"
+- "Wait for it"
+- "The reveal"
+- "Before → After"
+- "Game changer"
+- "Watch this"
+- "So satisfying"
 
 ${inspoHooks.length > 0 ? `Style reference from their inspo (but keep text SHORT): ${inspoHooks.slice(0, 3).join(", ")}` : ''}
 
@@ -239,11 +329,12 @@ Return JSON ONLY:
     }
   ],
   "reel_concept": "One sentence concept",
-  "suggested_hook": "2-4 words ONLY",
+  "suggested_hook": "2-4 words ONLY - MAX 12 CHARS",
   "suggested_cta": "Follow for more",
   "music_vibe": "upbeat_energy",
   "estimated_virality": 85,
-  "inspo_style_applied": true
+  "inspo_style_applied": true,
+  "format_used": "${dara_format || 'auto'}"
 }`;
 
     // Step 3: Fetch videos from media library

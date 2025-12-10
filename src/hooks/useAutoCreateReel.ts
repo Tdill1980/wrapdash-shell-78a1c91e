@@ -37,6 +37,18 @@ export interface AutoCreateResult {
   };
 }
 
+export type DaraFormatType = 
+  | "grid_style"
+  | "egc_warehouse"
+  | "founders_objection"
+  | "creator_testimonial"
+  | "ai_enhanced"
+  | "text_heavy"
+  | "dpa_catalog"
+  | "negative_marketing"
+  | "ugly_ads"
+  | "brandformance";
+
 export function useAutoCreateReel() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AutoCreateResult | null>(null);
@@ -46,6 +58,7 @@ export function useAutoCreateReel() {
     organizationId?: string;
     filterCategory?: string;
     maxVideos?: number;
+    daraFormat?: DaraFormatType;
   }): Promise<AutoCreateResult | null> => {
     setLoading(true);
     setError(null);
@@ -56,6 +69,7 @@ export function useAutoCreateReel() {
           organization_id: options?.organizationId,
           filter_category: options?.filterCategory,
           max_videos: options?.maxVideos || 50,
+          dara_format: options?.daraFormat,
         },
       });
 
