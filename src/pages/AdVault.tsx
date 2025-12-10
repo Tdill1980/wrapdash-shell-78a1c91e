@@ -16,6 +16,7 @@ import {
   Sparkles,
   LayoutTemplate,
   Filter,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LogPerformanceModal } from "@/components/ads/LogPerformanceModal";
 
 export default function AdVault() {
   const { organizationId } = useOrganization();
@@ -33,6 +35,12 @@ export default function AdVault() {
   );
   const [filterType, setFilterType] = useState<string>("all");
   const [filterPlacement, setFilterPlacement] = useState<string>("all");
+  const [logModalOpen, setLogModalOpen] = useState(false);
+  const [selectedAdForLog, setSelectedAdForLog] = useState<{
+    id: string;
+    imageUrl: string;
+    headline: string | null;
+  } | null>(null);
 
   const filteredAds = ads.filter((ad) => {
     if (filterType !== "all" && ad.type !== filterType) return false;
@@ -153,6 +161,22 @@ export default function AdVault() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+                    onClick={() => {
+                      setSelectedAdForLog({
+                        id: ad.id,
+                        imageUrl: ad.png_url,
+                        headline: ad.headline,
+                      });
+                      setLogModalOpen(true);
+                    }}
+                    title="Log Performance"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 <div className="absolute top-2 left-2 flex gap-1">
@@ -189,6 +213,20 @@ export default function AdVault() {
           ))}
         </div>
       )}
+
+      <LogPerformanceModal
+        open={logModalOpen}
+        onClose={() => {
+          setLogModalOpen(false);
+          setSelectedAdForLog(null);
+        }}
+        adVaultId={selectedAdForLog?.id}
+        adType="static"
+        adPreview={{
+          imageUrl: selectedAdForLog?.imageUrl,
+          headline: selectedAdForLog?.headline || undefined,
+        }}
+      />
     </div>
   );
 }

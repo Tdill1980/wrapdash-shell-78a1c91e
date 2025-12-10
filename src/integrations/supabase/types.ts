@@ -14,6 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_performance: {
+        Row: {
+          ad_set_name: string | null
+          ad_type: string
+          ad_vault_id: string | null
+          aov: number | null
+          campaign_name: string | null
+          clicks: number | null
+          content_queue_id: string | null
+          conversion_rate: number | null
+          conversions: number | null
+          cost_per_conversion: number | null
+          cpc: number | null
+          created_at: string | null
+          ctr: number | null
+          date_range_end: string | null
+          date_range_start: string | null
+          id: string
+          impressions: number | null
+          last_synced_at: string | null
+          organization_id: string | null
+          placement: string | null
+          platform: string | null
+          revenue: number | null
+          roas: number | null
+          spend: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ad_set_name?: string | null
+          ad_type?: string
+          ad_vault_id?: string | null
+          aov?: number | null
+          campaign_name?: string | null
+          clicks?: number | null
+          content_queue_id?: string | null
+          conversion_rate?: number | null
+          conversions?: number | null
+          cost_per_conversion?: number | null
+          cpc?: number | null
+          created_at?: string | null
+          ctr?: number | null
+          date_range_end?: string | null
+          date_range_start?: string | null
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string | null
+          organization_id?: string | null
+          placement?: string | null
+          platform?: string | null
+          revenue?: number | null
+          roas?: number | null
+          spend?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ad_set_name?: string | null
+          ad_type?: string
+          ad_vault_id?: string | null
+          aov?: number | null
+          campaign_name?: string | null
+          clicks?: number | null
+          content_queue_id?: string | null
+          conversion_rate?: number | null
+          conversions?: number | null
+          cost_per_conversion?: number | null
+          cpc?: number | null
+          created_at?: string | null
+          ctr?: number | null
+          date_range_end?: string | null
+          date_range_start?: string | null
+          id?: string
+          impressions?: number | null
+          last_synced_at?: string | null
+          organization_id?: string | null
+          placement?: string | null
+          platform?: string | null
+          revenue?: number | null
+          roas?: number | null
+          spend?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_performance_ad_vault_id_fkey"
+            columns: ["ad_vault_id"]
+            isOneToOne: false
+            referencedRelation: "ad_vault"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_performance_content_queue_id_fkey"
+            columns: ["content_queue_id"]
+            isOneToOne: false
+            referencedRelation: "content_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_performance_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_vault: {
         Row: {
           created_at: string
