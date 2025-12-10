@@ -158,3 +158,6 @@ verify_jwt = false
 
 [functions.yt-enhance-longform]
 verify_jwt = false
+
+[functions.analyze-inspo-video]
+verify_jwt = false

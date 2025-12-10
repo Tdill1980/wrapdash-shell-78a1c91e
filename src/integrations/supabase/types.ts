@@ -2582,6 +2582,53 @@ export type Database = {
           },
         ]
       }
+      inspo_analyses: {
+        Row: {
+          analysis_data: Json
+          created_at: string
+          id: string
+          is_saved: boolean | null
+          organization_id: string | null
+          platform: string
+          source_url: string
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_data?: Json
+          created_at?: string
+          id?: string
+          is_saved?: boolean | null
+          organization_id?: string | null
+          platform?: string
+          source_url: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_data?: Json
+          created_at?: string
+          id?: string
+          is_saved?: boolean | null
+          organization_id?: string | null
+          platform?: string
+          source_url?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspo_analyses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instagram_tokens: {
         Row: {
           access_token: string

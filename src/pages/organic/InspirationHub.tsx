@@ -35,22 +35,26 @@ import {
   ExternalLink,
   Bookmark,
   Wand2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useInspoAnalysis, StyleAnalysis as HookStyleAnalysis } from "@/hooks/useInspoAnalysis";
 
+// Local interface for display in modal (matches what AI returns)
 interface StyleAnalysis {
-  styleName: string;
-  energy: number;
-  pacing: string;
-  font: string;
-  colorTheme: string[];
-  structure: Array<{ time: string; label: string }>;
-  overlays: string[];
-  hooks: string[];
-  cta: string;
-  music: string;
-  transitions: string[];
+  styleName?: string;
+  energy?: number;
+  pacing?: string | { cutsPerSecond: number; averageClipLength: number; rhythm: string };
+  font?: string;
+  colorTheme?: string[];
+  structure?: Array<{ time?: string; label?: string; duration?: number; style?: string }>;
+  overlays?: string[] | { textStyle: string; fontSize: string; fontWeight: string; position: string; animation: string };
+  hooks?: string[];
+  cta?: string;
+  music?: string | { genre: string; energy: string; bpm: number };
+  transitions?: string[];
+  color?: { palette: string[]; mood: string; saturation: string; contrast: string };
 }
 
 interface TrendPack {
@@ -172,12 +176,13 @@ const SUPPORTED_PLATFORMS = [
 export default function InspirationHub() {
   const navigate = useNavigate();
   const [url, setUrl] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<StyleAnalysis | null>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("discover");
   const [selectedPack, setSelectedPack] = useState<TrendPack | null>(null);
+
+  const { analyzeVideo, analyzing, history, historyLoading, saved, savedLoading, toggleSaved, deleteAnalysis } = useInspoAnalysis();
 
   const detectPlatform = (inputUrl: string) => {
     if (inputUrl.includes("instagram.com")) return "Instagram";
@@ -194,38 +199,42 @@ export default function InspirationHub() {
     }
 
     const platform = detectPlatform(url);
-    setIsAnalyzing(true);
     toast.info(`Analyzing ${platform} video...`);
 
-    // Simulated analysis - in production this would call an edge function
-    await new Promise((r) => setTimeout(r, 2500));
+    const result = await analyzeVideo(url, platform.toLowerCase());
 
-    setAnalysis({
-      styleName: "High-Energy Reveal",
-      energy: 3,
-      pacing: "Fast cuts every 0.8s",
-      font: "Bold uppercase, white with shadow",
-      colorTheme: ["#E1306C", "#405DE6", "#FFFFFF", "#000000"],
-      structure: [
-        { time: "0-1.2s", label: "Hook (scroll stopper)" },
-        { time: "1.2-4s", label: "B-roll tension build" },
-        { time: "4-6s", label: "Transformation reveal" },
-        { time: "6-8s", label: "Final beauty shot + CTA" },
-      ],
-      overlays: ["WAIT FOR IT…", "TRANSFORMATION TIME", "FINAL LOOK 🔥", "LINK IN BIO"],
-      hooks: [
-        "This took 72 hours straight...",
-        "POV: Your car finally gets the glow up",
-        "Watch till the end for the reveal",
-      ],
-      cta: "DM us 'WRAP' to get started",
-      music: "Trending audio - high energy electronic beat",
-      transitions: ["Whip pan", "Speed ramp", "Cut to beat", "Zoom transition"],
-    });
-
-    setIsAnalyzing(false);
-    setShowAnalysisModal(true);
-    toast.success("Style analysis complete!");
+    if (result) {
+      // Transform the hook's StyleAnalysis to local format for display
+      setAnalysis({
+        styleName: "AI Style Analysis",
+        energy: result.music?.energy === "high" ? 3 : result.music?.energy === "medium" ? 2 : 1,
+        pacing: typeof result.pacing === "object" 
+          ? `${result.pacing.rhythm} cuts, ~${result.pacing.averageClipLength}s per clip` 
+          : "Fast cuts",
+        font: typeof result.overlays === "object" && !Array.isArray(result.overlays) 
+          ? `${result.overlays.fontWeight} ${result.overlays.fontSize}` 
+          : "Bold uppercase",
+        colorTheme: result.color?.palette || ["#FF6B35", "#2E2E2E", "#FFFFFF"],
+        structure: Array.isArray(result.structure) 
+          ? Object.entries(result.structure).map(([key, val]) => ({
+              time: `${(val as any).duration || 3}s`,
+              label: `${key}: ${(val as any).style || ""}`,
+            }))
+          : [
+              { time: `${result.structure?.hook?.duration || 3}s`, label: `Hook: ${result.structure?.hook?.style || "Opening"}` },
+              { time: `${result.structure?.body?.duration || 10}s`, label: `Body: ${result.structure?.body?.style || "Content"}` },
+              { time: `${result.structure?.cta?.duration || 3}s`, label: `CTA: ${result.structure?.cta?.style || "Closing"}` },
+            ],
+        overlays: result.hooks || ["WAIT FOR IT...", "THE REVEAL"],
+        hooks: result.hooks || ["Watch this transformation"],
+        cta: result.cta || "DM us for a quote",
+        music: typeof result.music === "object" 
+          ? `${result.music.genre} - ${result.music.energy} energy (${result.music.bpm} BPM)` 
+          : "Trending audio",
+        transitions: result.transitions || ["Cut", "Zoom"],
+      });
+      setShowAnalysisModal(true);
+    }
   };
 
   const handleApplyToReel = () => {
@@ -296,10 +305,10 @@ export default function InspirationHub() {
                   />
                   <Button
                     onClick={handleAnalyze}
-                    disabled={!url || isAnalyzing}
+                    disabled={!url || analyzing}
                     className="bg-gradient-to-r from-[#405DE6] to-[#E1306C] min-w-[160px]"
                   >
-                    {isAnalyzing ? (
+                    {analyzing ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Analyzing...
@@ -484,25 +493,128 @@ export default function InspirationHub() {
           </TabsContent>
 
           <TabsContent value="saved" className="mt-6">
-            <Card className="p-12 text-center">
-              <Bookmark className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="font-semibold mb-2">No Saved Inspiration Yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Analyze videos and save styles you love to use later
-              </p>
-              <Button variant="outline">Browse Trend Packs</Button>
-            </Card>
+            {savedLoading ? (
+              <Card className="p-12 text-center">
+                <Loader2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-spin" />
+                <p className="text-sm text-muted-foreground">Loading saved styles...</p>
+              </Card>
+            ) : saved && saved.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {saved.map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary">{item.platform}</Badge>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => toggleSaved({ id: item.id, isSaved: false })}
+                          >
+                            <Bookmark className="w-4 h-4 fill-current" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => deleteAnalysis(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm font-medium">{item.title || "Style Analysis"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.source_url}</p>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setAnalysis(item.analysis_data as unknown as StyleAnalysis);
+                          setShowAnalysisModal(true);
+                        }}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Analysis
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-12 text-center">
+                <Bookmark className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">No Saved Inspiration Yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Analyze videos and save styles you love to use later
+                </p>
+                <Button variant="outline">Browse Trend Packs</Button>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="history" className="mt-6">
-            <Card className="p-12 text-center">
-              <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="font-semibold mb-2">No Analysis History</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Videos you analyze will appear here
-              </p>
-              <Button variant="outline">Paste a Link Above</Button>
-            </Card>
+            {historyLoading ? (
+              <Card className="p-12 text-center">
+                <Loader2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-spin" />
+                <p className="text-sm text-muted-foreground">Loading history...</p>
+              </Card>
+            ) : history && history.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {history.map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="secondary">{item.platform}</Badge>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => toggleSaved({ id: item.id, isSaved: !item.is_saved })}
+                          >
+                            <Bookmark className={cn("w-4 h-4", item.is_saved && "fill-current")} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => deleteAnalysis(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-sm font-medium">{item.title || "Style Analysis"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{item.source_url}</p>
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setAnalysis(item.analysis_data as unknown as StyleAnalysis);
+                          setShowAnalysisModal(true);
+                        }}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Analysis
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-12 text-center">
+                <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">No Analysis History</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Videos you analyze will appear here
+                </p>
+                <Button variant="outline">Paste a Link Above</Button>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -540,14 +652,20 @@ export default function InspirationHub() {
                       <Clock className="w-3 h-3" />
                       Pacing
                     </div>
-                    <p className="text-sm font-medium">{analysis.pacing}</p>
+                    <p className="text-sm font-medium">
+                      {typeof analysis.pacing === "string" 
+                        ? analysis.pacing 
+                        : analysis.pacing 
+                          ? `${analysis.pacing.rhythm} (${analysis.pacing.cutsPerSecond}/s)` 
+                          : "Fast cuts"}
+                    </p>
                   </Card>
                   <Card className="p-3">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                       <Type className="w-3 h-3" />
                       Font Style
                     </div>
-                    <p className="text-sm font-medium">{analysis.font}</p>
+                    <p className="text-sm font-medium">{analysis.font || "Bold uppercase"}</p>
                   </Card>
                 </div>
 
@@ -557,7 +675,7 @@ export default function InspirationHub() {
                     Color Theme
                   </div>
                   <div className="flex gap-2">
-                    {analysis.colorTheme.map((color, i) => (
+                    {(analysis.colorTheme || analysis.color?.palette || ["#FF6B35", "#2E2E2E", "#FFFFFF"]).map((color, i) => (
                       <div
                         key={i}
                         className="w-8 h-8 rounded-full border-2 border-border"
@@ -570,12 +688,12 @@ export default function InspirationHub() {
                 <Card className="p-3">
                   <h4 className="text-sm font-medium mb-2">Video Structure</h4>
                   <div className="space-y-2">
-                    {analysis.structure.map((segment, i) => (
+                    {(analysis.structure || []).map((segment, i) => (
                       <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
                         <span className="text-xs text-muted-foreground w-16 shrink-0">
-                          {segment.time}
+                          {segment.time || `${segment.duration || 3}s`}
                         </span>
-                        <span className="text-sm font-medium">{segment.label}</span>
+                        <span className="text-sm font-medium">{segment.label || segment.style || "Segment"}</span>
                       </div>
                     ))}
                   </div>
@@ -584,7 +702,7 @@ export default function InspirationHub() {
                 <Card className="p-3">
                   <h4 className="text-sm font-medium mb-2">Transitions Used</h4>
                   <div className="flex flex-wrap gap-2">
-                    {analysis.transitions.map((t, i) => (
+                    {(analysis.transitions || ["Cut", "Zoom"]).map((t, i) => (
                       <Badge key={i} variant="outline">
                         {t}
                       </Badge>
@@ -598,7 +716,7 @@ export default function InspirationHub() {
                 <Card className="p-3">
                   <h4 className="text-sm font-medium mb-2">Text Overlays</h4>
                   <div className="flex flex-wrap gap-2">
-                    {analysis.overlays.map((overlay, i) => (
+                    {(Array.isArray(analysis.overlays) ? analysis.overlays : analysis.hooks || ["WAIT FOR IT..."]).map((overlay, i) => (
                       <div
                         key={i}
                         className="px-3 py-1.5 rounded-full bg-black text-white text-sm font-bold border border-white/20"
@@ -612,7 +730,7 @@ export default function InspirationHub() {
                 <Card className="p-3">
                   <h4 className="text-sm font-medium mb-2">Hook Examples</h4>
                   <div className="space-y-2">
-                    {analysis.hooks.map((hook, i) => (
+                    {(analysis.hooks || ["Watch this transformation"]).map((hook, i) => (
                       <div key={i} className="p-2 rounded-lg bg-muted/50 text-sm italic">
                         "{hook}"
                       </div>
@@ -622,12 +740,18 @@ export default function InspirationHub() {
 
                 <Card className="p-3">
                   <h4 className="text-sm font-medium mb-2">CTA</h4>
-                  <p className="text-sm font-semibold text-primary">{analysis.cta}</p>
+                  <p className="text-sm font-semibold text-primary">{analysis.cta || "DM us for a quote"}</p>
                 </Card>
 
                 <Card className="p-3">
                   <h4 className="text-sm font-medium mb-2">Music / Audio</h4>
-                  <p className="text-sm text-muted-foreground">{analysis.music}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {typeof analysis.music === "string" 
+                      ? analysis.music 
+                      : analysis.music 
+                        ? `${analysis.music.genre} - ${analysis.music.energy} energy` 
+                        : "Trending audio"}
+                  </p>
                 </Card>
 
                 <Card className="border-primary/30 bg-primary/5 p-4 space-y-3">
@@ -643,7 +767,10 @@ export default function InspirationHub() {
                     variant="outline"
                     className="w-full"
                     onClick={() => {
-                      navigator.clipboard.writeText(analysis.overlays.join("\n"));
+                      const overlayTexts = Array.isArray(analysis.overlays) 
+                        ? analysis.overlays.join("\n") 
+                        : (analysis.hooks || []).join("\n");
+                      navigator.clipboard.writeText(overlayTexts);
                       toast.success("Overlay texts copied!");
                     }}
                   >
