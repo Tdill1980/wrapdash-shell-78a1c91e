@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Upload, Image, Video, Music, Folder, 
-  Grid3X3, List, X, Play, Download, Trash2, Camera
+  Grid3X3, List, X, Play, Download, Trash2, Sparkles, FileStack, CheckCircle, Lightbulb
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MediaUploader } from "./MediaUploader";
 import { MediaCard, MediaSelectMode } from "./MediaCard";
+import { TagEditorModal } from "./TagEditorModal";
 
 export interface MediaFile {
   id: string;
@@ -23,13 +24,22 @@ export interface MediaFile {
   brand: string;
   created_at: string;
   duration_seconds: number | null;
+  content_category?: string | null;
 }
 
-const FILTER_TYPES = [
+const FILE_TYPES = [
   { id: "all", label: "All", icon: Grid3X3 },
   { id: "image", label: "Images", icon: Image },
   { id: "video", label: "Videos", icon: Video },
   { id: "audio", label: "Audio", icon: Music },
+];
+
+const CATEGORY_TABS = [
+  { id: "all", label: "All", icon: Grid3X3 },
+  { id: "raw", label: "Raw", icon: Sparkles },
+  { id: "template", label: "Templates", icon: FileStack },
+  { id: "finished", label: "Finished", icon: CheckCircle },
+  { id: "inspiration", label: "Inspiration", icon: Lightbulb },
 ];
 
 export function MediaLibrary({ 
@@ -41,12 +51,14 @@ export function MediaLibrary({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [category, setCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showUploader, setShowUploader] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [tagEditorFile, setTagEditorFile] = useState<MediaFile | null>(null);
 
   const { data: files = [], isLoading, refetch } = useQuery({
-    queryKey: ["media-library", filterType],
+    queryKey: ["media-library", filterType, category],
     queryFn: async () => {
       let query = supabase
         .from("content_files")
@@ -57,20 +69,25 @@ export function MediaLibrary({
         query = query.eq("file_type", filterType);
       }
 
+      if (category !== "all") {
+        query = query.eq("content_category", category);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data as MediaFile[];
     },
   });
 
-  const filteredFiles = files.filter((file) => {
-    if (!searchQuery) return true;
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      file.original_filename?.toLowerCase().includes(searchLower) ||
-      file.tags?.some((tag) => tag.toLowerCase().includes(searchLower))
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim()) return files;
+    
+    const q = searchQuery.toLowerCase();
+    return files.filter((file) => 
+      file.original_filename?.toLowerCase().includes(q) ||
+      file.tags?.some((tag) => tag.toLowerCase().includes(q))
     );
-  });
+  }, [files, searchQuery]);
 
   const handleFileSelect = (file: MediaFile, mode?: MediaSelectMode) => {
     if (onSelect) {
@@ -93,7 +110,7 @@ export function MediaLibrary({
 
   return (
     <div className="space-y-4">
-      {/* Header - Mobile Responsive */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg sm:text-xl font-semibold">Media Library</h2>
         <Button onClick={() => setShowUploader(true)} size="sm" className="sm:size-default">
@@ -110,13 +127,29 @@ export function MediaLibrary({
         />
       )}
 
-      {/* Filters - Mobile Responsive */}
+      {/* Category Tabs */}
+      <Tabs value={category} onValueChange={setCategory} className="w-full">
+        <TabsList className="w-full justify-start gap-1 bg-muted/50 p-1 rounded-lg overflow-x-auto no-scrollbar">
+          {CATEGORY_TABS.map((cat) => (
+            <TabsTrigger 
+              key={cat.id} 
+              value={cat.id}
+              className="gap-1.5 px-3 py-2 data-[state=active]:bg-background"
+            >
+              <cat.icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{cat.label}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      {/* Search + Type Filters + View Toggle */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
         {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search files..."
+            placeholder="Search by name, tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-10"
@@ -133,11 +166,11 @@ export function MediaLibrary({
           )}
         </div>
 
-        {/* Type Filters - Scrollable on mobile */}
+        {/* Type Filters */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <Tabs value={filterType} onValueChange={setFilterType}>
             <TabsList className="h-10">
-              {FILTER_TYPES.map((type) => (
+              {FILE_TYPES.map((type) => (
                 <TabsTrigger 
                   key={type.id} 
                   value={type.id} 
@@ -172,7 +205,7 @@ export function MediaLibrary({
         </div>
       </div>
 
-      {/* Selected Count - Mobile Responsive */}
+      {/* Selected Count */}
       {selectedFiles.length > 0 && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-primary/10 rounded-lg">
           <span className="text-sm">
@@ -194,7 +227,7 @@ export function MediaLibrary({
         </div>
       )}
 
-      {/* Files Grid/List - Mobile Responsive */}
+      {/* Files Grid/List */}
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">
           Loading media files...
@@ -211,7 +244,6 @@ export function MediaLibrary({
           </CardContent>
         </Card>
       ) : viewMode === "grid" ? (
-        /* 2 columns on mobile, 4 on tablet, 6 on desktop */
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
           {filteredFiles.map((file) => (
             <MediaCard
@@ -220,62 +252,36 @@ export function MediaLibrary({
               selected={selectedFiles.includes(file.id)}
               onClick={handleFileSelect}
               selectionMode={selectionMode}
+              onEditTags={() => setTagEditorFile(file)}
+              onDelete={refetch}
             />
           ))}
         </div>
       ) : (
         <div className="space-y-2">
           {filteredFiles.map((file) => (
-            <div
+            <MediaCard
               key={file.id}
-              className={`flex items-center gap-3 sm:gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
-                selectedFiles.includes(file.id)
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-accent"
-              }`}
-              onClick={() => handleFileSelect(file)}
-            >
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                {file.thumbnail_url || file.file_type === "image" ? (
-                  <img
-                    src={file.thumbnail_url || file.file_url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : file.file_type === "video" ? (
-                  <Play className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
-                ) : (
-                  <Music className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">
-                  {file.original_filename || "Untitled"}
-                </p>
-                <div className="flex gap-1 mt-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {file.file_type}
-                  </Badge>
-                  {file.duration_seconds && (
-                    <Badge variant="outline" className="text-xs">
-                      {Math.floor(file.duration_seconds / 60)}:{(file.duration_seconds % 60).toString().padStart(2, "0")}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              {/* Hide tags on mobile to save space */}
-              {file.tags && file.tags.length > 0 && (
-                <div className="hidden sm:flex gap-1">
-                  {file.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+              file={file}
+              listMode
+              selected={selectedFiles.includes(file.id)}
+              onClick={handleFileSelect}
+              selectionMode={selectionMode}
+              onEditTags={() => setTagEditorFile(file)}
+              onDelete={refetch}
+            />
           ))}
         </div>
+      )}
+
+      {/* Tag Editor Modal */}
+      {tagEditorFile && (
+        <TagEditorModal
+          file={tagEditorFile}
+          open={!!tagEditorFile}
+          onClose={() => setTagEditorFile(null)}
+          onSave={refetch}
+        />
       )}
     </div>
   );
