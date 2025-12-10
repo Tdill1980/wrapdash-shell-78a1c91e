@@ -134,3 +134,9 @@ verify_jwt = false
 
 [functions.ai-generate-static-ad]
 verify_jwt = false
+
+[functions.ai-audio-beats]
+verify_jwt = false
+
+[functions.ai-generate-captions]
+verify_jwt = false
