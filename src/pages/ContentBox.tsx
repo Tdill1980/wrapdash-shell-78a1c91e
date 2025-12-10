@@ -25,7 +25,8 @@ import {
   Target,
   Repeat,
   Link2,
-  Zap
+  Zap,
+  Lightbulb
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ import { MediaLibrary } from "@/components/media/MediaLibrary";
 import { ContentPlannerCalendar } from "@/components/calendar";
 import { MetaVideoAdFastPanel } from "@/components/ads/MetaVideoAdFastPanel";
 import { StaticAdDesigner } from "@/components/ads/StaticAdDesigner";
+import { InspirationAIPanel } from "@/components/contentbox/InspirationAIPanel";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -510,6 +512,10 @@ export default function ContentBox() {
             <Grid className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Library</span>
           </TabsTrigger>
+          <TabsTrigger value="inspiration" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 data-[state=active]:from-purple-500/20 data-[state=active]:to-pink-500/20">
+            <Lightbulb className="w-4 h-4 sm:mr-2 text-purple-400" />
+            <span className="hidden sm:inline">Inspiration AI</span>
+          </TabsTrigger>
           <TabsTrigger value="sources" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4">
             <Link2 className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Sources</span>
@@ -557,6 +563,40 @@ export default function ContentBox() {
               }
             }}
           />
+        </TabsContent>
+
+        {/* Inspiration AI Tab */}
+        <TabsContent value="inspiration" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left: Media Grid */}
+            <div className="lg:col-span-2">
+              <MediaLibrary
+                selectionMode={true}
+                onSelect={(file, mode) => {
+                  setSelectedFiles(prev => {
+                    const exists = prev.find(f => f.id === file.id);
+                    if (exists) return prev.filter(f => f.id !== file.id);
+                    return [...prev, file as ContentFile];
+                  });
+                  toast.success(`Selected for AI: ${file.original_filename || 'Media file'}`);
+                }}
+              />
+            </div>
+            
+            {/* Right: AI Panel */}
+            <div>
+              <InspirationAIPanel 
+                selectedMediaIds={selectedFiles.map(f => f.id)}
+                onSelectHook={(hook) => {
+                  navigator.clipboard.writeText(hook);
+                  toast.success("Hook copied to clipboard!");
+                }}
+                onAdGenerated={(ad) => {
+                  toast.success("Ad package created! Check the output panel.");
+                }}
+              />
+            </div>
+          </div>
         </TabsContent>
 
         {/* Source Integrations Tab */}

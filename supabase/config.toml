@@ -173,3 +173,6 @@ verify_jwt = false
 
 [functions.seed-vehicle-dimensions]
 verify_jwt = false
+
+[functions.ai-generate-from-inspiration]
+verify_jwt = false
