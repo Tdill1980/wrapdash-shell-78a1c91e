@@ -58,6 +58,7 @@ import InspoScrubber from "./pages/organic/InspoScrubber";
 import AutoSplit from "./pages/organic/AutoSplit";
 import StaticCreator from "./pages/organic/StaticCreator";
 import Atomizer from "./pages/organic/Atomizer";
+import YouTubeEditor from "./pages/organic/YouTubeEditor";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -110,6 +111,7 @@ const App = () => (
             <Route path="/organic/auto-split" element={<AutoSplit />} />
             <Route path="/organic/static" element={<StaticCreator />} />
             <Route path="/organic/atomizer" element={<Atomizer />} />
+            <Route path="/organic/youtube-editor" element={<YouTubeEditor />} />
             <Route path="/ad-vault" element={<AdVault />} />
             <Route path="/paid-ads-performance" element={<PaidAdsPerformance />} />
             <Route path="/portfolio" element={<Portfolio />} />

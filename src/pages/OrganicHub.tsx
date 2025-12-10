@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Play,
   Atom,
+  Youtube,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,15 @@ export default function OrganicHub() {
       path: "/organic/atomizer",
       gradient: "from-[#00AFFF] to-[#4EEAFF]",
       badge: "AI",
+    },
+    {
+      id: "youtube_editor",
+      label: "YouTube AI Editor",
+      description: "Turn long-form videos into shorts, reels, ads, and micro-content.",
+      icon: <Youtube className="w-6 h-6" />,
+      path: "/organic/youtube-editor",
+      gradient: "from-[#CC0000] to-[#FF4444]",
+      badge: "Pro",
     },
   ];
 
