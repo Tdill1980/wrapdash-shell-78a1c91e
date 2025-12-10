@@ -28,6 +28,7 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [contentCategory, setContentCategory] = useState<string>("raw");
   const isMobile = useIsMobile();
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +152,7 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
             tags: tags.length > 0 ? tags : null,
             source: "upload",
             brand: "wpw",
+            content_category: contentCategory,
           });
 
         if (insertError) throw insertError;
@@ -289,6 +291,29 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
               })}
             </div>
           )}
+
+          {/* Category Selector */}
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "raw", label: "Raw" },
+                { id: "template", label: "Template" },
+                { id: "finished", label: "Finished" },
+                { id: "inspiration", label: "Inspiration" },
+              ].map((cat) => (
+                <Button
+                  key={cat.id}
+                  type="button"
+                  variant={contentCategory === cat.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setContentCategory(cat.id)}
+                >
+                  {cat.label}
+                </Button>
+              ))}
+            </div>
+          </div>
 
           {/* Tags */}
           <div className="space-y-2">
