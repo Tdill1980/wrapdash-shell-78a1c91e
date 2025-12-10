@@ -167,3 +167,6 @@ verify_jwt = false
 
 [functions.parse-voice-quote]
 verify_jwt = false
+
+[functions.analyze-inspo-image]
+verify_jwt = false
