@@ -225,15 +225,17 @@ export function MediaCard({
             Reel
           </Button>
 
-          <Button
-            size="sm"
-            variant="secondary"
-            className="w-full max-w-[120px] h-9 text-xs sm:text-sm"
-            onClick={(e) => { e.stopPropagation(); onClick(file, "static"); }}
-          >
-            <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
-            Static
-          </Button>
+          {isImage && (
+            <Button
+              size="sm"
+              variant="default"
+              className="w-full max-w-[120px] h-9 text-xs sm:text-sm bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+              onClick={(e) => { e.stopPropagation(); onClick(file, "static"); }}
+            >
+              <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+              Static Ad
+            </Button>
+          )}
 
           <Button
             size="sm"
