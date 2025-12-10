@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Car,
   Film,
+  Image,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
@@ -141,6 +142,17 @@ const navigationItems = [
         <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">ContentBox</span>
         <span className="text-white"> AI</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "Ad Vault", 
+    path: "/ad-vault", 
+    icon: Image,
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Ad </span>
+        <span className="bg-gradient-to-r from-[#405DE6] to-[#E1306C] bg-clip-text text-transparent">Vault</span>
       </span>
     )
   },

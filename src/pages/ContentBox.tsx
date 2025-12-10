@@ -34,6 +34,7 @@ import { ContentRepurposer } from "@/components/contentbox/ContentRepurposer";
 import { MediaLibrary } from "@/components/media/MediaLibrary";
 import { ContentPlannerCalendar } from "@/components/calendar";
 import { MetaVideoAdFastPanel } from "@/components/ads/MetaVideoAdFastPanel";
+import { StaticAdDesigner } from "@/components/ads/StaticAdDesigner";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -506,7 +507,11 @@ export default function ContentBox() {
               }
               if (mode === "static") {
                 setActiveTab("create");
-                setCreatorTab("ad-creator");
+                setCreatorTab("static-ad");
+              }
+              if (mode === "video-ad") {
+                setActiveTab("create");
+                setCreatorTab("video-ad-fast");
               }
             }}
           />
@@ -531,6 +536,9 @@ export default function ContentBox() {
               <TabsTrigger value="video-ad-fast">
                 <Target className="w-4 h-4 mr-2" /> Video Ad Fast
               </TabsTrigger>
+              <TabsTrigger value="static-ad">
+                <Image className="w-4 h-4 mr-2" /> Static Ad
+              </TabsTrigger>
               <TabsTrigger value="ad-creator">
                 <Target className="w-4 h-4 mr-2" /> Ad Creator
               </TabsTrigger>
@@ -551,6 +559,12 @@ export default function ContentBox() {
               <MetaVideoAdFastPanel
                 videoUrl={selectedFiles[0]?.file_type === "video" ? selectedFiles[0]?.file_url : undefined}
                 videoThumbnail={selectedFiles[0]?.thumbnail_url || undefined}
+              />
+            </TabsContent>
+
+            <TabsContent value="static-ad">
+              <StaticAdDesigner
+                mediaUrl={selectedFiles[0]?.file_type === "image" ? selectedFiles[0]?.file_url : undefined}
               />
             </TabsContent>
 
