@@ -83,6 +83,7 @@ export default function ReelBuilder() {
   const [activeTab, setActiveTab] = useState("clip");
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [reelConcept, setReelConcept] = useState<string | null>(null);
+  const [isAutoProcessing, setIsAutoProcessing] = useState(false);
 
   const beatSync = useReelBeatSync();
   const captionsEngine = useReelCaptions();
@@ -90,9 +91,16 @@ export default function ReelBuilder() {
   const editorBrain = useEditorBrain();
   const smartAssist = useSmartAssist();
 
-  // Handle auto-created clips from ContentBox
+  // Handle auto-created clips from ContentBox - FULL AUTO PROCESSING
   useEffect(() => {
-    if (autoCreateState?.autoCreatedClips && autoCreateState.autoCreatedClips.length > 0) {
+    const runAutoProcess = async () => {
+      if (!autoCreateState?.autoCreatedClips || autoCreateState.autoCreatedClips.length === 0) {
+        return;
+      }
+
+      setIsAutoProcessing(true);
+
+      // Step 1: Load clips with AI-suggested trims already applied
       const newClips: Clip[] = autoCreateState.autoCreatedClips
         .sort((a, b) => a.order - b.order)
         .map((ac) => ({
@@ -111,20 +119,56 @@ export default function ReelBuilder() {
       setClips(newClips);
       setReelConcept(autoCreateState.reelConcept || null);
 
-      toast.success(`AI loaded ${newClips.length} clips for your reel!`, {
+      toast.success(`AI editing ${newClips.length} clips...`, {
         description: autoCreateState.reelConcept,
       });
 
-      // Auto-run Smart Assist if requested
+      // Step 2: Run Smart Assist to analyze and create creative plan
       if (autoCreateState.autoRunSmartAssist && newClips.length > 0) {
-        setTimeout(() => {
-          smartAssist.runSmartAssist(newClips);
-        }, 500);
+        const result = await smartAssist.runSmartAssist(newClips);
+
+        // Step 3: Auto-apply the AI plan
+        if (result?.creative?.sequence) {
+          const editedClips: Clip[] = result.creative.sequence.map((seq, idx) => {
+            const originalClip = newClips[idx] || newClips[0];
+            return {
+              ...originalClip,
+              id: originalClip?.id || `ai_${idx}`,
+              name: seq.label?.replace(/_/g, " ") || originalClip.name,
+              url: originalClip?.url || newClips[0].url,
+              duration: seq.end - seq.start,
+              trimStart: seq.start,
+              trimEnd: seq.end,
+              speed: seq.speed || 1,
+            };
+          });
+
+          setClips(editedClips);
+          
+          // Step 4: Apply brand overlays if available
+          if (autoCreateState.suggestedHook) {
+            overlaysEngine.addOverlay({
+              text: autoCreateState.suggestedHook,
+              style: "modern",
+              position: "top-center",
+              start: 0,
+              end: 3,
+              color: "#E1306C",
+            });
+          }
+
+          toast.success("AI Reel Created!", {
+            description: `${editedClips.length} clips edited and ready to render`,
+          });
+        }
       }
 
+      setIsAutoProcessing(false);
       // Clear location state to prevent re-triggering
       window.history.replaceState({}, document.title);
-    }
+    };
+
+    runAutoProcess();
   }, [autoCreateState]);
 
   const handleRunSmartAssist = async () => {
@@ -205,7 +249,25 @@ export default function ReelBuilder() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* AI Processing Overlay */}
+      {(isAutoProcessing || smartAssist.loading) && (
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse" />
+              <Loader2 className="w-10 h-10 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">AI Creating Your Reel</h2>
+              <p className="text-muted-foreground mt-1">
+                Analyzing clips • Choosing best scenes • Editing timeline
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -217,6 +279,7 @@ export default function ReelBuilder() {
               <h1 className="font-semibold text-lg">Multi-Clip Reel Builder</h1>
               <p className="text-xs text-muted-foreground">
                 {clips.length} clips • {totalDuration.toFixed(1)}s total
+                {reelConcept && <span className="ml-2 text-primary">• {reelConcept}</span>}
               </p>
             </div>
           </div>
@@ -267,8 +330,37 @@ export default function ReelBuilder() {
                       <Play className="w-12 h-12 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Add clips to preview</p>
                     </div>
+                  ) : selectedClip ? (
+                    <>
+                      <video
+                        key={selectedClip}
+                        src={clips.find(c => c.id === selectedClip)?.url}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        autoPlay={isPlaying}
+                        loop
+                        muted
+                        playsInline
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="absolute z-10"
+                        onClick={() => setIsPlaying(!isPlaying)}
+                      >
+                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                      </Button>
+                    </>
                   ) : (
                     <>
+                      <video
+                        src={clips[0]?.url}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        autoPlay={isPlaying}
+                        loop
+                        muted
+                        playsInline
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       <Button
                         size="icon"
