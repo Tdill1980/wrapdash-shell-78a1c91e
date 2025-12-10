@@ -116,3 +116,9 @@ verify_jwt = false
 
 [functions.ai-weekly-plan]
 verify_jwt = false
+
+[functions.mux-upload]
+verify_jwt = false
+
+[functions.mux-webhook]
+verify_jwt = false
