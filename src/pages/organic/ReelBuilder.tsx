@@ -596,16 +596,22 @@ export default function ReelBuilder() {
                       <div
                         key={clip.id}
                         className={cn(
-                          "shrink-0 w-24 rounded-lg border-2 cursor-pointer transition-all",
+                          "shrink-0 w-32 rounded-lg border-2 cursor-pointer transition-all",
                           selectedClip === clip.id
                             ? "border-primary bg-primary/10"
                             : "border-border hover:border-primary/50"
                         )}
                         onClick={() => setSelectedClip(clip.id)}
                       >
-                        <div className="aspect-[9/16] bg-muted rounded-t-md flex items-center justify-center relative group">
-                          <GripVertical className="w-4 h-4 text-muted-foreground absolute top-1 left-1 opacity-0 group-hover:opacity-100" />
-                          <span className="text-xs font-medium">{index + 1}</span>
+                        <div className="aspect-video bg-muted rounded-t-md flex items-center justify-center relative group overflow-hidden">
+                          {clip.thumbnail ? (
+                            <img src={clip.thumbnail} alt="" className="w-full h-full object-cover" />
+                          ) : clip.url ? (
+                            <video src={clip.url} className="w-full h-full object-cover" muted />
+                          ) : (
+                            <span className="text-lg font-bold text-primary">{index + 1}</span>
+                          )}
+                          <GripVertical className="w-4 h-4 text-white drop-shadow absolute top-1 left-1 opacity-0 group-hover:opacity-100" />
                           <Button
                             size="icon"
                             variant="destructive"
@@ -617,8 +623,16 @@ export default function ReelBuilder() {
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
+                          {/* Show suggested overlay text */}
+                          {clip.suggestedOverlay && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                              <p className="text-[8px] text-white font-bold leading-tight truncate">
+                                {clip.suggestedOverlay}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        <div className="p-1.5 text-center">
+                        <div className="p-1.5">
                           <p className="text-[10px] font-medium truncate">{clip.name}</p>
                           <p className="text-[9px] text-muted-foreground">
                             {(clip.trimEnd - clip.trimStart).toFixed(1)}s
