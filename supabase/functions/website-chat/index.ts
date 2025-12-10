@@ -88,7 +88,7 @@ serve(async (req) => {
   }
 
   try {
-    const { org, agent, mode, session_id, message_text, page_url, referrer } = await req.json();
+    const { org, agent, mode, session_id, message_text, page_url, referrer, geo } = await req.json();
 
     console.log('[Luigi] Received message:', { org, session_id, message_text: message_text?.substring(0, 50) });
 
@@ -163,7 +163,7 @@ serve(async (req) => {
 
       contactId = newContact?.id || null;
 
-      // Create conversation with initial state
+      // Create conversation with initial state and geo
       const { data: newConvo, error: convoError } = await supabase
         .from('conversations')
         .insert({
@@ -173,7 +173,7 @@ serve(async (req) => {
           status: 'open',
           priority: 'normal',
           chat_state: { stage: 'initial', escalations_sent: [] },
-          metadata: { session_id, agent, org, mode, page_url }
+          metadata: { session_id, agent, org, mode, page_url, geo: geo || null }
         })
         .select()
         .single();
