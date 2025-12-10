@@ -151,7 +151,7 @@ serve(async (req) => {
         }
       }
 
-      // Build modifications object
+      // Build modifications object with SAFE ZONE text positioning
       const modifications: Record<string, string | number | boolean> = {
         'Video.source': video_url,
       };
@@ -163,20 +163,52 @@ serve(async (req) => {
         });
       }
 
-      // Add text overlays
+      // SAFE ZONE TEXT SETTINGS - Keep text readable and within 9:16 bounds
+      // Safe zone: 10% margins on all sides = 80% of screen width for text
+      const textSettings = {
+        // Ensure text fits in safe zone with proper sizing
+        width: '80%',
+        x: '50%',
+        x_alignment: '50%',
+        font_size: '48', // Readable but not oversized
+        line_height: '120%',
+      };
+
+      // Add text overlays with proper positioning
       if (headline) {
-        modifications['Text-1.text'] = headline;
+        // Truncate if too long - max 20 chars
+        const shortHeadline = headline.length > 20 ? headline.substring(0, 20) : headline;
+        modifications['Text-1.text'] = shortHeadline.toUpperCase();
+        modifications['Text-1.width'] = textSettings.width;
+        modifications['Text-1.x'] = textSettings.x;
+        modifications['Text-1.x_alignment'] = textSettings.x_alignment;
+        modifications['Text-1.font_size'] = '56';
+        modifications['Text-1.y'] = '15%'; // Top safe zone
       }
       if (subtext) {
-        modifications['Text-2.text'] = subtext;
+        const shortSubtext = subtext.length > 25 ? subtext.substring(0, 25) : subtext;
+        modifications['Text-2.text'] = shortSubtext;
+        modifications['Text-2.width'] = textSettings.width;
+        modifications['Text-2.x'] = textSettings.x;
+        modifications['Text-2.x_alignment'] = textSettings.x_alignment;
+        modifications['Text-2.font_size'] = '36';
+        modifications['Text-2.y'] = '85%'; // Bottom safe zone
       }
 
-      // Add dynamic overlays from request (AI-generated)
+      // Add dynamic overlays from request (AI-generated) with safe zone positioning
       if (requestOverlays && requestOverlays.length > 0) {
         requestOverlays.forEach((overlay, idx) => {
-          modifications[`Overlay-${idx + 1}.text`] = overlay.text;
+          // Truncate overlay text to fit
+          const shortText = overlay.text.length > 18 ? overlay.text.substring(0, 18) : overlay.text;
+          modifications[`Overlay-${idx + 1}.text`] = shortText.toUpperCase();
           modifications[`Overlay-${idx + 1}.time`] = overlay.time;
           modifications[`Overlay-${idx + 1}.duration`] = overlay.duration;
+          modifications[`Overlay-${idx + 1}.width`] = textSettings.width;
+          modifications[`Overlay-${idx + 1}.x`] = textSettings.x;
+          modifications[`Overlay-${idx + 1}.x_alignment`] = textSettings.x_alignment;
+          modifications[`Overlay-${idx + 1}.font_size`] = '52';
+          // Alternate positioning: first overlay top, others center
+          modifications[`Overlay-${idx + 1}.y`] = idx === 0 ? '20%' : '50%';
         });
       }
 
@@ -192,27 +224,34 @@ serve(async (req) => {
         // Apply text color from inspo
         if (inspo_style.text_color) {
           modifications['Text-1.fill_color'] = inspo_style.text_color;
+          modifications['Text-2.fill_color'] = inspo_style.text_color;
           modifications['Overlay-1.fill_color'] = inspo_style.text_color;
           modifications['Overlay-2.fill_color'] = inspo_style.text_color;
+          modifications['Overlay-3.fill_color'] = inspo_style.text_color;
         }
         
-        // Apply accent color
+        // Apply accent color for secondary text
         if (inspo_style.accent_color) {
           modifications['Text-2.fill_color'] = inspo_style.accent_color;
         }
         
-        // Apply text shadow if detected in inspo
+        // Apply text shadow if detected in inspo - stronger for readability
         if (inspo_style.text_shadow) {
-          modifications['Text-1.shadow_blur'] = 8;
-          modifications['Text-1.shadow_color'] = 'rgba(0,0,0,0.7)';
-          modifications['Text-2.shadow_blur'] = 8;
-          modifications['Text-2.shadow_color'] = 'rgba(0,0,0,0.7)';
+          modifications['Text-1.shadow_blur'] = 12;
+          modifications['Text-1.shadow_color'] = 'rgba(0,0,0,0.9)';
+          modifications['Text-1.shadow_x'] = 2;
+          modifications['Text-1.shadow_y'] = 2;
+          modifications['Text-2.shadow_blur'] = 10;
+          modifications['Text-2.shadow_color'] = 'rgba(0,0,0,0.8)';
+          modifications['Overlay-1.shadow_blur'] = 12;
+          modifications['Overlay-1.shadow_color'] = 'rgba(0,0,0,0.9)';
         }
         
-        // Apply font weight
+        // Apply font weight - bold for hooks
         if (inspo_style.font_weight === 'black' || inspo_style.font_weight === 'bold') {
           modifications['Text-1.font_weight'] = '900';
           modifications['Text-2.font_weight'] = '700';
+          modifications['Overlay-1.font_weight'] = '900';
         }
       } else {
         // Fallback: Apply brand colors if available from merged overlays OR brand_defaults
@@ -225,6 +264,12 @@ serve(async (req) => {
             modifications['Text-2.fill_color'] = overlays.secondary_color;
           }
         }
+        
+        // Default: Add text shadow for readability on video
+        modifications['Text-1.shadow_blur'] = 10;
+        modifications['Text-1.shadow_color'] = 'rgba(0,0,0,0.8)';
+        modifications['Overlay-1.shadow_blur'] = 10;
+        modifications['Overlay-1.shadow_color'] = 'rgba(0,0,0,0.8)';
       }
 
       console.log('[render-video-reel] Starting render with template:', template_id || DEFAULT_TEMPLATE_ID);
