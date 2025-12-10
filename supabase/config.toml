@@ -170,3 +170,6 @@ verify_jwt = false
 
 [functions.analyze-inspo-image]
 verify_jwt = false
+
+[functions.seed-vehicle-dimensions]
+verify_jwt = false
