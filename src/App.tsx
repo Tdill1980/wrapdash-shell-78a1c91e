@@ -50,6 +50,7 @@ import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGen
 import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
 import InstagramTokenExchange from "./pages/InstagramTokenExchange";
 import AICorrectionsAdmin from "./pages/AICorrectionsAdmin";
+import AdVault from "./pages/AdVault";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -96,6 +97,7 @@ const App = () => (
             <Route path="/contentbox" element={<ContentBox />} />
             <Route path="/content-creator" element={<ContentCreator />} />
             <Route path="/content-schedule" element={<ContentSchedule />} />
+            <Route path="/ad-vault" element={<AdVault />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />
