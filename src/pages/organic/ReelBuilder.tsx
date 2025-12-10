@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,22 +47,85 @@ interface Clip {
   speed?: number;
   hookScore?: number;
   energyLevel?: number;
+  suggestedOverlay?: string;
+  reason?: string;
+}
+
+interface AutoCreateState {
+  autoCreatedClips?: Array<{
+    id: string;
+    order: number;
+    trim_start: number;
+    trim_end: number;
+    reason?: string;
+    suggested_overlay?: string;
+    file_url?: string;
+    thumbnail_url?: string;
+    original_filename?: string;
+    duration_seconds?: number;
+  }>;
+  reelConcept?: string;
+  suggestedHook?: string;
+  suggestedCta?: string;
+  musicVibe?: string;
+  autoRunSmartAssist?: boolean;
 }
 
 export default function ReelBuilder() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const autoCreateState = location.state as AutoCreateState | undefined;
+
   const [clips, setClips] = useState<Clip[]>([]);
   const [selectedClip, setSelectedClip] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("clip");
   const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [reelConcept, setReelConcept] = useState<string | null>(null);
 
   const beatSync = useReelBeatSync();
   const captionsEngine = useReelCaptions();
   const overlaysEngine = useReelOverlays();
   const editorBrain = useEditorBrain();
   const smartAssist = useSmartAssist();
+
+  // Handle auto-created clips from ContentBox
+  useEffect(() => {
+    if (autoCreateState?.autoCreatedClips && autoCreateState.autoCreatedClips.length > 0) {
+      const newClips: Clip[] = autoCreateState.autoCreatedClips
+        .sort((a, b) => a.order - b.order)
+        .map((ac) => ({
+          id: ac.id,
+          name: ac.original_filename || `Clip ${ac.order}`,
+          url: ac.file_url || "",
+          duration: ac.duration_seconds || 10,
+          thumbnail: ac.thumbnail_url,
+          trimStart: ac.trim_start || 0,
+          trimEnd: ac.trim_end || (ac.duration_seconds || 10),
+          speed: 1,
+          suggestedOverlay: ac.suggested_overlay,
+          reason: ac.reason,
+        }));
+
+      setClips(newClips);
+      setReelConcept(autoCreateState.reelConcept || null);
+
+      toast.success(`AI loaded ${newClips.length} clips for your reel!`, {
+        description: autoCreateState.reelConcept,
+      });
+
+      // Auto-run Smart Assist if requested
+      if (autoCreateState.autoRunSmartAssist && newClips.length > 0) {
+        setTimeout(() => {
+          smartAssist.runSmartAssist(newClips);
+        }, 500);
+      }
+
+      // Clear location state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [autoCreateState]);
 
   const handleRunSmartAssist = async () => {
     await smartAssist.runSmartAssist(clips);

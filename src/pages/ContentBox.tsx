@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { useContentBox, ContentFile, ContentProject, ContentCalendarEntry } from "@/hooks/useContentBox";
+import { useAutoCreateReel } from "@/hooks/useAutoCreateReel";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +24,8 @@ import {
   Scissors,
   Target,
   Repeat,
-  Link2
+  Link2,
+  Zap
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -328,6 +331,7 @@ function CalendarView({ calendar }: { calendar: ContentCalendarEntry[] }) {
 }
 
 export default function ContentBox() {
+  const navigate = useNavigate();
   const { 
     files, 
     projects, 
@@ -342,6 +346,8 @@ export default function ContentBox() {
     repurposeContent
   } = useContentBox();
 
+  const autoCreateReel = useAutoCreateReel();
+
   const [selectedFiles, setSelectedFiles] = useState<ContentFile[]>([]);
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [brandFilter, setBrandFilter] = useState('all');
@@ -351,6 +357,26 @@ export default function ContentBox() {
   const [creatorTab, setCreatorTab] = useState('video-editor');
   const [syncingSource, setSyncingSource] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+
+  const handleAutoCreateReel = async () => {
+    const result = await autoCreateReel.autoCreate({
+      filterCategory: typeFilter === 'video' ? undefined : typeFilter,
+    });
+
+    if (result && result.selected_videos.length > 0) {
+      // Navigate to ReelBuilder with pre-selected clips
+      navigate("/organic/reel-builder", {
+        state: {
+          autoCreatedClips: result.selected_videos,
+          reelConcept: result.reel_concept,
+          suggestedHook: result.suggested_hook,
+          suggestedCta: result.suggested_cta,
+          musicVibe: result.music_vibe,
+          autoRunSmartAssist: true,
+        },
+      });
+    }
+  };
 
 
   const handleConnectSource = (source: string) => {
@@ -433,6 +459,22 @@ export default function ContentBox() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
+          {/* AI Auto-Create Reel Button */}
+          <Button 
+            size="sm"
+            className="sm:size-default bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            onClick={handleAutoCreateReel}
+            disabled={autoCreateReel.loading}
+          >
+            {autoCreateReel.loading ? (
+              <Loader2 className="w-4 h-4 animate-spin sm:mr-2" />
+            ) : (
+              <Zap className="w-4 h-4 sm:mr-2" />
+            )}
+            <span className="hidden sm:inline">AI Auto-Create Reel</span>
+            <span className="sm:hidden">Auto</span>
+          </Button>
+
           <Button 
             variant="outline" 
             size="sm"

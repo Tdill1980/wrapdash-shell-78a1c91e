@@ -161,3 +161,6 @@ verify_jwt = false
 
 [functions.analyze-inspo-video]
 verify_jwt = false
+
+[functions.ai-auto-create-reel]
+verify_jwt = false
