@@ -36,10 +36,16 @@ import {
   Bookmark,
   Wand2,
   Trash2,
+  FolderOpen,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useInspoAnalysis, StyleAnalysis as HookStyleAnalysis } from "@/hooks/useInspoAnalysis";
+import { useInspoLibrary, InspoFile } from "@/hooks/useInspoLibrary";
+import { InspoUploadModal } from "@/components/inspo/InspoUploadModal";
+import { InspoImageCard } from "@/components/inspo/InspoImageCard";
 
 // Local interface for display in modal (matches what AI returns)
 interface StyleAnalysis {
@@ -179,10 +185,14 @@ export default function InspirationHub() {
   const [analysis, setAnalysis] = useState<StyleAnalysis | null>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("discover");
+  const [activeTab, setActiveTab] = useState("library");
   const [selectedPack, setSelectedPack] = useState<TrendPack | null>(null);
 
   const { analyzeVideo, analyzing, history, historyLoading, saved, savedLoading, toggleSaved, deleteAnalysis } = useInspoAnalysis();
+  const { library, isLoading: libraryLoading, uploadFile, isUploading, deleteFile } = useInspoLibrary();
+  const [analyzingImageId, setAnalyzingImageId] = useState<string | null>(null);
+  const [imageAnalysis, setImageAnalysis] = useState<any>(null);
+  const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false);
 
   const detectPlatform = (inputUrl: string) => {
     if (inputUrl.includes("instagram.com")) return "Instagram";
@@ -255,6 +265,48 @@ export default function InspirationHub() {
       default:
         return <Video className="w-3 h-3" />;
     }
+  };
+
+  // Handle AI analysis of uploaded image
+  const handleAnalyzeImage = async (file: InspoFile) => {
+    setAnalyzingImageId(file.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      let organizationId = null;
+      if (user) {
+        const { data: orgMember } = await supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", user.id)
+          .single();
+        organizationId = orgMember?.organization_id;
+      }
+
+      const { data, error } = await supabase.functions.invoke("analyze-inspo-image", {
+        body: { imageUrl: file.file_url, organizationId, contentFileId: file.id },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setImageAnalysis(data.analysis);
+      setShowImageAnalysisModal(true);
+      toast.success("Style analysis complete!");
+    } catch (err) {
+      console.error("Analysis error:", err);
+      toast.error("Failed to analyze image");
+    } finally {
+      setAnalyzingImageId(null);
+    }
+  };
+
+  // Generate similar content based on analyzed style
+  const handleGenerateSimilar = (file: InspoFile) => {
+    toast.info("Opening Ad Creator with this style...");
+    navigate("/contentbox", { state: { inspoFile: file } });
   };
 
   return (
@@ -357,6 +409,10 @@ export default function InspirationHub() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
+            <TabsTrigger value="library">
+              <FolderOpen className="w-4 h-4 mr-2" />
+              My Library
+            </TabsTrigger>
             <TabsTrigger value="discover">
               <TrendingUp className="w-4 h-4 mr-2" />
               Discover
@@ -370,6 +426,52 @@ export default function InspirationHub() {
               History
             </TabsTrigger>
           </TabsList>
+
+          {/* My Library Tab - Uploaded Content */}
+          <TabsContent value="library" className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-primary" />
+                My Uploaded Inspiration
+              </h3>
+              <Button onClick={() => setUploadModalOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload More
+              </Button>
+            </div>
+
+            {libraryLoading ? (
+              <Card className="p-12 text-center">
+                <Loader2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-spin" />
+                <p className="text-sm text-muted-foreground">Loading your library...</p>
+              </Card>
+            ) : library.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {library.map((file) => (
+                  <InspoImageCard
+                    key={file.id}
+                    file={file}
+                    onAnalyze={handleAnalyzeImage}
+                    onDelete={deleteFile}
+                    onGenerateSimilar={handleGenerateSimilar}
+                    isAnalyzing={analyzingImageId === file.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="p-12 text-center">
+                <FolderOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">No Uploads Yet</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload your Canva ads, reels, or any content to analyze their styles
+                </p>
+                <Button onClick={() => setUploadModalOpen(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Your First File
+                </Button>
+              </Card>
+            )}
+          </TabsContent>
 
           <TabsContent value="discover" className="space-y-8 mt-6">
             {/* Trend Packs */}
@@ -788,22 +890,154 @@ export default function InspirationHub() {
         </DialogContent>
       </Dialog>
 
-      {/* Upload Modal */}
-      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
-        <DialogContent>
+      {/* Upload Modal - Real Upload */}
+      <InspoUploadModal
+        open={uploadModalOpen}
+        onOpenChange={setUploadModalOpen}
+        onUpload={uploadFile}
+        isUploading={isUploading}
+      />
+
+      {/* Image Analysis Modal */}
+      <Dialog open={showImageAnalysisModal} onOpenChange={setShowImageAnalysisModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Upload Inspiration Video</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Image Style Analysis
+            </DialogTitle>
             <DialogDescription>
-              Upload a video file directly to analyze its style
+              AI has extracted the visual style and design elements
             </DialogDescription>
           </DialogHeader>
-          <div className="border-2 border-dashed border-border rounded-xl p-12 text-center">
-            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-4">
-              Drag and drop a video file, or click to browse
-            </p>
-            <Button variant="outline">Choose File</Button>
-          </div>
+
+          {imageAnalysis && (
+            <div className="space-y-4 mt-4">
+              {/* Style Name */}
+              <div className="flex items-center justify-between">
+                <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+                  {imageAnalysis.styleName || "Analyzed Style"}
+                </span>
+              </div>
+
+              {/* Color Palette */}
+              {imageAnalysis.colorPalette && (
+                <Card className="p-4">
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Color Palette
+                  </h4>
+                  <div className="flex gap-2 mb-2">
+                    {imageAnalysis.colorPalette.map((color: string, i: number) => (
+                      <div
+                        key={i}
+                        className="w-12 h-12 rounded-lg shadow-sm border cursor-pointer hover:scale-110 transition-transform"
+                        style={{ backgroundColor: color }}
+                        title={color}
+                        onClick={() => {
+                          navigator.clipboard.writeText(color);
+                          toast.success(`Copied ${color}`);
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{imageAnalysis.colorMood}</p>
+                </Card>
+              )}
+
+              {/* Typography */}
+              {imageAnalysis.typography && (
+                <Card className="p-4">
+                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Type className="w-4 h-4" />
+                    Typography
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-muted-foreground">Style:</span> {imageAnalysis.typography.style}</div>
+                    <div><span className="text-muted-foreground">Weight:</span> {imageAnalysis.typography.weight}</div>
+                    <div><span className="text-muted-foreground">Case:</span> {imageAnalysis.typography.case}</div>
+                    <div><span className="text-muted-foreground">Position:</span> {imageAnalysis.typography.position}</div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Hooks & CTA */}
+              <div className="grid grid-cols-2 gap-4">
+                {imageAnalysis.hooks && imageAnalysis.hooks.length > 0 && (
+                  <Card className="p-4">
+                    <h4 className="text-sm font-medium mb-2">Hooks</h4>
+                    <div className="space-y-1">
+                      {imageAnalysis.hooks.map((hook: string, i: number) => (
+                        <p key={i} className="text-sm italic text-muted-foreground">"{hook}"</p>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+                {imageAnalysis.cta && (
+                  <Card className="p-4">
+                    <h4 className="text-sm font-medium mb-2">CTA</h4>
+                    <p className="text-sm font-semibold text-primary">{imageAnalysis.cta}</p>
+                  </Card>
+                )}
+              </div>
+
+              {/* Marketing Angle */}
+              {imageAnalysis.marketingAngle && (
+                <Card className="p-4">
+                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    Marketing Approach
+                  </h4>
+                  <p className="text-sm text-muted-foreground">{imageAnalysis.marketingAngle}</p>
+                  {imageAnalysis.targetEmotion && (
+                    <Badge className="mt-2" variant="secondary">Target Emotion: {imageAnalysis.targetEmotion}</Badge>
+                  )}
+                </Card>
+              )}
+
+              {/* Recommendations */}
+              {imageAnalysis.recommendations && (
+                <Card className="p-4 border-primary/30 bg-primary/5">
+                  <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <Wand2 className="w-4 h-4" />
+                    AI Recommendations
+                  </h4>
+                  <ul className="space-y-1">
+                    {imageAnalysis.recommendations.map((rec: string, i: number) => (
+                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    navigate("/contentbox", { state: { styleAnalysis: imageAnalysis } });
+                    setShowImageAnalysisModal(false);
+                  }}
+                >
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Generate Similar Ad
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(imageAnalysis, null, 2));
+                    toast.success("Style JSON copied!");
+                  }}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Style
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
