@@ -695,52 +695,94 @@ export default function ReelBuilder() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Preview + Timeline */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Video Upload Zone - Shows when no clips */}
+            {/* Empty State - AI Auto-Create from Library (Primary) */}
             {clips.length === 0 && (
-              <Card className="border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
-                <CardContent className="p-6">
-                  <div
-                    {...getRootProps()}
-                    className={cn(
-                      "aspect-[9/16] max-h-[400px] mx-auto rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all",
-                      isDragActive 
-                        ? "bg-primary/20 border-2 border-primary scale-[1.02]" 
-                        : "bg-background/50 hover:bg-primary/10",
-                      (isUploading || isAutoProcessing) && "pointer-events-none opacity-60"
-                    )}
-                  >
-                    <input {...getInputProps()} />
-                    {isUploading || isAutoProcessing ? (
-                      <div className="text-center space-y-3">
-                        <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
-                        <p className="font-semibold text-foreground">
-                          {isUploading ? "Uploading..." : "AI Analyzing Video..."}
-                        </p>
-                        <p className="text-sm text-muted-foreground">Finding best scenes for your reel</p>
-                      </div>
-                    ) : isDragActive ? (
-                      <div className="text-center">
-                        <Video className="w-16 h-16 mx-auto text-primary mb-3" />
-                        <p className="font-semibold text-primary">Drop video here</p>
-                      </div>
-                    ) : (
+              <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
+                <CardContent className="p-8">
+                  {isAutoProcessing ? (
+                    <div className="aspect-[9/16] max-h-[500px] mx-auto rounded-xl flex flex-col items-center justify-center bg-background/50">
                       <div className="text-center space-y-4">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center mx-auto">
-                          <Upload className="w-10 h-10 text-white" />
+                        <div className="relative">
+                          <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse" />
+                          <Loader2 className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
                         </div>
                         <div>
-                          <p className="font-semibold text-lg text-foreground">Drop a video here</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            AI will find the best scenes automatically
+                          <p className="font-bold text-xl text-foreground">AI Creating Your Reel</p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Scanning your library • Selecting best clips • Learning your style
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-[9/16] max-h-[500px] mx-auto rounded-xl flex flex-col items-center justify-center bg-background/30">
+                      <div className="text-center space-y-6 max-w-sm">
+                        {/* Primary Action - AI Create from Library */}
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center mx-auto shadow-lg shadow-purple-500/30">
+                          <Brain className="w-12 h-12 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-2xl text-foreground">AI Auto-Create</h3>
+                          <p className="text-muted-foreground mt-2">
+                            AI will scan your uploaded videos, pick the best clips, and create a scroll-stopping reel
+                          </p>
+                        </div>
+                        
+                        {/* Format Selection */}
+                        <div className="space-y-2">
+                          <DaraFormatSelector 
+                            value={selectedDaraFormat} 
+                            onChange={setSelectedDaraFormat}
+                          />
+                        </div>
+
+                        {/* Main CTA */}
+                        <Button 
+                          size="lg"
+                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-lg py-6"
+                          onClick={() => handleAIAutoCreate()}
+                          disabled={autoCreateReel.loading}
+                        >
+                          <Sparkles className="w-5 h-5 mr-2" />
+                          Create Reel from My Library
+                        </Button>
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
                           <Sparkles className="w-4 h-4 text-primary" />
-                          <span>Powered by Dara Denney AI</span>
+                          <span>Powered by Dara Denney AI + Your Inspiration</span>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="relative py-2">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-border/50" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-card px-2 text-muted-foreground">or</span>
+                          </div>
+                        </div>
+
+                        {/* Secondary Actions */}
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1"
+                            onClick={() => setShowLibraryModal(true)}
+                          >
+                            <Video className="w-4 h-4 mr-1.5" />
+                            Pick Clips
+                          </Button>
+                          <div {...getRootProps()} className="flex-1">
+                            <input {...getInputProps()} />
+                            <Button variant="outline" className="w-full" disabled={isUploading}>
+                              <Upload className="w-4 h-4 mr-1.5" />
+                              Upload New
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
