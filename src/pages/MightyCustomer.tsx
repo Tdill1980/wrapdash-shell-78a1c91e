@@ -146,13 +146,17 @@ export default function MightyCustomer() {
     const vehicleYear = parsedData.vehicleYear || parsedData.year || '';
     const vehicleMake = parsedData.vehicleMake || parsedData.make || '';
     const vehicleModel = parsedData.vehicleModel || parsedData.model || '';
+    const customerName = parsedData.customerName || '';
+    const email = parsedData.email || '';
+    const phone = parsedData.phone || '';
+    const company = parsedData.companyName || '';
     
     setCustomerData(prev => ({
       ...prev,
-      name: parsedData.customerName || prev.name,
-      company: parsedData.companyName || prev.company,
-      phone: parsedData.phone || prev.phone,
-      email: parsedData.email || prev.email,
+      name: customerName || prev.name,
+      company: company || prev.company,
+      phone: phone || prev.phone,
+      email: email || prev.email,
       vehicleYear: vehicleYear || prev.vehicleYear,
       vehicleMake: vehicleMake || prev.vehicleMake,
       vehicleModel: vehicleModel || prev.vehicleModel,
@@ -193,6 +197,19 @@ export default function MightyCustomer() {
       if (lower.includes("gloss")) setFinish("Gloss");
       if (lower.includes("matte")) setFinish("Matte");
       if (lower.includes("satin")) setFinish("Satin");
+    }
+    
+    // Show what was parsed
+    const parsedFields = [];
+    if (customerName) parsedFields.push(`Name: ${customerName}`);
+    if (email) parsedFields.push(`Email: ${email}`);
+    if (vehicleYear && vehicleMake && vehicleModel) parsedFields.push(`Vehicle: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
+    
+    if (parsedFields.length > 0) {
+      toast({
+        title: "Voice Data Parsed",
+        description: parsedFields.join(' • '),
+      });
     }
     
     // Force re-render after state updates to trigger SQFT recalculation

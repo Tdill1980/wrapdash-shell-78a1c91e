@@ -46,12 +46,14 @@ serve(async (req) => {
 Rules:
 - Extract year as 4-digit string (e.g., "2024")
 - Capitalize make/model properly (e.g., "Ford", "Bronco")
-- Extract phone in any format mentioned
+- Extract phone in any format mentioned (555-1234, 555.1234, 5551234 all valid)
+- IMPORTANT: Extract email addresses carefully - look for patterns like "name at gmail.com", "name@domain", "email is xyz"
 - If "for [Name]" pattern, that's the customer name
 - If company name mentioned, capture it
 - Notes should contain any special requests or deadlines
 
 Voice transcript: "${transcript}"`;
+
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
