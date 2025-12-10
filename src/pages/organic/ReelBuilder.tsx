@@ -20,15 +20,18 @@ import {
   Layers,
   Scissors,
   Loader2,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
 import { useReelCaptions, CaptionStyle } from "@/hooks/useReelCaptions";
 import { useReelOverlays, BrandPackId } from "@/hooks/useReelOverlays";
 import { useEditorBrain } from "@/hooks/useEditorBrain";
+import { useSmartAssist } from "@/hooks/useSmartAssist";
 import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
 import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
 import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
+import { SmartAssistPanel } from "@/components/reel-builder/SmartAssistPanel";
 import { MediaLibraryModal } from "@/components/media/MediaLibraryModal";
 import { MediaFile } from "@/components/media/MediaLibrary";
 import { toast } from "sonner";
@@ -59,6 +62,32 @@ export default function ReelBuilder() {
   const captionsEngine = useReelCaptions();
   const overlaysEngine = useReelOverlays();
   const editorBrain = useEditorBrain();
+  const smartAssist = useSmartAssist();
+
+  const handleRunSmartAssist = async () => {
+    await smartAssist.runSmartAssist(clips);
+  };
+
+  const handleApplyAIPlan = () => {
+    if (!smartAssist.creative) return;
+
+    const newClips: Clip[] = smartAssist.creative.sequence.map((seq, idx) => {
+      const originalClip = clips[idx] || clips[0];
+      return {
+        ...originalClip,
+        id: originalClip?.id || `ai_${idx}`,
+        name: seq.label?.replace(/_/g, " ") || `Scene ${idx + 1}`,
+        url: originalClip?.url || clips[0].url,
+        duration: seq.end - seq.start,
+        trimStart: seq.start,
+        trimEnd: seq.end,
+        speed: seq.speed || 1,
+      };
+    });
+
+    setClips(newClips);
+    toast.success("AI Timeline Applied!");
+  };
 
   const handleAddClipsFromLibrary = (files: MediaFile[]) => {
     const videoFiles = files.filter((f) => f.file_type === "video");
@@ -256,39 +285,38 @@ export default function ReelBuilder() {
               </CardContent>
             </Card>
 
-            {/* AI Suggestion */}
-            {clips.length >= 2 && (
-              <Card className="border-primary/30 bg-primary/5">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-primary/20">
-                      <Wand2 className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-sm">AI Sequence Suggestion</h3>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Start with Clip 2 for a stronger hook and add overlays for maximum retention.
-                      </p>
-                      <Button size="sm" variant="secondary" className="mt-3">
-                        <Zap className="w-3 h-3 mr-1" />
-                        Apply AI Timeline
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Smart Assist Panel */}
+            <SmartAssistPanel
+              analysis={smartAssist.analysis}
+              creative={smartAssist.creative}
+              loading={smartAssist.loading}
+              onRunAnalysis={handleRunSmartAssist}
+              onApply={handleApplyAIPlan}
+              hasClips={clips.length > 0}
+            />
           </div>
 
           {/* Right: Editor Panels */}
           <div className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full grid grid-cols-4">
+              <TabsList className="w-full grid grid-cols-5">
+                <TabsTrigger value="ai" className="text-xs"><Brain className="w-3 h-3" /></TabsTrigger>
                 <TabsTrigger value="clip" className="text-xs"><Wand2 className="w-3 h-3" /></TabsTrigger>
                 <TabsTrigger value="audio" className="text-xs"><Music className="w-3 h-3" /></TabsTrigger>
                 <TabsTrigger value="captions" className="text-xs"><Type className="w-3 h-3" /></TabsTrigger>
                 <TabsTrigger value="overlays" className="text-xs"><Palette className="w-3 h-3" /></TabsTrigger>
               </TabsList>
+
+              <TabsContent value="ai" className="mt-4">
+                <SmartAssistPanel
+                  analysis={smartAssist.analysis}
+                  creative={smartAssist.creative}
+                  loading={smartAssist.loading}
+                  onRunAnalysis={handleRunSmartAssist}
+                  onApply={handleApplyAIPlan}
+                  hasClips={clips.length > 0}
+                />
+              </TabsContent>
 
               <TabsContent value="clip" className="mt-4">
                 <Card>
