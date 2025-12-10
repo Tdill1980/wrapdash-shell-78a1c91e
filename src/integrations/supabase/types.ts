@@ -1149,12 +1149,14 @@ export type Database = {
         Row: {
           ai_labels: Json | null
           brand: string
+          content_category: string | null
           created_at: string
           dominant_colors: string[] | null
           duration_seconds: number | null
           file_size_bytes: number | null
           file_type: string
           file_url: string
+          height: number | null
           id: string
           metadata: Json | null
           organization_id: string | null
@@ -1163,21 +1165,25 @@ export type Database = {
           source: string
           source_id: string | null
           tags: string[] | null
+          thumbnail_generated_at: string | null
           thumbnail_url: string | null
           transcript: string | null
           updated_at: string
           uploader_id: string | null
           vehicle_info: Json | null
+          width: number | null
         }
         Insert: {
           ai_labels?: Json | null
           brand?: string
+          content_category?: string | null
           created_at?: string
           dominant_colors?: string[] | null
           duration_seconds?: number | null
           file_size_bytes?: number | null
           file_type?: string
           file_url: string
+          height?: number | null
           id?: string
           metadata?: Json | null
           organization_id?: string | null
@@ -1186,21 +1192,25 @@ export type Database = {
           source?: string
           source_id?: string | null
           tags?: string[] | null
+          thumbnail_generated_at?: string | null
           thumbnail_url?: string | null
           transcript?: string | null
           updated_at?: string
           uploader_id?: string | null
           vehicle_info?: Json | null
+          width?: number | null
         }
         Update: {
           ai_labels?: Json | null
           brand?: string
+          content_category?: string | null
           created_at?: string
           dominant_colors?: string[] | null
           duration_seconds?: number | null
           file_size_bytes?: number | null
           file_type?: string
           file_url?: string
+          height?: number | null
           id?: string
           metadata?: Json | null
           organization_id?: string | null
@@ -1209,11 +1219,13 @@ export type Database = {
           source?: string
           source_id?: string | null
           tags?: string[] | null
+          thumbnail_generated_at?: string | null
           thumbnail_url?: string | null
           transcript?: string | null
           updated_at?: string
           uploader_id?: string | null
           vehicle_info?: Json | null
+          width?: number | null
         }
         Relationships: [
           {
