@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Image, Video, Music, Check, Tag, Trash2 } from "lucide-react";
+import { Play, Image, Video, Music, Check, Tag, Trash2, Target } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +19,7 @@ interface MediaFile {
   content_category?: string | null;
 }
 
-export type MediaSelectMode = "select" | "reel" | "static" | "hybrid";
+export type MediaSelectMode = "select" | "reel" | "static" | "hybrid" | "video-ad";
 
 interface MediaCardProps {
   file: MediaFile;
@@ -244,6 +244,18 @@ export function MediaCard({
             <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
             Hybrid
           </Button>
+
+          {isVideo && (
+            <Button
+              size="sm"
+              variant="default"
+              className="w-full max-w-[120px] h-9 text-xs sm:text-sm bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+              onClick={(e) => { e.stopPropagation(); onClick(file, "video-ad"); }}
+            >
+              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+              Video Ad
+            </Button>
+          )}
 
           {onEditTags && (
             <Button
