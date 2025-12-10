@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,6 +84,19 @@ export default function ReelBuilder() {
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [reelConcept, setReelConcept] = useState<string | null>(null);
   const [isAutoProcessing, setIsAutoProcessing] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Handle play/pause with ref
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play().catch(console.error);
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
 
   const beatSync = useReelBeatSync();
   const captionsEngine = useReelCaptions();
@@ -330,43 +343,24 @@ export default function ReelBuilder() {
                       <Play className="w-12 h-12 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Add clips to preview</p>
                     </div>
-                  ) : selectedClip ? (
-                    <>
-                      <video
-                        key={selectedClip}
-                        src={clips.find(c => c.id === selectedClip)?.url}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        autoPlay={isPlaying}
-                        loop
-                        muted
-                        playsInline
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="absolute z-10"
-                        onClick={() => setIsPlaying(!isPlaying)}
-                      >
-                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                      </Button>
-                    </>
                   ) : (
                     <>
                       <video
-                        src={clips[0]?.url}
+                        ref={videoRef}
+                        key={selectedClip || clips[0]?.id}
+                        src={selectedClip ? clips.find(c => c.id === selectedClip)?.url : clips[0]?.url}
                         className="absolute inset-0 w-full h-full object-cover"
-                        autoPlay={isPlaying}
                         loop
                         muted
                         playsInline
+                        onEnded={() => setIsPlaying(false)}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                       <Button
                         size="icon"
                         variant="secondary"
                         className="absolute z-10"
-                        onClick={() => setIsPlaying(!isPlaying)}
+                        onClick={handlePlayPause}
                       >
                         {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
                       </Button>
