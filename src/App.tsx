@@ -54,7 +54,7 @@ import AdVault from "./pages/AdVault";
 import PaidAdsPerformance from "./pages/PaidAdsPerformance";
 import OrganicHub from "./pages/OrganicHub";
 import ReelBuilder from "./pages/organic/ReelBuilder";
-import InspoScrubber from "./pages/organic/InspoScrubber";
+import InspirationHub from "./pages/organic/InspirationHub";
 import AutoSplit from "./pages/organic/AutoSplit";
 import StaticCreator from "./pages/organic/StaticCreator";
 import Atomizer from "./pages/organic/Atomizer";
@@ -107,7 +107,7 @@ const App = () => (
             <Route path="/content-schedule" element={<ContentSchedule />} />
             <Route path="/organic" element={<OrganicHub />} />
             <Route path="/organic/reel-builder" element={<ReelBuilder />} />
-            <Route path="/organic/inspo" element={<InspoScrubber />} />
+            <Route path="/organic/inspo" element={<InspirationHub />} />
             <Route path="/organic/auto-split" element={<AutoSplit />} />
             <Route path="/organic/static" element={<StaticCreator />} />
             <Route path="/organic/atomizer" element={<Atomizer />} />

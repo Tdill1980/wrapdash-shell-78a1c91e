@@ -1,0 +1,684 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  ArrowLeft,
+  Link2,
+  Sparkles,
+  Zap,
+  Clock,
+  Type,
+  Palette,
+  Play,
+  Copy,
+  Upload,
+  TrendingUp,
+  Flame,
+  Target,
+  Layers,
+  Video,
+  Instagram,
+  Youtube,
+  Music2,
+  ArrowRight,
+  Eye,
+  Heart,
+  Share2,
+  Loader2,
+  Check,
+  ExternalLink,
+  Bookmark,
+  Wand2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+interface StyleAnalysis {
+  styleName: string;
+  energy: number;
+  pacing: string;
+  font: string;
+  colorTheme: string[];
+  structure: Array<{ time: string; label: string }>;
+  overlays: string[];
+  hooks: string[];
+  cta: string;
+  music: string;
+  transitions: string[];
+}
+
+interface TrendPack {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  count: number;
+  color: string;
+  description: string;
+}
+
+interface InspoItem {
+  id: string;
+  thumbnail: string;
+  platform: "instagram" | "tiktok" | "youtube";
+  views: string;
+  hook: string;
+  overlays: string[];
+  duration: string;
+}
+
+const TREND_PACKS: TrendPack[] = [
+  {
+    id: "wrap-reels",
+    title: "Trending Wrap Reels",
+    icon: <Flame className="w-5 h-5" />,
+    count: 24,
+    color: "from-orange-500 to-red-500",
+    description: "Viral transformation reels from top wrap shops",
+  },
+  {
+    id: "high-converting",
+    title: "High-Converting Ads",
+    icon: <Target className="w-5 h-5" />,
+    count: 18,
+    color: "from-green-500 to-emerald-500",
+    description: "Best performing paid social ads",
+  },
+  {
+    id: "overlay-styles",
+    title: "Overlay Style Ideas",
+    icon: <Layers className="w-5 h-5" />,
+    count: 32,
+    color: "from-purple-500 to-pink-500",
+    description: "Text overlays, captions, and graphics",
+  },
+  {
+    id: "text-animations",
+    title: "Text Animation Ideas",
+    icon: <Type className="w-5 h-5" />,
+    count: 15,
+    color: "from-blue-500 to-cyan-500",
+    description: "Motion text and kinetic typography",
+  },
+  {
+    id: "before-after",
+    title: "Before/After Reveals",
+    icon: <Zap className="w-5 h-5" />,
+    count: 28,
+    color: "from-amber-500 to-yellow-500",
+    description: "Transformation reveal techniques",
+  },
+  {
+    id: "hooks",
+    title: "Viral Hooks",
+    icon: <TrendingUp className="w-5 h-5" />,
+    count: 45,
+    color: "from-rose-500 to-pink-500",
+    description: "First 3-second hooks that stop scroll",
+  },
+];
+
+const MOCK_INSPO_ITEMS: InspoItem[] = [
+  {
+    id: "1",
+    thumbnail: "https://images.unsplash.com/photo-1619405399517-d7fce0f13302?w=300&h=400&fit=crop",
+    platform: "instagram",
+    views: "2.4M",
+    hook: "Watch this Tesla go from boring to BEAST mode 🔥",
+    overlays: ["WAIT FOR IT...", "THE REVEAL"],
+    duration: "0:15",
+  },
+  {
+    id: "2",
+    thumbnail: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=300&h=400&fit=crop",
+    platform: "tiktok",
+    views: "890K",
+    hook: "POV: Your car gets the glow up it deserves",
+    overlays: ["BEFORE", "AFTER", "LINK IN BIO"],
+    duration: "0:12",
+  },
+  {
+    id: "3",
+    thumbnail: "https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=300&h=400&fit=crop",
+    platform: "youtube",
+    views: "1.2M",
+    hook: "This wrap took us 72 hours straight...",
+    overlays: ["DAY 1", "DAY 2", "DAY 3", "FINAL RESULT"],
+    duration: "0:45",
+  },
+  {
+    id: "4",
+    thumbnail: "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=300&h=400&fit=crop",
+    platform: "instagram",
+    views: "567K",
+    hook: "When the customer says 'surprise me'",
+    overlays: ["BOLD CHOICE", "TRUST THE PROCESS"],
+    duration: "0:18",
+  },
+];
+
+const SUPPORTED_PLATFORMS = [
+  { name: "Instagram Reels", icon: Instagram, color: "text-pink-500" },
+  { name: "TikTok", icon: Music2, color: "text-foreground" },
+  { name: "YouTube Shorts", icon: Youtube, color: "text-red-500" },
+  { name: "Facebook Video", icon: Video, color: "text-blue-500" },
+];
+
+export default function InspirationHub() {
+  const navigate = useNavigate();
+  const [url, setUrl] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<StyleAnalysis | null>(null);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("discover");
+  const [selectedPack, setSelectedPack] = useState<TrendPack | null>(null);
+
+  const detectPlatform = (inputUrl: string) => {
+    if (inputUrl.includes("instagram.com")) return "Instagram";
+    if (inputUrl.includes("tiktok.com")) return "TikTok";
+    if (inputUrl.includes("youtube.com") || inputUrl.includes("youtu.be")) return "YouTube";
+    if (inputUrl.includes("facebook.com") || inputUrl.includes("fb.watch")) return "Facebook";
+    return "Video";
+  };
+
+  const handleAnalyze = async () => {
+    if (!url) {
+      toast.error("Please paste a video URL first");
+      return;
+    }
+
+    const platform = detectPlatform(url);
+    setIsAnalyzing(true);
+    toast.info(`Analyzing ${platform} video...`);
+
+    // Simulated analysis - in production this would call an edge function
+    await new Promise((r) => setTimeout(r, 2500));
+
+    setAnalysis({
+      styleName: "High-Energy Reveal",
+      energy: 3,
+      pacing: "Fast cuts every 0.8s",
+      font: "Bold uppercase, white with shadow",
+      colorTheme: ["#E1306C", "#405DE6", "#FFFFFF", "#000000"],
+      structure: [
+        { time: "0-1.2s", label: "Hook (scroll stopper)" },
+        { time: "1.2-4s", label: "B-roll tension build" },
+        { time: "4-6s", label: "Transformation reveal" },
+        { time: "6-8s", label: "Final beauty shot + CTA" },
+      ],
+      overlays: ["WAIT FOR IT…", "TRANSFORMATION TIME", "FINAL LOOK 🔥", "LINK IN BIO"],
+      hooks: [
+        "This took 72 hours straight...",
+        "POV: Your car finally gets the glow up",
+        "Watch till the end for the reveal",
+      ],
+      cta: "DM us 'WRAP' to get started",
+      music: "Trending audio - high energy electronic beat",
+      transitions: ["Whip pan", "Speed ramp", "Cut to beat", "Zoom transition"],
+    });
+
+    setIsAnalyzing(false);
+    setShowAnalysisModal(true);
+    toast.success("Style analysis complete!");
+  };
+
+  const handleApplyToReel = () => {
+    if (analysis) {
+      toast.success("Opening Reel Builder with this style applied...");
+      navigate("/organic/reel-builder", { state: { styleAnalysis: analysis } });
+    }
+  };
+
+  const getPlatformIcon = (platform: string) => {
+    switch (platform) {
+      case "instagram":
+        return <Instagram className="w-3 h-3" />;
+      case "tiktok":
+        return <Music2 className="w-3 h-3" />;
+      case "youtube":
+        return <Youtube className="w-3 h-3" />;
+      default:
+        return <Video className="w-3 h-3" />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/organic")}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="font-bold text-xl flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                  Inspiration Hub
+                </span>
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                AI-powered discovery • Style breakdown • Trend scrubbing
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* Hero Section - Paste Link */}
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-purple-500/5 to-pink-500/5">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-6 items-start">
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Paste Any Video Link</h2>
+                  <p className="text-muted-foreground text-sm">
+                    AI breaks down pacing, overlays, hooks, transitions, colors, CTAs, and more.
+                    <br />
+                    Then rebuild it for YOUR brand.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="https://instagram.com/reel/... or youtube.com/shorts/... or tiktok.com/..."
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="flex-1 bg-background"
+                  />
+                  <Button
+                    onClick={handleAnalyze}
+                    disabled={!url || isAnalyzing}
+                    className="bg-gradient-to-r from-[#405DE6] to-[#E1306C] min-w-[160px]"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Analyze Style
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {SUPPORTED_PLATFORMS.map((platform) => (
+                    <Badge
+                      key={platform.name}
+                      variant="secondary"
+                      className="text-xs flex items-center gap-1"
+                    >
+                      <platform.icon className={cn("w-3 h-3", platform.color)} />
+                      {platform.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 lg:w-48">
+                <Button
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => setUploadModalOpen(true)}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Inspo Video
+                </Button>
+                <Button variant="outline" className="justify-start">
+                  <Bookmark className="w-4 h-4 mr-2" />
+                  Saved Inspiration
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="discover">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Discover
+            </TabsTrigger>
+            <TabsTrigger value="saved">
+              <Bookmark className="w-4 h-4 mr-2" />
+              Saved
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <Clock className="w-4 h-4 mr-2" />
+              History
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="discover" className="space-y-8 mt-6">
+            {/* Trend Packs */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                  Trend Packs
+                </h3>
+                <Button variant="ghost" size="sm">
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+
+              <ScrollArea className="w-full">
+                <div className="flex gap-4 pb-4">
+                  {TREND_PACKS.map((pack) => (
+                    <Card
+                      key={pack.id}
+                      className={cn(
+                        "min-w-[240px] cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg",
+                        selectedPack?.id === pack.id && "ring-2 ring-primary"
+                      )}
+                      onClick={() => setSelectedPack(pack)}
+                    >
+                      <CardContent className="p-4">
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-lg flex items-center justify-center text-white mb-3 bg-gradient-to-br",
+                            pack.color
+                          )}
+                        >
+                          {pack.icon}
+                        </div>
+                        <h4 className="font-semibold text-sm mb-1">{pack.title}</h4>
+                        <p className="text-xs text-muted-foreground mb-2">{pack.description}</p>
+                        <Badge variant="secondary" className="text-xs">
+                          {pack.count} examples
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </section>
+
+            {/* Inspo Grid */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  {selectedPack ? selectedPack.title : "Featured Inspiration"}
+                </h3>
+                {selectedPack && (
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedPack(null)}>
+                    Clear Filter
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {MOCK_INSPO_ITEMS.map((item) => (
+                  <Card
+                    key={item.id}
+                    className="overflow-hidden cursor-pointer group hover:ring-2 hover:ring-primary transition-all"
+                    onClick={() => {
+                      setUrl(`https://instagram.com/reel/${item.id}`);
+                      toast.info("Link loaded - click Analyze to break down this style");
+                    }}
+                  >
+                    <div className="relative aspect-[9/16]">
+                      <img
+                        src={item.thumbnail}
+                        alt="Inspiration"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+                      {/* Platform badge */}
+                      <div className="absolute top-2 left-2">
+                        <Badge
+                          variant="secondary"
+                          className="text-xs bg-black/50 backdrop-blur-sm border-0"
+                        >
+                          {getPlatformIcon(item.platform)}
+                          <span className="ml-1 capitalize">{item.platform}</span>
+                        </Badge>
+                      </div>
+
+                      {/* Duration */}
+                      <div className="absolute top-2 right-2">
+                        <Badge variant="secondary" className="text-xs bg-black/50 backdrop-blur-sm border-0">
+                          {item.duration}
+                        </Badge>
+                      </div>
+
+                      {/* Views */}
+                      <div className="absolute bottom-12 left-2 flex items-center gap-1 text-white text-xs">
+                        <Eye className="w-3 h-3" />
+                        {item.views}
+                      </div>
+
+                      {/* Hook text */}
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <p className="text-white text-xs font-medium line-clamp-2">{item.hook}</p>
+                      </div>
+
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Button size="sm" className="bg-white text-black hover:bg-white/90">
+                          <Sparkles className="w-4 h-4 mr-1" />
+                          Analyze
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          </TabsContent>
+
+          <TabsContent value="saved" className="mt-6">
+            <Card className="p-12 text-center">
+              <Bookmark className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-semibold mb-2">No Saved Inspiration Yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Analyze videos and save styles you love to use later
+              </p>
+              <Button variant="outline">Browse Trend Packs</Button>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-6">
+            <Card className="p-12 text-center">
+              <Clock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-semibold mb-2">No Analysis History</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Videos you analyze will appear here
+              </p>
+              <Button variant="outline">Paste a Link Above</Button>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Analysis Results Modal */}
+      <Dialog open={showAnalysisModal} onOpenChange={setShowAnalysisModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Style Analysis Complete
+            </DialogTitle>
+            <DialogDescription>
+              AI has extracted the style, pacing, and techniques from this video
+            </DialogDescription>
+          </DialogHeader>
+
+          {analysis && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+              {/* Left Column - Style Details */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold bg-gradient-to-r from-[#405DE6] to-[#E1306C] bg-clip-text text-transparent">
+                    {analysis.styleName}
+                  </span>
+                  <Badge variant="secondary" className="gap-1">
+                    <Zap className="w-3 h-3" />
+                    {analysis.energy === 3 ? "High" : analysis.energy === 2 ? "Medium" : "Low"} Energy
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Card className="p-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                      <Clock className="w-3 h-3" />
+                      Pacing
+                    </div>
+                    <p className="text-sm font-medium">{analysis.pacing}</p>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                      <Type className="w-3 h-3" />
+                      Font Style
+                    </div>
+                    <p className="text-sm font-medium">{analysis.font}</p>
+                  </Card>
+                </div>
+
+                <Card className="p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                    <Palette className="w-3 h-3" />
+                    Color Theme
+                  </div>
+                  <div className="flex gap-2">
+                    {analysis.colorTheme.map((color, i) => (
+                      <div
+                        key={i}
+                        className="w-8 h-8 rounded-full border-2 border-border"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="p-3">
+                  <h4 className="text-sm font-medium mb-2">Video Structure</h4>
+                  <div className="space-y-2">
+                    {analysis.structure.map((segment, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                        <span className="text-xs text-muted-foreground w-16 shrink-0">
+                          {segment.time}
+                        </span>
+                        <span className="text-sm font-medium">{segment.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="p-3">
+                  <h4 className="text-sm font-medium mb-2">Transitions Used</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {analysis.transitions.map((t, i) => (
+                      <Badge key={i} variant="outline">
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Right Column - Overlays & Actions */}
+              <div className="space-y-4">
+                <Card className="p-3">
+                  <h4 className="text-sm font-medium mb-2">Text Overlays</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {analysis.overlays.map((overlay, i) => (
+                      <div
+                        key={i}
+                        className="px-3 py-1.5 rounded-full bg-black text-white text-sm font-bold border border-white/20"
+                      >
+                        {overlay}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="p-3">
+                  <h4 className="text-sm font-medium mb-2">Hook Examples</h4>
+                  <div className="space-y-2">
+                    {analysis.hooks.map((hook, i) => (
+                      <div key={i} className="p-2 rounded-lg bg-muted/50 text-sm italic">
+                        "{hook}"
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+
+                <Card className="p-3">
+                  <h4 className="text-sm font-medium mb-2">CTA</h4>
+                  <p className="text-sm font-semibold text-primary">{analysis.cta}</p>
+                </Card>
+
+                <Card className="p-3">
+                  <h4 className="text-sm font-medium mb-2">Music / Audio</h4>
+                  <p className="text-sm text-muted-foreground">{analysis.music}</p>
+                </Card>
+
+                <Card className="border-primary/30 bg-primary/5 p-4 space-y-3">
+                  <h3 className="font-semibold">Apply This Style</h3>
+                  <Button
+                    className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+                    onClick={handleApplyToReel}
+                  >
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Apply to Reel Builder
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      navigator.clipboard.writeText(analysis.overlays.join("\n"));
+                      toast.success("Overlay texts copied!");
+                    }}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Overlay Texts
+                  </Button>
+                  <Button variant="ghost" className="w-full">
+                    <Bookmark className="w-4 h-4 mr-2" />
+                    Save Style to Library
+                  </Button>
+                </Card>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Modal */}
+      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Inspiration Video</DialogTitle>
+            <DialogDescription>
+              Upload a video file directly to analyze its style
+            </DialogDescription>
+          </DialogHeader>
+          <div className="border-2 border-dashed border-border rounded-xl p-12 text-center">
+            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-4">
+              Drag and drop a video file, or click to browse
+            </p>
+            <Button variant="outline">Choose File</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
