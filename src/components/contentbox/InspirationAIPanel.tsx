@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { 
   Sparkles, 
   Lightbulb, 
@@ -19,10 +20,14 @@ import {
   Wand2,
   Play,
   FileText,
-  Clock
+  Clock,
+  Download,
+  Rocket
 } from "lucide-react";
 import { useInspirationAI, HookItem, AdPackage } from "@/hooks/useInspirationAI";
 import { useInspoLibrary } from "@/hooks/useInspoLibrary";
+import { useVideoRender } from "@/hooks/useVideoRender";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface InspirationAIPanelProps {
@@ -49,6 +54,10 @@ export function InspirationAIPanel({
     generateAd,
   } = useInspirationAI();
 
+  const { isRendering, status: renderStatus, progress, outputUrl, startRender, reset } = useVideoRender();
+  const [renderingStatic, setRenderingStatic] = useState(false);
+  const [staticOutputUrl, setStaticOutputUrl] = useState<string | null>(null);
+
   const [copiedHook, setCopiedHook] = useState<string | null>(null);
   const [adType, setAdType] = useState<"video" | "static" | "carousel">("video");
   const [platform, setPlatform] = useState("instagram");
@@ -73,6 +82,72 @@ export function InspirationAIPanel({
     });
     if (result && onAdGenerated) {
       onAdGenerated(result);
+    }
+  };
+
+  const handleRenderNow = async () => {
+    if (!adPackage) return;
+
+    // Get selected media for rendering
+    const selectedMedia = library.filter(m => 
+      selectedMediaIds.length > 0 
+        ? selectedMediaIds.includes(m.id) 
+        : true
+    );
+
+    if (adType === "video") {
+      // Find first video in selection or library
+      const videoMedia = selectedMedia.find(m => m.file_type === "video") || 
+                         library.find(m => m.file_type === "video");
+      
+      if (!videoMedia) {
+        toast.error("No video found in your library to render");
+        return;
+      }
+
+      // Use the first hook text as headline
+      const headline = adPackage.hooks?.[0]?.text || adPackage.script?.intro || "";
+      const subtext = adPackage.script?.cta || "";
+
+      await startRender({
+        videoUrl: videoMedia.file_url,
+        headline,
+        subtext,
+      });
+    } else if (adType === "static") {
+      // Find first image in selection or library
+      const imageMedia = selectedMedia.find(m => m.file_type === "image") || 
+                         library.find(m => m.file_type === "image");
+      
+      if (!imageMedia) {
+        toast.error("No image found in your library to render");
+        return;
+      }
+
+      setRenderingStatic(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("render-static-ad", {
+          body: {
+            image_url: imageMedia.file_url,
+            headline: adPackage.hooks?.[0]?.text || "",
+            body_text: adPackage.caption || "",
+            cta_text: adPackage.cta_options?.[0] || "Learn More",
+            platform,
+          }
+        });
+
+        if (error) throw error;
+        
+        if (data?.url) {
+          setStaticOutputUrl(data.url);
+          toast.success("Static ad rendered!");
+        }
+      } catch (err) {
+        console.error("Static render error:", err);
+        toast.error("Failed to render static ad");
+      } finally {
+        setRenderingStatic(false);
+      }
     }
   };
 
@@ -336,100 +411,166 @@ export function InspirationAIPanel({
           </Button>
 
           {adPackage && (
-            <ScrollArea className="h-[300px]">
-              <div className="space-y-4 pr-4">
-                {/* Hooks */}
-                <Card className="p-3">
-                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <Play className="w-4 h-4 text-red-400" /> Hook Options
-                  </h4>
-                  <div className="space-y-2">
-                    {adPackage.hooks?.map((hook, idx) => (
-                      <div key={idx} className="p-2 rounded bg-muted/50">
-                        <p className="text-sm font-medium">{hook.text}</p>
-                        {hook.voiceover && (
-                          <p className="text-xs text-muted-foreground mt-1">VO: {hook.voiceover}</p>
-                        )}
-                      </div>
-                    ))}
+            <>
+              {/* Render Now Button */}
+              <Card className="p-3 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium flex items-center gap-2">
+                      <Rocket className="w-4 h-4 text-green-400" />
+                      Ready to Render
+                    </span>
+                    <Badge variant="outline" className="text-green-400 border-green-400/30">
+                      {adType === "video" ? "Video" : "Static"}
+                    </Badge>
                   </div>
-                </Card>
+                  
+                  {(isRendering || renderingStatic) ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {renderStatus === "starting" ? "Starting render..." : "Rendering..."}
+                      </div>
+                      {adType === "video" && (
+                        <Progress value={progress} className="h-2" />
+                      )}
+                    </div>
+                  ) : outputUrl || staticOutputUrl ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-green-400">
+                        <Check className="w-4 h-4" /> Render Complete!
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => window.open(outputUrl || staticOutputUrl || "", "_blank")}
+                        >
+                          <Play className="w-4 h-4 mr-1" /> Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const url = outputUrl || staticOutputUrl;
+                            if (url) {
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = adType === "video" ? "ad-reel.mp4" : "ad-static.png";
+                              a.click();
+                            }
+                          }}
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleRenderNow}
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600"
+                    >
+                      <Rocket className="w-4 h-4 mr-2" /> Render {adType === "video" ? "Video" : "Static"} Ad Now
+                    </Button>
+                  )}
+                </div>
+              </Card>
 
-                {/* Script */}
-                {adPackage.script && (
+              <ScrollArea className="h-[250px]">
+                <div className="space-y-4 pr-4">
+                  {/* Hooks */}
                   <Card className="p-3">
                     <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-400" /> Script
+                      <Play className="w-4 h-4 text-red-400" /> Hook Options
                     </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="p-2 rounded bg-muted/50">
-                        <span className="text-xs text-muted-foreground">Intro:</span>
-                        <p>{adPackage.script.intro}</p>
-                      </div>
-                      <div className="p-2 rounded bg-muted/50">
-                        <span className="text-xs text-muted-foreground">Body:</span>
-                        <p>{adPackage.script.body}</p>
-                      </div>
-                      <div className="p-2 rounded bg-muted/50">
-                        <span className="text-xs text-muted-foreground">CTA:</span>
-                        <p>{adPackage.script.cta}</p>
-                      </div>
-                      <Badge variant="outline">
-                        <Clock className="w-3 h-3 mr-1" /> {adPackage.script.total_duration}
-                      </Badge>
-                    </div>
-                  </Card>
-                )}
-
-                {/* Text Overlays */}
-                {adPackage.text_overlays && adPackage.text_overlays.length > 0 && (
-                  <Card className="p-3">
-                    <h4 className="font-semibold text-sm mb-2">Text Overlays</h4>
-                    <div className="space-y-1">
-                      {adPackage.text_overlays.map((overlay, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-sm">
-                          <Badge variant="outline" className="text-xs">{overlay.timestamp}</Badge>
-                          <span>{overlay.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                )}
-
-                {/* Caption */}
-                {adPackage.caption && (
-                  <Card className="p-3">
-                    <h4 className="font-semibold text-sm mb-2">Caption</h4>
-                    <p className="text-sm">{adPackage.caption}</p>
-                    {adPackage.hashtags && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {adPackage.hashtags.map((tag, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">#{tag}</Badge>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                )}
-
-                {/* Media Usage */}
-                {adPackage.media_usage && adPackage.media_usage.length > 0 && (
-                  <Card className="p-3">
-                    <h4 className="font-semibold text-sm mb-2">How to Use Your Media</h4>
                     <div className="space-y-2">
-                      {adPackage.media_usage.map((usage, idx) => (
-                        <div key={idx} className="p-2 rounded bg-muted/50 text-sm">
-                          <span className="font-medium">{usage.filename}</span>
-                          <p className="text-muted-foreground text-xs">{usage.usage}</p>
-                          {usage.timestamp && (
-                            <Badge variant="outline" className="text-xs mt-1">{usage.timestamp}</Badge>
+                      {adPackage.hooks?.map((hook, idx) => (
+                        <div key={idx} className="p-2 rounded bg-muted/50">
+                          <p className="text-sm font-medium">{hook.text}</p>
+                          {hook.voiceover && (
+                            <p className="text-xs text-muted-foreground mt-1">VO: {hook.voiceover}</p>
                           )}
                         </div>
                       ))}
                     </div>
                   </Card>
-                )}
-              </div>
-            </ScrollArea>
+
+                  {/* Script */}
+                  {adPackage.script && (
+                    <Card className="p-3">
+                      <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-blue-400" /> Script
+                      </h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 rounded bg-muted/50">
+                          <span className="text-xs text-muted-foreground">Intro:</span>
+                          <p>{adPackage.script.intro}</p>
+                        </div>
+                        <div className="p-2 rounded bg-muted/50">
+                          <span className="text-xs text-muted-foreground">Body:</span>
+                          <p>{adPackage.script.body}</p>
+                        </div>
+                        <div className="p-2 rounded bg-muted/50">
+                          <span className="text-xs text-muted-foreground">CTA:</span>
+                          <p>{adPackage.script.cta}</p>
+                        </div>
+                        <Badge variant="outline">
+                          <Clock className="w-3 h-3 mr-1" /> {adPackage.script.total_duration}
+                        </Badge>
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Text Overlays */}
+                  {adPackage.text_overlays && adPackage.text_overlays.length > 0 && (
+                    <Card className="p-3">
+                      <h4 className="font-semibold text-sm mb-2">Text Overlays</h4>
+                      <div className="space-y-1">
+                        {adPackage.text_overlays.map((overlay, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <Badge variant="outline" className="text-xs">{overlay.timestamp}</Badge>
+                            <span>{overlay.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Caption */}
+                  {adPackage.caption && (
+                    <Card className="p-3">
+                      <h4 className="font-semibold text-sm mb-2">Caption</h4>
+                      <p className="text-sm">{adPackage.caption}</p>
+                      {adPackage.hashtags && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {adPackage.hashtags.map((tag, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">#{tag}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  )}
+
+                  {/* Media Usage */}
+                  {adPackage.media_usage && adPackage.media_usage.length > 0 && (
+                    <Card className="p-3">
+                      <h4 className="font-semibold text-sm mb-2">How to Use Your Media</h4>
+                      <div className="space-y-2">
+                        {adPackage.media_usage.map((usage, idx) => (
+                          <div key={idx} className="p-2 rounded bg-muted/50 text-sm">
+                            <span className="font-medium">{usage.filename}</span>
+                            <p className="text-muted-foreground text-xs">{usage.usage}</p>
+                            {usage.timestamp && (
+                              <Badge variant="outline" className="text-xs mt-1">{usage.timestamp}</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              </ScrollArea>
+            </>
           )}
         </TabsContent>
       </Tabs>
