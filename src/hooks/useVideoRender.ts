@@ -43,13 +43,16 @@ export function useVideoRender() {
 
   const checkStatus = useCallback(async (renderId: string) => {
     try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-video-reel`,
+        `${supabaseUrl}/functions/v1/render-video-reel`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'apikey': supabaseKey,
           },
           body: JSON.stringify({
             action: 'status',
@@ -117,13 +120,16 @@ export function useVideoRender() {
     });
 
     try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/render-video-reel`,
+        `${supabaseUrl}/functions/v1/render-video-reel`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'apikey': supabaseKey,
           },
           body: JSON.stringify({
             action: 'start',
