@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import {
   Film,
   Scissors,
-  Wand2,
   Images,
   Sparkles,
   ChevronRight,
@@ -12,6 +11,7 @@ import {
   Zap,
   TrendingUp,
   Play,
+  Atom,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,15 @@ export default function OrganicHub() {
       path: "/organic/static",
       gradient: "from-[#F77737] to-[#FCAF45]",
       badge: null,
+    },
+    {
+      id: "atomizer",
+      label: "Content Atomizer",
+      description: "Upload transcripts, FAQs, pricing — AI breaks into micro-content.",
+      icon: <Atom className="w-6 h-6" />,
+      path: "/organic/atomizer",
+      gradient: "from-[#00AFFF] to-[#4EEAFF]",
+      badge: "AI",
     },
   ];
 
