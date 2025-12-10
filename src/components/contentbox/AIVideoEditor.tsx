@@ -129,7 +129,6 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
   };
 
   const handleSendHybridToRender = () => {
-    // Use hybrid output to populate render fields
     if (hybridOutput?.hook) {
       setHeadline(hybridOutput.hook);
     }
@@ -137,6 +136,40 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
       setSubtext(hybridOutput.cta);
     }
     toast.success("Applied to Creatomate render settings");
+  };
+
+  const handleAddHybridToScheduler = async () => {
+    if (!hybridOutput) {
+      toast.error("No hybrid content to schedule");
+      return;
+    }
+
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { error } = await supabase.from("content_queue").insert({
+        organization_id: organizationId,
+        content_type: contentType,
+        mode: contentMode,
+        script: hybridOutput.script || null,
+        caption: hybridOutput.caption || null,
+        hashtags: hybridOutput.hashtags || [],
+        cta_text: hybridOutput.cta || null,
+        ai_metadata: {
+          hook: hybridOutput.hook,
+          overlays: hybridOutput.overlays,
+          media_plan: hybridOutput.media_plan,
+        },
+        media_urls: selectedFile?.file_url ? [selectedFile.file_url] : [],
+        status: "draft",
+      });
+
+      if (error) throw error;
+      toast.success("Added to Content Scheduler!");
+    } catch (err) {
+      console.error("Failed to add to scheduler:", err);
+      toast.error("Failed to add to scheduler");
+    }
   };
 
   const handleProcess = async () => {
@@ -370,6 +403,7 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
           output={hybridOutput}
           rawOutput={hybridRawOutput}
           onSendToRender={handleSendHybridToRender}
+          onAddToScheduler={handleAddHybridToScheduler}
         />
       )}
 
