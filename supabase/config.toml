@@ -146,3 +146,6 @@ verify_jwt = false
 
 [functions.ai-generate-micro-content]
 verify_jwt = false
+
+[functions.yt-generate-shorts]
+verify_jwt = false
