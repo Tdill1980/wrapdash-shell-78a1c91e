@@ -38,12 +38,44 @@ export interface AnalysisData {
   chapters?: { time: string; title: string }[];
 }
 
+export interface EnhancementData {
+  pacing?: {
+    overall_score: number;
+    slow_sections: Array<{ start: string; end: string; suggestion: string }>;
+    rushed_sections: Array<{ start: string; end: string; suggestion: string }>;
+  };
+  filler_words?: {
+    total_count: number;
+    density_per_minute: number;
+    instances: Array<{ word: string; timestamp: string }>;
+  };
+  dead_air?: {
+    total_seconds: number;
+    instances: Array<{ start: string; duration: number; suggestion: string }>;
+  };
+  emotional_beats?: {
+    arc_type: string;
+    high_points: Array<{ timestamp: string; description: string; energy: number }>;
+    low_points: Array<{ timestamp: string; description: string }>;
+  };
+  broll_cues?: Array<{ timestamp: string; duration: number; suggestion: string; type: string }>;
+  text_overlays?: Array<{ timestamp: string; text: string; style: string }>;
+  chapters?: Array<{ time: string; title: string }>;
+  quality_scores?: {
+    pacing: number;
+    engagement: number;
+    clarity: number;
+    production_notes: string[];
+  };
+}
+
 export type ProcessingStatus = 
   | "idle" 
   | "uploading" 
   | "transcribing" 
   | "analyzing" 
   | "generating_shorts" 
+  | "enhancing"
   | "complete" 
   | "failed";
 
@@ -57,6 +89,8 @@ export function useYouTubeEditor() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>("idle");
   const [transcript, setTranscript] = useState<string | null>(null);
+  const [enhancementData, setEnhancementData] = useState<EnhancementData | null>(null);
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   // Placeholder stats for demo mode
   const [analysis, setAnalysis] = useState<AnalysisData>({
@@ -206,6 +240,36 @@ export function useYouTubeEditor() {
     }
   }, [pollJobStatus]);
 
+  // Generate long-form enhancements
+  const generateEnhancements = useCallback(async () => {
+    if (!jobId || !transcript) {
+      toast.error("No transcript available for enhancement analysis");
+      return;
+    }
+
+    setIsEnhancing(true);
+    setProcessingStatus("enhancing");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("yt-enhance-longform", {
+        body: { job_id: jobId, transcript }
+      });
+
+      if (error) throw error;
+
+      if (data.enhancements) {
+        setEnhancementData(data.enhancements);
+        toast.success("Enhancement analysis complete!");
+      }
+    } catch (err) {
+      console.error("Enhancement failed:", err);
+      toast.error("Failed to generate enhancements");
+    } finally {
+      setIsEnhancing(false);
+      setProcessingStatus("complete");
+    }
+  }, [jobId, transcript]);
+
   const reset = useCallback(() => {
     setVideoUrl("");
     setUploadedFile(null);
@@ -216,6 +280,8 @@ export function useYouTubeEditor() {
     setJobId(null);
     setProcessingStatus("idle");
     setTranscript(null);
+    setEnhancementData(null);
+    setIsEnhancing(false);
   }, []);
 
   return {
@@ -238,5 +304,8 @@ export function useYouTubeEditor() {
     jobId,
     processingStatus,
     transcript,
+    enhancementData,
+    isEnhancing,
+    generateEnhancements,
   };
 }

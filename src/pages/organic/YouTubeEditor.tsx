@@ -11,16 +11,19 @@ import {
   Zap,
   Package,
   RotateCcw,
+  Wand2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useYouTubeEditor } from "@/hooks/useYouTubeEditor";
 import { YouTubeProcessingStatus } from "@/components/youtube/YouTubeProcessingStatus";
 import { SceneTimeline } from "@/components/youtube/SceneTimeline";
 import { ShortPreviewCard } from "@/components/youtube/ShortPreviewCard";
+import { LongFormEnhancementPanel } from "@/components/youtube/LongFormEnhancementPanel";
 
 export default function YouTubeEditor() {
   const navigate = useNavigate();
@@ -132,39 +135,80 @@ export default function YouTubeEditor() {
         />
       )}
 
-      {/* GENERATED SHORTS */}
+      {/* TABS FOR SHORTS AND ENHANCEMENTS */}
       {YT.isAnalyzed && (
-        <div className="animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Video className="w-5 h-5 text-pink-500" />
-              Auto-Generated Shorts
-            </h2>
-            <div className="flex gap-2">
-              <Button 
-                className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white border-0"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Render All
-              </Button>
-              <Button variant="outline">
-                Schedule All
-              </Button>
-            </div>
-          </div>
+        <Tabs defaultValue="shorts" className="animate-fade-in">
+          <TabsList className="mb-4">
+            <TabsTrigger value="shorts" className="gap-2">
+              <Video className="w-4 h-4" />
+              Shorts ({YT.shorts.length})
+            </TabsTrigger>
+            <TabsTrigger value="enhancements" className="gap-2">
+              <Wand2 className="w-4 h-4" />
+              Enhancements
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {YT.shorts.map((short) => (
-              <ShortPreviewCard 
-                key={short.id} 
-                short={short}
-                onSendToReel={() => navigate("/organic/reel-builder")}
-                onSendToAd={() => navigate("/contentbox")}
-                onSchedule={() => navigate("/content-schedule")}
-              />
-            ))}
-          </div>
-        </div>
+          <TabsContent value="shorts">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Video className="w-5 h-5 text-pink-500" />
+                Auto-Generated Shorts
+              </h2>
+              <div className="flex gap-2">
+                <Button 
+                  className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white border-0"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Render All
+                </Button>
+                <Button variant="outline">
+                  Schedule All
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {YT.shorts.map((short) => (
+                <ShortPreviewCard 
+                  key={short.id} 
+                  short={short}
+                  onSendToReel={() => navigate("/organic/reel-builder")}
+                  onSendToAd={() => navigate("/contentbox")}
+                  onSchedule={() => navigate("/content-schedule")}
+                />
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="enhancements">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Wand2 className="w-5 h-5 text-pink-500" />
+                Long-Form Enhancements
+              </h2>
+              {!YT.enhancementData && (
+                <Button 
+                  onClick={YT.generateEnhancements}
+                  disabled={YT.isEnhancing || !YT.transcript}
+                  className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white border-0"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {YT.isEnhancing ? "Analyzing..." : "Analyze for Enhancements"}
+                </Button>
+              )}
+            </div>
+
+            <LongFormEnhancementPanel 
+              data={YT.enhancementData}
+              isLoading={YT.isEnhancing}
+              onApplyEnhancement={(type, item) => {
+                console.log("Apply enhancement:", type, item);
+                // TODO: Handle enhancement actions
+              }}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* INTEGRATION BUTTONS */}
