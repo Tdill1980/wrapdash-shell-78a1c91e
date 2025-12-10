@@ -1,4 +1,4 @@
-// INSTAGRAM WEBHOOK WITH USERNAME/AVATAR LOOKUP
+// INSTAGRAM WEBHOOK WITH USERNAME/AVATAR LOOKUP + FILE HANDLING
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -76,8 +76,18 @@ serve(async (req) => {
       const event = body.entry[0].messaging[0];
       const senderId = event.sender?.id || "unknown";
       const text = event.message?.text || "";
+      
+      // *** NEW: Extract file attachments ***
+      const attachments = event.message?.attachments || [];
+      const hasFiles = attachments.length > 0;
+      const fileUrls = attachments
+        .map((a: any) => a.payload?.url)
+        .filter(Boolean);
 
       console.log(`Received DM from ${senderId}: "${text}"`);
+      if (hasFiles) {
+        console.log(`📁 ${attachments.length} file(s) attached:`, fileUrls);
+      }
 
       // ---------------------------------------------------------------------
       // 3. FETCH INSTAGRAM USER PROFILE
@@ -90,14 +100,14 @@ serve(async (req) => {
       console.log(`User profile: ${displayName} (${usernameDisplay})`);
 
       // ---------------------------------------------------------------------
-      // 4. INSERT INGEST LOG
+      // 4. INSERT INGEST LOG WITH FILE INFO
       // ---------------------------------------------------------------------
       await supabase.from("message_ingest_log").insert({
         platform: "instagram",
         sender_id: senderId,
         sender_username: usernameDisplay,
-        message_text: text,
-        raw_payload: body,
+        message_text: hasFiles ? `${text} [+${attachments.length} file(s)]` : text,
+        raw_payload: { ...body, has_files: hasFiles, file_urls: fileUrls },
         processed: false
       });
 
@@ -176,7 +186,7 @@ serve(async (req) => {
             channel: "instagram",
             subject: conversationSubject,
             status: "open",
-            priority: "normal",
+            priority: hasFiles ? "high" : "normal", // Escalate priority if files sent
             unread_count: 1,
             last_message_at: new Date().toISOString()
           })
@@ -191,33 +201,36 @@ serve(async (req) => {
           .update({ 
             subject: conversationSubject,
             unread_count: (conversation.unread_count || 0) + 1,
-            last_message_at: new Date().toISOString()
+            last_message_at: new Date().toISOString(),
+            priority: hasFiles ? "high" : conversation.priority // Escalate if files
           })
           .eq("id", conversation.id);
         console.log("Updated conversation:", conversation.id);
       }
 
       // ---------------------------------------------------------------------
-      // 7. INSERT MESSAGE INTO MESSAGES TABLE
+      // 7. INSERT MESSAGE INTO MESSAGES TABLE WITH FILE METADATA
       // ---------------------------------------------------------------------
       await supabase.from("messages").insert({
         conversation_id: conversation.id,
         channel: "instagram",
-        content: text,
+        content: hasFiles ? `${text || ''} [Sent ${attachments.length} file(s)]` : text,
         direction: "inbound",
         status: "received",
         sender_name: usernameDisplay,
         metadata: { 
           sender_id: senderId,
           username: profile.username,
-          avatar_url: profile.profile_picture_url
+          avatar_url: profile.profile_picture_url,
+          has_files: hasFiles,
+          attachments: hasFiles ? fileUrls : undefined
         }
       });
 
       console.log("Message saved successfully");
 
       // ---------------------------------------------------------------------
-      // 8. ROUTE THROUGH INGEST-MESSAGE FOR AI PROCESSING
+      // 8. ROUTE THROUGH INGEST-MESSAGE FOR AI PROCESSING (WITH FILES)
       // ---------------------------------------------------------------------
       try {
         const ingestResponse = await fetch(`${SUPABASE_URL}/functions/v1/ingest-message`, {
@@ -232,7 +245,9 @@ serve(async (req) => {
             sender_username: usernameDisplay,
             message_text: text,
             conversation_id: conversation.id,
-            contact_id: contact.id
+            contact_id: contact.id,
+            // *** NEW: Pass file attachments to ingest-message ***
+            attachments: hasFiles ? fileUrls : []
           })
         });
         

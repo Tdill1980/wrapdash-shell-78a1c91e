@@ -29,7 +29,20 @@ export const WPW_TEAM: Record<string, TeamMember> = {
     name: 'Design Team',
     role: 'File Review & Quotes',
     customerFacing: true,
-    triggers: ['check my files', 'review my files', 'look at my design', 'file check', 'artwork check', 'review my artwork', 'can you check']
+    triggers: [
+      // Existing file check triggers
+      'check my files', 'review my files', 'look at my design', 'file check', 
+      'artwork check', 'review my artwork', 'can you check',
+      // NEW: Customer offering to send files
+      'send it your way', 'send you the', 'sending you the', 'got the edit ready',
+      'file ready', 'design ready', 'artwork ready', 'sending files',
+      'send my files', 'can i send', 'send over my', 'here is the file',
+      'here are the files', 'attached', 'sending the design', 'send it over',
+      'gonna send', 'about to send', 'sending now', 'uploading now',
+      'just sent', 'i sent', 'files sent', 'design sent',
+      // File type mentions
+      '.pdf', '.ai', '.eps', '.psd', '.png', '.jpg', 'illustrator', 'photoshop'
+    ]
   },
   trish: {
     email: 'Trish@WePrintWraps.com',
@@ -61,13 +74,29 @@ export function detectEscalation(message: string): string | null {
   return null;
 }
 
+// Detect if message indicates file sending intent
+export function hasFileIntent(message: string): boolean {
+  const fileIntentPhrases = [
+    'send', 'file', 'design', 'artwork', 'upload', 'attached', 'sending',
+    '.pdf', '.ai', '.eps', '.psd', '.png', '.jpg', 'illustrator', 'photoshop'
+  ];
+  
+  const lowerMessage = message.toLowerCase();
+  return fileIntentPhrases.some(phrase => lowerMessage.includes(phrase));
+}
+
 // Get escalation response for Luigi to say to customer
 export function getEscalationResponse(escalationType: string, customerName?: string): string {
   const responses: Record<string, string> = {
     jackson: `Great question! Let me check with Jackson, our Operations Manager. He'll email you the pricing details shortly. What's your email so he can reach you?`,
     lance: `I'm sorry to hear that! Let me get Lance, our Graphics Manager, on this right away. He'll contact you directly to make this right. What's your email?`,
-    design: `Absolutely! I've sent your file review request to our design team. They'll check your files and get you a quote. What's your email so they can send it over?`
+    design: `Absolutely! Send it right over - I'll forward your files to our design team. They'll check everything and get you a quote. What's your email so they can send it over?`
   };
   
   return responses[escalationType] || `Let me check with the team on that. What's your email so we can follow up?`;
+}
+
+// Response when files are actually received
+export function getFileReceivedResponse(): string {
+  return `Got it! 👊 Forwarding to Lance and the design team now - they'll review your files and email your quote shortly. What's your email so they can reach you?`;
 }
