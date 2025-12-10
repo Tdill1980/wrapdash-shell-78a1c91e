@@ -59,6 +59,8 @@ export function useAutoCreateReel() {
     filterCategory?: string;
     maxVideos?: number;
     daraFormat?: DaraFormatType;
+    videoUrl?: string; // Single video mode - AI analyzes this video and finds best scenes
+    videoDuration?: number;
   }): Promise<AutoCreateResult | null> => {
     setLoading(true);
     setError(null);
@@ -70,6 +72,8 @@ export function useAutoCreateReel() {
           filter_category: options?.filterCategory,
           max_videos: options?.maxVideos || 50,
           dara_format: options?.daraFormat,
+          video_url: options?.videoUrl,
+          video_duration: options?.videoDuration,
         },
       });
 

@@ -95,7 +95,164 @@ serve(async (req) => {
   }
 
   try {
-    const { organization_id, filter_category, max_videos, use_inspo, dara_format } = await req.json();
+    const { organization_id, filter_category, max_videos, use_inspo, dara_format, video_url, video_duration } = await req.json();
+
+    // ═══════════════════════════════════════════════════════════════
+    // SINGLE VIDEO AUTO-EDIT MODE
+    // If video_url is provided, analyze that ONE video and find best scenes
+    // ═══════════════════════════════════════════════════════════════
+    if (video_url) {
+      console.log("Single video mode - analyzing:", video_url);
+      
+      const formatPrompt = dara_format && DARA_FORMAT_PROMPTS[dara_format] 
+        ? DARA_FORMAT_PROMPTS[dara_format] 
+        : "";
+
+      const singleVideoPrompt = `You are Dara Denney, the world's best performance creative strategist.
+
+${formatPrompt ? `SELECTED FORMAT:\n${formatPrompt}\n` : ''}
+
+You are analyzing a SINGLE video to find the BEST CONVERTING MOMENTS for a viral reel.
+
+VIDEO DURATION: ${video_duration || 60} seconds
+
+YOUR TASK:
+1. Identify 3-5 KEY MOMENTS in this video that would make scroll-stopping content
+2. For each moment, specify exact timestamps (start/end in seconds)
+3. Prioritize: reveals, transformations, satisfying moments, action shots, before/after
+
+SCENE DETECTION STRATEGY:
+- Look for visual transitions, movement changes, key actions
+- Hook moment should be in first 10 seconds of source
+- Find the "money shot" - the most visually impressive moment
+- Find B-roll/filler that supports the story
+- End with a satisfying conclusion or call-to-action moment
+
+Return JSON with scene cuts from THIS video:
+{
+  "selected_videos": [
+    {
+      "id": "scene_1",
+      "order": 1,
+      "trim_start": 0,
+      "trim_end": 3,
+      "reason": "Strong opening hook",
+      "suggested_overlay": "Watch this",
+      "scene_type": "hook"
+    },
+    {
+      "id": "scene_2", 
+      "order": 2,
+      "trim_start": 15,
+      "trim_end": 20,
+      "reason": "The transformation/reveal",
+      "suggested_overlay": "The reveal",
+      "scene_type": "payoff"
+    }
+  ],
+  "reel_concept": "One sentence concept",
+  "suggested_hook": "MAX 12 chars",
+  "suggested_cta": "Follow for more",
+  "music_vibe": "upbeat_energy",
+  "estimated_virality": 85
+}
+
+RULES:
+- Each scene is 2-5 seconds MAX
+- Total reel = 12-20 seconds
+- Hook overlay: MAX 12 characters
+- Other overlays: MAX 15 characters
+- Truncate at WORD boundaries, never mid-word`;
+
+      // Call AI to analyze the single video
+      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${AI_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: singleVideoPrompt },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `Analyze this video and identify the best 3-5 scenes for a viral reel. The video is ${video_duration || 60} seconds long. Find the most converting, scroll-stopping moments.`
+                },
+                {
+                  type: "image_url",
+                  image_url: { url: video_url }
+                }
+              ]
+            }
+          ],
+        }),
+      });
+
+      if (!aiRes.ok) {
+        const errorText = await aiRes.text();
+        console.error("AI analysis failed:", errorText);
+        
+        // Fallback: create default scene cuts if AI vision fails
+        const duration = video_duration || 60;
+        const defaultScenes = [
+          { id: "scene_1", order: 1, trim_start: 0, trim_end: 3, reason: "Opening hook", suggested_overlay: "Watch this", scene_type: "hook" },
+          { id: "scene_2", order: 2, trim_start: Math.floor(duration * 0.3), trim_end: Math.floor(duration * 0.3) + 4, reason: "Build-up", suggested_overlay: "The process", scene_type: "value" },
+          { id: "scene_3", order: 3, trim_start: Math.floor(duration * 0.7), trim_end: Math.floor(duration * 0.7) + 5, reason: "The reveal", suggested_overlay: "The reveal", scene_type: "payoff" },
+          { id: "scene_4", order: 4, trim_start: Math.max(0, duration - 5), trim_end: duration, reason: "Final result", suggested_overlay: "Follow", scene_type: "cta" },
+        ];
+
+        return new Response(JSON.stringify({
+          selected_videos: defaultScenes.map(s => ({ ...s, file_url: video_url, source_video_url: video_url })),
+          reel_concept: "Auto-generated reel from uploaded video",
+          suggested_hook: "Watch this",
+          suggested_cta: "Follow",
+          music_vibe: "upbeat_energy",
+          estimated_virality: 70,
+          total_analyzed: 1,
+          single_video_mode: true,
+          source_video_url: video_url
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      const aiJson = await aiRes.json();
+      const content = aiJson.choices?.[0]?.message?.content || "{}";
+      
+      let result;
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        result = JSON.parse(jsonMatch?.[0] ?? "{}");
+      } catch {
+        console.error("Failed to parse AI response:", content);
+        result = { selected_videos: [] };
+      }
+
+      // Enrich scenes with the source video URL
+      const enrichedScenes = (result.selected_videos || []).map((scene: any) => ({
+        ...scene,
+        file_url: video_url,
+        source_video_url: video_url,
+      }));
+
+      return new Response(JSON.stringify({
+        ...result,
+        selected_videos: enrichedScenes,
+        total_analyzed: 1,
+        single_video_mode: true,
+        source_video_url: video_url
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // LIBRARY MODE (existing behavior)
+    // ═══════════════════════════════════════════════════════════════
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
