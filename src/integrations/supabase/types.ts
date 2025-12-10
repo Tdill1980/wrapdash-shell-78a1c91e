@@ -1309,6 +1309,92 @@ export type Database = {
           },
         ]
       }
+      content_queue: {
+        Row: {
+          ai_metadata: Json | null
+          ai_prompt: string | null
+          caption: string | null
+          content_type: string | null
+          created_at: string | null
+          created_by: string | null
+          cta_text: string | null
+          hashtags: string[] | null
+          id: string
+          media_urls: string[] | null
+          mode: string | null
+          organization_id: string | null
+          output_url: string | null
+          platform: string | null
+          published_at: string | null
+          references_urls: string[] | null
+          review_notes: string | null
+          reviewed_by: string | null
+          scheduled_for: string | null
+          script: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_metadata?: Json | null
+          ai_prompt?: string | null
+          caption?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cta_text?: string | null
+          hashtags?: string[] | null
+          id?: string
+          media_urls?: string[] | null
+          mode?: string | null
+          organization_id?: string | null
+          output_url?: string | null
+          platform?: string | null
+          published_at?: string | null
+          references_urls?: string[] | null
+          review_notes?: string | null
+          reviewed_by?: string | null
+          scheduled_for?: string | null
+          script?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_metadata?: Json | null
+          ai_prompt?: string | null
+          caption?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cta_text?: string | null
+          hashtags?: string[] | null
+          id?: string
+          media_urls?: string[] | null
+          mode?: string | null
+          organization_id?: string | null
+          output_url?: string | null
+          platform?: string | null
+          published_at?: string | null
+          references_urls?: string[] | null
+          review_notes?: string | null
+          reviewed_by?: string | null
+          scheduled_for?: string | null
+          script?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_sync_sources: {
         Row: {
           access_token: string | null

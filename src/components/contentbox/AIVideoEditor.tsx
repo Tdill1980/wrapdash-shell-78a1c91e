@@ -25,8 +25,11 @@ import {
 import { ContentFile, VideoProcessResult } from "@/hooks/useContentBox";
 import { useVideoRender } from "@/hooks/useVideoRender";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useHybridGenerate } from "@/hooks/useHybridGenerate";
 import { MusicPicker } from "./MusicPicker";
 import { BrandVoiceIndicator } from "./BrandVoiceIndicator";
+import { HybridModeSelector } from "./HybridModeSelector";
+import { HybridOutputDisplay } from "./HybridOutputDisplay";
 import { toast } from "sonner";
 
 interface AIVideoEditorProps {
@@ -47,6 +50,13 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
   const [subtext, setSubtext] = useState("");
   const [selectedMusicUrl, setSelectedMusicUrl] = useState<string | null>(null);
   
+  // Hybrid Mode state
+  const [contentMode, setContentMode] = useState<'auto' | 'hybrid' | 'exact'>('auto');
+  const [hybridBrief, setHybridBrief] = useState("");
+  const [contentType, setContentType] = useState("reel");
+  const [references, setReferences] = useState("");
+  const [assets, setAssets] = useState("");
+  
   const { organizationId } = useOrganization();
   const { 
     status: renderStatus, 
@@ -56,6 +66,14 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
     startRender, 
     reset: resetRender 
   } = useVideoRender();
+  
+  const {
+    generate: generateHybrid,
+    isGenerating: isGeneratingHybrid,
+    output: hybridOutput,
+    rawOutput: hybridRawOutput,
+    reset: resetHybrid,
+  } = useHybridGenerate();
 
   const actions = [
     {
@@ -91,6 +109,34 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
       organizationId: organizationId || undefined,
       musicUrl: selectedMusicUrl || undefined,
     });
+  };
+
+  const handleGenerateHybrid = async () => {
+    if (!selectedFile?.file_url && contentMode !== 'auto') {
+      toast.error("Please select a video or provide a brief");
+      return;
+    }
+
+    await generateHybrid({
+      organizationId,
+      mode: contentMode,
+      contentType,
+      hybridBrief,
+      references,
+      assets,
+      mediaUrl: selectedFile?.file_url,
+    });
+  };
+
+  const handleSendHybridToRender = () => {
+    // Use hybrid output to populate render fields
+    if (hybridOutput?.hook) {
+      setHeadline(hybridOutput.hook);
+    }
+    if (hybridOutput?.cta) {
+      setSubtext(hybridOutput.cta);
+    }
+    toast.success("Applied to Creatomate render settings");
   };
 
   const handleProcess = async () => {
@@ -281,6 +327,51 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
           </>
         )}
       </Button>
+
+      {/* ========== HYBRID MODE SECTION ========== */}
+      <HybridModeSelector
+        mode={contentMode}
+        setMode={setContentMode}
+        hybridBrief={hybridBrief}
+        setHybridBrief={setHybridBrief}
+        contentType={contentType}
+        setContentType={setContentType}
+        references={references}
+        setReferences={setReferences}
+        assets={assets}
+        setAssets={setAssets}
+      />
+
+      {/* Generate Hybrid Content Button */}
+      {(contentMode === 'hybrid' || contentMode === 'exact') && (
+        <Button
+          className="w-full bg-gradient-to-r from-[#833AB4] to-[#E1306C]"
+          size="lg"
+          disabled={isGeneratingHybrid || !hybridBrief}
+          onClick={handleGenerateHybrid}
+        >
+          {isGeneratingHybrid ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-5 h-5 mr-2" />
+              Generate {contentMode === 'hybrid' ? 'Hybrid' : 'Exact'} Content
+            </>
+          )}
+        </Button>
+      )}
+
+      {/* Hybrid Output Display */}
+      {(hybridOutput || hybridRawOutput) && (
+        <HybridOutputDisplay
+          output={hybridOutput}
+          rawOutput={hybridRawOutput}
+          onSendToRender={handleSendHybridToRender}
+        />
+      )}
 
       {/* ========== CREATOMATE RENDER SECTION ========== */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
