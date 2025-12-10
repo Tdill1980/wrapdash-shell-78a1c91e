@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.ai-repurpose-content]
 verify_jwt = false
+
+[functions.load-voice-profile]
+verify_jwt = false
