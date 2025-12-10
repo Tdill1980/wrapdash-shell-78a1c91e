@@ -31,6 +31,7 @@ import { useReelOverlays, BrandPackId } from "@/hooks/useReelOverlays";
 import { useEditorBrain } from "@/hooks/useEditorBrain";
 import { useSmartAssist } from "@/hooks/useSmartAssist";
 import { useVideoRender } from "@/hooks/useVideoRender";
+import { useAutoCreateReel } from "@/hooks/useAutoCreateReel";
 import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
 import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
 import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
@@ -111,6 +112,53 @@ export default function ReelBuilder() {
   const editorBrain = useEditorBrain();
   const smartAssist = useSmartAssist();
   const videoRender = useVideoRender();
+  const autoCreateReel = useAutoCreateReel();
+
+  // AI Auto-Create handler - uses inspo styles and picks best videos
+  const handleAIAutoCreate = async () => {
+    setIsAutoProcessing(true);
+    const result = await autoCreateReel.autoCreate({
+      maxVideos: 50,
+    });
+    
+    if (result && result.selected_videos && result.selected_videos.length > 0) {
+      // Load the AI-selected clips directly
+      const newClips: Clip[] = result.selected_videos
+        .sort((a, b) => a.order - b.order)
+        .map((video) => ({
+          id: video.id,
+          name: video.original_filename || `Clip ${video.order}`,
+          url: video.file_url || "",
+          duration: video.duration_seconds || 10,
+          thumbnail: video.thumbnail_url,
+          trimStart: video.trim_start || 0,
+          trimEnd: video.trim_end || (video.duration_seconds || 10),
+          speed: 1,
+          suggestedOverlay: video.suggested_overlay,
+          reason: video.reason,
+        }));
+
+      setClips(newClips);
+      setReelConcept(result.reel_concept);
+
+      // Apply the suggested hook as overlay
+      if (result.suggested_hook) {
+        overlaysEngine.addOverlay({
+          text: result.suggested_hook,
+          style: "modern",
+          position: "top-center",
+          start: 0,
+          end: 3,
+          color: "#E1306C",
+        });
+      }
+
+      toast.success(`AI created reel with ${newClips.length} clips!`, {
+        description: result.reel_concept,
+      });
+    }
+    setIsAutoProcessing(false);
+  };
 
   // Auto-save when render succeeds
   useEffect(() => {
@@ -419,6 +467,25 @@ export default function ReelBuilder() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* AI Auto-Create - The main action button */}
+            <Button 
+              size="sm"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              onClick={handleAIAutoCreate}
+              disabled={autoCreateReel.loading || isAutoProcessing}
+            >
+              {autoCreateReel.loading || isAutoProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-1.5" />
+                  AI Auto-Create
+                </>
+              )}
+            </Button>
             <Button 
               variant="outline" 
               size="sm"
