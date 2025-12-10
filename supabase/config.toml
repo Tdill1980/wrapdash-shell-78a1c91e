@@ -164,3 +164,6 @@ verify_jwt = false
 
 [functions.ai-auto-create-reel]
 verify_jwt = false
+
+[functions.parse-voice-quote]
+verify_jwt = false

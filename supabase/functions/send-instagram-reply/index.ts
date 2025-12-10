@@ -13,6 +13,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const token = Deno.env.get("INSTAGRAM_ACCESS_TOKEN");
+    const pageId = Deno.env.get("INSTAGRAM_PAGE_ID");
 
     if (!token) {
       console.error("❌ INSTAGRAM_ACCESS_TOKEN not configured");
@@ -25,12 +26,30 @@ serve(async (req) => {
     console.log("📤 Sending IG reply to:", body.recipient);
     console.log("📝 Message length:", body.message?.length || 0);
 
-    const url = `https://graph.facebook.com/v19.0/me/messages?access_token=${token}`;
+    // Use Instagram Graph API for Business accounts
+    // The correct endpoint for Instagram messaging is /messages on the Instagram account ID
+    // If INSTAGRAM_PAGE_ID is set, use it; otherwise fall back to /me/messages (Facebook page)
+    let url: string;
+    let payload: any;
 
-    const payload = {
-      recipient: { id: body.recipient },
-      message: { text: body.message },
-    };
+    if (pageId) {
+      // Instagram Business API - send via Instagram Graph API
+      url = `https://graph.instagram.com/v19.0/${pageId}/messages?access_token=${token}`;
+      payload = {
+        recipient: { id: body.recipient },
+        message: { text: body.message },
+      };
+      console.log("📸 Using Instagram Graph API with Page ID:", pageId);
+    } else {
+      // Fallback: Facebook Pages API (for Pages with linked Instagram)
+      url = `https://graph.facebook.com/v19.0/me/messages?access_token=${token}`;
+      payload = {
+        recipient: { id: body.recipient },
+        message: { text: body.message },
+        messaging_type: "RESPONSE",
+      };
+      console.log("📘 Using Facebook Graph API (fallback - add INSTAGRAM_PAGE_ID for direct IG)");
+    }
 
     console.log("🔗 Request URL:", url.replace(token, "***TOKEN***"));
     console.log("📦 Payload:", JSON.stringify({ recipient: payload.recipient, message: { text: body.message?.slice(0, 50) + "..." } }));
@@ -64,13 +83,16 @@ serve(async (req) => {
       } else if (errorCode === 10) {
         console.error("🔒 PERMISSION DENIED - App missing instagram_manage_messages permission");
       } else if (errorCode === 100) {
-        console.error("📛 INVALID PARAMETER - Recipient ID may be invalid or user blocked the page");
+        console.error("📛 INVALID PARAMETER - Check INSTAGRAM_PAGE_ID or recipient ID");
+        console.error("   For Instagram DMs, you need the Instagram Professional Account ID");
+        console.error("   Get it from: https://graph.facebook.com/v19.0/me/accounts?access_token=YOUR_TOKEN");
       }
       
       return new Response(JSON.stringify({ 
         error: result,
         error_summary: errorMessage || "Unknown Meta API error",
-        error_code: errorCode
+        error_code: errorCode,
+        help: errorCode === 100 ? "Add INSTAGRAM_PAGE_ID secret with your Instagram Professional Account ID" : null
       }), { 
         status: response.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
