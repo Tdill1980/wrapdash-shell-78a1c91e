@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
   Plus,
@@ -21,6 +22,7 @@ import {
   Scissors,
   Loader2,
   Brain,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
@@ -28,12 +30,15 @@ import { useReelCaptions, CaptionStyle } from "@/hooks/useReelCaptions";
 import { useReelOverlays, BrandPackId } from "@/hooks/useReelOverlays";
 import { useEditorBrain } from "@/hooks/useEditorBrain";
 import { useSmartAssist } from "@/hooks/useSmartAssist";
+import { useVideoRender } from "@/hooks/useVideoRender";
 import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
 import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
 import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
 import { SmartAssistPanel } from "@/components/reel-builder/SmartAssistPanel";
 import { MediaLibraryModal } from "@/components/media/MediaLibraryModal";
+import { PostRenderModal } from "@/components/reel-builder/PostRenderModal";
 import { MediaFile } from "@/components/media/MediaLibrary";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Clip {
@@ -84,6 +89,8 @@ export default function ReelBuilder() {
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [reelConcept, setReelConcept] = useState<string | null>(null);
   const [isAutoProcessing, setIsAutoProcessing] = useState(false);
+  const [showPostRenderModal, setShowPostRenderModal] = useState(false);
+  const [savedVideoUrl, setSavedVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Handle play/pause with ref
@@ -103,6 +110,109 @@ export default function ReelBuilder() {
   const overlaysEngine = useReelOverlays();
   const editorBrain = useEditorBrain();
   const smartAssist = useSmartAssist();
+  const videoRender = useVideoRender();
+
+  // Auto-save when render succeeds
+  useEffect(() => {
+    const saveRenderedVideo = async () => {
+      if (videoRender.status === 'succeeded' && videoRender.outputUrl) {
+        try {
+          // Save to content_files (Media Library)
+          const { data: fileData, error: fileError } = await supabase
+            .from('content_files')
+            .insert({
+              file_url: videoRender.outputUrl,
+              file_type: 'video',
+              source: 'ai_reel_builder',
+              brand: 'wpw',
+              tags: ['ai-created', 'reel', 'auto-generated'],
+              original_filename: `AI-Reel-${Date.now()}.mp4`,
+              ai_labels: {
+                concept: reelConcept,
+                clips_used: clips.length,
+                hook: autoCreateState?.suggestedHook,
+                cta: autoCreateState?.suggestedCta,
+              },
+            })
+            .select()
+            .single();
+
+          if (fileError) throw fileError;
+
+          // Save to content_queue (for scheduling/review)
+          const { error: queueError } = await supabase
+            .from('content_queue')
+            .insert({
+              content_type: 'reel',
+              status: 'draft',
+              output_url: videoRender.outputUrl,
+              caption: autoCreateState?.suggestedHook || reelConcept,
+              ai_metadata: {
+                concept: reelConcept,
+                clips_used: clips.map(c => c.id),
+                generated_at: new Date().toISOString(),
+              },
+              mode: 'auto',
+            });
+
+          if (queueError) throw queueError;
+
+          setSavedVideoUrl(videoRender.outputUrl);
+          setShowPostRenderModal(true);
+          toast.success('Reel saved to library and queue!');
+        } catch (error) {
+          console.error('Failed to save rendered video:', error);
+          toast.error('Render complete but failed to save');
+        }
+      }
+    };
+
+    saveRenderedVideo();
+  }, [videoRender.status, videoRender.outputUrl]);
+
+  // Handle render reel
+  const handleRenderReel = async () => {
+    if (clips.length === 0) {
+      toast.error('Add clips first');
+      return;
+    }
+
+    // Use first clip as primary video (Creatomate will handle multi-clip in template)
+    const primaryVideoUrl = clips[0]?.url;
+    if (!primaryVideoUrl) {
+      toast.error('No video URL available');
+      return;
+    }
+
+    await videoRender.startRender({
+      videoUrl: primaryVideoUrl,
+      headline: autoCreateState?.suggestedHook || reelConcept || undefined,
+      subtext: autoCreateState?.suggestedCta || undefined,
+      musicUrl: audioUrl || undefined,
+    });
+  };
+
+  const handleDownloadVideo = () => {
+    if (savedVideoUrl) {
+      window.open(savedVideoUrl, '_blank');
+    }
+  };
+
+  const handleViewInLibrary = () => {
+    setShowPostRenderModal(false);
+    navigate('/contentbox');
+  };
+
+  const handleSchedule = () => {
+    setShowPostRenderModal(false);
+    navigate('/content-schedule');
+  };
+
+  const handleSendToReview = () => {
+    setShowPostRenderModal(false);
+    navigate('/content-schedule');
+    toast.success('Video ready for review in Content Schedule');
+  };
 
   // Handle auto-created clips from ContentBox - FULL AUTO PROCESSING
   useEffect(() => {
@@ -322,9 +432,17 @@ export default function ReelBuilder() {
             <Button
               size="sm"
               className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
-              disabled={clips.length === 0}
+              disabled={clips.length === 0 || videoRender.isRendering}
+              onClick={handleRenderReel}
             >
-              Render Reel
+              {videoRender.isRendering ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  {videoRender.progress}%
+                </>
+              ) : (
+                'Render Reel'
+              )}
             </Button>
           </div>
         </div>
@@ -513,6 +631,35 @@ export default function ReelBuilder() {
         onMultiSelect={handleAddClipsFromLibrary}
         filterType="video"
       />
+
+      {/* Post-Render Modal */}
+      <PostRenderModal
+        open={showPostRenderModal}
+        onClose={() => setShowPostRenderModal(false)}
+        videoUrl={savedVideoUrl || ''}
+        onDownload={handleDownloadVideo}
+        onViewInLibrary={handleViewInLibrary}
+        onSchedule={handleSchedule}
+        onSendToReview={handleSendToReview}
+      />
+
+      {/* Render Progress Overlay */}
+      {videoRender.isRendering && (
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-[#405DE6] to-[#E1306C] animate-pulse" />
+              <Loader2 className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Rendering Your Reel</h2>
+              <p className="text-muted-foreground mt-1">This takes 30-60 seconds</p>
+            </div>
+            <Progress value={videoRender.progress} className="w-64 mx-auto" />
+            <p className="text-sm text-muted-foreground">{videoRender.progress}% complete</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
