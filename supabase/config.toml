@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.render-video-reel]
 verify_jwt = false
+
+[functions.hybrid-generate-content]
+verify_jwt = false
