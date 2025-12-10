@@ -1,12 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, Image, Music, Check, MoreVertical, Download, Trash2, Tag } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Play, Image, Music, Check, Video, Wand2, ImageIcon } from "lucide-react";
 
 interface MediaFile {
   id: string;
@@ -20,10 +14,12 @@ interface MediaFile {
   duration_seconds: number | null;
 }
 
+export type MediaSelectMode = "select" | "reel" | "static" | "hybrid";
+
 interface MediaCardProps {
   file: MediaFile;
   selected: boolean;
-  onClick: () => void;
+  onClick: (file: MediaFile, mode?: MediaSelectMode) => void;
   selectionMode?: boolean;
 }
 
@@ -45,7 +41,7 @@ export function MediaCard({ file, selected, onClick, selectionMode }: MediaCardP
           ? "border-primary ring-2 ring-primary/30"
           : "border-border hover:border-primary/50"
       }`}
-      onClick={onClick}
+      onClick={() => onClick(file, "select")}
     >
       {/* Thumbnail */}
       <div className="aspect-square bg-muted relative">
@@ -83,38 +79,36 @@ export function MediaCard({ file, selected, onClick, selectionMode }: MediaCardP
           </div>
         )}
 
-        {/* Hover Actions */}
+        {/* Hover Actions - Use in Reel/Static/Hybrid */}
         {!selectionMode && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="sm" className="h-7 w-7 p-0">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <Play className="w-4 h-4 mr-2" />
-                  Use in Reel
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Image className="w-4 h-4 mr-2" />
-                  Use in Static
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Tag className="w-4 h-4 mr-2" />
-                  Edit Tags
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-2 transition-opacity">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-28"
+              onClick={(e) => { e.stopPropagation(); onClick(file, "reel"); }}
+            >
+              <Video className="w-4 h-4 mr-2" />
+              Use in Reel
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-28"
+              onClick={(e) => { e.stopPropagation(); onClick(file, "static"); }}
+            >
+              <ImageIcon className="w-4 h-4 mr-2" />
+              Use in Static
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-28"
+              onClick={(e) => { e.stopPropagation(); onClick(file, "hybrid"); }}
+            >
+              <Wand2 className="w-4 h-4 mr-2" />
+              Use in Hybrid
+            </Button>
           </div>
         )}
       </div>

@@ -24,7 +24,6 @@ import {
   Repeat,
   Link2
 } from "lucide-react";
-import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 
 // Components
@@ -32,6 +31,7 @@ import { SourceIntegrationsPanel } from "@/components/contentbox/SourceIntegrati
 import { AIVideoEditor } from "@/components/contentbox/AIVideoEditor";
 import { AdCreator } from "@/components/contentbox/AdCreator";
 import { ContentRepurposer } from "@/components/contentbox/ContentRepurposer";
+import { MediaLibrary } from "@/components/media/MediaLibrary";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -69,74 +69,7 @@ const STYLE_MODIFIERS = [
   { value: 'daradenney', label: 'Dara Denney', description: 'UGC, paid social, storytelling' },
 ];
 
-function MediaCard({ file, onSelect, selected }: { file: ContentFile; onSelect: (file: ContentFile) => void; selected?: boolean }) {
-  const isVideo = file.file_type === 'video' || file.file_type === 'reel';
-  
-  return (
-    <Card 
-      className={`bg-card/50 border-border hover:border-primary/50 transition-all cursor-pointer group overflow-hidden ${
-        selected ? 'ring-2 ring-primary border-primary' : ''
-      }`}
-      onClick={() => onSelect(file)}
-    >
-      <div className="aspect-square relative overflow-hidden">
-        {isVideo ? (
-          <>
-            <img 
-              src={file.thumbnail_url || file.file_url} 
-              alt={file.original_filename || 'Media'}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <Play className="w-12 h-12 text-white" />
-            </div>
-          </>
-        ) : (
-          <img 
-            src={file.file_url} 
-            alt={file.original_filename || 'Media'}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-          />
-        )}
-        
-        <div className="absolute top-2 left-2">
-          <Badge className="bg-black/60 text-white text-xs">
-            {file.brand.toUpperCase()}
-          </Badge>
-        </div>
-        
-        <div className="absolute top-2 right-2">
-          {isVideo ? (
-            <Video className="w-4 h-4 text-white drop-shadow" />
-          ) : (
-            <Image className="w-4 h-4 text-white drop-shadow" />
-          )}
-        </div>
-        
-        {file.processing_status === 'pending' && (
-          <div className="absolute bottom-2 right-2">
-            <Loader2 className="w-4 h-4 text-primary animate-spin" />
-          </div>
-        )}
-      </div>
-      
-      <CardContent className="p-3">
-        <div className="flex flex-wrap gap-1">
-          {file.tags?.slice(0, 3).map((tag, i) => (
-            <Badge key={i} variant="secondary" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-          {(file.tags?.length || 0) > 3 && (
-            <Badge variant="outline" className="text-xs">
-              +{file.tags.length - 3}
-            </Badge>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// MediaCard moved to MediaLibrary component
 
 function GeneratorModal({ 
   open, 
@@ -416,33 +349,6 @@ export default function ContentBox() {
   const [syncingSource, setSyncingSource] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    acceptedFiles.forEach(file => {
-      uploadFile.mutate({ file, brand: brandFilter === 'all' ? 'wpw' : brandFilter });
-    });
-  }, [uploadFile, brandFilter]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': [],
-      'video/*': []
-    }
-  });
-
-  const filteredFiles = files?.filter(f => {
-    if (brandFilter !== 'all' && f.brand !== brandFilter) return false;
-    if (typeFilter !== 'all' && f.file_type !== typeFilter) return false;
-    return true;
-  }) || [];
-
-  const toggleFileSelection = (file: ContentFile) => {
-    setSelectedFiles(prev => {
-      const exists = prev.find(f => f.id === file.id);
-      if (exists) return prev.filter(f => f.id !== file.id);
-      return [...prev, file];
-    });
-  };
 
   const handleConnectSource = (source: string) => {
     toast.info(`${source} integration coming soon!`);
@@ -570,82 +476,18 @@ export default function ContentBox() {
 
         {/* Media Library Tab */}
         <TabsContent value="library" className="space-y-4">
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer
-              ${isDragActive ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
-          >
-            <input {...getInputProps()} />
-            <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-            <p className="text-foreground font-medium">
-              {isDragActive ? 'Drop files here...' : 'Drag & drop media files'}
-            </p>
-            <p className="text-muted-foreground text-sm mt-1">
-              or click to browse
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <select
-                className="bg-muted text-foreground p-2 rounded-md border border-border text-sm"
-                value={brandFilter}
-                onChange={(e) => setBrandFilter(e.target.value)}
-              >
-                {BRANDS.map(b => (
-                  <option key={b.value} value={b.value}>{b.label}</option>
-                ))}
-              </select>
-              
-              <select
-                className="bg-muted text-foreground p-2 rounded-md border border-border text-sm"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                {CONTENT_TYPES.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {filteredFiles.length} files • {selectedFiles.length} selected
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              >
-                {viewMode === 'grid' ? <LayoutList className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
-              </Button>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : filteredFiles.length === 0 ? (
-            <Card className="p-12 text-center">
-              <FolderSync className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-foreground font-medium">No media files yet</p>
-              <p className="text-muted-foreground text-sm mt-1">
-                Upload files or sync from Instagram to get started
-              </p>
-            </Card>
-          ) : (
-            <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' : 'grid-cols-1'}`}>
-              {filteredFiles.map(file => (
-                <MediaCard 
-                  key={file.id}
-                  file={file} 
-                  onSelect={toggleFileSelection}
-                  selected={selectedFiles.some(f => f.id === file.id)}
-                />
-              ))}
-            </div>
-          )}
+          <MediaLibrary
+            selectionMode={true}
+            onSelect={(file) => {
+              // Add to selected files for use in editors
+              setSelectedFiles(prev => {
+                const exists = prev.find(f => f.id === file.id);
+                if (exists) return prev.filter(f => f.id !== file.id);
+                return [...prev, file as ContentFile];
+              });
+              toast.success(`Selected: ${file.original_filename || 'Media file'}`);
+            }}
+          />
         </TabsContent>
 
         {/* Source Integrations Tab */}
