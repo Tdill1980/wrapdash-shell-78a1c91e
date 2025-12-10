@@ -10,6 +10,19 @@ interface RenderOverlay {
   duration: number;
 }
 
+export interface InspoStyle {
+  font_style?: string;
+  font_weight?: string;
+  text_color?: string;
+  text_shadow?: boolean;
+  text_position?: string;
+  background_style?: string;
+  accent_color?: string;
+  text_animation?: string;
+  hook_format?: string;
+  emoji_usage?: boolean;
+}
+
 interface RenderParams {
   videoUrl: string;
   additionalClips?: string[];
@@ -19,6 +32,7 @@ interface RenderParams {
   organizationId?: string;
   musicUrl?: string;
   overlays?: RenderOverlay[];
+  inspoStyle?: InspoStyle;
 }
 
 interface RenderState {
@@ -112,7 +126,7 @@ export function useVideoRender() {
   }, []);
 
   const startRender = useCallback(async (params: RenderParams) => {
-    const { videoUrl, additionalClips, headline, subtext, templateId, organizationId, musicUrl, overlays } = params;
+    const { videoUrl, additionalClips, headline, subtext, templateId, organizationId, musicUrl, overlays, inspoStyle } = params;
 
     if (!videoUrl) {
       toast.error('Video URL is required');
@@ -149,6 +163,7 @@ export function useVideoRender() {
             organization_id: organizationId,
             music_url: musicUrl,
             overlays,
+            inspo_style: inspoStyle,
           }),
         }
       );

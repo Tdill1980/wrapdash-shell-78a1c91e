@@ -23,6 +23,18 @@ export interface AutoCreateResult {
   music_vibe: string;
   estimated_virality: number;
   total_analyzed: number;
+  extracted_style?: {
+    font_style: string;
+    font_weight: string;
+    text_color: string;
+    text_shadow: boolean;
+    text_position: string;
+    background_style: string;
+    accent_color: string;
+    text_animation: string;
+    hook_format: string;
+    emoji_usage: boolean;
+  };
 }
 
 export function useAutoCreateReel() {
