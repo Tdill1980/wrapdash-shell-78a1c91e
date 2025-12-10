@@ -11,9 +11,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MediaUploader } from "./MediaUploader";
-import { MediaCard } from "./MediaCard";
+import { MediaCard, MediaSelectMode } from "./MediaCard";
 
-interface MediaFile {
+export interface MediaFile {
   id: string;
   file_url: string;
   file_type: string;
@@ -36,7 +36,7 @@ export function MediaLibrary({
   onSelect,
   selectionMode = false 
 }: { 
-  onSelect?: (file: MediaFile) => void;
+  onSelect?: (file: MediaFile, mode?: MediaSelectMode) => void;
   selectionMode?: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,10 +72,12 @@ export function MediaLibrary({
     );
   });
 
-  const handleFileSelect = (file: MediaFile) => {
-    if (selectionMode && onSelect) {
-      onSelect(file);
-    } else {
+  const handleFileSelect = (file: MediaFile, mode?: MediaSelectMode) => {
+    if (onSelect) {
+      onSelect(file, mode);
+    }
+    
+    if (!selectionMode) {
       setSelectedFiles((prev) =>
         prev.includes(file.id)
           ? prev.filter((id) => id !== file.id)
@@ -203,7 +205,7 @@ export function MediaLibrary({
               key={file.id}
               file={file}
               selected={selectedFiles.includes(file.id)}
-              onClick={() => handleFileSelect(file)}
+              onClick={handleFileSelect}
               selectionMode={selectionMode}
             />
           ))}
