@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_vault: {
+        Row: {
+          created_at: string
+          cta: string | null
+          headline: string | null
+          id: string
+          layout_json: Json | null
+          organization_id: string
+          placement: string
+          png_url: string
+          primary_text: string | null
+          template_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          cta?: string | null
+          headline?: string | null
+          id?: string
+          layout_json?: Json | null
+          organization_id: string
+          placement: string
+          png_url: string
+          primary_text?: string | null
+          template_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          cta?: string | null
+          headline?: string | null
+          id?: string
+          layout_json?: Json | null
+          organization_id?: string
+          placement?: string
+          png_url?: string
+          primary_text?: string | null
+          template_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_vault_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_card_views: {
         Row: {
           created_at: string | null

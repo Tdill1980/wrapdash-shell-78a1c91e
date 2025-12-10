@@ -6,13 +6,18 @@ import { TemplateAdPicker } from "./TemplateAdPicker";
 import { MetaAdFormatPicker } from "./MetaAdFormatPicker";
 import { MetaAdPreviewFrame } from "./MetaAdPreviewFrame";
 import { useStaticAdBuilder, StaticAdLayout } from "@/hooks/useStaticAdBuilder";
+import { useStaticAdRender } from "@/hooks/useStaticAdRender";
+import { useAdVault } from "@/hooks/useAdVault";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import { MetaPlacement, META_PLACEMENTS } from "@/lib/meta-ads";
 import { CTA_OPTIONS, MetaCTA } from "@/lib/meta-ads/ctaMap";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, RefreshCw } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Download, RefreshCw, Save, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface StaticAdDesignerProps {
   mediaUrl?: string;
@@ -24,12 +29,17 @@ interface StaticAdDesignerProps {
 
 export function StaticAdDesigner({
   mediaUrl,
-  organizationId,
+  organizationId: propOrgId,
   initialHeadline = "",
   initialCta = "GET_QUOTE",
   onLayoutGenerated,
 }: StaticAdDesignerProps) {
+  const { organizationId: contextOrgId } = useOrganization();
+  const orgId = propOrgId || contextOrgId;
+
   const { generateStaticAd, loading, adLayout, reset } = useStaticAdBuilder();
+  const { startRender, rendering, progress, result, reset: resetRender } = useStaticAdRender();
+  const { addToVault, isAdding } = useAdVault(orgId || undefined);
 
   const [mode, setMode] = useState<"template" | "ai">("template");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("bold_premium");
@@ -38,8 +48,11 @@ export function StaticAdDesigner({
   const [primaryText, setPrimaryText] = useState("");
   const [cta, setCta] = useState<MetaCTA>(initialCta);
 
+  const placementFormat = META_PLACEMENTS[selectedPlacement];
+  const aspectRatio = placementFormat?.aspectRatio || "4:5";
+
   const handleGenerate = async () => {
-    const result = await generateStaticAd({
+    const generatedLayout = await generateStaticAd({
       mode,
       templateId: mode === "template" ? selectedTemplate : undefined,
       placement: selectedPlacement,
@@ -47,15 +60,67 @@ export function StaticAdDesigner({
       primaryText,
       cta,
       mediaUrl,
-      organizationId,
+      organizationId: orgId || undefined,
     });
 
-    if (result && onLayoutGenerated) {
-      onLayoutGenerated(result);
+    if (generatedLayout && onLayoutGenerated) {
+      onLayoutGenerated(generatedLayout);
     }
   };
 
-  const placementFormat = META_PLACEMENTS[selectedPlacement];
+  const handleRenderPng = async () => {
+    const ctaLabel = CTA_OPTIONS.find((c) => c.id === cta)?.label || "Get Quote";
+
+    await startRender({
+      mode,
+      templateId: mode === "template" ? selectedTemplate : undefined,
+      aspectRatio,
+      headline,
+      cta: ctaLabel,
+      mediaUrl,
+      layoutJson: adLayout?.layout,
+    });
+  };
+
+  const handleSaveToVault = async () => {
+    if (!result?.url || !orgId) {
+      toast.error("No rendered image to save");
+      return;
+    }
+
+    await addToVault({
+      organization_id: orgId,
+      placement: selectedPlacement,
+      type: mode,
+      png_url: result.url,
+      template_id: mode === "template" ? selectedTemplate : null,
+      layout_json: adLayout?.layout || null,
+      headline,
+      primary_text: primaryText || null,
+      cta,
+    });
+  };
+
+  const handleDownload = async () => {
+    if (!result?.url) return;
+
+    try {
+      const response = await fetch(result.url);
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${headline || "ad"}-${selectedPlacement}-${Date.now()}.png`;
+      link.click();
+      toast.success("Download started");
+    } catch {
+      toast.error("Failed to download");
+    }
+  };
+
+  const handleReset = () => {
+    reset();
+    resetRender();
+  };
 
   return (
     <div className="grid lg:grid-cols-2 gap-6">
@@ -142,29 +207,83 @@ export function StaticAdDesigner({
           </div>
         </div>
 
-        {/* Generate Button */}
-        <div className="flex gap-3">
-          <Button
-            onClick={handleGenerate}
-            disabled={loading || !headline}
-            className="flex-1"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                {mode === "template" ? "Apply Template" : "Generate AI Design"}
-              </>
-            )}
-          </Button>
-
-          {adLayout && (
-            <Button variant="outline" onClick={reset}>
-              <RefreshCw className="w-4 h-4" />
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <div className="flex gap-3">
+            <Button
+              onClick={handleGenerate}
+              disabled={loading || !headline}
+              className="flex-1"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>{mode === "template" ? "Apply Template" : "Generate AI Design"}</>
+              )}
             </Button>
+
+            {(adLayout || result) && (
+              <Button variant="outline" onClick={handleReset}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Render PNG Button */}
+          {adLayout && !result?.url && (
+            <Button
+              onClick={handleRenderPng}
+              disabled={rendering}
+              variant="secondary"
+              className="w-full"
+            >
+              {rendering ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Rendering PNG...
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  Render PNG
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* Progress Bar */}
+          {rendering && (
+            <div className="space-y-2">
+              <Progress value={progress} className="h-2" />
+              <p className="text-xs text-muted-foreground text-center">
+                Rendering... {Math.round(progress)}%
+              </p>
+            </div>
+          )}
+
+          {/* Save/Download Buttons */}
+          {result?.url && (
+            <div className="flex gap-3">
+              <Button onClick={handleDownload} variant="outline" className="flex-1">
+                <Download className="w-4 h-4 mr-2" />
+                Download PNG
+              </Button>
+              <Button
+                onClick={handleSaveToVault}
+                disabled={isAdding || !orgId}
+                className="flex-1"
+              >
+                {isAdding ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save to Vault
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -172,23 +291,30 @@ export function StaticAdDesigner({
       {/* RIGHT SIDE - PREVIEW */}
       <div className="space-y-4">
         <div className="p-4 border rounded-xl bg-muted/30">
-          <MetaAdPreviewFrame
-            placement={selectedPlacement}
-            mediaUrl={mediaUrl}
-            caption={headline}
-            showSafeZones={true}
-          />
+          {result?.url ? (
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-center">Rendered Ad</p>
+              <img
+                src={result.url}
+                alt="Rendered Ad"
+                className="w-full rounded-lg shadow-lg"
+              />
+            </div>
+          ) : (
+            <MetaAdPreviewFrame
+              placement={selectedPlacement}
+              mediaUrl={mediaUrl}
+              caption={headline}
+              showSafeZones={true}
+            />
+          )}
         </div>
 
         {/* Layout Output (debug/export) */}
-        {adLayout && (
+        {adLayout && !result?.url && (
           <div className="p-4 border rounded-xl bg-card">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold">Generated Layout</h4>
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export PNG
-              </Button>
+              <h4 className="font-semibold text-sm">Layout Preview</h4>
             </div>
             <pre className="text-xs bg-muted p-3 rounded-lg overflow-auto max-h-48">
               {JSON.stringify(adLayout.layout, null, 2)}
