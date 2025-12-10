@@ -478,14 +478,25 @@ export default function ContentBox() {
         <TabsContent value="library" className="space-y-4">
           <MediaLibrary
             selectionMode={true}
-            onSelect={(file) => {
+            onSelect={(file, mode) => {
               // Add to selected files for use in editors
               setSelectedFiles(prev => {
                 const exists = prev.find(f => f.id === file.id);
                 if (exists) return prev.filter(f => f.id !== file.id);
                 return [...prev, file as ContentFile];
               });
+
               toast.success(`Selected: ${file.original_filename || 'Media file'}`);
+
+              // Route to appropriate editor based on mode
+              if (mode === "reel" || mode === "hybrid") {
+                setActiveTab("create");
+                setCreatorTab("video-editor");
+              }
+              if (mode === "static") {
+                setActiveTab("create");
+                setCreatorTab("ad-creator");
+              }
             }}
           />
         </TabsContent>
