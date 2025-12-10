@@ -26,6 +26,8 @@ import { ContentFile, VideoProcessResult } from "@/hooks/useContentBox";
 import { useVideoRender } from "@/hooks/useVideoRender";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useHybridGenerate } from "@/hooks/useHybridGenerate";
+import { EditorModeProvider, useEditorMode } from "@/contexts/EditorModeContext";
+import { EditorModeTabs, EditorToolSidebar } from "@/components/editor";
 import { MusicPicker } from "./MusicPicker";
 import { BrandVoiceIndicator } from "./BrandVoiceIndicator";
 import { HybridModeSelector } from "./HybridModeSelector";
@@ -38,12 +40,14 @@ interface AIVideoEditorProps {
   processing: boolean;
 }
 
-export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEditorProps) {
+function AIVideoEditorContent({ selectedFile, onProcess, processing }: AIVideoEditorProps) {
+  const { mode } = useEditorMode();
   const [trimStart, setTrimStart] = useState([0]);
   const [trimEnd, setTrimEnd] = useState([100]);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [result, setResult] = useState<VideoProcessResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
   
   // Creatomate render state
   const [headline, setHeadline] = useState("");
@@ -189,6 +193,16 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
     }
   };
 
+  const handleToolSelect = (toolId: string) => {
+    setSelectedTool(toolId);
+    // Map sidebar tool to action for basic mode
+    if (mode === 'basic') {
+      if (toolId === 'auto_cut') setSelectedAction('auto_cut');
+      else if (toolId === 'auto_captions') setSelectedAction('add_captions');
+      else if (toolId === 'enhance') setSelectedAction('enhance');
+    }
+  };
+
   const downloadCaptions = (format: 'srt' | 'vtt') => {
     if (!result) return;
     const content = format === 'srt' ? result.captions_srt : result.captions_vtt;
@@ -237,395 +251,456 @@ export function AIVideoEditor({ selectedFile, onProcess, processing }: AIVideoEd
     );
   }
 
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Video Preview - Responsive */}
-      <Card className="bg-black overflow-hidden">
-        <div className="aspect-video relative">
-          <video
-            src={selectedFile.file_url}
-            className="w-full h-full object-contain"
-            controls={false}
-          />
-          <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/80 to-transparent">
-            <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-3">
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
-                <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-              <Button size="icon" className="bg-white text-black hover:bg-white/90 h-10 w-10 sm:h-12 sm:w-12">
-                <Play className="w-5 h-5 sm:w-6 sm:h-6" />
-              </Button>
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
-                <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
-                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            </div>
-            
-            {/* Timeline */}
-            <div className="space-y-1 sm:space-y-2">
-              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
-                  style={{ width: '35%' }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-white/60">
-                <span>0:00</span>
-                <span>{selectedFile.duration_seconds ? `${Math.floor(selectedFile.duration_seconds / 60)}:${String(Math.floor(selectedFile.duration_seconds % 60)).padStart(2, '0')}` : '0:00'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Trim Controls - Mobile Friendly */}
-      <Card>
-        <CardHeader className="pb-2 px-3 sm:px-6">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Scissors className="w-4 h-4" />
-            Trim Video
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 px-3 sm:px-6">
-          <div>
-            <label className="text-xs text-muted-foreground">Start Point</label>
-            <Slider
-              value={trimStart}
-              onValueChange={setTrimStart}
-              max={100}
-              step={1}
-              className="mt-2 touch-none"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">End Point</label>
-            <Slider
-              value={trimEnd}
-              onValueChange={setTrimEnd}
-              max={100}
-              step={1}
-              className="mt-2 touch-none"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Trimming from {trimStart[0]}% to {trimEnd[0]}%
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* AI Actions - Responsive Grid */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
-        {actions.map((action) => (
-          <Card 
-            key={action.id}
-            className={`cursor-pointer transition-all ${
-              selectedAction === action.id 
-                ? 'ring-2 ring-primary border-primary' 
-                : 'hover:border-primary/50'
-            }`}
-            onClick={() => setSelectedAction(action.id)}
-          >
-            <CardContent className="py-3 sm:py-4 px-3 sm:px-4">
-              <div className="flex items-center sm:items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
-                  {action.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-foreground text-sm">{action.name}</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-2">{action.description}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Button
-        className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C] h-11 sm:h-12"
-        size="lg"
-        disabled={!selectedAction || processing}
-        onClick={handleProcess}
-      >
-        {processing ? (
+  // Render content based on current mode
+  const renderModeContent = () => {
+    switch (mode) {
+      case 'basic':
+        return (
           <>
-            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin mr-2" />
-            Processing...
-          </>
-        ) : (
-          <>
-            <Wand2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Apply {selectedAction ? actions.find(a => a.id === selectedAction)?.name : 'Edit'}
-          </>
-        )}
-      </Button>
+            {/* Trim Controls */}
+            <Card>
+              <CardHeader className="pb-2 px-3 sm:px-6">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Scissors className="w-4 h-4" />
+                  Trim Video
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 px-3 sm:px-6">
+                <div>
+                  <label className="text-xs text-muted-foreground">Start Point</label>
+                  <Slider
+                    value={trimStart}
+                    onValueChange={setTrimStart}
+                    max={100}
+                    step={1}
+                    className="mt-2 touch-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">End Point</label>
+                  <Slider
+                    value={trimEnd}
+                    onValueChange={setTrimEnd}
+                    max={100}
+                    step={1}
+                    className="mt-2 touch-none"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Trimming from {trimStart[0]}% to {trimEnd[0]}%
+                </p>
+              </CardContent>
+            </Card>
 
-      {/* ========== HYBRID MODE SECTION ========== */}
-      <HybridModeSelector
-        mode={contentMode}
-        setMode={setContentMode}
-        hybridBrief={hybridBrief}
-        setHybridBrief={setHybridBrief}
-        contentType={contentType}
-        setContentType={setContentType}
-        references={references}
-        setReferences={setReferences}
-        assets={assets}
-        setAssets={setAssets}
-      />
-
-      {/* Generate Hybrid Content Button */}
-      {(contentMode === 'hybrid' || contentMode === 'exact') && (
-        <Button
-          className="w-full bg-gradient-to-r from-[#833AB4] to-[#E1306C]"
-          size="lg"
-          disabled={isGeneratingHybrid || !hybridBrief}
-          onClick={handleGenerateHybrid}
-        >
-          {isGeneratingHybrid ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Wand2 className="w-5 h-5 mr-2" />
-              Generate {contentMode === 'hybrid' ? 'Hybrid' : 'Exact'} Content
-            </>
-          )}
-        </Button>
-      )}
-
-      {/* Hybrid Output Display */}
-      {(hybridOutput || hybridRawOutput) && (
-        <HybridOutputDisplay
-          output={hybridOutput}
-          rawOutput={hybridRawOutput}
-          onSendToRender={handleSendHybridToRender}
-          onAddToScheduler={handleAddHybridToScheduler}
-        />
-      )}
-
-      {/* ========== CREATOMATE RENDER SECTION ========== */}
-      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
-        <CardHeader className="pb-3 px-3 sm:px-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Video className="w-4 h-4 text-primary" />
-              Render Reel with Creatomate
-            </CardTitle>
-            <BrandVoiceIndicator />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Add text overlays and music, then render a polished reel
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4 px-3 sm:px-6">
-          {/* Text Overlays - Stack on mobile */}
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="headline" className="text-xs">Headline (Text-1)</Label>
-              <Input
-                id="headline"
-                placeholder="Your Text Here"
-                value={headline}
-                onChange={(e) => setHeadline(e.target.value)}
-                className="bg-background h-10"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="subtext" className="text-xs">Subtext (Text-2)</Label>
-              <Input
-                id="subtext"
-                placeholder="Create & Automate Video"
-                value={subtext}
-                onChange={(e) => setSubtext(e.target.value)}
-                className="bg-background h-10"
-              />
-            </div>
-          </div>
-
-          {/* Music Picker */}
-          <MusicPicker
-            selectedUrl={selectedMusicUrl}
-            onSelect={setSelectedMusicUrl}
-          />
-
-          {/* Render Progress */}
-          {isRendering && (
-            <div className="space-y-2 p-4 rounded-lg bg-background/50 border border-border/50">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                  Rendering video...
-                </span>
-                <span className="text-muted-foreground">{renderProgress}%</span>
-              </div>
-              <Progress value={renderProgress} className="h-2" />
-              <p className="text-xs text-muted-foreground">
-                This may take 1-2 minutes depending on video length
-              </p>
-            </div>
-          )}
-
-          {/* Render Complete */}
-          {renderStatus === 'succeeded' && outputUrl && (
-            <div className="space-y-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
-              <div className="flex items-center gap-2 text-green-500">
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-medium">Render Complete!</span>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  className="flex-1 bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
-                  asChild
+            {/* AI Actions */}
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+              {actions.map((action) => (
+                <Card 
+                  key={action.id}
+                  className={`cursor-pointer transition-all ${
+                    selectedAction === action.id 
+                      ? 'ring-2 ring-primary border-primary' 
+                      : 'hover:border-primary/50'
+                  }`}
+                  onClick={() => setSelectedAction(action.id)}
                 >
-                  <a href={outputUrl} target="_blank" rel="noopener noreferrer">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download MP4
-                  </a>
-                </Button>
-                <Button variant="outline" asChild>
-                  <a href={outputUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </Button>
-              </div>
+                  <CardContent className="py-3 sm:py-4 px-3 sm:px-4">
+                    <div className="flex items-center sm:items-start gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                        {action.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-foreground text-sm">{action.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-2">{action.description}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          )}
 
-          {/* Render Failed */}
-          {renderStatus === 'failed' && (
-            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-              <p className="text-sm text-destructive">
-                Render failed. Please try again or check your video file.
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-2"
-                onClick={resetRender}
-              >
-                Try Again
-              </Button>
-            </div>
-          )}
-
-          {/* Render Button */}
-          {renderStatus !== 'succeeded' && (
             <Button
-              className="w-full bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] hover:from-[#5B7FFF] hover:via-[#9B59B6] hover:to-[#F56A9E]"
+              className="w-full bg-gradient-to-r from-[hsl(var(--instagram-blue))] to-[hsl(var(--instagram-pink))] h-11 sm:h-12"
               size="lg"
-              disabled={isRendering || !selectedFile}
-              onClick={handleRenderReel}
+              disabled={!selectedAction || processing}
+              onClick={handleProcess}
             >
-              {isRendering ? (
+              {processing ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Rendering...
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin mr-2" />
+                  Processing...
                 </>
               ) : (
                 <>
-                  <Video className="w-5 h-5 mr-2" />
-                  Render Reel
+                  <Wand2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  Apply {selectedAction ? actions.find(a => a.id === selectedAction)?.name : 'Edit'}
                 </>
               )}
             </Button>
+          </>
+        );
+
+      case 'smart_assist':
+        return (
+          <Card className="p-8 text-center border-dashed">
+            <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary/50" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Smart Assist Coming Soon</h3>
+            <p className="text-muted-foreground text-sm">
+              AI-powered clip analysis, scene detection, and creative suggestions
+            </p>
+          </Card>
+        );
+
+      case 'auto_create':
+        return (
+          <Card className="p-8 text-center border-dashed">
+            <Wand2 className="w-12 h-12 mx-auto mb-4 text-primary/50" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Auto Create Coming Soon</h3>
+            <p className="text-muted-foreground text-sm">
+              Fully automated timeline, variants, and multi-platform export
+            </p>
+          </Card>
+        );
+
+      case 'hybrid':
+        return (
+          <>
+            <HybridModeSelector
+              mode={contentMode}
+              setMode={setContentMode}
+              hybridBrief={hybridBrief}
+              setHybridBrief={setHybridBrief}
+              contentType={contentType}
+              setContentType={setContentType}
+              references={references}
+              setReferences={setReferences}
+              assets={assets}
+              setAssets={setAssets}
+            />
+
+            {(contentMode === 'hybrid' || contentMode === 'exact') && (
+              <Button
+                className="w-full bg-gradient-to-r from-[hsl(var(--instagram-purple))] to-[hsl(var(--instagram-pink))]"
+                size="lg"
+                disabled={isGeneratingHybrid || !hybridBrief}
+                onClick={handleGenerateHybrid}
+              >
+                {isGeneratingHybrid ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-5 h-5 mr-2" />
+                    Generate {contentMode === 'hybrid' ? 'Hybrid' : 'Exact'} Content
+                  </>
+                )}
+              </Button>
+            )}
+
+            {(hybridOutput || hybridRawOutput) && (
+              <HybridOutputDisplay
+                output={hybridOutput}
+                rawOutput={hybridRawOutput}
+                onSendToRender={handleSendHybridToRender}
+                onAddToScheduler={handleAddHybridToScheduler}
+              />
+            )}
+          </>
+        );
+
+      case 'render':
+        return (
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5">
+            <CardHeader className="pb-3 px-3 sm:px-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Video className="w-4 h-4 text-primary" />
+                  Render Reel with Creatomate
+                </CardTitle>
+                <BrandVoiceIndicator />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Add text overlays and music, then render a polished reel
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4 px-3 sm:px-6">
+              {/* Text Overlays */}
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="headline" className="text-xs">Headline (Text-1)</Label>
+                  <Input
+                    id="headline"
+                    placeholder="Your Text Here"
+                    value={headline}
+                    onChange={(e) => setHeadline(e.target.value)}
+                    className="bg-background h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subtext" className="text-xs">Subtext (Text-2)</Label>
+                  <Input
+                    id="subtext"
+                    placeholder="Create & Automate Video"
+                    value={subtext}
+                    onChange={(e) => setSubtext(e.target.value)}
+                    className="bg-background h-10"
+                  />
+                </div>
+              </div>
+
+              {/* Music Picker */}
+              <MusicPicker
+                selectedUrl={selectedMusicUrl}
+                onSelect={setSelectedMusicUrl}
+              />
+
+              {/* Render Progress */}
+              {isRendering && (
+                <div className="space-y-2 p-4 rounded-lg bg-background/50 border border-border/50">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      Rendering video...
+                    </span>
+                    <span className="text-muted-foreground">{renderProgress}%</span>
+                  </div>
+                  <Progress value={renderProgress} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    This may take 1-2 minutes depending on video length
+                  </p>
+                </div>
+              )}
+
+              {/* Render Complete */}
+              {renderStatus === 'succeeded' && outputUrl && (
+                <div className="space-y-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <div className="flex items-center gap-2 text-green-500">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-medium">Render Complete!</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1 bg-gradient-to-r from-[hsl(var(--instagram-blue))] to-[hsl(var(--instagram-pink))]"
+                      asChild
+                    >
+                      <a href={outputUrl} target="_blank" rel="noopener noreferrer">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download MP4
+                      </a>
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <a href={outputUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Render Failed */}
+              {renderStatus === 'failed' && (
+                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                  <p className="text-sm text-destructive">
+                    Render failed. Please try again or check your video file.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={resetRender}
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              )}
+
+              {/* Render Button */}
+              {renderStatus !== 'succeeded' && (
+                <Button
+                  className="w-full bg-gradient-to-r from-[hsl(var(--instagram-blue))] via-[hsl(var(--instagram-purple))] to-[hsl(var(--instagram-pink))] hover:opacity-90"
+                  size="lg"
+                  disabled={isRendering || !selectedFile}
+                  onClick={handleRenderReel}
+                >
+                  {isRendering ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Rendering...
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-5 h-5 mr-2" />
+                      Render Reel
+                    </>
+                  )}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex flex-col w-full h-full">
+      {/* Top Mode Tabs */}
+      <EditorModeTabs />
+
+      <div className="flex w-full gap-4">
+        {/* Left Sidebar */}
+        <EditorToolSidebar onToolSelect={handleToolSelect} selectedTool={selectedTool} />
+
+        {/* Main Workspace */}
+        <div className="flex-1 space-y-4 sm:space-y-6">
+          {/* Video Preview */}
+          <Card className="bg-black overflow-hidden">
+            <div className="aspect-video relative">
+              <video
+                src={selectedFile.file_url}
+                className="w-full h-full object-contain"
+                controls={false}
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/80 to-transparent">
+                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-2 sm:mb-3">
+                  <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
+                    <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                  <Button size="icon" className="bg-white text-black hover:bg-white/90 h-10 w-10 sm:h-12 sm:w-12">
+                    <Play className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
+                    <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 h-9 w-9 sm:h-10 sm:w-10">
+                    <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </div>
+                
+                {/* Timeline */}
+                <div className="space-y-1 sm:space-y-2">
+                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[hsl(var(--instagram-blue))] to-[hsl(var(--instagram-pink))]"
+                      style={{ width: '35%' }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-white/60">
+                    <span>0:00</span>
+                    <span>{selectedFile.duration_seconds ? `${Math.floor(selectedFile.duration_seconds / 60)}:${String(Math.floor(selectedFile.duration_seconds % 60)).padStart(2, '0')}` : '0:00'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Mode-specific content */}
+          {renderModeContent()}
+
+          {/* Results Display - shown in all modes */}
+          {result && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  AI Processing Complete
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Captions */}
+                {result.captions_srt && (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-2">Caption Files</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => downloadCaptions('srt')}>
+                        <Download className="w-4 h-4 mr-1" /> SRT
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => downloadCaptions('vtt')}>
+                        <Download className="w-4 h-4 mr-1" /> VTT
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transcript */}
+                {result.transcript && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-foreground">Transcript</p>
+                      <Button size="sm" variant="ghost" onClick={() => copyToClipboard(result.transcript!)}>
+                        {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg max-h-32 overflow-y-auto">
+                      {result.transcript}
+                    </p>
+                  </div>
+                )}
+
+                {/* Beat Sheet */}
+                {result.beat_sheet && result.beat_sheet.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-2">Beat Sheet</p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {result.beat_sheet.map((beat, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs bg-muted p-2 rounded">
+                          <span className="text-primary font-mono">{beat.timestamp}</span>
+                          <span className="text-muted-foreground">{beat.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cut Recommendations */}
+                {result.cut_recommendations && result.cut_recommendations.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-2">Recommended Cuts</p>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {result.cut_recommendations.map((cut, i) => (
+                        <div key={i} className="text-xs bg-muted p-2 rounded">
+                          <div className="flex items-center gap-2">
+                            <span className="text-primary font-mono">{cut.start} → {cut.end}</span>
+                            <span className="text-green-500">Score: {cut.score}/10</span>
+                          </div>
+                          <p className="text-muted-foreground mt-1">{cut.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Enhancement Suggestions */}
+                {result.enhancement_suggestions && result.enhancement_suggestions.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-2">Enhancement Suggestions</p>
+                    <ul className="space-y-1">
+                      {result.enhancement_suggestions.map((suggestion, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                          <Sparkles className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Results Display */}
-      {result && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              AI Processing Complete
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Captions */}
-            {result.captions_srt && (
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">Caption Files</p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => downloadCaptions('srt')}>
-                    <Download className="w-4 h-4 mr-1" /> SRT
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => downloadCaptions('vtt')}>
-                    <Download className="w-4 h-4 mr-1" /> VTT
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Transcript */}
-            {result.transcript && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-foreground">Transcript</p>
-                  <Button size="sm" variant="ghost" onClick={() => copyToClipboard(result.transcript!)}>
-                    {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg max-h-32 overflow-y-auto">
-                  {result.transcript}
-                </p>
-              </div>
-            )}
-
-            {/* Beat Sheet */}
-            {result.beat_sheet && result.beat_sheet.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">Beat Sheet</p>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {result.beat_sheet.map((beat, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs bg-muted p-2 rounded">
-                      <span className="text-primary font-mono">{beat.timestamp}</span>
-                      <span className="text-muted-foreground">{beat.description}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Cut Recommendations */}
-            {result.cut_recommendations && result.cut_recommendations.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">Recommended Cuts</p>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {result.cut_recommendations.map((cut, i) => (
-                    <div key={i} className="text-xs bg-muted p-2 rounded">
-                      <div className="flex items-center gap-2">
-                        <span className="text-primary font-mono">{cut.start} → {cut.end}</span>
-                        <span className="text-green-500">Score: {cut.score}/10</span>
-                      </div>
-                      <p className="text-muted-foreground mt-1">{cut.reason}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Enhancement Suggestions */}
-            {result.enhancement_suggestions && result.enhancement_suggestions.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">Enhancement Suggestions</p>
-                <ul className="space-y-1">
-                  {result.enhancement_suggestions.map((suggestion, i) => (
-                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                      <Sparkles className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+export function AIVideoEditor(props: AIVideoEditorProps) {
+  return (
+    <EditorModeProvider>
+      <AIVideoEditorContent {...props} />
+    </EditorModeProvider>
   );
 }
