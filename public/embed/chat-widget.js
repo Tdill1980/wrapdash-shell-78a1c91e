@@ -10,6 +10,32 @@
     apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/website-chat'
   };
 
+  // Geo data (fetched on load)
+  let geoData = null;
+
+  // Fetch geo location on widget load
+  (async function fetchGeoData() {
+    try {
+      const response = await fetch('https://ipapi.co/json/', { cache: 'force-cache' });
+      if (response.ok) {
+        const data = await response.json();
+        geoData = {
+          ip: data.ip,
+          city: data.city,
+          region: data.region,
+          country: data.country_code,
+          country_name: data.country_name,
+          timezone: data.timezone,
+          latitude: data.latitude,
+          longitude: data.longitude
+        };
+        console.log('[WCAI] Geo:', geoData?.city, geoData?.country);
+      }
+    } catch (err) {
+      console.warn('[WCAI] Geo fetch failed');
+    }
+  })();
+
   // Styles
   const styles = `
     .wcai-chat-container {
@@ -317,7 +343,8 @@
           session_id: sessionId,
           message_text: text,
           page_url: window.location.href,
-          referrer: document.referrer
+          referrer: document.referrer,
+          geo: geoData
         })
       });
 
