@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPricingContext, calculateQuickQuote } from "../_shared/wpw-pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,13 +22,17 @@ serve(async (req) => {
 
     console.log("📥 Ingesting message:", body);
 
+    // Check for file attachments
+    const hasFiles = body.attachments?.length > 0;
+    const fileUrls = body.attachments || [];
+
     // 1. Log raw message
     const { error: logError } = await supabase.from("message_ingest_log").insert({
       platform: body.platform,
       sender_id: body.sender_id,
       sender_username: body.sender_username,
       message_text: body.message_text,
-      raw_payload: body,
+      raw_payload: { ...body, has_files: hasFiles, file_count: fileUrls.length },
     });
 
     if (logError) console.error("Log insert error:", logError);
@@ -35,14 +40,23 @@ serve(async (req) => {
     // 2. Classify intent AND extract vehicle info via AI
     const classifyPrompt = `Analyze this customer message and return JSON only:
 {
-  "type": "quote" | "design" | "support" | "general",
+  "type": "quote" | "design" | "support" | "file_received" | "general",
   "vehicle": { "year": string | null, "make": string | null, "model": string | null },
-  "wrap_type": "full" | "partial" | "color_change" | "ppf" | "commercial" | null,
+  "wrap_type": "full" | "partial" | "color_change" | "fade" | "commercial" | null,
   "urgency": "high" | "normal" | "low",
-  "needs_vehicle_info": boolean
+  "needs_vehicle_info": boolean,
+  "has_file_intent": boolean,
+  "customer_email": string | null
 }
 
-Message: "${body.message_text}"`;
+Look for:
+- Vehicle year/make/model mentions
+- Email addresses
+- File sending intent (words like "send", "file", "design", "artwork", "attached")
+- Wrap type mentions
+
+Message: "${body.message_text}"
+${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
 
     const classifyRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -59,7 +73,16 @@ Message: "${body.message_text}"`;
       }),
     });
 
-    let parsed: any = { type: "general", vehicle: {}, urgency: "normal", needs_vehicle_info: true, wrap_type: null };
+    let parsed: any = { 
+      type: hasFiles ? "file_received" : "general", 
+      vehicle: {}, 
+      urgency: "normal", 
+      needs_vehicle_info: true, 
+      wrap_type: null,
+      has_file_intent: hasFiles,
+      customer_email: null
+    };
+    
     try {
       const classifyData = await classifyRes.json();
       const content = classifyData.choices?.[0]?.message?.content || "{}";
@@ -69,6 +92,11 @@ Message: "${body.message_text}"`;
       }
     } catch (e) {
       console.error("Classification parse error:", e);
+    }
+
+    // Override type if files were received
+    if (hasFiles) {
+      parsed.type = "file_received";
     }
 
     console.log("🎯 Classified:", parsed);
@@ -106,18 +134,39 @@ Message: "${body.message_text}"`;
         .eq("id", conversation.id);
     }
 
-    // 4. Insert inbound message
+    // 4. Insert inbound message with file metadata
     if (conversation) {
       await supabase.from("messages").insert({
         conversation_id: conversation.id,
         direction: "inbound",
         channel: body.platform,
-        content: body.message_text,
+        content: hasFiles ? `${body.message_text || ''} [Sent ${fileUrls.length} file(s)]` : body.message_text,
         sender_name: body.sender_username || body.sender_id,
+        metadata: hasFiles ? { attachments: fileUrls, has_files: true } : {}
       });
     }
 
-    // 5. Create ai_action for quote requests
+    // 5. Handle quote requests - try to auto-quote if vehicle info available
+    let quickQuoteInfo: { materialCost: number; pricePerSqft: number; productName: string; sqft: number } | null = null;
+    if (parsed.type === "quote" && parsed.vehicle?.year && parsed.vehicle?.make && parsed.vehicle?.model) {
+      // Look up vehicle SQFT from database
+      const { data: vehicleData } = await supabase
+        .from("vehicle_dimensions")
+        .select("corrected_sqft")
+        .ilike("make", `%${parsed.vehicle.make}%`)
+        .ilike("model", `%${parsed.vehicle.model}%`)
+        .gte("year_end", parseInt(parsed.vehicle.year) || 2024)
+        .lte("year_start", parseInt(parsed.vehicle.year) || 2024)
+        .maybeSingle();
+
+      if (vehicleData?.corrected_sqft) {
+        const quoteCalc = calculateQuickQuote(vehicleData.corrected_sqft, parsed.wrap_type || 'avery');
+        quickQuoteInfo = { ...quoteCalc, sqft: vehicleData.corrected_sqft };
+        console.log("💰 Quick quote calculated:", quickQuoteInfo);
+      }
+    }
+
+    // Create ai_action for quote requests
     if (parsed.type === "quote") {
       const { error: actionError } = await supabase.from("ai_actions").insert({
         action_type: "create_quote",
@@ -127,37 +176,91 @@ Message: "${body.message_text}"`;
           sender_id: body.sender_id,
           vehicle: parsed.vehicle,
           message: body.message_text,
+          quick_quote: quickQuoteInfo
         },
       });
       if (actionError) console.error("AI action error:", actionError);
       console.log("📝 Quote request created in ai_actions");
     }
 
-    // 5b. Fetch REAL pricing from database for AI responses
-    const { data: products } = await supabase
-      .from("products")
-      .select("product_name, price_per_sqft, flat_price")
-      .eq("is_active", true)
-      .order("display_order");
+    // 5b. Handle file received - escalate to design team
+    if (parsed.type === "file_received" || hasFiles) {
+      console.log("📁 File received - escalating to design team");
+      
+      // Create ai_action for file review
+      await supabase.from("ai_actions").insert({
+        action_type: "file_review",
+        priority: "high",
+        action_payload: {
+          source: body.platform,
+          sender_id: body.sender_id,
+          sender_username: body.sender_username,
+          file_urls: fileUrls,
+          message: body.message_text,
+          conversation_id: conversation?.id
+        },
+      });
 
-    // Build pricing context from real database values
-    const keyPricing = products?.slice(0, 8).map(p => {
-      if (p.flat_price) return `${p.product_name}: $${p.flat_price}`;
-      if (p.price_per_sqft) return `${p.product_name}: $${p.price_per_sqft}/sqft`;
-      return null;
-    }).filter(Boolean).join(", ") || "";
+      // Email design team about files (if files present)
+      if (hasFiles && fileUrls.length > 0) {
+        try {
+          const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
+          if (RESEND_KEY) {
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${RESEND_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: "WPW AI <notifications@resend.dev>",
+                to: ["Design@WePrintWraps.com"],
+                cc: ["Trish@WePrintWraps.com"],
+                subject: `📁 New Files Received via Instagram DM - ${body.sender_username || body.sender_id}`,
+                html: `
+                  <h2>Customer sent design files!</h2>
+                  <p><strong>From:</strong> ${body.sender_username || body.sender_id}</p>
+                  <p><strong>Platform:</strong> ${body.platform}</p>
+                  <p><strong>Message:</strong> ${body.message_text || 'No message'}</p>
+                  <p><strong>Files (${fileUrls.length}):</strong></p>
+                  <ul>${fileUrls.map((url: string) => `<li><a href="${url}">${url}</a></li>`).join('')}</ul>
+                  <p><em>AI is asking for their email to send a formal quote.</em></p>
+                `
+              })
+            });
+            console.log("✅ Design team notified via email");
+          }
+        } catch (emailErr) {
+          console.error("Email notification error:", emailErr);
+        }
+      }
+    }
 
-    console.log("💰 Real pricing loaded:", keyPricing);
+    // 6. Get official pricing context
+    const pricingContext = getPricingContext();
 
-    // 6. Generate AI reply with intent-specific prompts
+    // 7. Generate AI reply with intent-specific prompts
     const intentPrompts: Record<string, string> = {
       quote: parsed.needs_vehicle_info 
         ? "Ask for their vehicle YEAR, MAKE, and MODEL. Be friendly and quick."
-        : "They provided vehicle info. Confirm details and mention you'll prepare a quote.",
-      design: "Ask what style they're looking for (color change, printed graphics, partial wrap, etc). Offer to show examples.",
+        : quickQuoteInfo 
+          ? `You have a quote ready! Tell them: "${parsed.vehicle.year} ${parsed.vehicle.make} ${parsed.vehicle.model} full wrap is approximately $${quickQuoteInfo.materialCost.toFixed(0)} for materials (${quickQuoteInfo.sqft} sqft @ $${quickQuoteInfo.pricePerSqft}/sqft). Ask for their email to send a detailed breakdown!"`
+          : "They provided vehicle info. Confirm details and ask for their email to send a formal quote.",
+      design: "Ask what style they're looking for. Offer to show examples.",
       support: "Ask for their order number so you can help track it.",
+      file_received: "Thank them for sending files! Confirm you're forwarding to the design team. Ask for their email so the team can send a quote.",
       general: "Answer their question helpfully. Guide toward getting a quote if appropriate."
     };
+
+    const fileHandlingRules = `
+FILE HANDLING RULES (CRITICAL):
+- WePrintWraps CAN receive files directly via Instagram DM!
+- ALWAYS encourage customers to send their files here
+- When they mention files/artwork/designs, say: "Yes! Send it right over - I'll forward it to our design team for a quote!"
+- If files need review, mention Jackson or Lance will take a look
+- NEVER say "I can't receive files" - that's WRONG
+- When files ARE received: "Got it! 👊 Forwarding to Lance and the design team - they'll review and email your quote!"
+- Always ask for their email after receiving files so team can follow up`;
 
     const replyPrompt = `You are WPW AI TEAM - the friendly AI assistant for WePrintWraps.com.
 
@@ -165,22 +268,27 @@ BRAND VOICE:
 - High-energy wrap industry pro
 - Professional but friendly
 - Quick and helpful
+- Use emojis sparingly (1-2 max)
 
 INTENT: ${parsed.type}
 ${intentPrompts[parsed.type] || intentPrompts.general}
 
 ${parsed.vehicle?.year ? `Vehicle detected: ${parsed.vehicle.year} ${parsed.vehicle.make} ${parsed.vehicle.model}` : ''}
 ${parsed.wrap_type ? `Wrap type: ${parsed.wrap_type}` : ''}
+${hasFiles ? `FILES RECEIVED: Customer just sent ${fileUrls.length} file(s)! Thank them and confirm forwarding to design team.` : ''}
+${parsed.has_file_intent ? `Customer mentioned files/artwork - encourage them to send it!` : ''}
 
-ACTUAL PRICING (use these exact numbers if asked about pricing):
-${keyPricing}
+${pricingContext}
+
+${fileHandlingRules}
 
 RULES:
-- Keep replies under 35 words
+- Keep replies under 40 words
 - Use 1-2 emojis max
 - Be direct and helpful
 - Direct them to weprintwraps.com for instant quotes
-- NEVER make up prices - only use the pricing listed above or say "get an instant quote on our website"`;
+- NEVER make up prices - only use the pricing listed above
+- When you have vehicle info + sqft, give them the actual price!`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -192,7 +300,7 @@ RULES:
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: replyPrompt },
-          { role: "user", content: body.message_text },
+          { role: "user", content: body.message_text || (hasFiles ? "[Customer sent files]" : "") },
         ],
       }),
     });
@@ -202,7 +310,7 @@ RULES:
 
     console.log("💬 AI Reply:", aiReply);
 
-    // 7. Save outbound message
+    // 8. Save outbound message
     if (conversation) {
       await supabase.from("messages").insert({
         conversation_id: conversation.id,
@@ -212,7 +320,7 @@ RULES:
       });
     }
 
-    // 8. Send reply back via Instagram
+    // 9. Send reply back via Instagram
     if (body.platform === "instagram") {
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-instagram-reply`, {
@@ -232,7 +340,7 @@ RULES:
       }
     }
 
-    return new Response(JSON.stringify({ reply: aiReply, intent: parsed }), {
+    return new Response(JSON.stringify({ reply: aiReply, intent: parsed, quick_quote: quickQuoteInfo }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
