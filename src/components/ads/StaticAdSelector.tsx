@@ -2,11 +2,11 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { LayoutTemplate, Sparkles } from "lucide-react";
+import { LayoutTemplate, Sparkles, Grid3X3 } from "lucide-react";
 
 interface StaticAdSelectorProps {
-  mode: "template" | "ai";
-  onModeChange: (mode: "template" | "ai") => void;
+  mode: "template" | "ai" | "grid";
+  onModeChange: (mode: "template" | "ai" | "grid") => void;
 }
 
 export function StaticAdSelector({ mode, onModeChange }: StaticAdSelectorProps) {
@@ -24,7 +24,23 @@ export function StaticAdSelector({ mode, onModeChange }: StaticAdSelectorProps) 
         <LayoutTemplate className="w-5 h-5" />
         <div className="text-left">
           <p className="font-semibold">Template Ad</p>
-          <p className="text-xs text-muted-foreground">Use pre-designed layouts</p>
+          <p className="text-xs text-muted-foreground">Pre-designed layouts</p>
+        </div>
+      </button>
+
+      <button
+        onClick={() => onModeChange("grid")}
+        className={cn(
+          "flex-1 flex items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all",
+          mode === "grid"
+            ? "border-primary bg-primary/10 text-primary"
+            : "border-muted hover:border-primary/50 hover:bg-muted/50"
+        )}
+      >
+        <Grid3X3 className="w-5 h-5" />
+        <div className="text-left">
+          <p className="font-semibold">Grid Ads</p>
+          <p className="text-xs text-muted-foreground">3×3 or 4×4 moodboards</p>
         </div>
       </button>
 

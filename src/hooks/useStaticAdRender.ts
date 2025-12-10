@@ -83,7 +83,7 @@ export function useStaticAdRender() {
       layoutJson,
       brandColors,
     }: {
-      mode: "template" | "ai";
+      mode: "template" | "ai" | "grid";
       templateId?: string;
       aspectRatio: string;
       headline?: string;

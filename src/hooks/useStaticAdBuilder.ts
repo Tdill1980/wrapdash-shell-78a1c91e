@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MetaPlacement } from "@/lib/meta-ads";
 
 export interface StaticAdLayout {
-  mode: "template" | "ai";
+  mode: "template" | "ai" | "grid";
   template_id?: string;
   layout: Record<string, any>;
   content: {
@@ -83,7 +83,7 @@ export function useStaticAdBuilder() {
     organizationId,
     brandColors,
   }: {
-    mode: "template" | "ai";
+    mode: "template" | "ai" | "grid";
     templateId?: string;
     placement: MetaPlacement;
     headline: string;
