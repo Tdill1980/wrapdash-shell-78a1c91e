@@ -33,6 +33,7 @@ import { AdCreator } from "@/components/contentbox/AdCreator";
 import { ContentRepurposer } from "@/components/contentbox/ContentRepurposer";
 import { MediaLibrary } from "@/components/media/MediaLibrary";
 import { ContentPlannerCalendar } from "@/components/calendar";
+import { MetaVideoAdFastPanel } from "@/components/ads/MetaVideoAdFastPanel";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -523,9 +524,12 @@ export default function ContentBox() {
         {/* AI Create Tab */}
         <TabsContent value="create" className="space-y-4">
           <Tabs value={creatorTab} onValueChange={setCreatorTab}>
-            <TabsList className="mb-4">
+            <TabsList className="mb-4 flex-wrap">
               <TabsTrigger value="video-editor">
                 <Scissors className="w-4 h-4 mr-2" /> Video Editor
+              </TabsTrigger>
+              <TabsTrigger value="video-ad-fast">
+                <Target className="w-4 h-4 mr-2" /> Video Ad Fast
               </TabsTrigger>
               <TabsTrigger value="ad-creator">
                 <Target className="w-4 h-4 mr-2" /> Ad Creator
@@ -540,6 +544,13 @@ export default function ContentBox() {
                 selectedFile={selectedFiles[0] || null}
                 onProcess={handleVideoProcess}
                 processing={processing}
+              />
+            </TabsContent>
+
+            <TabsContent value="video-ad-fast">
+              <MetaVideoAdFastPanel
+                videoUrl={selectedFiles[0]?.file_type === "video" ? selectedFiles[0]?.file_url : undefined}
+                videoThumbnail={selectedFiles[0]?.thumbnail_url || undefined}
               />
             </TabsContent>
 
