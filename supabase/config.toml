@@ -140,3 +140,9 @@ verify_jwt = false
 
 [functions.ai-generate-captions]
 verify_jwt = false
+
+[functions.ai-atomize-content]
+verify_jwt = false
+
+[functions.ai-generate-micro-content]
+verify_jwt = false

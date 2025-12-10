@@ -1226,6 +1226,69 @@ export type Database = {
           },
         ]
       }
+      content_atoms: {
+        Row: {
+          ad_angles: string[] | null
+          atom_type: string
+          created_at: string | null
+          id: string
+          is_used: boolean | null
+          organization_id: string | null
+          original_text: string
+          processed_text: string | null
+          product_id: string | null
+          source_type: string
+          suggested_formats: string[] | null
+          tags: string[] | null
+          use_count: number | null
+        }
+        Insert: {
+          ad_angles?: string[] | null
+          atom_type?: string
+          created_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          organization_id?: string | null
+          original_text: string
+          processed_text?: string | null
+          product_id?: string | null
+          source_type?: string
+          suggested_formats?: string[] | null
+          tags?: string[] | null
+          use_count?: number | null
+        }
+        Update: {
+          ad_angles?: string[] | null
+          atom_type?: string
+          created_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          organization_id?: string | null
+          original_text?: string
+          processed_text?: string | null
+          product_id?: string | null
+          source_type?: string
+          suggested_formats?: string[] | null
+          tags?: string[] | null
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_atoms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_atoms_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_calendar: {
         Row: {
           brand: string
