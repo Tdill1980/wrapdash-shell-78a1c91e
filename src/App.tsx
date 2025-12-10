@@ -52,6 +52,11 @@ import InstagramTokenExchange from "./pages/InstagramTokenExchange";
 import AICorrectionsAdmin from "./pages/AICorrectionsAdmin";
 import AdVault from "./pages/AdVault";
 import PaidAdsPerformance from "./pages/PaidAdsPerformance";
+import OrganicHub from "./pages/OrganicHub";
+import ReelBuilder from "./pages/organic/ReelBuilder";
+import InspoScrubber from "./pages/organic/InspoScrubber";
+import AutoSplit from "./pages/organic/AutoSplit";
+import StaticCreator from "./pages/organic/StaticCreator";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -98,6 +103,11 @@ const App = () => (
             <Route path="/contentbox" element={<ContentBox />} />
             <Route path="/content-creator" element={<ContentCreator />} />
             <Route path="/content-schedule" element={<ContentSchedule />} />
+            <Route path="/organic" element={<OrganicHub />} />
+            <Route path="/organic/reel-builder" element={<ReelBuilder />} />
+            <Route path="/organic/inspo" element={<InspoScrubber />} />
+            <Route path="/organic/auto-split" element={<AutoSplit />} />
+            <Route path="/organic/static" element={<StaticCreator />} />
             <Route path="/ad-vault" element={<AdVault />} />
             <Route path="/paid-ads-performance" element={<PaidAdsPerformance />} />
             <Route path="/portfolio" element={<Portfolio />} />

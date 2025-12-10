@@ -19,6 +19,7 @@ import {
   Film,
   Image,
   BarChart3,
+  Sparkles as SparklesIcon,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 
@@ -143,6 +144,17 @@ const navigationItems = [
         <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">ContentBox</span>
         <span className="text-white"> AI</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "Organic Hub", 
+    path: "/organic", 
+    icon: SparklesIcon,
+    customRender: (
+      <span className="font-medium">
+        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Organic</span>
+        <span className="text-white"> Hub</span>
       </span>
     )
   },
