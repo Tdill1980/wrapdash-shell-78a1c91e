@@ -151,6 +151,18 @@ serve(async (req) => {
         }
       }
 
+      // Helper: Truncate text at word boundaries (never cut mid-word)
+      const truncateAtWord = (text: string, maxLength: number): string => {
+        if (text.length <= maxLength) return text;
+        const truncated = text.substring(0, maxLength);
+        const lastSpace = truncated.lastIndexOf(" ");
+        // If there's a space in a reasonable position, cut there
+        if (lastSpace > maxLength * 0.4) {
+          return truncated.substring(0, lastSpace);
+        }
+        return truncated;
+      };
+
       // Build modifications object with SAFE ZONE text positioning
       const modifications: Record<string, string | number | boolean> = {
         'Video.source': video_url,
@@ -163,52 +175,57 @@ serve(async (req) => {
         });
       }
 
-      // SAFE ZONE TEXT SETTINGS - Keep text readable and within 9:16 bounds
-      // Safe zone: 10% margins on all sides = 80% of screen width for text
+      // SAFE ZONE TEXT SETTINGS - 70% width for better mobile readability
       const textSettings = {
-        // Ensure text fits in safe zone with proper sizing
-        width: '80%',
+        width: '70%',
         x: '50%',
         x_alignment: '50%',
-        font_size: '48', // Readable but not oversized
-        line_height: '120%',
+        font_size_hook: '64',    // Bigger for hooks
+        font_size_body: '48',    // Standard for body
+        font_size_cta: '40',     // Smaller for CTA
+        line_height: '110%',
       };
 
-      // Add text overlays with proper positioning
+      // Add text overlays with proper positioning and word-boundary truncation
       if (headline) {
-        // Truncate if too long - max 20 chars
-        const shortHeadline = headline.length > 20 ? headline.substring(0, 20) : headline;
+        // MAX 12 chars for hooks, truncate at word boundary
+        const shortHeadline = truncateAtWord(headline, 12);
         modifications['Text-1.text'] = shortHeadline.toUpperCase();
         modifications['Text-1.width'] = textSettings.width;
         modifications['Text-1.x'] = textSettings.x;
         modifications['Text-1.x_alignment'] = textSettings.x_alignment;
-        modifications['Text-1.font_size'] = '56';
-        modifications['Text-1.y'] = '15%'; // Top safe zone
+        modifications['Text-1.font_size'] = textSettings.font_size_hook;
+        modifications['Text-1.y'] = '18%'; // Top safe zone
+        modifications['Text-1.line_height'] = textSettings.line_height;
       }
       if (subtext) {
-        const shortSubtext = subtext.length > 25 ? subtext.substring(0, 25) : subtext;
+        // MAX 15 chars for CTA, truncate at word boundary
+        const shortSubtext = truncateAtWord(subtext, 15);
         modifications['Text-2.text'] = shortSubtext;
         modifications['Text-2.width'] = textSettings.width;
         modifications['Text-2.x'] = textSettings.x;
         modifications['Text-2.x_alignment'] = textSettings.x_alignment;
-        modifications['Text-2.font_size'] = '36';
-        modifications['Text-2.y'] = '85%'; // Bottom safe zone
+        modifications['Text-2.font_size'] = textSettings.font_size_cta;
+        modifications['Text-2.y'] = '82%'; // Bottom safe zone
+        modifications['Text-2.line_height'] = textSettings.line_height;
       }
 
       // Add dynamic overlays from request (AI-generated) with safe zone positioning
       if (requestOverlays && requestOverlays.length > 0) {
         requestOverlays.forEach((overlay, idx) => {
-          // Truncate overlay text to fit
-          const shortText = overlay.text.length > 18 ? overlay.text.substring(0, 18) : overlay.text;
+          // MAX 15 chars, truncate at word boundary
+          const shortText = truncateAtWord(overlay.text, 15);
           modifications[`Overlay-${idx + 1}.text`] = shortText.toUpperCase();
           modifications[`Overlay-${idx + 1}.time`] = overlay.time;
           modifications[`Overlay-${idx + 1}.duration`] = overlay.duration;
           modifications[`Overlay-${idx + 1}.width`] = textSettings.width;
           modifications[`Overlay-${idx + 1}.x`] = textSettings.x;
           modifications[`Overlay-${idx + 1}.x_alignment`] = textSettings.x_alignment;
-          modifications[`Overlay-${idx + 1}.font_size`] = '52';
-          // Alternate positioning: first overlay top, others center
-          modifications[`Overlay-${idx + 1}.y`] = idx === 0 ? '20%' : '50%';
+          modifications[`Overlay-${idx + 1}.font_size`] = textSettings.font_size_body;
+          modifications[`Overlay-${idx + 1}.line_height`] = textSettings.line_height;
+          // Position: first at top, second center, third bottom
+          const yPositions = ['20%', '50%', '80%'];
+          modifications[`Overlay-${idx + 1}.y`] = yPositions[idx % 3];
         });
       }
 

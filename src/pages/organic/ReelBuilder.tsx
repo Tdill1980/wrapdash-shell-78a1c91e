@@ -23,6 +23,7 @@ import {
   Loader2,
   Brain,
   Download,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
@@ -31,16 +32,24 @@ import { useReelOverlays, BrandPackId } from "@/hooks/useReelOverlays";
 import { useEditorBrain } from "@/hooks/useEditorBrain";
 import { useSmartAssist } from "@/hooks/useSmartAssist";
 import { useVideoRender } from "@/hooks/useVideoRender";
-import { useAutoCreateReel } from "@/hooks/useAutoCreateReel";
+import { useAutoCreateReel, DaraFormatType } from "@/hooks/useAutoCreateReel";
 import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
 import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
 import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
 import { SmartAssistPanel } from "@/components/reel-builder/SmartAssistPanel";
+import { DaraFormatSelector } from "@/components/reel-builder/DaraFormatSelector";
 import { MediaLibraryModal } from "@/components/media/MediaLibraryModal";
 import { PostRenderModal } from "@/components/reel-builder/PostRenderModal";
 import { MediaFile } from "@/components/media/MediaLibrary";
+import { DARA_FORMATS, DaraFormat } from "@/lib/dara-denney-formats";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Clip {
   id: string;
@@ -95,6 +104,7 @@ export default function ReelBuilder() {
   const [extractedInspoStyle, setExtractedInspoStyle] = useState<any>(null);
   const [suggestedHook, setSuggestedHook] = useState<string | null>(null);
   const [suggestedCta, setSuggestedCta] = useState<string | null>(null);
+  const [selectedDaraFormat, setSelectedDaraFormat] = useState<DaraFormat | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Handle play/pause with ref
@@ -117,11 +127,13 @@ export default function ReelBuilder() {
   const videoRender = useVideoRender();
   const autoCreateReel = useAutoCreateReel();
 
-  // AI Auto-Create handler - uses inspo styles and picks best videos
-  const handleAIAutoCreate = async () => {
+  // AI Auto-Create handler - uses inspo styles, format, and picks best videos
+  const handleAIAutoCreate = async (format?: DaraFormat) => {
+    const useFormat = format || selectedDaraFormat;
     setIsAutoProcessing(true);
     const result = await autoCreateReel.autoCreate({
       maxVideos: 50,
+      daraFormat: useFormat as DaraFormatType | undefined,
     });
     
     if (result && result.selected_videos && result.selected_videos.length > 0) {
@@ -164,8 +176,9 @@ export default function ReelBuilder() {
         });
       }
 
+      const formatInfo = useFormat ? DARA_FORMATS[useFormat] : null;
       toast.success(`AI created reel with ${newClips.length} clips!`, {
-        description: `${result.reel_concept}${result.extracted_style ? ' • Style matched from your inspo!' : ''}`,
+        description: `${result.reel_concept}${formatInfo ? ` • ${formatInfo.emoji} ${formatInfo.name}` : ''}${result.extracted_style ? ' • Style matched!' : ''}`,
       });
     }
     setIsAutoProcessing(false);
@@ -479,11 +492,42 @@ export default function ReelBuilder() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Dara Format Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="min-w-[140px]">
+                  {selectedDaraFormat ? (
+                    <>
+                      {DARA_FORMATS[selectedDaraFormat].emoji} {DARA_FORMATS[selectedDaraFormat].name}
+                    </>
+                  ) : (
+                    "Select Format"
+                  )}
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setSelectedDaraFormat(null)}>
+                  <span className="text-muted-foreground">Auto (AI Chooses)</span>
+                </DropdownMenuItem>
+                {Object.values(DARA_FORMATS).map((format) => (
+                  <DropdownMenuItem 
+                    key={format.id} 
+                    onClick={() => setSelectedDaraFormat(format.id)}
+                    className={selectedDaraFormat === format.id ? "bg-primary/10" : ""}
+                  >
+                    <span className="mr-2">{format.emoji}</span>
+                    {format.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {/* AI Auto-Create - The main action button */}
             <Button 
               size="sm"
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-              onClick={handleAIAutoCreate}
+              onClick={() => handleAIAutoCreate()}
               disabled={autoCreateReel.loading || isAutoProcessing}
             >
               {autoCreateReel.loading || isAutoProcessing ? (
