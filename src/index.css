@@ -60,6 +60,13 @@ All colors MUST be HSL.
       --sidebar-accent-foreground: 240 10% 98%;
       --sidebar-border: 0 0% 100% / 0.06;
       --sidebar-ring: 198 100% 50%;
+      
+      /* Instagram gradient colors */
+      --instagram-blue: 231 70% 53%;       /* #405DE6 */
+      --instagram-purple: 280 58% 44%;     /* #833AB4 */
+      --instagram-pink: 348 79% 54%;       /* #E1306C */
+      --instagram-orange: 28 90% 55%;      /* #F77737 */
+      --instagram-yellow: 42 98% 64%;      /* #FCAF45 */
     }
   }
 
