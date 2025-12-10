@@ -32,6 +32,7 @@ import { AIVideoEditor } from "@/components/contentbox/AIVideoEditor";
 import { AdCreator } from "@/components/contentbox/AdCreator";
 import { ContentRepurposer } from "@/components/contentbox/ContentRepurposer";
 import { MediaLibrary } from "@/components/media/MediaLibrary";
+import { ContentPlannerCalendar } from "@/components/calendar";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -605,23 +606,9 @@ export default function ContentBox() {
           )}
         </TabsContent>
 
-        {/* Calendar Tab */}
+        {/* Calendar Tab - Instagram-Style Content Planner */}
         <TabsContent value="calendar" className="space-y-4">
-          <div className="flex justify-end mb-4">
-            <Button 
-              variant="outline"
-              onClick={() => generateCalendar.mutate({ weeks_ahead: 2 })}
-              disabled={generateCalendar.isPending}
-            >
-              {generateCalendar.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Calendar className="w-4 h-4 mr-2" />
-              )}
-              Generate Calendar
-            </Button>
-          </div>
-          <CalendarView calendar={calendar || []} />
+          <ContentPlannerCalendar />
         </TabsContent>
       </Tabs>
 
