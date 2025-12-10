@@ -415,62 +415,71 @@ export default function ContentBox() {
 
   return (
     <MainLayout>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3">
             <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">
               ContentBox
             </span>
             <span className="text-foreground">AI</span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base hidden sm:block">
             AI-powered content creation • Video editing • Ad generation • Repurposing
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button 
             variant="outline" 
+            size="sm"
+            className="sm:size-default"
             onClick={() => syncInstagram.mutate({ brand: brandFilter === 'all' ? 'wpw' : brandFilter })}
             disabled={syncInstagram.isPending}
           >
             {syncInstagram.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              <Loader2 className="w-4 h-4 animate-spin sm:mr-2" />
             ) : (
-              <Instagram className="w-4 h-4 mr-2" />
+              <Instagram className="w-4 h-4 sm:mr-2" />
             )}
-            Sync Instagram
+            <span className="hidden sm:inline">Sync Instagram</span>
           </Button>
           
           {selectedFiles.length > 0 && (
             <Button 
-              className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+              size="sm"
+              className="sm:size-default bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
               onClick={() => setGeneratorOpen(true)}
             >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate ({selectedFiles.length})
+              <Sparkles className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Generate</span> ({selectedFiles.length})
             </Button>
           )}
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="library">
-            <Grid className="w-4 h-4 mr-2" /> Library
+        {/* Mobile-friendly scrollable tabs */}
+        <TabsList className="flex w-full overflow-x-auto no-scrollbar gap-1 p-1">
+          <TabsTrigger value="library" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4">
+            <Grid className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Library</span>
           </TabsTrigger>
-          <TabsTrigger value="sources">
-            <Link2 className="w-4 h-4 mr-2" /> Sources
+          <TabsTrigger value="sources" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4">
+            <Link2 className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Sources</span>
           </TabsTrigger>
-          <TabsTrigger value="create">
-            <Wand2 className="w-4 h-4 mr-2" /> AI Create
+          <TabsTrigger value="create" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4">
+            <Wand2 className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">AI Create</span>
           </TabsTrigger>
-          <TabsTrigger value="projects">
-            <Sparkles className="w-4 h-4 mr-2" /> Projects
+          <TabsTrigger value="projects" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4">
+            <Sparkles className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Projects</span>
           </TabsTrigger>
-          <TabsTrigger value="calendar">
-            <Calendar className="w-4 h-4 mr-2" /> Calendar
+          <TabsTrigger value="calendar" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4">
+            <Calendar className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Calendar</span>
           </TabsTrigger>
         </TabsList>
 
