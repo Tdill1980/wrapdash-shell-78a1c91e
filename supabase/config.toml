@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.ai-generate-meta-ads]
 verify_jwt = false
+
+[functions.ai-generate-static-ad]
+verify_jwt = false
