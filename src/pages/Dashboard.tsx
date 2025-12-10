@@ -31,7 +31,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useProducts } from "@/hooks/useProducts";
-import vehicleDimensionsDataRaw from "@/data/vehicle-dimensions.json";
+import { useVehicleDimensions } from "@/hooks/useVehicleDimensions";
 import VoiceCommand from "@/components/VoiceCommand";
 import { DashboardCardPreview } from "@/modules/designvault/components/DashboardCardPreview";
 import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
@@ -41,8 +41,6 @@ import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { QuoteRequestCard } from "@/components/dashboard/QuoteRequestCard";
 import { ContentFactoryCard } from "@/components/dashboard/ContentFactoryCard";
-
-const vehicleDimensionsData = (vehicleDimensionsDataRaw as any).vehicles || [];
 
 const metrics = [
   {
@@ -137,6 +135,9 @@ export default function Dashboard() {
   const [isCarouselHovered, setIsCarouselHovered] = useState(false);
   const { isRecording, isProcessing, startRecording, stopRecording } = useVoiceInput();
   
+  // Vehicle dimensions from Supabase
+  const { makes, models, years, loading: vehicleLoading, fetchModels, fetchYears, getCorrectedSQFT } = useVehicleDimensions();
+  
   // Quote Builder State
   const [productCategory, setProductCategory] = useState<'wrap' | 'ppf' | 'tint' | 'all'>('all');
   const [product, setProduct] = useState("");
@@ -161,60 +162,39 @@ export default function Dashboard() {
     return products.filter(p => p.category === productCategory);
   }, [products, productCategory]);
   
-  // Parse vehicle dimensions data
-  const vehicleData = useMemo(() => {
-    const makes = Array.from(new Set(vehicleDimensionsData.map((v: any) => v.Make))).sort();
-    
-    const modelsByMake = vehicleDimensionsData.reduce((acc: any, v: any) => {
-      if (!acc[v.Make]) acc[v.Make] = new Set();
-      acc[v.Make].add(v.Model);
-      return acc;
-    }, {});
-    
-    // Convert sets to sorted arrays
-    Object.keys(modelsByMake).forEach(make => {
-      modelsByMake[make] = Array.from(modelsByMake[make]).sort();
-    });
-    
-    return { makes, modelsByMake, data: vehicleDimensionsData };
-  }, []);
-  
-  // Auto-fill sq ft when vehicle is selected
+  // Fetch models when make changes
   useEffect(() => {
-    if (vehicleMake && vehicleModel && vehicleYear) {
-      console.log(`🔍 Searching for: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
-      
-      const match = vehicleData.data.find((v: any) => {
-        const vehicleYearStr = v.Year.toString();
-        const yearInput = vehicleYear.toString();
-        
-        // Handle year ranges like "2018-2022"
-        let yearMatch = false;
-        if (vehicleYearStr.includes('-')) {
-          const [startYear, endYear] = vehicleYearStr.split('-').map((y: string) => parseInt(y.trim()));
-          const inputYear = parseInt(yearInput);
-          yearMatch = inputYear >= startYear && inputYear <= endYear;
+    if (vehicleMake) {
+      fetchModels(vehicleMake);
+      setVehicleModel("");
+      setVehicleYear("");
+    }
+  }, [vehicleMake, fetchModels]);
+  
+  // Fetch years when model changes
+  useEffect(() => {
+    if (vehicleMake && vehicleModel) {
+      fetchYears(vehicleMake, vehicleModel);
+      setVehicleYear("");
+    }
+  }, [vehicleMake, vehicleModel, fetchYears]);
+  
+  // Auto-fill sq ft when vehicle is selected (from Supabase)
+  useEffect(() => {
+    async function lookupSqft() {
+      if (vehicleMake && vehicleModel && vehicleYear) {
+        console.log(`🔍 Searching Supabase for: ${vehicleYear} ${vehicleMake} ${vehicleModel}`);
+        const sqftValue = await getCorrectedSQFT(vehicleMake, vehicleModel, parseInt(vehicleYear));
+        if (sqftValue) {
+          console.log(`✓ Match found! Setting sqft to ${sqftValue}`);
+          setSqFt(sqftValue);
         } else {
-          yearMatch = vehicleYearStr === yearInput;
+          console.log(`✗ No match found in database`);
         }
-        
-        // Case-insensitive make/model matching
-        const makeMatch = v.Make.toLowerCase() === vehicleMake.toLowerCase();
-        const modelMatch = v.Model.toLowerCase().includes(vehicleModel.toLowerCase()) || 
-                          vehicleModel.toLowerCase().includes(v.Model.toLowerCase());
-        
-        return yearMatch && makeMatch && modelMatch;
-      });
-      
-      if (match) {
-        const sqftValue = match["Corrected Sq Foot"] || match["Total Sq Foot"] || 0;
-        console.log(`✓ Match found! Setting sqft to ${sqftValue}`);
-        setSqFt(sqftValue);
-      } else {
-        console.log(`✗ No match found`);
       }
     }
-  }, [vehicleMake, vehicleModel, vehicleYear, vehicleData]);
+    lookupSqft();
+  }, [vehicleMake, vehicleModel, vehicleYear, getCorrectedSQFT]);
   
   // Pricing calculation based on WPW products
   const selectedProduct = products.find(p => p.product_name === product);
@@ -239,13 +219,6 @@ export default function Dashboard() {
   
   const latestDesigns = designs?.slice(0, 5) || [];
 
-  const productTypes = [
-    { name: "Full Wraps", gradient: "bg-gradient-primary" },
-    { name: "Partial Wraps", gradient: "bg-gradient-primary" },
-    { name: "Chrome Delete", gradient: "bg-gradient-primary" },
-    { name: "PPF", gradient: "bg-gradient-primary" },
-    { name: "Window Tint", gradient: "bg-gradient-primary" },
-  ];
 
   const nextSlide = () => {
     if (latestDesigns.length > 0) {
@@ -340,19 +313,6 @@ export default function Dashboard() {
           activeRendersCount={activeRendersCount}
         />
 
-      {/* Product Type Chips */}
-      <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-        {productTypes.map((product) => (
-          <button
-            key={product.name}
-            onClick={() => product.name === "Full Wraps" ? navigate("/visualize") : null}
-            className={`px-3 sm:px-4 py-2 text-xs font-semibold rounded-lg whitespace-nowrap ${product.gradient} text-white hover:opacity-90 transition-opacity`}
-          >
-            {product.name}
-          </button>
-        ))}
-      </div>
-
       {/* MightyChat - Prominent Unified Inbox */}
       <MightyChatCard />
 
@@ -374,7 +334,26 @@ export default function Dashboard() {
               </div>
               {/* VoiceCommand Widget - positioned in corner */}
               <div className="absolute top-3 right-3">
-                <VoiceCommand onTranscript={(transcript) => parseAndFillForm(transcript)} />
+                <VoiceCommand onTranscript={(transcript, parsedData) => {
+                  // If AI parsed data is available, use it directly
+                  if (parsedData) {
+                    if (parsedData.customerName) setCustomerName(parsedData.customerName);
+                    if (parsedData.email) setCustomerEmail(parsedData.email);
+                    if (parsedData.vehicleYear) setVehicleYear(parsedData.vehicleYear);
+                    if (parsedData.vehicleMake) setVehicleMake(parsedData.vehicleMake);
+                    if (parsedData.vehicleModel) setVehicleModel(parsedData.vehicleModel);
+                    if (parsedData.finish) setFinish(parsedData.finish);
+                    if (parsedData.productType) {
+                      // Try to match to a product name
+                      const matchedProduct = products.find(p => 
+                        p.product_name.toLowerCase().includes(parsedData.productType.toLowerCase())
+                      );
+                      if (matchedProduct) setProduct(matchedProduct.product_name);
+                    }
+                  }
+                  // Also run basic parsing as fallback
+                  parseAndFillForm(transcript);
+                }} />
               </div>
             </div>
           </CardHeader>
@@ -462,33 +441,35 @@ export default function Dashboard() {
                         value={vehicleMake}
                         onChange={(e) => {
                           setVehicleMake(e.target.value);
-                          setVehicleModel(""); // Reset model when make changes
                         }}
                         className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       >
-                        <option value="">Make</option>
-                        {vehicleData.makes.map((make: string) => (
+                        <option value="">{vehicleLoading ? "Loading..." : "Make"}</option>
+                        {makes.map((make: string) => (
                           <option key={make} value={make}>{make}</option>
                         ))}
                       </select>
                       <select
                         value={vehicleModel}
                         onChange={(e) => setVehicleModel(e.target.value)}
-                        disabled={!vehicleMake}
+                        disabled={!vehicleMake || vehicleLoading}
                         className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                       >
-                        <option value="">Model</option>
-                        {vehicleMake && vehicleData.modelsByMake[vehicleMake]?.map((model: string) => (
+                        <option value="">{vehicleLoading ? "Loading..." : "Model"}</option>
+                        {models.map((model: string) => (
                           <option key={model} value={model}>{model}</option>
                         ))}
                       </select>
                       <select
                         value={vehicleYear}
                         onChange={(e) => setVehicleYear(e.target.value)}
-                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        disabled={!vehicleModel || vehicleLoading}
+                        className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                       >
-                        <option value="">Year</option>
-                        {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                        <option value="">{vehicleLoading ? "Loading..." : "Year"}</option>
+                        {years.length > 0 ? years.map((year: number) => (
+                          <option key={year} value={year}>{year}</option>
+                        )) : Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(year => (
                           <option key={year} value={year}>{year}</option>
                         ))}
                       </select>
