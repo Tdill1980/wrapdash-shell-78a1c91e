@@ -4081,6 +4081,68 @@ export type Database = {
           },
         ]
       }
+      youtube_editor_jobs: {
+        Row: {
+          analysis_data: Json | null
+          created_at: string | null
+          duration_seconds: number | null
+          enhancement_data: Json | null
+          generated_shorts: Json | null
+          id: string
+          mux_asset_id: string | null
+          mux_playback_id: string | null
+          organization_id: string | null
+          processing_status: string | null
+          seo_data: Json | null
+          source_file_url: string
+          thumbnail_data: Json | null
+          transcript: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          analysis_data?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          enhancement_data?: Json | null
+          generated_shorts?: Json | null
+          id?: string
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
+          organization_id?: string | null
+          processing_status?: string | null
+          seo_data?: Json | null
+          source_file_url: string
+          thumbnail_data?: Json | null
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          analysis_data?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          enhancement_data?: Json | null
+          generated_shorts?: Json | null
+          id?: string
+          mux_asset_id?: string | null
+          mux_playback_id?: string | null
+          organization_id?: string | null
+          processing_status?: string | null
+          seo_data?: Json | null
+          source_file_url?: string
+          thumbnail_data?: Json | null
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "youtube_editor_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
