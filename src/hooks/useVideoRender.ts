@@ -4,13 +4,21 @@ import { toast } from 'sonner';
 
 export type RenderStatus = 'idle' | 'starting' | 'rendering' | 'succeeded' | 'failed';
 
+interface RenderOverlay {
+  text: string;
+  time: number;
+  duration: number;
+}
+
 interface RenderParams {
   videoUrl: string;
+  additionalClips?: string[];
   headline?: string;
   subtext?: string;
   templateId?: string;
   organizationId?: string;
   musicUrl?: string;
+  overlays?: RenderOverlay[];
 }
 
 interface RenderState {
@@ -104,7 +112,7 @@ export function useVideoRender() {
   }, []);
 
   const startRender = useCallback(async (params: RenderParams) => {
-    const { videoUrl, headline, subtext, templateId, organizationId, musicUrl } = params;
+    const { videoUrl, additionalClips, headline, subtext, templateId, organizationId, musicUrl, overlays } = params;
 
     if (!videoUrl) {
       toast.error('Video URL is required');
@@ -134,11 +142,13 @@ export function useVideoRender() {
           body: JSON.stringify({
             action: 'start',
             video_url: videoUrl,
+            additional_clips: additionalClips,
             headline,
             subtext,
             template_id: templateId,
             organization_id: organizationId,
             music_url: musicUrl,
+            overlays,
           }),
         }
       );

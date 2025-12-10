@@ -170,25 +170,37 @@ export default function ReelBuilder() {
     saveRenderedVideo();
   }, [videoRender.status, videoRender.outputUrl]);
 
-  // Handle render reel
+  // Handle render reel - now with multi-clip support
   const handleRenderReel = async () => {
     if (clips.length === 0) {
       toast.error('Add clips first');
       return;
     }
 
-    // Use first clip as primary video (Creatomate will handle multi-clip in template)
-    const primaryVideoUrl = clips[0]?.url;
-    if (!primaryVideoUrl) {
-      toast.error('No video URL available');
+    // Collect all clip URLs for multi-clip render
+    const clipUrls = clips.map(c => c.url).filter(Boolean);
+    if (clipUrls.length === 0) {
+      toast.error('No video URLs available');
       return;
     }
 
+    // Build overlays from AI suggestions + engine overlays
+    const allOverlays = [
+      ...clips.filter(c => c.suggestedOverlay).map((c, idx) => ({
+        text: c.suggestedOverlay!,
+        time: clips.slice(0, idx).reduce((acc, cl) => acc + (cl.trimEnd - cl.trimStart), 0),
+        duration: 2,
+      })),
+      ...overlaysEngine.exportForCreatomate(),
+    ];
+
     await videoRender.startRender({
-      videoUrl: primaryVideoUrl,
-      headline: autoCreateState?.suggestedHook || reelConcept || undefined,
+      videoUrl: clipUrls[0], // Primary video
+      additionalClips: clipUrls.slice(1), // Additional clips for concatenation
+      headline: autoCreateState?.suggestedHook || reelConcept || clips[0]?.suggestedOverlay || undefined,
       subtext: autoCreateState?.suggestedCta || undefined,
       musicUrl: audioUrl || undefined,
+      overlays: allOverlays.length > 0 ? allOverlays : undefined,
     });
   };
 
