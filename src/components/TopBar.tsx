@@ -1,5 +1,6 @@
 import { Menu, Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import wrapCommandLogo from "@/assets/wrapcommand-logo-new.png";
 
 interface TopBarProps {
@@ -30,6 +31,7 @@ export const TopBar = ({ onMenuClick }: TopBarProps) => {
       </div>
 
       <div className="flex items-center gap-2">
+        <OfflineIndicator />
         <Button
           variant="ghost"
           size="icon"
