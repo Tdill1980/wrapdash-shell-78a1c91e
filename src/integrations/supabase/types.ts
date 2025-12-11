@@ -264,47 +264,71 @@ export type Database = {
       affiliate_founders: {
         Row: {
           affiliate_code: string
+          agreed_to_terms: boolean | null
+          agreed_to_terms_at: string | null
           avatar_url: string | null
           bio: string | null
           commission_rate: number | null
           company_name: string | null
+          content_creator_opted_in: boolean | null
           created_at: string | null
           email: string
           full_name: string
           id: string
           is_active: boolean | null
+          onboarding_step: number | null
+          payout_email: string | null
+          payout_method: string | null
           phone: string | null
           social_links: Json | null
+          stripe_account_id: string | null
+          stripe_onboarding_complete: boolean | null
           updated_at: string | null
         }
         Insert: {
           affiliate_code: string
+          agreed_to_terms?: boolean | null
+          agreed_to_terms_at?: string | null
           avatar_url?: string | null
           bio?: string | null
           commission_rate?: number | null
           company_name?: string | null
+          content_creator_opted_in?: boolean | null
           created_at?: string | null
           email: string
           full_name: string
           id?: string
           is_active?: boolean | null
+          onboarding_step?: number | null
+          payout_email?: string | null
+          payout_method?: string | null
           phone?: string | null
           social_links?: Json | null
+          stripe_account_id?: string | null
+          stripe_onboarding_complete?: boolean | null
           updated_at?: string | null
         }
         Update: {
           affiliate_code?: string
+          agreed_to_terms?: boolean | null
+          agreed_to_terms_at?: string | null
           avatar_url?: string | null
           bio?: string | null
           commission_rate?: number | null
           company_name?: string | null
+          content_creator_opted_in?: boolean | null
           created_at?: string | null
           email?: string
           full_name?: string
           id?: string
           is_active?: boolean | null
+          onboarding_step?: number | null
+          payout_email?: string | null
+          payout_method?: string | null
           phone?: string | null
           social_links?: Json | null
+          stripe_account_id?: string | null
+          stripe_onboarding_complete?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
