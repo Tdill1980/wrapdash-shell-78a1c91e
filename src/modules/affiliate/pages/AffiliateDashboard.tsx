@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAffiliate } from '../hooks/useAffiliate';
 import { useAffiliateStats } from '../hooks/useAffiliateStats';
+import { useAffiliateMedia } from '../hooks/useAffiliateMedia';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -16,7 +17,7 @@ import { SalesBreakdown } from '../components/SalesBreakdown';
 import { ProductCard } from '../components/ProductCard';
 import { ProductCommissionCards } from '../components/ProductCommissionCards';
 import { AffiliateHeader } from '../components/AffiliateHeader';
-import { LogOut } from 'lucide-react';
+import { LogOut, Upload, Image, Film, CheckCircle, Clock, Sparkles } from 'lucide-react';
 
 export const AffiliateDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -28,6 +29,11 @@ export const AffiliateDashboard = () => {
 
   const { founder, loading: authLoading, requestLogin, updateProfile, logout } = useAffiliate(token || undefined);
   const { stats, commissions, loading: statsLoading } = useAffiliateStats(founder?.id);
+  const { media } = useAffiliateMedia(founder?.id);
+
+  const pendingCount = media?.filter(m => m.status === 'pending').length || 0;
+  const approvedCount = media?.filter(m => m.status === 'approved').length || 0;
+  const usedInAdsCount = media?.filter(m => m.status === 'approved').length || 0; // TODO: track actual usage
 
   useEffect(() => {
     // Check session storage for existing founder
@@ -110,6 +116,42 @@ export const AffiliateDashboard = () => {
 
         {/* Stats Cards */}
         <StatsCards stats={stats} loading={statsLoading} />
+
+        {/* Content Hub Card */}
+        <Card className="mt-8 p-6 bg-gradient-to-br from-[#405DE6]/10 via-[#833AB4]/10 to-[#E1306C]/10 border-[#ffffff0f]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#E1306C]" />
+                Creator Content Hub
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Upload your wrap content to be featured in our ads and organic posts
+              </p>
+              <div className="flex gap-4 mt-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-yellow-500" />
+                  <span className="text-muted-foreground">{pendingCount} pending</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-muted-foreground">{approvedCount} approved</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Film className="w-4 h-4 text-[#00AFFF]" />
+                  <span className="text-muted-foreground">{usedInAdsCount} used</span>
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate('/affiliate/upload')}
+              className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white hover:opacity-90"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Content
+            </Button>
+          </div>
+        </Card>
 
         {/* Product Performance Breakdown */}
         <div className="mt-8">
