@@ -32,6 +32,7 @@ import { MusicPicker } from "./MusicPicker";
 import { BrandVoiceIndicator } from "./BrandVoiceIndicator";
 import { HybridModeSelector } from "./HybridModeSelector";
 import { HybridOutputDisplay } from "./HybridOutputDisplay";
+import { ScriptEditor } from "./ScriptEditor";
 import { toast } from "sonner";
 
 interface AIVideoEditorProps {
@@ -52,6 +53,7 @@ function AIVideoEditorContent({ selectedFile, onProcess, processing }: AIVideoEd
   // Creatomate render state
   const [headline, setHeadline] = useState("");
   const [subtext, setSubtext] = useState("");
+  const [videoScript, setVideoScript] = useState("");
   const [selectedMusicUrl, setSelectedMusicUrl] = useState<string | null>(null);
   
   // Hybrid Mode state
@@ -426,6 +428,15 @@ function AIVideoEditorContent({ selectedFile, onProcess, processing }: AIVideoEd
               </p>
             </CardHeader>
             <CardContent className="space-y-4 px-3 sm:px-6">
+              {/* Script Editor with Hook Tools */}
+              <ScriptEditor
+                value={videoScript}
+                onChange={setVideoScript}
+                assets={selectedFile ? [{ type: selectedFile.file_type, tags: selectedFile.tags || [] }] : []}
+                label="Video Script / Hook"
+                placeholder="Write your hook or use a template..."
+              />
+
               {/* Text Overlays */}
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                 <div className="space-y-2">

@@ -16,6 +16,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import { ContentFile, AdGenerationResult } from "@/hooks/useContentBox";
+import { ScriptEditor } from "./ScriptEditor";
 import { toast } from "sonner";
 
 interface AdCreatorProps {
@@ -49,6 +50,7 @@ export function AdCreator({ selectedFiles, onGenerate, generating }: AdCreatorPr
   const [platform, setPlatform] = useState<string>('instagram');
   const [format, setFormat] = useState<string>('video_ad');
   const [headline, setHeadline] = useState('');
+  const [script, setScript] = useState('');
   const [cta, setCta] = useState('Shop Now');
   const [result, setResult] = useState<AdGenerationResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
@@ -187,6 +189,15 @@ export function AdCreator({ selectedFiles, onGenerate, generating }: AdCreatorPr
           </div>
         </CardContent>
       </Card>
+
+      {/* Script Editor with Hook Tools */}
+      <ScriptEditor
+        value={script}
+        onChange={setScript}
+        assets={selectedFiles.map(f => ({ type: f.file_type, tags: f.tags || [] }))}
+        label="Ad Script / Hook"
+        placeholder="Write your hook or use a template above..."
+      />
 
       {/* Ad Copy */}
       <Card>
