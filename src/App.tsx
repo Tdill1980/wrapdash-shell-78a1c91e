@@ -45,6 +45,7 @@ import NotFound from "./pages/NotFound";
 import { AffiliateCard, AffiliateDashboard, AffiliateAdmin, AffiliateSignup } from "./modules/affiliate";
 import AffiliatePayments from "./modules/affiliate/pages/AffiliatePayments";
 import AffiliateContentUpload from "./modules/affiliate/pages/ContentUpload";
+import { AffiliateOnboarding } from "./modules/affiliate/pages/AffiliateOnboarding";
 import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
 import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
@@ -131,6 +132,7 @@ const App = () => (
             <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
             <Route path="/affiliate/signup" element={<AffiliateSignup />} />
+            <Route path="/affiliate/onboarding" element={<AffiliateOnboarding />} />
             <Route path="/affiliate/upload" element={<AffiliateContentUpload />} />
             <Route path="/affiliate/admin" element={<AffiliateAdmin />} />
             <Route path="/affiliate/payments" element={<AffiliatePayments />} />
