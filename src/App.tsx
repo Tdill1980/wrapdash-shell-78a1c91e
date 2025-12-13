@@ -64,6 +64,7 @@ import StaticCreator from "./pages/organic/StaticCreator";
 import Atomizer from "./pages/organic/Atomizer";
 import YouTubeEditor from "./pages/organic/YouTubeEditor";
 import MyProducts from "./pages/settings/MyProducts";
+import AdminOrganizations from "./pages/AdminOrganizations";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -130,6 +131,7 @@ const App = () => (
             <Route path="/admin/website-agent" element={<WebsiteAgentAdmin />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
+            <Route path="/admin/organizations" element={<AdminOrganizations />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />

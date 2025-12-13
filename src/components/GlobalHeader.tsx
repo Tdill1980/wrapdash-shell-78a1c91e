@@ -13,6 +13,7 @@ import {
 import { LogOut, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 
 interface GlobalHeaderProps {
   userName?: string;
@@ -65,6 +66,9 @@ export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMe
 
         {/* Right-side controls */}
         <div className="flex items-center gap-2 sm:gap-4">
+          {/* Organization Switcher */}
+          <OrganizationSwitcher />
+          
           {/* Offline Indicator */}
           <OfflineIndicator />
 
