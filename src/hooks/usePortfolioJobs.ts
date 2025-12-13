@@ -1,0 +1,223 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
+import { toast } from "sonner";
+
+export interface PortfolioJob {
+  id: string;
+  organization_id: string | null;
+  user_id: string | null;
+  shopflow_order_id: string | null;
+  order_number: string | null;
+  title: string;
+  customer_name: string | null;
+  vehicle_year: number | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  tags: string[] | null;
+  status: string;
+  created_at: string | null;
+}
+
+export interface PortfolioMedia {
+  id: string;
+  job_id: string;
+  storage_path: string;
+  file_type: string | null;
+  media_type: string | null;
+  caption: string | null;
+  display_order: number | null;
+  created_at: string | null;
+}
+
+export function usePortfolioJobs() {
+  const { organizationId } = useOrganization();
+  const [jobs, setJobs] = useState<PortfolioJob[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("portfolio_jobs")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (organizationId) {
+        query = query.eq("organization_id", organizationId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      setJobs((data || []) as PortfolioJob[]);
+    } catch (err) {
+      console.error("Error fetching portfolio jobs:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
+  }, [organizationId]);
+
+  const createJob = async (jobData: Partial<PortfolioJob>) => {
+    try {
+      const { data, error } = await supabase
+        .from("portfolio_jobs")
+        .insert({ ...jobData, organization_id: organizationId, status: "pending" })
+        .select()
+        .single();
+      if (error) throw error;
+      setJobs((prev) => [data as PortfolioJob, ...prev]);
+      toast.success("Portfolio job created");
+      return data;
+    } catch (err) {
+      toast.error("Failed to create job");
+      return null;
+    }
+  };
+
+  const deleteJob = async (id: string) => {
+    try {
+      const { error } = await supabase.from("portfolio_jobs").delete().eq("id", id);
+      if (error) throw error;
+      setJobs((prev) => prev.filter((job) => job.id !== id));
+      toast.success("Job deleted");
+    } catch (err) {
+      toast.error("Failed to delete job");
+    }
+  };
+
+  return { jobs, loading, fetchJobs, createJob, deleteJob };
+}
+
+export function usePortfolioMedia(jobId: string | null) {
+  const [media, setMedia] = useState<PortfolioMedia[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!jobId) return;
+    setLoading(true);
+    supabase
+      .from("portfolio_media")
+      .select("*")
+      .eq("job_id", jobId)
+      .order("display_order", { ascending: true })
+      .then(({ data }) => {
+        setMedia((data || []) as PortfolioMedia[]);
+        setLoading(false);
+      });
+  }, [jobId]);
+
+  const getPublicUrl = (storagePath: string) => {
+    const { data } = supabase.storage.from("portfolio-media").getPublicUrl(storagePath);
+    return data.publicUrl;
+  };
+
+  return { media, loading, getPublicUrl };
+}
+
+export function usePortfolioMedia(jobId: string | null) {
+  const [media, setMedia] = useState<PortfolioMedia[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchMedia = async () => {
+    if (!jobId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("portfolio_media")
+        .select("*")
+        .eq("job_id", jobId)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      setMedia(data || []);
+    } catch (err) {
+      console.error("Error fetching media:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMedia();
+  }, [jobId]);
+
+  const uploadMedia = async (
+    file: File,
+    mediaType: "before" | "after" | "process"
+  ) => {
+    if (!jobId) return null;
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${jobId}/${mediaType}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("portfolio-media")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: insertData, error: insertError } = await supabase
+        .from("portfolio_media")
+        .insert({
+          job_id: jobId,
+          storage_path: fileName,
+          file_type: file.type.startsWith("video") ? "video" : "image",
+          media_type: mediaType,
+          display_order: media.length,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      setMedia((prev) => [...prev, insertData]);
+      toast.success("Media uploaded");
+      return insertData;
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Failed to upload media");
+      return null;
+    }
+  };
+
+  const deleteMedia = async (mediaId: string, storagePath: string) => {
+    try {
+      await supabase.storage.from("portfolio-media").remove([storagePath]);
+      
+      const { error } = await supabase
+        .from("portfolio_media")
+        .delete()
+        .eq("id", mediaId);
+
+      if (error) throw error;
+
+      setMedia((prev) => prev.filter((m) => m.id !== mediaId));
+      toast.success("Media deleted");
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to delete media");
+    }
+  };
+
+  const getPublicUrl = (storagePath: string) => {
+    const { data } = supabase.storage
+      .from("portfolio-media")
+      .getPublicUrl(storagePath);
+    return data.publicUrl;
+  };
+
+  return {
+    media,
+    loading,
+    fetchMedia,
+    uploadMedia,
+    deleteMedia,
+    getPublicUrl,
+  };
+}
