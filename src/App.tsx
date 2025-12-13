@@ -34,6 +34,8 @@ import ContentSchedule from "./pages/ContentSchedule";
 import ContentCreator from "./pages/ContentCreator";
 import MightyChat from "./pages/MightyChat";
 import Portfolio from "./pages/Portfolio";
+import MightyTasks from "./pages/MightyTasks";
+import TradeDNA from "./pages/TradeDNA";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import ProductAdmin from "./pages/ProductAdmin";
 import DesignVaultAdmin from "./pages/DesignVaultAdmin";
@@ -117,6 +119,8 @@ const App = () => (
             <Route path="/ad-vault" element={<AdVault />} />
             <Route path="/paid-ads-performance" element={<PaidAdsPerformance />} />
             <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/tasks" element={<MightyTasks />} />
+            <Route path="/tradedna" element={<TradeDNA />} />
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />
             <Route path="/admin/designvault" element={<DesignVaultAdmin />} />

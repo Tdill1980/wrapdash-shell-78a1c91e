@@ -41,6 +41,7 @@ import { DashboardHeroHeader } from "@/components/DashboardHeroHeader";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { QuoteRequestCard } from "@/components/dashboard/QuoteRequestCard";
 import { ContentFactoryCard } from "@/components/dashboard/ContentFactoryCard";
+import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
 
 const metrics = [
   {
@@ -312,6 +313,9 @@ export default function Dashboard() {
         <DashboardHeroHeader
           activeRendersCount={activeRendersCount}
         />
+
+      {/* Onboarding Checklist - Beta */}
+      <OnboardingChecklist />
 
       {/* MightyChat - Prominent Unified Inbox */}
       <MightyChatCard />
