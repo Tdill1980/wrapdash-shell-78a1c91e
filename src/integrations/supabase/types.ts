@@ -3071,6 +3071,41 @@ export type Database = {
           },
         ]
       }
+      organization_product_settings: {
+        Row: {
+          created_at: string | null
+          default_margin_percentage: number | null
+          id: string
+          organization_id: string
+          show_wpw_wholesale: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_margin_percentage?: number | null
+          id?: string
+          organization_id: string
+          show_wpw_wholesale?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_margin_percentage?: number | null
+          id?: string
+          organization_id?: string
+          show_wpw_wholesale?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_product_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_tradedna: {
         Row: {
           business_category: string | null
@@ -3315,6 +3350,7 @@ export type Database = {
           product_name: string
           product_type: string
           updated_at: string
+          visibility: string | null
           woo_product_id: number | null
         }
         Insert: {
@@ -3332,6 +3368,7 @@ export type Database = {
           product_name: string
           product_type?: string
           updated_at?: string
+          visibility?: string | null
           woo_product_id?: number | null
         }
         Update: {
@@ -3349,6 +3386,7 @@ export type Database = {
           product_name?: string
           product_type?: string
           updated_at?: string
+          visibility?: string | null
           woo_product_id?: number | null
         }
         Relationships: [
