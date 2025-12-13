@@ -60,6 +60,7 @@ import AutoSplit from "./pages/organic/AutoSplit";
 import StaticCreator from "./pages/organic/StaticCreator";
 import Atomizer from "./pages/organic/Atomizer";
 import YouTubeEditor from "./pages/organic/YouTubeEditor";
+import MyProducts from "./pages/settings/MyProducts";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -129,6 +130,7 @@ const App = () => (
             </AppLayout>
           } />
             <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/settings/products" element={<MyProducts />} />
             <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
             <Route path="/affiliate/signup" element={<AffiliateSignup />} />
