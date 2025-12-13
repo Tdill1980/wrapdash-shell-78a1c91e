@@ -145,6 +145,8 @@ const navigationItems: NavigationItem[] = [
   },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users, roles: ["beta_shop", "admin"] },
   { name: "Portfolio", path: "/portfolio", icon: Briefcase, roles: ["beta_shop", "admin"] },
+  { name: "My Products", path: "/settings/my-products", icon: DollarSign, roles: ["beta_shop", "admin"] },
+  { name: "Settings", path: "/settings", icon: Settings, roles: ["beta_shop", "affiliate", "admin"] },
   { 
     name: "ContentBox AI", 
     path: "/contentbox", 
