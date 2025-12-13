@@ -237,6 +237,7 @@ const navigationItems: NavigationItem[] = [
   { name: "Product Admin", path: "/admin/products", icon: Settings },
   { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
   { name: "Vehicle Admin", path: "/admin/vehicles", icon: Car },
+  { name: "Organizations", path: "/admin/organizations", icon: Users },
 ];
 
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
