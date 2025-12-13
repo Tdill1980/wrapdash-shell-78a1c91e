@@ -22,9 +22,18 @@ import {
   Sparkles as SparklesIcon,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
+import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
 
-const navigationItems = [
-  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+interface NavigationItem {
+  name: string;
+  path: string;
+  icon: any;
+  customRender?: React.ReactNode;
+  roles?: OrganizationRole[]; // If undefined, only admin sees it
+}
+
+const navigationItems: NavigationItem[] = [
+  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["beta_shop", "affiliate", "admin"] },
   { 
     name: "InkFusion™", 
     path: "/inkfusion", 
@@ -96,7 +105,7 @@ const navigationItems = [
       <span className="font-medium text-gradient">WBTY™</span>
     )
   },
-  { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle },
+  { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle, roles: ["beta_shop", "admin"] },
   { name: "DesignVault", path: "/designvault", icon: FolderOpen },
   { name: "WrapBox", path: "/wrapbox", icon: Package },
   { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
@@ -105,6 +114,7 @@ const navigationItems = [
     name: "ShopFlow", 
     path: "/my-shopflow", 
     icon: ShoppingCart,
+    roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-medium text-gradient">ShopFlow</span>
     )
@@ -133,12 +143,13 @@ const navigationItems = [
       </span>
     )
   },
-  { name: "MightyCustomer", path: "/mighty-customer", icon: Users },
-  { name: "Portfolio", path: "/portfolio", icon: Briefcase },
+  { name: "MightyCustomer", path: "/mighty-customer", icon: Users, roles: ["beta_shop", "admin"] },
+  { name: "Portfolio", path: "/portfolio", icon: Briefcase, roles: ["beta_shop", "admin"] },
   { 
     name: "ContentBox AI", 
     path: "/contentbox", 
     icon: Film,
+    roles: ["beta_shop", "affiliate", "admin"],
     customRender: (
       <span className="font-medium">
         <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">ContentBox</span>
@@ -184,6 +195,7 @@ const navigationItems = [
     name: "Affiliate Dashboard", 
     path: "/affiliate/dashboard", 
     icon: TrendingUp,
+    roles: ["affiliate", "admin"],
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Affiliate </span>
@@ -226,6 +238,18 @@ const navigationItems = [
 ];
 
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
+  const { role, isLoading } = useUserRole();
+
+  // Filter navigation items based on user role
+  const filteredNavItems = navigationItems.filter((item) => {
+    // If no roles specified, only admin can see it
+    if (!item.roles) {
+      return role === "admin";
+    }
+    // Check if user's role is in the allowed roles
+    return item.roles.includes(role);
+  });
+
   return (
     <aside className="flex flex-col w-full h-full bg-sidebar border-r border-sidebar-border">
       <div className="px-3 py-8 border-b border-sidebar-border">
@@ -237,7 +261,7 @@ export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
       </div>
       
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        {navigationItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
@@ -248,7 +272,7 @@ export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
               activeClassName="text-foreground bg-white/5 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-gradient-primary before:rounded-r"
             >
               <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} />
-              {(item as any).customRender || <span className="font-medium">{item.name}</span>}
+              {item.customRender || <span className="font-medium">{item.name}</span>}
             </NavLink>
           );
         })}
@@ -258,7 +282,9 @@ export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
         <div className="px-3 py-2.5 rounded-xl bg-white/[0.02] border border-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-foreground">Pro Plan</p>
+              <p className="text-xs font-semibold text-foreground">
+                {role === "admin" ? "Admin" : role === "affiliate" ? "Affiliate" : "Pro Plan"}
+              </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">Active</p>
             </div>
             <div className="w-2 h-2 rounded-full bg-primary shadow-glow"></div>

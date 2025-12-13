@@ -3180,6 +3180,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           owner_id: string | null
+          role: Database["public"]["Enums"]["organization_role"] | null
           subdomain: string
           subscription_tier: string | null
           updated_at: string | null
@@ -3192,6 +3193,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           owner_id?: string | null
+          role?: Database["public"]["Enums"]["organization_role"] | null
           subdomain: string
           subscription_tier?: string | null
           updated_at?: string | null
@@ -3204,6 +3206,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           owner_id?: string | null
+          role?: Database["public"]["Enums"]["organization_role"] | null
           subdomain?: string
           subscription_tier?: string | null
           updated_at?: string | null
@@ -4269,6 +4272,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      organization_role: "beta_shop" | "affiliate" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4397,6 +4401,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      organization_role: ["beta_shop", "affiliate", "admin"],
     },
   },
 } as const

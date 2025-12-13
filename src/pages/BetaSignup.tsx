@@ -163,12 +163,14 @@ const BetaSignup = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      // Get or create organization
+      // Get or create organization with beta_shop role
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .insert({
           name: formData.businessName,
           subdomain: formData.businessName.toLowerCase().replace(/[^a-z0-9]/g, ""),
+          owner_id: user.id,
+          role: "beta_shop",
         })
         .select()
         .single();
