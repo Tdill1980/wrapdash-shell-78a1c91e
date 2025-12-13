@@ -42,6 +42,7 @@ import DesignVaultAdmin from "./pages/DesignVaultAdmin";
 import DashboardHeroAdmin from "./pages/DashboardHeroAdmin";
 import Auth from "./pages/Auth";
 import Signup from "./pages/Signup";
+import BetaSignup from "./pages/BetaSignup";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import { AffiliateCard, AffiliateDashboard, AffiliateAdmin, AffiliateSignup } from "./modules/affiliate";
@@ -76,6 +77,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/signup" element={<Signup />} />
+            <Route path="/beta/signup" element={<BetaSignup />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
