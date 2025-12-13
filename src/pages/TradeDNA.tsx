@@ -22,6 +22,7 @@ import {
   Target,
   Palette,
 } from "lucide-react";
+import wrapCommandLogo from "@/assets/wrapcommand-logo-new.png";
 
 const STEPS = [
   { id: 1, title: "Business Info", icon: Globe },
@@ -189,15 +190,23 @@ export default function TradeDNA() {
     <MainLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight font-poppins">
-            <span className="text-foreground">Trade</span>
-            <span className="text-gradient">DNA</span>
-            <span className="text-muted-foreground text-sm align-super">™</span>
-          </h1>
-          <p className="text-muted-foreground">
-            Extract your unique brand voice so AI speaks like YOU
-          </p>
+        <div className="text-center space-y-4">
+          {/* WrapCommandAI Logo */}
+          <img 
+            src={wrapCommandLogo} 
+            alt="WrapCommandAI™" 
+            className="h-12 mx-auto object-contain"
+          />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight font-poppins">
+              <span className="text-foreground">Trade</span>
+              <span className="text-gradient">DNA</span>
+              <span className="text-muted-foreground text-sm align-super">™</span>
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Extract your unique brand voice so AI speaks like YOU
+            </p>
+          </div>
         </div>
 
         {/* Progress Steps */}
