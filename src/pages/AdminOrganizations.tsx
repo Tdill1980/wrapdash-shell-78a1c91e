@@ -27,8 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, Plus, Users, ExternalLink } from "lucide-react";
+import { Building2, Plus, Users, ExternalLink, Sparkles, Dna } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface Organization {
   id: string;
@@ -42,6 +43,7 @@ interface Organization {
 
 const AdminOrganizations = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -182,14 +184,23 @@ const AdminOrganizations = () => {
     <MainLayout userName="Admin">
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Building2 className="w-7 h-7" />
-            Organization Management
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Create and manage workspaces for Ink & Edge, WrapTV, and other brands
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <Building2 className="w-7 h-7" />
+              Organization Management
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Create and manage workspaces for Ink & Edge, WrapTV, and other brands
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate("/admin/add-organization")}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Add New Brand (AI Wizard)
+          </Button>
         </div>
 
         {/* Create Organization Form */}

@@ -44,6 +44,65 @@ serve(async (req) => {
       }
     }
 
+    // Fetch Instagram profile data if handle provided
+    let instagramBio = "";
+    let instagramPosts: string[] = [];
+    if (instagramHandle) {
+      const cleanHandle = instagramHandle.replace("@", "").trim();
+      console.log("[analyze-brand-voice-enhanced] Scrubbing Instagram:", cleanHandle);
+      
+      try {
+        // Try to fetch Instagram public profile page
+        const igUrl = `https://www.instagram.com/${cleanHandle}/`;
+        const igResponse = await fetch(igUrl, {
+          headers: { 
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+          },
+        });
+        
+        if (igResponse.ok) {
+          const igHtml = await igResponse.text();
+          
+          // Extract bio from meta description (public profiles)
+          const descMatch = igHtml.match(/<meta\s+(?:name="description"|property="og:description")\s+content="([^"]+)"/i);
+          if (descMatch && descMatch[1]) {
+            instagramBio = descMatch[1]
+              .replace(/&quot;/g, '"')
+              .replace(/&amp;/g, '&')
+              .replace(/&#x27;/g, "'")
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>');
+            console.log("[analyze-brand-voice-enhanced] Found Instagram bio");
+          }
+          
+          // Extract any visible captions/text from page
+          const captionMatches = igHtml.match(/"caption"\s*:\s*"([^"]{10,200})"/g);
+          if (captionMatches) {
+            instagramPosts = captionMatches
+              .slice(0, 5)
+              .map(m => {
+                const match = m.match(/"caption"\s*:\s*"([^"]+)"/);
+                return match ? match[1].replace(/\\n/g, ' ').slice(0, 200) : '';
+              })
+              .filter(Boolean);
+            console.log("[analyze-brand-voice-enhanced] Found", instagramPosts.length, "Instagram captions");
+          }
+        }
+      } catch (err) {
+        console.log("[analyze-brand-voice-enhanced] Could not fetch Instagram:", err);
+      }
+      
+      // Add Instagram data to context
+      if (instagramBio) {
+        contextData += `\nInstagram Bio: ${instagramBio}\n`;
+      }
+      if (instagramPosts.length > 0) {
+        contextData += `\nRecent Instagram Captions:\n${instagramPosts.join('\n')}\n`;
+      }
+    }
+
     // Use Lovable AI Gateway
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {
@@ -166,7 +225,10 @@ Be specific to the wrap industry and the shop's positioning.`;
         success: true,
         voiceProfile: result.voiceProfile,
         detectedServices: result.detectedServices || [],
-        detectedInfo: result.detectedInfo || {},
+        detectedInfo: {
+          ...result.detectedInfo,
+          instagram_bio: instagramBio || result.detectedInfo?.instagram_bio || null,
+        },
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
