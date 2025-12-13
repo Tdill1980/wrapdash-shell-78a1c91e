@@ -63,9 +63,18 @@ export function usePortfolioJobs() {
 
   const createJob = async (jobData: Partial<PortfolioJob>) => {
     try {
+      const insertData = {
+        title: jobData.title || "Untitled Job",
+        customer_name: jobData.customer_name,
+        vehicle_year: jobData.vehicle_year,
+        vehicle_make: jobData.vehicle_make,
+        vehicle_model: jobData.vehicle_model,
+        tags: jobData.tags,
+        status: "pending",
+      };
       const { data, error } = await supabase
         .from("portfolio_jobs")
-        .insert({ ...jobData, organization_id: organizationId, status: "pending" })
+        .insert(insertData)
         .select()
         .single();
       if (error) throw error;
@@ -90,32 +99,6 @@ export function usePortfolioJobs() {
   };
 
   return { jobs, loading, fetchJobs, createJob, deleteJob };
-}
-
-export function usePortfolioMedia(jobId: string | null) {
-  const [media, setMedia] = useState<PortfolioMedia[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!jobId) return;
-    setLoading(true);
-    supabase
-      .from("portfolio_media")
-      .select("*")
-      .eq("job_id", jobId)
-      .order("display_order", { ascending: true })
-      .then(({ data }) => {
-        setMedia((data || []) as PortfolioMedia[]);
-        setLoading(false);
-      });
-  }, [jobId]);
-
-  const getPublicUrl = (storagePath: string) => {
-    const { data } = supabase.storage.from("portfolio-media").getPublicUrl(storagePath);
-    return data.publicUrl;
-  };
-
-  return { media, loading, getPublicUrl };
 }
 
 export function usePortfolioMedia(jobId: string | null) {

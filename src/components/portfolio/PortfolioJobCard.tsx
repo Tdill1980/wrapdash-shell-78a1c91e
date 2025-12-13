@@ -7,9 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Car,
   Calendar,
-  Star,
-  Eye,
-  EyeOff,
   MoreVertical,
   Upload,
   Trash,
@@ -66,11 +63,6 @@ export function PortfolioJobCard({
           </Badge>
         )}
 
-        {/* Featured star */}
-        {job.is_featured && (
-          <Star className="absolute top-2 right-2 w-5 h-5 text-yellow-500 fill-yellow-500" />
-        )}
-
         {/* Status badge */}
         <Badge
           variant={job.status === "published" ? "default" : "secondary"}
@@ -78,15 +70,6 @@ export function PortfolioJobCard({
         >
           {job.status}
         </Badge>
-
-        {/* Public/Private indicator */}
-        <div className="absolute bottom-2 right-2">
-          {job.is_public ? (
-            <Eye className="w-4 h-4 text-white drop-shadow" />
-          ) : (
-            <EyeOff className="w-4 h-4 text-white drop-shadow" />
-          )}
-        </div>
 
         {/* Hover actions */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -164,11 +147,11 @@ export function PortfolioJobCard({
         )}
 
         {/* Date */}
-        {job.completed_date && (
+        {job.created_at && (
           <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
             <Calendar className="w-3 h-3" />
             <span>
-              {new Date(job.completed_date).toLocaleDateString()}
+              {new Date(job.created_at).toLocaleDateString()}
             </span>
           </div>
         )}
