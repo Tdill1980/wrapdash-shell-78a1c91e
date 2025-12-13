@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DNAHelixAnimation } from "@/components/beta/DNAHelixAnimation";
 import { BetaProgressBar } from "@/components/beta/BetaProgressBar";
+import wrapCommandLogo from "@/assets/wrapcommand-logo-new.png";
 import { AccountInfoStep } from "@/components/beta/AccountInfoStep";
 import { ScrubbingStep } from "@/components/beta/ScrubbingStep";
 import { DetectedServicesStep } from "@/components/beta/DetectedServicesStep";
@@ -238,6 +239,13 @@ const BetaSignup = () => {
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-8">
         {/* DNA Helix Header */}
         <div className="mb-8 text-center">
+          {/* WrapCommandAI Logo */}
+          <img 
+            src={wrapCommandLogo} 
+            alt="WrapCommandAI™" 
+            className="h-14 mx-auto mb-6 object-contain"
+          />
+          
           <DNAHelixAnimation />
           <h1 className="text-4xl font-bold text-gradient mt-4">TradeDNA™</h1>
           <p className="text-muted-foreground mt-2">Unlock your brand superpowers</p>
