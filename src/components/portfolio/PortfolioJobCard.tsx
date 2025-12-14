@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   Link,
   FileText,
   Play,
+  ScanLine,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,12 +21,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { VinCaptureDialog } from "./VinCaptureDialog";
 
 interface PortfolioJobCardProps {
   job: PortfolioJob;
   onEdit: (job: PortfolioJob) => void;
   onDelete: (id: string) => void;
   onUpload: (job: PortfolioJob) => void;
+  onJobUpdated?: () => void;
 }
 
 interface MediaThumbnailProps {
@@ -114,14 +118,20 @@ export function PortfolioJobCard({
   onEdit,
   onDelete,
   onUpload,
+  onJobUpdated,
 }: PortfolioJobCardProps) {
   const { media, getPublicUrl } = usePortfolioMedia(job.id);
+  const [vinDialogOpen, setVinDialogOpen] = useState(false);
 
   const beforeImages = media.filter((m) => m.media_type === "before");
   const afterImages = media.filter((m) => m.media_type === "after");
   const processImages = media.filter((m) => m.media_type === "process");
 
   const handleUpload = () => onUpload(job);
+  
+  const handleVinCaptured = () => {
+    onJobUpdated?.();
+  };
 
   return (
     <Card className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-all">
@@ -161,6 +171,10 @@ export function PortfolioJobCard({
             <DropdownMenuItem onClick={handleUpload}>
               <Upload className="w-4 h-4 mr-2" />
               Upload Media
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setVinDialogOpen(true)}>
+              <ScanLine className="w-4 h-4 mr-2" />
+              Capture VIN
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onDelete(job.id)}
@@ -248,6 +262,16 @@ export function PortfolioJobCard({
           </div>
         )}
       </CardContent>
+
+      {/* VIN Capture Dialog */}
+      <VinCaptureDialog
+        open={vinDialogOpen}
+        onOpenChange={setVinDialogOpen}
+        jobId={job.id}
+        currentVin={job.vin_number}
+        currentVinPhoto={job.vin_photo_path}
+        onVinCaptured={handleVinCaptured}
+      />
     </Card>
   );
 }
