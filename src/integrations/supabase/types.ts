@@ -3225,10 +3225,15 @@ export type Database = {
         Row: {
           completion_date: string | null
           created_at: string | null
+          customer_acknowledged_at: string | null
           customer_name: string | null
+          customer_signature_path: string | null
           finish: string | null
           id: string
+          is_featured: boolean | null
+          is_public: boolean | null
           job_price: number | null
+          liability_pdf_path: string | null
           notes: string | null
           order_number: string | null
           organization_id: string | null
@@ -3243,14 +3248,21 @@ export type Database = {
           vehicle_make: string | null
           vehicle_model: string | null
           vehicle_year: number | null
+          vin_number: string | null
+          vin_photo_path: string | null
         }
         Insert: {
           completion_date?: string | null
           created_at?: string | null
+          customer_acknowledged_at?: string | null
           customer_name?: string | null
+          customer_signature_path?: string | null
           finish?: string | null
           id?: string
+          is_featured?: boolean | null
+          is_public?: boolean | null
           job_price?: number | null
+          liability_pdf_path?: string | null
           notes?: string | null
           order_number?: string | null
           organization_id?: string | null
@@ -3265,14 +3277,21 @@ export type Database = {
           vehicle_make?: string | null
           vehicle_model?: string | null
           vehicle_year?: number | null
+          vin_number?: string | null
+          vin_photo_path?: string | null
         }
         Update: {
           completion_date?: string | null
           created_at?: string | null
+          customer_acknowledged_at?: string | null
           customer_name?: string | null
+          customer_signature_path?: string | null
           finish?: string | null
           id?: string
+          is_featured?: boolean | null
+          is_public?: boolean | null
           job_price?: number | null
+          liability_pdf_path?: string | null
           notes?: string | null
           order_number?: string | null
           organization_id?: string | null
@@ -3287,6 +3306,8 @@ export type Database = {
           vehicle_make?: string | null
           vehicle_model?: string | null
           vehicle_year?: number | null
+          vin_number?: string | null
+          vin_photo_path?: string | null
         }
         Relationships: [
           {
@@ -3308,32 +3329,41 @@ export type Database = {
       portfolio_media: {
         Row: {
           caption: string | null
+          condition_notes: string | null
           created_at: string | null
           display_order: number | null
           file_type: string | null
           id: string
           job_id: string
+          location_on_vehicle: string | null
           media_type: string | null
+          photo_timestamp: string | null
           storage_path: string
         }
         Insert: {
           caption?: string | null
+          condition_notes?: string | null
           created_at?: string | null
           display_order?: number | null
           file_type?: string | null
           id?: string
           job_id: string
+          location_on_vehicle?: string | null
           media_type?: string | null
+          photo_timestamp?: string | null
           storage_path: string
         }
         Update: {
           caption?: string | null
+          condition_notes?: string | null
           created_at?: string | null
           display_order?: number | null
           file_type?: string | null
           id?: string
           job_id?: string
+          location_on_vehicle?: string | null
           media_type?: string | null
+          photo_timestamp?: string | null
           storage_path?: string
         }
         Relationships: [

@@ -185,3 +185,6 @@ verify_jwt = false
 
 [functions.analyze-brand-voice-enhanced]
 verify_jwt = false
+
+[functions.extract-vin-ocr]
+verify_jwt = false

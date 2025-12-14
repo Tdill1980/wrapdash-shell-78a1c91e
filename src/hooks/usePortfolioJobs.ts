@@ -17,6 +17,15 @@ export interface PortfolioJob {
   tags: string[] | null;
   status: string;
   created_at: string | null;
+  // Liability fields
+  vin_number: string | null;
+  vin_photo_path: string | null;
+  customer_acknowledged_at: string | null;
+  customer_signature_path: string | null;
+  liability_pdf_path: string | null;
+  // Showcase fields
+  is_public: boolean;
+  is_featured: boolean;
 }
 
 export interface PortfolioMedia {
@@ -28,6 +37,10 @@ export interface PortfolioMedia {
   caption: string | null;
   display_order: number | null;
   created_at: string | null;
+  // Liability fields
+  condition_notes: string | null;
+  location_on_vehicle: string | null;
+  photo_timestamp: string | null;
 }
 
 export function usePortfolioJobs() {
