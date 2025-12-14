@@ -3223,13 +3223,16 @@ export type Database = {
       }
       portfolio_jobs: {
         Row: {
+          completion_date: string | null
           created_at: string | null
           customer_name: string | null
           finish: string | null
           id: string
           job_price: number | null
+          notes: string | null
           order_number: string | null
           organization_id: string | null
+          service_type: string | null
           shopflow_order_id: string | null
           status: string | null
           tags: string[] | null
@@ -3242,13 +3245,16 @@ export type Database = {
           vehicle_year: number | null
         }
         Insert: {
+          completion_date?: string | null
           created_at?: string | null
           customer_name?: string | null
           finish?: string | null
           id?: string
           job_price?: number | null
+          notes?: string | null
           order_number?: string | null
           organization_id?: string | null
+          service_type?: string | null
           shopflow_order_id?: string | null
           status?: string | null
           tags?: string[] | null
@@ -3261,13 +3267,16 @@ export type Database = {
           vehicle_year?: number | null
         }
         Update: {
+          completion_date?: string | null
           created_at?: string | null
           customer_name?: string | null
           finish?: string | null
           id?: string
           job_price?: number | null
+          notes?: string | null
           order_number?: string | null
           organization_id?: string | null
+          service_type?: string | null
           shopflow_order_id?: string | null
           status?: string | null
           tags?: string[] | null

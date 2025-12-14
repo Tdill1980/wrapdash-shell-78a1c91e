@@ -68,9 +68,15 @@ export default function Portfolio() {
   const pendingJobs = jobs.filter((j) => j.status === "pending" || j.status === "draft").length;
 
   const handleCreateJob = async (jobData: any) => {
-    await createJob(jobData);
+    const newJob = await createJob(jobData);
     setIsCreateDialogOpen(false);
     fetchJobs();
+    // Auto-open upload dialog for newly created legacy job
+    if (newJob?.id) {
+      setSelectedJobId(newJob.id);
+      setIsUploadDialogOpen(true);
+    }
+    return newJob?.id || null;
   };
 
   const handleUploadMedia = (jobId: string) => {
