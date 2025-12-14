@@ -10,12 +10,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Calendar } from "lucide-react";
 
 interface PortfolioJobDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: any) => Promise<string | null>;
   jobId?: string | null;
 }
 
@@ -27,6 +35,19 @@ const COMMON_TAGS = [
   "PPF",
   "Chrome Delete",
   "Custom Design",
+];
+
+const SERVICE_TYPES = [
+  "Full Wrap",
+  "Partial Wrap",
+  "PPF",
+  "Chrome Delete",
+  "Window Tint",
+  "Commercial Fleet",
+  "Custom Design",
+  "Color Change",
+  "Accent Wrap",
+  "Other",
 ];
 
 export function PortfolioJobDialog({
@@ -42,6 +63,9 @@ export function PortfolioJobDialog({
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [serviceType, setServiceType] = useState("");
+  const [completionDate, setCompletionDate] = useState("");
+  const [notes, setNotes] = useState("");
 
   // Reset form when dialog opens/closes
   useEffect(() => {
@@ -52,6 +76,9 @@ export function PortfolioJobDialog({
       setVehicleMake("");
       setVehicleModel("");
       setSelectedTags([]);
+      setServiceType("");
+      setCompletionDate("");
+      setNotes("");
     }
   }, [open, jobId]);
 
@@ -66,15 +93,19 @@ export function PortfolioJobDialog({
 
     setIsSubmitting(true);
     try {
-      await onSubmit({
+      const newJobId = await onSubmit({
         title,
         customer_name: customerName || null,
         vehicle_year: vehicleYear ? parseInt(vehicleYear) : null,
         vehicle_make: vehicleMake || null,
         vehicle_model: vehicleModel || null,
         tags: selectedTags.length > 0 ? selectedTags : null,
+        service_type: serviceType || null,
+        completion_date: completionDate || null,
+        notes: notes || null,
       });
       onOpenChange(false);
+      return newJobId;
     } finally {
       setIsSubmitting(false);
     }
@@ -82,9 +113,9 @@ export function PortfolioJobDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{jobId ? "Edit Job" : "Add Portfolio Job"}</DialogTitle>
+          <DialogTitle>{jobId ? "Edit Job" : "Add Legacy Job"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -98,14 +129,31 @@ export function PortfolioJobDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="customer">Customer Name</Label>
-            <Input
-              id="customer"
-              placeholder="John Smith"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer">Customer Name</Label>
+              <Input
+                id="customer"
+                placeholder="John Smith"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="serviceType">Service Type</Label>
+              <Select value={serviceType} onValueChange={setServiceType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {SERVICE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -139,6 +187,31 @@ export function PortfolioJobDialog({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="completionDate">Job Completion Date</Label>
+            <div className="relative">
+              <Input
+                id="completionDate"
+                type="date"
+                value={completionDate}
+                onChange={(e) => setCompletionDate(e.target.value)}
+                className="pl-10"
+              />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              placeholder="Additional details about the job..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label>Tags</Label>
             <div className="flex flex-wrap gap-2">
               {COMMON_TAGS.map((tag) => (
@@ -166,7 +239,7 @@ export function PortfolioJobDialog({
                 Saving...
               </>
             ) : (
-              "Save Job"
+              "Save & Add Photos"
             )}
           </Button>
         </DialogFooter>

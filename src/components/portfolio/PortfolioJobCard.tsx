@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PortfolioJob, PortfolioMedia, usePortfolioMedia } from "@/hooks/usePortfolioJobs";
-import { supabase } from "@/integrations/supabase/client";
+import { PortfolioJob, usePortfolioMedia } from "@/hooks/usePortfolioJobs";
 import {
   Car,
   Calendar,
@@ -11,6 +9,8 @@ import {
   Upload,
   Trash,
   Edit,
+  Link,
+  FileText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -56,9 +56,22 @@ export function PortfolioJobCard({
           </div>
         )}
 
+        {/* Order number badge or Manual indicator */}
+        {job.order_number ? (
+          <Badge className="absolute top-2 left-2 bg-primary/90 backdrop-blur gap-1">
+            <Link className="w-3 h-3" />
+            {job.order_number}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="absolute top-2 left-2 bg-background/80 backdrop-blur gap-1">
+            <FileText className="w-3 h-3" />
+            Legacy
+          </Badge>
+        )}
+
         {/* Before/After indicator */}
         {primaryBefore && primaryAfter && (
-          <Badge className="absolute top-2 left-2 bg-background/80 backdrop-blur">
+          <Badge className="absolute top-2 right-2 bg-background/80 backdrop-blur">
             Before/After
           </Badge>
         )}
