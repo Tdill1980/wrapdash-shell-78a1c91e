@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PortfolioJob, usePortfolioMedia, PortfolioMedia } from "@/hooks/usePortfolioJobs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PortfolioJob, usePortfolioMedia } from "@/hooks/usePortfolioJobs";
 import {
   Car,
   Calendar,
@@ -10,10 +11,10 @@ import {
   Upload,
   Trash,
   Edit,
-  Link,
-  FileText,
   Play,
   ScanLine,
+  ImageIcon,
+  ArrowRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,88 +32,6 @@ interface PortfolioJobCardProps {
   onJobUpdated?: () => void;
 }
 
-interface MediaThumbnailProps {
-  item: PortfolioMedia;
-  getPublicUrl: (path: string) => string;
-  onClick: () => void;
-}
-
-function MediaThumbnail({ item, getPublicUrl, onClick }: MediaThumbnailProps) {
-  const isVideo = item.file_type?.startsWith("video/");
-  
-  return (
-    <div 
-      className="relative aspect-square rounded-md overflow-hidden bg-muted cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-      onClick={onClick}
-    >
-      <img
-        src={getPublicUrl(item.storage_path)}
-        alt=""
-        className="w-full h-full object-cover"
-      />
-      {isVideo && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-          <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
-            <Play className="w-3 h-3 text-black fill-black ml-0.5" />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface MediaRowProps {
-  label: string;
-  items: PortfolioMedia[];
-  getPublicUrl: (path: string) => string;
-  maxVisible?: number;
-  onUpload: () => void;
-}
-
-function MediaRow({ label, items, getPublicUrl, maxVisible = 4, onUpload }: MediaRowProps) {
-  const visibleItems = items.slice(0, maxVisible);
-  const overflowCount = items.length - maxVisible;
-
-  if (items.length === 0) {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground w-14">{label}:</span>
-        <div 
-          className="flex items-center justify-center w-8 h-8 rounded-md border border-dashed border-muted-foreground/30 cursor-pointer hover:border-primary/50 transition-colors"
-          onClick={onUpload}
-        >
-          <Upload className="w-3 h-3 text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground w-14">{label}:</span>
-      <div className="flex gap-1 flex-1">
-        {visibleItems.map((item) => (
-          <div key={item.id} className="w-8 h-8 flex-shrink-0">
-            <MediaThumbnail 
-              item={item} 
-              getPublicUrl={getPublicUrl} 
-              onClick={onUpload}
-            />
-          </div>
-        ))}
-        {overflowCount > 0 && (
-          <div 
-            className="w-8 h-8 rounded-md bg-muted flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors flex-shrink-0"
-            onClick={onUpload}
-          >
-            <span className="text-xs font-medium text-muted-foreground">+{overflowCount}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function PortfolioJobCard({
   job,
   onEdit,
@@ -122,10 +41,10 @@ export function PortfolioJobCard({
 }: PortfolioJobCardProps) {
   const { media, getPublicUrl } = usePortfolioMedia(job.id);
   const [vinDialogOpen, setVinDialogOpen] = useState(false);
+  const [mediaTab, setMediaTab] = useState<"before" | "after">("after");
 
   const beforeImages = media.filter((m) => m.media_type === "before");
   const afterImages = media.filter((m) => m.media_type === "after");
-  const processImages = media.filter((m) => m.media_type === "process");
 
   const handleUpload = () => onUpload(job);
   
@@ -133,37 +52,90 @@ export function PortfolioJobCard({
     onJobUpdated?.();
   };
 
+  // Get preview image based on selected tab
+  const currentImages = mediaTab === "before" ? beforeImages : afterImages;
+  const previewImage = currentImages[0];
+  const isVideo = previewImage?.file_type?.startsWith("video");
+
   return (
-    <Card className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-all">
-      {/* Header with badges */}
-      <div className="p-3 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {job.order_number ? (
-            <Badge className="bg-primary/90 backdrop-blur gap-1 text-xs">
-              <Link className="w-3 h-3" />
-              {job.order_number}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="bg-background/80 backdrop-blur gap-1 text-xs">
-              <FileText className="w-3 h-3" />
-              Legacy
-            </Badge>
-          )}
-          <Badge
-            variant={job.status === "published" ? "default" : "secondary"}
-            className="text-xs"
-          >
-            {job.status}
-          </Badge>
+    <Card className="bg-card/60 backdrop-blur border-border/50 overflow-hidden group hover:border-primary/40 transition-all duration-300">
+      {/* Preview Image with Tab Toggle */}
+      <div className="relative aspect-[4/3] bg-muted/50 overflow-hidden">
+        {previewImage ? (
+          <>
+            <img
+              src={getPublicUrl(previewImage.storage_path)}
+              alt=""
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            {isVideo && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                  <Play className="w-5 h-5 text-black fill-black ml-1" />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <ImageIcon className="w-10 h-10 opacity-30" />
+            <span className="text-xs">No {mediaTab} photos</span>
+            <Button variant="ghost" size="sm" onClick={handleUpload} className="text-xs">
+              <Upload className="w-3 h-3 mr-1" />
+              Upload
+            </Button>
+          </div>
+        )}
+
+        {/* Before/After Tabs Overlay */}
+        <div className="absolute bottom-2 left-2 right-2">
+          <Tabs value={mediaTab} onValueChange={(v) => setMediaTab(v as "before" | "after")}>
+            <TabsList className="w-full bg-black/60 backdrop-blur-sm border-0 h-8">
+              <TabsTrigger 
+                value="before" 
+                className="flex-1 text-xs h-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-500 data-[state=active]:text-white"
+              >
+                Before
+                {beforeImages.length > 0 && (
+                  <span className="ml-1 opacity-70">({beforeImages.length})</span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="after"
+                className="flex-1 text-xs h-6 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[hsl(var(--primary))] data-[state=active]:to-[hsl(var(--gradient-dark))] data-[state=active]:text-white"
+              >
+                After
+                {afterImages.length > 0 && (
+                  <span className="ml-1 opacity-70">({afterImages.length})</span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
+        {/* Status Badge */}
+        <Badge
+          className={`absolute top-2 left-2 text-xs ${
+            job.status === "published" 
+              ? "bg-green-500/90 text-white" 
+              : "bg-amber-500/90 text-white"
+          }`}
+        >
+          {job.status === "published" ? "Complete" : "Pending"}
+        </Badge>
+
+        {/* Dropdown Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-              <MoreVertical className="w-4 h-4" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute top-2 right-2 h-7 w-7 p-0 bg-black/40 hover:bg-black/60 backdrop-blur-sm"
+            >
+              <MoreVertical className="w-4 h-4 text-white" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="bg-card border-border">
             <DropdownMenuItem onClick={() => onEdit(job)}>
               <Edit className="w-4 h-4 mr-2" />
               Edit Details
@@ -178,7 +150,7 @@ export function PortfolioJobCard({
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onDelete(job.id)}
-              className="text-destructive"
+              className="text-destructive focus:text-destructive"
             >
               <Trash className="w-4 h-4 mr-2" />
               Delete
@@ -187,48 +159,22 @@ export function PortfolioJobCard({
         </DropdownMenu>
       </div>
 
-      {/* Media Preview Grid */}
-      <div className="px-3 py-2 space-y-2 border-y border-border bg-muted/30">
-        <MediaRow 
-          label="Before" 
-          items={beforeImages} 
-          getPublicUrl={getPublicUrl} 
-          onUpload={handleUpload}
-        />
-        <MediaRow 
-          label="After" 
-          items={afterImages} 
-          getPublicUrl={getPublicUrl} 
-          onUpload={handleUpload}
-        />
-        {processImages.length > 0 && (
-          <MediaRow 
-            label="Process" 
-            items={processImages} 
-            getPublicUrl={getPublicUrl} 
-            onUpload={handleUpload}
-          />
-        )}
-      </div>
-
       {/* Content */}
-      <CardContent className="p-3 pt-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold truncate text-sm">{job.title}</h3>
-            {job.customer_name && (
-              <p className="text-xs text-muted-foreground truncate">
-                {job.customer_name}
-              </p>
-            )}
-          </div>
+      <CardContent className="p-3 space-y-2">
+        <div>
+          <h3 className="font-semibold text-sm truncate">{job.title}</h3>
+          {job.customer_name && (
+            <p className="text-xs text-muted-foreground truncate">
+              {job.customer_name}
+            </p>
+          )}
         </div>
 
         {/* Vehicle info */}
         {(job.vehicle_year || job.vehicle_make || job.vehicle_model) && (
-          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-            <Car className="w-3 h-3" />
-            <span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Car className="w-3.5 h-3.5 text-primary" />
+            <span className="truncate">
               {[job.vehicle_year, job.vehicle_make, job.vehicle_model]
                 .filter(Boolean)
                 .join(" ")}
@@ -238,29 +184,34 @@ export function PortfolioJobCard({
 
         {/* Tags */}
         {job.tags && job.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {job.tags.slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs py-0">
+          <div className="flex flex-wrap gap-1">
+            {job.tags.slice(0, 2).map((tag) => (
+              <Badge key={tag} variant="outline" className="text-[10px] py-0 px-1.5 bg-muted/50">
                 {tag}
               </Badge>
             ))}
-            {job.tags.length > 3 && (
-              <Badge variant="outline" className="text-xs py-0">
-                +{job.tags.length - 3}
+            {job.tags.length > 2 && (
+              <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-muted/50">
+                +{job.tags.length - 2}
               </Badge>
             )}
           </div>
         )}
 
-        {/* Date */}
-        {job.created_at && (
-          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-            <Calendar className="w-3 h-3" />
-            <span>
-              {new Date(job.created_at).toLocaleDateString()}
-            </span>
+        {/* Footer with date and media count */}
+        <div className="flex items-center justify-between pt-1 border-t border-border/50">
+          {job.created_at && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Calendar className="w-3 h-3" />
+              <span>{new Date(job.created_at).toLocaleDateString()}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>{beforeImages.length}</span>
+            <ArrowRight className="w-3 h-3" />
+            <span>{afterImages.length}</span>
           </div>
-        )}
+        </div>
       </CardContent>
 
       {/* VIN Capture Dialog */}
