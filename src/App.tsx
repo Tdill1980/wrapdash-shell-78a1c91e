@@ -14,7 +14,7 @@ import { WrapBox } from "./modules/wrapbox";
 import MonthlyDrops from "./pages/MonthlyDrops";
 import DesignMarket from "./pages/DesignMarket";
 import ShopFlow from "./pages/ShopFlow";
-
+import ShopFlowDetail from "./pages/ShopFlowDetail";
 import ShopFlowInternalList from "./pages/ShopFlowInternalList";
 import ShopFlowBulkAdmin from "./pages/ShopFlowBulkAdmin";
 import { TrackJob } from "./modules/shopflow";
@@ -95,6 +95,7 @@ const App = () => (
             <Route path="/monthly-drops" element={<MonthlyDrops />} />
             <Route path="/design-market" element={<DesignMarket />} />
             <Route path="/shopflow" element={<ShopFlow />} />
+            <Route path="/shopflow/:id" element={<ShopFlowDetail />} />
             <Route path="/shopflow-internal" element={<ShopFlowInternalList />} />
             <Route path="/shopflow-bulk-admin" element={<ShopFlowBulkAdmin />} />
             <Route path="/track/:orderNumber" element={<TrackJob />} />
