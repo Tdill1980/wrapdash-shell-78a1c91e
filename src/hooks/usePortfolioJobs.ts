@@ -118,9 +118,15 @@ export function usePortfolioMedia(jobId: string | null) {
   const [media, setMedia] = useState<PortfolioMedia[]>([]);
   const [loading, setLoading] = useState(false);
 
+  console.log("[usePortfolioMedia] Hook initialized with jobId:", jobId);
+
   const fetchMedia = async () => {
-    if (!jobId) return;
+    if (!jobId) {
+      console.log("[usePortfolioMedia] fetchMedia skipped - no jobId");
+      return;
+    }
     
+    console.log("[usePortfolioMedia] fetchMedia starting for jobId:", jobId);
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -129,7 +135,11 @@ export function usePortfolioMedia(jobId: string | null) {
         .eq("job_id", jobId)
         .order("display_order", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("[usePortfolioMedia] fetchMedia error:", error);
+        throw error;
+      }
+      console.log("[usePortfolioMedia] fetchMedia success, count:", data?.length);
       setMedia(data || []);
     } catch (err) {
       console.error("Error fetching media:", err);
@@ -146,17 +156,29 @@ export function usePortfolioMedia(jobId: string | null) {
     file: File,
     mediaType: "before" | "after" | "process"
   ) => {
-    if (!jobId) return null;
+    console.log("[usePortfolioMedia] uploadMedia called:", { jobId, fileName: file.name, mediaType });
+    
+    if (!jobId) {
+      console.error("[usePortfolioMedia] uploadMedia failed - no jobId");
+      return null;
+    }
 
     try {
       const fileExt = file.name.split(".").pop();
       const fileName = `${jobId}/${mediaType}_${Date.now()}.${fileExt}`;
+      
+      console.log("[usePortfolioMedia] Uploading to storage:", fileName);
 
       const { error: uploadError } = await supabase.storage
         .from("portfolio-media")
         .upload(fileName, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("[usePortfolioMedia] Storage upload error:", uploadError);
+        throw uploadError;
+      }
+      
+      console.log("[usePortfolioMedia] Storage upload success, inserting DB record");
 
       const { data: insertData, error: insertError } = await supabase
         .from("portfolio_media")
@@ -170,8 +192,12 @@ export function usePortfolioMedia(jobId: string | null) {
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("[usePortfolioMedia] DB insert error:", insertError);
+        throw insertError;
+      }
 
+      console.log("[usePortfolioMedia] Upload complete:", insertData);
       setMedia((prev) => [...prev, insertData]);
       toast.success("Media uploaded");
       return insertData;

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -26,13 +27,18 @@ export function PortfolioShareDialog({
   const { organizationSettings } = useOrganization();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [email, setEmail] = useState("");
+  const [includeBeforePhotos, setIncludeBeforePhotos] = useState(true);
 
-  // Generate portfolio URL based on organization subdomain
-  const portfolioUrl = organizationSettings?.subdomain
+  // Generate portfolio URL based on organization subdomain and share mode
+  const baseUrl = organizationSettings?.subdomain
     ? `${window.location.origin}/gallery/${organizationSettings.subdomain}`
     : `${window.location.origin}/portfolio`;
+  
+  const portfolioUrl = includeBeforePhotos 
+    ? baseUrl 
+    : `${baseUrl}?mode=after-only`;
 
-  // Generate QR code when dialog opens
+  // Generate QR code when dialog opens or mode changes
   useEffect(() => {
     if (open) {
       QRCode.toDataURL(portfolioUrl, {
@@ -53,7 +59,8 @@ export function PortfolioShareDialog({
 
   const downloadQR = () => {
     const link = document.createElement("a");
-    link.download = `portfolio-qr-${organizationSettings?.subdomain || "gallery"}.png`;
+    const modeSuffix = includeBeforePhotos ? "full" : "after-only";
+    link.download = `portfolio-qr-${organizationSettings?.subdomain || "gallery"}-${modeSuffix}.png`;
     link.href = qrCodeUrl;
     link.click();
     toast.success("QR code downloaded!");
@@ -65,8 +72,9 @@ export function PortfolioShareDialog({
       return;
     }
 
+    const modeText = includeBeforePhotos ? "transformation" : "finished work";
     const subject = encodeURIComponent(
-      `Check out our portfolio - ${organizationSettings?.name || "Our Wrap Shop"}`
+      `Check out our ${modeText} - ${organizationSettings?.name || "Our Wrap Shop"}`
     );
     const body = encodeURIComponent(
       `Hi!\n\nI wanted to share our portfolio of wrap projects with you:\n\n${portfolioUrl}\n\nTake a look at some of our best work!\n\nBest regards,\n${organizationSettings?.name || "The Team"}`
@@ -90,6 +98,23 @@ export function PortfolioShareDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Share Mode Toggle */}
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div className="space-y-0.5">
+              <Label htmlFor="include-before" className="font-medium">Include Before Photos</Label>
+              <p className="text-xs text-muted-foreground">
+                {includeBeforePhotos 
+                  ? "Showing full Before → After transformation" 
+                  : "Showing finished work only (After photos)"}
+              </p>
+            </div>
+            <Switch
+              id="include-before"
+              checked={includeBeforePhotos}
+              onCheckedChange={setIncludeBeforePhotos}
+            />
+          </div>
+
           {/* QR Code */}
           <div className="flex flex-col items-center gap-4">
             {qrCodeUrl && (
