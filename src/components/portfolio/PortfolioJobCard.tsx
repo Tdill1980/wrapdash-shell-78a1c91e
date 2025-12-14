@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PortfolioJob, usePortfolioMedia } from "@/hooks/usePortfolioJobs";
+import { PortfolioJob, usePortfolioMedia, PortfolioMedia } from "@/hooks/usePortfolioJobs";
 import {
   Car,
   Calendar,
@@ -11,6 +11,7 @@ import {
   Edit,
   Link,
   FileText,
+  Play,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +27,88 @@ interface PortfolioJobCardProps {
   onUpload: (job: PortfolioJob) => void;
 }
 
+interface MediaThumbnailProps {
+  item: PortfolioMedia;
+  getPublicUrl: (path: string) => string;
+  onClick: () => void;
+}
+
+function MediaThumbnail({ item, getPublicUrl, onClick }: MediaThumbnailProps) {
+  const isVideo = item.file_type?.startsWith("video/");
+  
+  return (
+    <div 
+      className="relative aspect-square rounded-md overflow-hidden bg-muted cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+      onClick={onClick}
+    >
+      <img
+        src={getPublicUrl(item.storage_path)}
+        alt=""
+        className="w-full h-full object-cover"
+      />
+      {isVideo && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+          <div className="w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
+            <Play className="w-3 h-3 text-black fill-black ml-0.5" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface MediaRowProps {
+  label: string;
+  items: PortfolioMedia[];
+  getPublicUrl: (path: string) => string;
+  maxVisible?: number;
+  onUpload: () => void;
+}
+
+function MediaRow({ label, items, getPublicUrl, maxVisible = 4, onUpload }: MediaRowProps) {
+  const visibleItems = items.slice(0, maxVisible);
+  const overflowCount = items.length - maxVisible;
+
+  if (items.length === 0) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground w-14">{label}:</span>
+        <div 
+          className="flex items-center justify-center w-8 h-8 rounded-md border border-dashed border-muted-foreground/30 cursor-pointer hover:border-primary/50 transition-colors"
+          onClick={onUpload}
+        >
+          <Upload className="w-3 h-3 text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground w-14">{label}:</span>
+      <div className="flex gap-1 flex-1">
+        {visibleItems.map((item) => (
+          <div key={item.id} className="w-8 h-8 flex-shrink-0">
+            <MediaThumbnail 
+              item={item} 
+              getPublicUrl={getPublicUrl} 
+              onClick={onUpload}
+            />
+          </div>
+        ))}
+        {overflowCount > 0 && (
+          <div 
+            className="w-8 h-8 rounded-md bg-muted flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors flex-shrink-0"
+            onClick={onUpload}
+          >
+            <span className="text-xs font-medium text-muted-foreground">+{overflowCount}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PortfolioJobCard({
   job,
   onEdit,
@@ -36,105 +119,101 @@ export function PortfolioJobCard({
 
   const beforeImages = media.filter((m) => m.media_type === "before");
   const afterImages = media.filter((m) => m.media_type === "after");
+  const processImages = media.filter((m) => m.media_type === "process");
 
-  const primaryAfter = afterImages[0];
-  const primaryBefore = beforeImages[0];
+  const handleUpload = () => onUpload(job);
 
   return (
     <Card className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-all">
-      {/* Image Section */}
-      <div className="relative aspect-video bg-muted">
-        {primaryAfter ? (
-          <img
-            src={getPublicUrl(primaryAfter.storage_path)}
-            alt={job.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            <Upload className="w-8 h-8" />
-          </div>
-        )}
-
-        {/* Order number badge or Manual indicator */}
-        {job.order_number ? (
-          <Badge className="absolute top-2 left-2 bg-primary/90 backdrop-blur gap-1">
-            <Link className="w-3 h-3" />
-            {job.order_number}
+      {/* Header with badges */}
+      <div className="p-3 pb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {job.order_number ? (
+            <Badge className="bg-primary/90 backdrop-blur gap-1 text-xs">
+              <Link className="w-3 h-3" />
+              {job.order_number}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-background/80 backdrop-blur gap-1 text-xs">
+              <FileText className="w-3 h-3" />
+              Legacy
+            </Badge>
+          )}
+          <Badge
+            variant={job.status === "published" ? "default" : "secondary"}
+            className="text-xs"
+          >
+            {job.status}
           </Badge>
-        ) : (
-          <Badge variant="outline" className="absolute top-2 left-2 bg-background/80 backdrop-blur gap-1">
-            <FileText className="w-3 h-3" />
-            Legacy
-          </Badge>
-        )}
-
-        {/* Before/After indicator */}
-        {primaryBefore && primaryAfter && (
-          <Badge className="absolute top-2 right-2 bg-background/80 backdrop-blur">
-            Before/After
-          </Badge>
-        )}
-
-        {/* Status badge */}
-        <Badge
-          variant={job.status === "published" ? "default" : "secondary"}
-          className="absolute bottom-2 left-2"
-        >
-          {job.status}
-        </Badge>
-
-        {/* Hover actions */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <Button size="sm" variant="secondary" onClick={() => onUpload(job)}>
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Media
-          </Button>
         </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(job)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleUpload}>
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Media
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(job.id)}
+              className="text-destructive"
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Media Preview Grid */}
+      <div className="px-3 py-2 space-y-2 border-y border-border bg-muted/30">
+        <MediaRow 
+          label="Before" 
+          items={beforeImages} 
+          getPublicUrl={getPublicUrl} 
+          onUpload={handleUpload}
+        />
+        <MediaRow 
+          label="After" 
+          items={afterImages} 
+          getPublicUrl={getPublicUrl} 
+          onUpload={handleUpload}
+        />
+        {processImages.length > 0 && (
+          <MediaRow 
+            label="Process" 
+            items={processImages} 
+            getPublicUrl={getPublicUrl} 
+            onUpload={handleUpload}
+          />
+        )}
       </div>
 
       {/* Content */}
-      <CardContent className="p-4">
+      <CardContent className="p-3 pt-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold truncate">{job.title}</h3>
+            <h3 className="font-semibold truncate text-sm">{job.title}</h3>
             {job.customer_name && (
-              <p className="text-sm text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {job.customer_name}
               </p>
             )}
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(job)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onUpload(job)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Media
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDelete(job.id)}
-                className="text-destructive"
-              >
-                <Trash className="w-4 h-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Vehicle info */}
         {(job.vehicle_year || job.vehicle_make || job.vehicle_model) && (
-          <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-            <Car className="w-4 h-4" />
+          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+            <Car className="w-3 h-3" />
             <span>
               {[job.vehicle_year, job.vehicle_make, job.vehicle_model]
                 .filter(Boolean)
@@ -147,12 +226,12 @@ export function PortfolioJobCard({
         {job.tags && job.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {job.tags.slice(0, 3).map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
+              <Badge key={tag} variant="outline" className="text-xs py-0">
                 {tag}
               </Badge>
             ))}
             {job.tags.length > 3 && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs py-0">
                 +{job.tags.length - 3}
               </Badge>
             )}
@@ -168,13 +247,6 @@ export function PortfolioJobCard({
             </span>
           </div>
         )}
-
-        {/* Media count */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
-          <span>{beforeImages.length} before</span>
-          <span>{afterImages.length} after</span>
-          <span>{media.filter((m) => m.media_type === "process").length} process</span>
-        </div>
       </CardContent>
     </Card>
   );
