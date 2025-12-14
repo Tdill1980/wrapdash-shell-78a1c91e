@@ -30,13 +30,32 @@ export function PortfolioMediaUploadDialog({
   const [activeType, setActiveType] = useState<MediaType>("before");
   const [isUploading, setIsUploading] = useState(false);
 
+  // Debug logging
+  console.log("[PortfolioMediaUploadDialog] Dialog state:", { open, jobId, loading, mediaCount: media.length });
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      if (!jobId) return;
+      console.log("[PortfolioMediaUploadDialog] onDrop triggered:", { 
+        filesCount: acceptedFiles.length, 
+        jobId, 
+        activeType,
+        files: acceptedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
+      });
+      
+      if (!jobId) {
+        console.error("[PortfolioMediaUploadDialog] No jobId - cannot upload");
+        return;
+      }
 
       setIsUploading(true);
       for (const file of acceptedFiles) {
-        await uploadMedia(file, activeType);
+        console.log("[PortfolioMediaUploadDialog] Uploading file:", file.name);
+        try {
+          await uploadMedia(file, activeType);
+          console.log("[PortfolioMediaUploadDialog] Upload success:", file.name);
+        } catch (error) {
+          console.error("[PortfolioMediaUploadDialog] Upload error:", error);
+        }
       }
       setIsUploading(false);
     },
