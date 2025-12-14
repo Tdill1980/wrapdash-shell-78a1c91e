@@ -221,6 +221,7 @@ const navigationItems: NavigationItem[] = [
     name: "MightyMail", 
     path: "/admin/mightymail", 
     icon: Mail,
+    roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Mighty</span>
