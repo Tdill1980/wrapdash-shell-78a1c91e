@@ -1,18 +1,17 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainLayout } from "@/layouts/MainLayout";
-import { usePortfolioJobs, usePortfolioMedia } from "@/hooks/usePortfolioJobs";
+import { usePortfolioJobs } from "@/hooks/usePortfolioJobs";
 import { PortfolioJobCard } from "@/components/portfolio/PortfolioJobCard";
 import { PortfolioJobDialog } from "@/components/portfolio/PortfolioJobDialog";
 import { PortfolioMediaUploadDialog } from "@/components/portfolio/PortfolioMediaUploadDialog";
 import { PortfolioAnalytics } from "@/components/portfolio/PortfolioAnalytics";
 import { PortfolioShareDialog } from "@/components/portfolio/PortfolioShareDialog";
 import {
-  Briefcase,
   Plus,
   Search,
   Image,
@@ -21,7 +20,7 @@ import {
   Star,
   Loader2,
   Share2,
-  QrCode,
+  Layers,
 } from "lucide-react";
 
 export default function Portfolio() {
@@ -91,52 +90,104 @@ export default function Portfolio() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 w-full">
+      <div className="space-y-6 w-full max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-poppins">
-              <span className="text-foreground">Mighty</span>
-              <span className="text-gradient">Portfolio</span>
-              <span className="text-muted-foreground text-sm align-super">™</span>
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Showcase your best wrap projects with before/after galleries
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--gradient-dark))]">
+              <Layers className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                MightyPortfolio
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Showcase your best wrap projects
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsShareDialogOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => setIsShareDialogOpen(true)}>
               <Share2 className="w-4 h-4 mr-2" />
-              Share Gallery
+              Share
             </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Button size="sm" className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--gradient-dark))]" onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Job
             </Button>
           </div>
         </div>
 
-        {/* Analytics Card */}
-        <PortfolioAnalytics jobs={jobs} />
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Layers className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalJobs}</p>
+                <p className="text-xs text-muted-foreground">Total Jobs</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{completedJobs}</p>
+                <p className="text-xs text-muted-foreground">Completed</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card/50 border-border/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <Clock className="w-4 h-4 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{pendingJobs}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Tabs + Search */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <TabsList className="grid grid-cols-4 w-full sm:w-auto">
-              <TabsTrigger value="all" className="gap-2">
-                <Briefcase className="w-4 h-4" />
-                All ({totalJobs})
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-card/80 border border-border/50 p-1">
+              <TabsTrigger 
+                value="all" 
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[hsl(var(--primary))] data-[state=active]:to-[hsl(var(--gradient-dark))] data-[state=active]:text-white gap-1.5 px-4"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                All
+                <Badge variant="secondary" className="ml-1 bg-background/20 text-xs px-1.5">{totalJobs}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="completed" className="gap-2">
-                <CheckCircle className="w-4 h-4" />
-                Completed ({completedJobs})
+              <TabsTrigger 
+                value="completed"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-600 data-[state=active]:text-white gap-1.5 px-4"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                Completed
+                <Badge variant="secondary" className="ml-1 bg-background/20 text-xs px-1.5">{completedJobs}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="pending" className="gap-2">
-                <Clock className="w-4 h-4" />
-                Pending ({pendingJobs})
+              <TabsTrigger 
+                value="pending"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-white gap-1.5 px-4"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Pending
+                <Badge variant="secondary" className="ml-1 bg-background/20 text-xs px-1.5">{pendingJobs}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="favorites" className="gap-2">
-                <Star className="w-4 h-4" />
+              <TabsTrigger 
+                value="favorites"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-purple-600 data-[state=active]:text-white gap-1.5 px-4"
+              >
+                <Star className="w-3.5 h-3.5" />
                 Favorites
               </TabsTrigger>
             </TabsList>
@@ -148,7 +199,7 @@ export default function Portfolio() {
               placeholder="Search jobs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-card/50 border-border/50"
             />
           </div>
         </div>
@@ -159,23 +210,26 @@ export default function Portfolio() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : filteredJobs.length === 0 ? (
-          <Card className="p-12 bg-card border-border text-center">
-            <div className="max-w-lg mx-auto space-y-5">
+          <Card className="p-12 bg-card/50 border-border/50 text-center">
+            <div className="max-w-md mx-auto space-y-4">
               <div className="flex justify-center">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Image className="w-8 h-8 text-primary" strokeWidth={1.5} />
+                <div className="p-4 bg-gradient-to-br from-[hsl(var(--primary))]/20 to-[hsl(var(--gradient-dark))]/20 rounded-2xl">
+                  <Image className="w-10 h-10 text-primary" strokeWidth={1.5} />
                 </div>
               </div>
               <h2 className="text-xl font-semibold">
                 {searchQuery ? "No jobs found" : "Start Your Portfolio"}
               </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground">
                 {searchQuery
                   ? "Try adjusting your search or filters"
-                  : "Add your first wrap job to start building your portfolio gallery. Jobs auto-create from ShopFlow when marked complete."}
+                  : "Add your first wrap job to start building your portfolio gallery."}
               </p>
               {!searchQuery && (
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Button 
+                  className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--gradient-dark))]"
+                  onClick={() => setIsCreateDialogOpen(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Job
                 </Button>
