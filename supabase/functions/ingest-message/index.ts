@@ -38,9 +38,11 @@ serve(async (req) => {
     if (logError) console.error("Log insert error:", logError);
 
     // 2. Classify intent AND extract vehicle info via AI
+    // CRITICAL: Also detect ANY price/quote/cost mentions for retargeting
     const classifyPrompt = `Analyze this customer message and return JSON only:
 {
   "type": "quote" | "design" | "support" | "file_received" | "general",
+  "wants_pricing": boolean,
   "vehicle": { "year": string | null, "make": string | null, "model": string | null },
   "wrap_type": "full" | "partial" | "color_change" | "fade" | "commercial" | null,
   "urgency": "high" | "normal" | "low",
@@ -49,11 +51,16 @@ serve(async (req) => {
   "customer_email": string | null
 }
 
+CRITICAL - Set wants_pricing=true if ANY of these are mentioned:
+- price, pricing, cost, how much, quote, estimate, rate, $, dollar
+- "what would it cost", "ballpark", "rough idea", "budget"
+
 Look for:
 - Vehicle year/make/model mentions
 - Email addresses
 - File sending intent (words like "send", "file", "design", "artwork", "attached")
 - Wrap type mentions
+- ANY pricing/cost questions (ALWAYS set wants_pricing=true for these!)
 
 Message: "${body.message_text}"
 ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
@@ -67,7 +74,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are a message classifier. Return valid JSON only." },
+          { role: "system", content: "You are a message classifier. Return valid JSON only. ALWAYS detect pricing questions!" },
           { role: "user", content: classifyPrompt },
         ],
       }),
@@ -75,6 +82,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
 
     let parsed: any = { 
       type: hasFiles ? "file_received" : "general", 
+      wants_pricing: false,
       vehicle: {}, 
       urgency: "normal", 
       needs_vehicle_info: true, 
@@ -92,6 +100,14 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       }
     } catch (e) {
       console.error("Classification parse error:", e);
+    }
+    
+    // FALLBACK: Check for pricing keywords if AI missed it
+    const lowerMsg = (body.message_text || '').toLowerCase();
+    const pricingKeywords = ['price', 'pricing', 'cost', 'how much', 'quote', 'estimate', '$', 'dollar', 'ballpark', 'budget', 'rate'];
+    if (!parsed.wants_pricing && pricingKeywords.some(kw => lowerMsg.includes(kw))) {
+      parsed.wants_pricing = true;
+      console.log("💰 Pricing intent detected via keyword fallback");
     }
 
     // Override type if files were received
@@ -146,25 +162,30 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       });
     }
 
-    // 5. Handle quote requests - AUTO-CREATE REAL QUOTES when vehicle info is available
+    // 5. Handle quote requests - ALWAYS CREATE QUOTE RECORD FOR RETARGETING
+    // CRITICAL: Create quote even with partial info - this is for sales pipeline tracking
     let autoQuoteResult: any = null;
     const hasCompleteVehicle = parsed.vehicle?.year && parsed.vehicle?.make && parsed.vehicle?.model;
+    const shouldCreateQuote = parsed.type === "quote" || parsed.wants_pricing;
     
-    if (parsed.type === "quote") {
+    if (shouldCreateQuote) {
+      const quoteNumber = `WPW-${body.platform.toUpperCase().slice(0,2)}-${Date.now().toString().slice(-6)}`;
+      console.log("💰 PRICING INTEREST DETECTED - Creating quote record:", quoteNumber);
+      
+      // Map wrap_type to WPW product types
+      let wpwProductType = 'avery'; // Default to Avery Printed Wrap $5.27/sqft
+      const msgLower = (body.message_text || '').toLowerCase();
+      if (parsed.wrap_type === '3m' || msgLower.includes('3m')) {
+        wpwProductType = '3m';
+      } else if (parsed.wrap_type === 'window' || msgLower.includes('window') || msgLower.includes('perf')) {
+        wpwProductType = 'window';
+      } else if (parsed.wrap_type === 'contour' || msgLower.includes('contour') || msgLower.includes('cut')) {
+        wpwProductType = 'contour';
+      }
+
       if (hasCompleteVehicle) {
-        // CALL ai-auto-quote to create REAL quote in database
-        console.log("🚀 Auto-generating quote for:", parsed.vehicle);
-        
-        // Map wrap_type to WPW product types (uses wpw-pricing.ts)
-        // WPW PRODUCTS: avery ($5.27), 3m ($5.90), contour ($6.32), 3m-contour ($6.92), window ($5.95)
-        let wpwProductType = 'avery'; // Default to Avery Printed Wrap $5.27/sqft
-        if (parsed.wrap_type === '3m' || parsed.message?.toLowerCase().includes('3m')) {
-          wpwProductType = '3m';
-        } else if (parsed.wrap_type === 'window' || parsed.message?.toLowerCase().includes('window') || parsed.message?.toLowerCase().includes('perf')) {
-          wpwProductType = 'window';
-        } else if (parsed.wrap_type === 'contour' || parsed.message?.toLowerCase().includes('contour') || parsed.message?.toLowerCase().includes('cut')) {
-          wpwProductType = 'contour';
-        }
+        // FULL AUTO-QUOTE: We have complete vehicle info
+        console.log("🚀 Auto-generating complete quote for:", parsed.vehicle);
         
         try {
           const autoQuoteResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-auto-quote`, {
@@ -179,9 +200,9 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
               vehicleModel: parsed.vehicle.model,
               customerName: body.sender_username || body.sender_id,
               customerEmail: parsed.customer_email || null,
-              productType: wpwProductType, // Use WPW product type
+              productType: wpwProductType,
               conversationId: conversation?.id,
-              autoEmail: !!parsed.customer_email // Auto-send email if we have their email
+              autoEmail: !!parsed.customer_email
             })
           });
           
@@ -195,31 +216,68 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
         } catch (autoQuoteErr) {
           console.error("❌ Auto-quote error:", autoQuoteErr);
         }
+      } else {
+        // PARTIAL QUOTE: Create lead record even without complete vehicle info
+        // This is CRITICAL for retargeting - don't lose these leads!
+        console.log("📋 Creating PARTIAL quote for retargeting:", quoteNumber);
+        
+        const { data: partialQuote, error: quoteErr } = await supabase.from("quotes").insert({
+          quote_number: quoteNumber,
+          customer_name: body.sender_username || body.sender_id || 'Unknown',
+          customer_email: parsed.customer_email || `pending-${body.sender_id}@capture.local`,
+          vehicle_year: parsed.vehicle?.year || null,
+          vehicle_make: parsed.vehicle?.make || null,
+          vehicle_model: parsed.vehicle?.model || null,
+          product_name: wpwProductType,
+          status: 'lead', // New status for incomplete quotes
+          total_price: 0,
+          ai_generated: false,
+          ai_message: body.message_text
+        }).select().single();
+        
+        if (quoteErr) {
+          console.error("❌ Partial quote error:", quoteErr);
+        } else {
+          console.log("✅ LEAD CAPTURED:", quoteNumber, partialQuote?.id);
+          autoQuoteResult = { 
+            success: true, 
+            partial: true, 
+            quote: { 
+              id: partialQuote?.id, 
+              quoteNumber,
+              status: 'lead'
+            } 
+          };
+        }
       }
       
-      // Also log to ai_actions for MCP visibility
+      // Log to ai_actions for MCP visibility
       const { error: actionError } = await supabase.from("ai_actions").insert({
         action_type: "create_quote",
         priority: parsed.urgency,
-        resolved: !!autoQuoteResult?.success, // Mark resolved if quote was auto-created
-        resolved_at: autoQuoteResult?.success ? new Date().toISOString() : null,
+        resolved: !!autoQuoteResult?.success && !autoQuoteResult?.partial,
+        resolved_at: autoQuoteResult?.success && !autoQuoteResult?.partial ? new Date().toISOString() : null,
         action_payload: {
           source: body.platform,
           sender_id: body.sender_id,
+          sender_username: body.sender_username,
           vehicle: parsed.vehicle,
           message: body.message_text,
-          auto_quote: autoQuoteResult?.success ? {
+          is_partial_lead: autoQuoteResult?.partial || false,
+          quote_number: autoQuoteResult?.quote?.quoteNumber || null,
+          auto_quote: autoQuoteResult?.success && !autoQuoteResult?.partial ? {
             quote_id: autoQuoteResult.quote?.id,
             quote_number: autoQuoteResult.quote?.quoteNumber,
             total_price: autoQuoteResult.quote?.totalPrice,
             price_per_sqft: autoQuoteResult.quote?.pricePerSqft,
             product_name: autoQuoteResult.quote?.productName,
             email_sent: autoQuoteResult.emailSent
-          } : null
+          } : null,
+          needs_follow_up: !hasCompleteVehicle
         },
       });
       if (actionError) console.error("AI action error:", actionError);
-      console.log("📝 Quote request logged to ai_actions", autoQuoteResult?.success ? "(AUTO-CREATED)" : "(NEEDS FOLLOW-UP)");
+      console.log("📝 Quote logged to ai_actions:", autoQuoteResult?.partial ? "LEAD (needs follow-up)" : "COMPLETE");
     }
 
     // 5b. Handle file received - escalate to design team

@@ -5,7 +5,7 @@ export interface AgentConfig {
   id: string;
   name: string;
   displayName: string;
-  channel: 'email' | 'instagram' | 'website' | 'sms';
+  channel: 'email' | 'instagram' | 'website' | 'sms' | 'internal';
   inboxEmail?: string; // For email agents
   persona: string;
   systemPrompt: string;
@@ -341,6 +341,67 @@ ESCALATION:
     escalationBehavior: {
       autoEscalate: true,
       requireApproval: false, // Fast response for DMs
+      notifyOrchestrator: true
+    }
+  },
+
+  // ---------------------------------------------------------------------------
+  // MIGHTYTASK AGENT - Task Orchestration & Scheduling
+  // ---------------------------------------------------------------------------
+  mightytask: {
+    id: 'mightytask',
+    name: 'MightyTask Agent',
+    displayName: 'MightyTask AI',
+    channel: 'internal',
+    persona: `You are the MightyTask AI agent - an autonomous task executor that follows orchestrator instructions.`,
+    systemPrompt: `You are the MightyTask AI Agent for WePrintWraps. You execute tasks assigned by orchestrators (Jackson and the owner).
+
+YOUR ROLE:
+- Execute scheduled tasks on daily/hourly schedules
+- Follow orchestrator instructions precisely
+- Report task completion status
+- Escalate blockers to orchestrators
+
+TASK TYPES YOU HANDLE:
+1. FOLLOW-UP TASKS
+   - Send follow-up emails on pending quotes
+   - Re-engage cold leads
+   - Check on abandoned carts
+
+2. RETARGETING TASKS  
+   - Identify quotes without responses
+   - Generate retargeting sequences
+   - Flag hot leads for immediate action
+
+3. REPORT TASKS
+   - Generate daily sales summaries
+   - Track quote conversion rates
+   - Identify pipeline blockers
+
+4. CONTENT TASKS
+   - Schedule social posts
+   - Generate content suggestions
+   - Queue email campaigns
+
+EXECUTION RULES:
+- Always log task start/completion
+- Never execute without orchestrator approval for high-impact tasks
+- Report blockers immediately
+- Maintain audit trail of all actions
+
+COMMUNICATION STYLE:
+- Brief status updates
+- Clear action items
+- No fluff - just results`,
+    responseStyle: {
+      maxLength: 300,
+      emojiLevel: 'minimal',
+      formality: 'professional',
+      signOff: ''
+    },
+    escalationBehavior: {
+      autoEscalate: false,
+      requireApproval: true, // ALL tasks need orchestrator approval
       notifyOrchestrator: true
     }
   }

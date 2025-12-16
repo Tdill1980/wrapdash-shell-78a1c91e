@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, ArrowLeft, RefreshCw } from "lucide-react";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
 import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
+import { InboxFilters, AgentBadge, QuoteStatusBadge, type InboxFilter } from "@/components/mightychat/InboxFilters";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Conversation {
   id: string;
@@ -22,6 +24,9 @@ interface Conversation {
   unread_count: number | null;
   last_message_at: string | null;
   contact_id: string | null;
+  recipient_inbox?: string | null;
+  review_status?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface Message {
@@ -46,6 +51,7 @@ export default function MightyChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<InboxFilter>('all');
 
   useEffect(() => {
     loadConversations();
@@ -64,7 +70,8 @@ export default function MightyChat() {
       .order("last_message_at", { ascending: false });
     
     if (!error && data) {
-      setConversations(data);
+      // Cast metadata to proper type
+      setConversations(data as unknown as Conversation[]);
     }
     setLoading(false);
   };
@@ -213,10 +220,45 @@ export default function MightyChat() {
     }
   };
 
+  // Filter conversations based on active filter
+  const filteredConversations = useMemo(() => {
+    if (activeFilter === 'all') return conversations;
+    
+    return conversations.filter(conv => {
+      switch (activeFilter) {
+        case 'instagram':
+          return conv.channel === 'instagram';
+        case 'website':
+          return conv.channel === 'website';
+        case 'hello':
+          return conv.channel === 'email' && (!conv.recipient_inbox || conv.recipient_inbox?.includes('hello'));
+        case 'design':
+          return conv.channel === 'email' && conv.recipient_inbox?.includes('design');
+        case 'jackson':
+          return conv.channel === 'email' && conv.recipient_inbox?.includes('jackson');
+        case 'quotes':
+          return conv.review_status === 'pending_review' || (conv.metadata as any)?.has_quote_request;
+        default:
+          return true;
+      }
+    });
+  }, [conversations, activeFilter]);
+
+  // Compute filter counts
+  const filterCounts = useMemo(() => ({
+    all: conversations.length,
+    hello: conversations.filter(c => c.channel === 'email' && (!c.recipient_inbox || c.recipient_inbox?.includes('hello'))).length,
+    design: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('design')).length,
+    jackson: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('jackson')).length,
+    instagram: conversations.filter(c => c.channel === 'instagram').length,
+    website: conversations.filter(c => c.channel === 'website').length,
+    pendingQuotes: conversations.filter(c => c.review_status === 'pending_review' || (c.metadata as any)?.has_quote_request).length
+  }), [conversations]);
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">
               Mighty<span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>™
@@ -234,51 +276,74 @@ export default function MightyChat() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-200px)]">
+        {/* Inbox Filters */}
+        <div className="mb-4">
+          <InboxFilters 
+            activeFilter={activeFilter} 
+            onFilterChange={setActiveFilter}
+            counts={filterCounts}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-260px)]">
           {/* Conversation List - 3 cols */}
           <Card className="lg:col-span-3">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Conversations</CardTitle>
+              <CardTitle className="text-lg flex items-center justify-between">
+                <span>Conversations</span>
+                <Badge variant="outline" className="text-xs">
+                  {filteredConversations.length}
+                </Badge>
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-300px)]">
+              <ScrollArea className="h-[calc(100vh-360px)]">
                 {loading ? (
                   <div className="p-4 text-muted-foreground">Loading...</div>
-                ) : conversations.length === 0 ? (
-                  <div className="p-4 text-muted-foreground">No conversations yet</div>
+                ) : filteredConversations.length === 0 ? (
+                  <div className="p-4 text-muted-foreground">
+                    {activeFilter === 'all' ? 'No conversations yet' : `No ${activeFilter} conversations`}
+                  </div>
                 ) : (
-                  conversations.map((conv) => (
-                    <div
-                      key={conv.id}
-                      className={`p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
-                        selectedConversation?.id === conv.id ? "bg-muted" : ""
-                      }`}
-                      onClick={() => {
-                        setSelectedConversation(conv);
-                        loadConversation(conv.id);
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ChannelBadge channel={conv.channel} size="sm" />
-                        <span className="font-medium flex-1 truncate text-sm">
-                          {conv.subject || `${conv.channel} conversation`}
-                        </span>
-                        {(conv.unread_count ?? 0) > 0 && (
-                          <Badge variant="destructive" className="text-xs h-5 min-w-[20px] flex items-center justify-center">
-                            {conv.unread_count}
-                          </Badge>
+                  filteredConversations.map((conv) => {
+                    const hasQuoteRequest = conv.review_status === 'pending_review' || (conv.metadata as any)?.has_quote_request;
+                    
+                    return (
+                      <div
+                        key={conv.id}
+                        className={cn(
+                          "p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors",
+                          selectedConversation?.id === conv.id && "bg-muted",
+                          hasQuoteRequest && conv.review_status === 'pending_review' && "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20"
                         )}
+                        onClick={() => {
+                          setSelectedConversation(conv);
+                          loadConversation(conv.id);
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <AgentBadge channel={conv.channel} recipientInbox={conv.recipient_inbox} />
+                          <span className="font-medium flex-1 truncate text-sm">
+                            {conv.subject || `${conv.channel} conversation`}
+                          </span>
+                          {(conv.unread_count ?? 0) > 0 && (
+                            <Badge variant="destructive" className="text-xs h-5 min-w-[20px] flex items-center justify-center">
+                              {conv.unread_count}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {formatTime(conv.last_message_at)}
+                          </span>
+                          {conv.priority && conv.priority !== "normal" && (
+                            <div className={`w-2 h-2 rounded-full ${getPriorityColor(conv.priority)}`} />
+                          )}
+                          <QuoteStatusBadge reviewStatus={conv.review_status} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {formatTime(conv.last_message_at)}
-                        </span>
-                        {conv.priority && conv.priority !== "normal" && (
-                          <div className={`w-2 h-2 rounded-full ${getPriorityColor(conv.priority)}`} />
-                        )}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </ScrollArea>
             </CardContent>
