@@ -1,30 +1,72 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Check, Globe, MessageSquare, Zap, Shield, ExternalLink, FileText } from "lucide-react";
+import { Copy, Check, Globe, MessageSquare, Zap, Shield, ExternalLink, FileText, TestTubeDiagonal } from "lucide-react";
 import { toast } from "sonner";
 import { ChatTranscriptViewer } from "@/components/admin/ChatTranscriptViewer";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 export default function WebsiteAgentAdmin() {
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
-  const embedCode = `<script defer src="https://wrapcommandai.com/embed/chat-widget.js"
+  const embedCode = useMemo(
+    () =>
+      `<script defer src="https://wrapcommandai.com/embed/chat-widget.js"
         data-org="wpw"
         data-agent="wpw_ai_team"
-        data-mode="test"></script>`;
+        data-mode="test"></script>`,
+    []
+  );
 
-  const liveEmbedCode = `<script defer src="https://wrapcommandai.com/embed/chat-widget.js"
+  const liveEmbedCode = useMemo(
+    () =>
+      `<script defer src="https://wrapcommandai.com/embed/chat-widget.js"
         data-org="wpw"
         data-agent="wpw_ai_team"
-        data-mode="live"></script>`;
+        data-mode="live"></script>`,
+    []
+  );
 
   const copyToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopied(true);
     toast.success("Embed code copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const runSmokeTest = async () => {
+    setIsTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("website-chat", {
+        body: {
+          org: "wpw",
+          agent: "wpw_ai_team",
+          mode: "test",
+          session_id: `admin_smoke_${Date.now()}`,
+          message_text: "Quick test: need a quote for a 2020 Ford Transit full wrap. Email: test@example.com",
+          page_url: "https://admin.test/website-agent",
+          referrer: "",
+        },
+      });
+
+      if (error) throw error;
+
+      const price = data?.auto_quote?.formattedPrice;
+      toast.success(price ? `Website chat OK — auto quote: ${price}` : "Website chat OK — reply generated");
+
+      // Jump straight to inbox so you can see the new conversation instantly
+      navigate("/mightychat");
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Smoke test failed");
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -131,15 +173,31 @@ export default function WebsiteAgentAdmin() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center">
+                <Button
+                  variant="default"
+                  className="sm:w-auto"
+                  onClick={runSmokeTest}
+                  disabled={isTesting}
+                >
+                  <TestTubeDiagonal className="h-4 w-4" />
+                  {isTesting ? "Running test…" : "Run Smoke Test"}
+                </Button>
+
                 <Button variant="outline" asChild>
                   <a href="/mightychat" className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4" />
                     View MightyChat
                   </a>
                 </Button>
+
                 <Button variant="outline" asChild>
-                  <a href="https://weprintwraps.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <a
+                    href="https://weprintwraps.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2"
+                  >
                     <ExternalLink className="h-4 w-4" />
                     Test on WPW
                   </a>
