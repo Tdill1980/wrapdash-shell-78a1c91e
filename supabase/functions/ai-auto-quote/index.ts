@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { WPW_PRICING, calculateQuickQuote } from "../_shared/wpw-pricing.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,7 +38,7 @@ serve(async (req) => {
       customerName, 
       customerEmail,
       customerPhone,
-      productType = 'Full Color Change Wrap',
+      productType = 'avery', // Default to Avery Printed Wrap
       organizationId,
       conversationId,
       autoEmail = false
@@ -98,42 +99,24 @@ serve(async (req) => {
       }
     }
 
-    // Query products table for pricing
-    const { data: productData, error: productError } = await supabase
-      .from('products')
-      .select('id, product_name, price_per_sqft, flat_price, pricing_type, category')
-      .ilike('product_name', `%${productType}%`)
-      .eq('is_active', true)
-      .limit(1)
-      .single();
+    // Use WPW official pricing from shared module
+    const quoteCalc = calculateQuickQuote(sqft, productType);
+    const pricePerSqft = quoteCalc.pricePerSqft;
+    const productName = quoteCalc.productName;
 
-    let pricePerSqft = 8.50; // Default price per sqft
-    let productName = productType;
-    let productId = null;
+    console.log('Using WPW pricing:', { productName, pricePerSqft, sqft });
 
-    if (productData) {
-      pricePerSqft = productData.price_per_sqft || pricePerSqft;
-      productName = productData.product_name;
-      productId = productData.id;
-      console.log('Product match:', productData);
-    }
-
-    // Calculate quote using same logic as useQuoteEngine
-    const materialCost = sqft * pricePerSqft;
-    const installHours = Math.ceil(sqft / 25);
-    const installRatePerHour = 75;
-    const laborCost = installHours * installRatePerHour;
-    const subtotal = materialCost + laborCost;
-    const marginPercent = 65;
-    const marginAmount = subtotal * (marginPercent / 100);
-    const totalPrice = subtotal + marginAmount;
+    // WPW is a WHOLESALE PRINT SHOP - NO LABOR, NO MARGIN
+    // Formula: SQFT × Price Per SQFT = Total (material cost only)
+    const materialCost = quoteCalc.materialCost;
+    const totalPrice = materialCost; // WPW wholesale = material only, no markup
 
     // Generate quote number
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const quoteNumber = `AQ-${timestamp}-${random}`;
+    const quoteNumber = `WPW-${timestamp}-${random}`;
 
-    // Create quote in database
+    // Create quote in database - WPW wholesale pricing (no labor, no margin)
     const quoteData = {
       quote_number: quoteNumber,
       customer_name: customerName || 'Website Visitor',
@@ -145,13 +128,13 @@ serve(async (req) => {
       product_name: productName,
       sqft: sqft,
       material_cost: materialCost,
-      labor_cost: laborCost,
-      margin: marginPercent,
+      labor_cost: 0, // WPW does NOT install
+      margin: 0, // WPW wholesale = no retail margin
       total_price: totalPrice,
       status: 'pending',
       ai_generated: true,
       ai_sqft_estimate: sqft,
-      ai_labor_hours: installHours,
+      ai_labor_hours: 0, // WPW does NOT install
       ai_generated_at: new Date().toISOString(),
       organization_id: organizationId || null
     };
@@ -207,13 +190,20 @@ serve(async (req) => {
         quote_id: createdQuote.id,
         quote_number: quoteNumber,
         vehicle: `${year} ${vehicleMake} ${vehicleModel}`,
+        sqft: sqft,
+        price_per_sqft: pricePerSqft,
+        product_name: productName,
         total_price: totalPrice,
         email_sent: emailSent,
-        conversation_id: conversationId
+        conversation_id: conversationId,
+        pricing_model: 'WPW_WHOLESALE' // Track that this is wholesale pricing
       },
       priority: 'high',
       organization_id: organizationId
     });
+
+    // Build friendly price message
+    const formattedPrice = totalPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 
     // Return success response with quote details
     return new Response(
@@ -224,13 +214,15 @@ serve(async (req) => {
           quoteNumber: quoteNumber,
           vehicle: `${year} ${vehicleMake} ${vehicleModel}`,
           sqft: sqft,
+          pricePerSqft: pricePerSqft,
+          productName: productName,
           materialCost: materialCost,
-          laborCost: laborCost,
+          laborCost: 0, // WPW does not install
           totalPrice: totalPrice,
-          formattedPrice: `$${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+          formattedPrice: formattedPrice
         },
         emailSent: emailSent,
-        message: `Great news! I've prepared your quote for the ${year} ${vehicleMake} ${vehicleModel} full wrap - ${totalPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}. ${emailSent ? 'Check your email for the full details!' : ''}`
+        message: `Your ${productName} quote for the ${year} ${vehicleMake} ${vehicleModel} (${sqft} sqft): ${formattedPrice}. ${emailSent ? 'Check your email for details!' : 'Drop your email and I\'ll send the full quote!'}`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
