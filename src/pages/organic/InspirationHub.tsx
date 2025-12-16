@@ -189,7 +189,7 @@ export default function InspirationHub() {
   const [selectedPack, setSelectedPack] = useState<TrendPack | null>(null);
 
   const { analyzeVideo, analyzing, history, historyLoading, saved, savedLoading, toggleSaved, deleteAnalysis } = useInspoAnalysis();
-  const { library, isLoading: libraryLoading, uploadFile, isUploading, deleteFile } = useInspoLibrary();
+  const { library, isLoading: libraryLoading, uploadFile, isUploading, deleteFile, reanalyzeAll, reanalyzeProgress } = useInspoLibrary();
   const [analyzingImageId, setAnalyzingImageId] = useState<string | null>(null);
   const [imageAnalysis, setImageAnalysis] = useState<any>(null);
   const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false);
@@ -433,12 +433,56 @@ export default function InspirationHub() {
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <FolderOpen className="w-5 h-5 text-primary" />
                 My Uploaded Inspiration
+                {library.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{library.length}</Badge>
+                )}
               </h3>
-              <Button onClick={() => setUploadModalOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload More
-              </Button>
+              <div className="flex items-center gap-2">
+                {library.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    onClick={reanalyzeAll}
+                    disabled={!!reanalyzeProgress}
+                  >
+                    {reanalyzeProgress ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {reanalyzeProgress.current}/{reanalyzeProgress.total}
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4 mr-2" />
+                        Re-analyze All
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button onClick={() => setUploadModalOpen(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload More
+                </Button>
+              </div>
             </div>
+
+            {reanalyzeProgress && (
+              <Card className="mb-4 p-4 bg-primary/5 border-primary/20">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">Extracting your style from uploads...</p>
+                    <p className="text-xs text-muted-foreground">
+                      Processing {reanalyzeProgress.current} of {reanalyzeProgress.total} files
+                    </p>
+                    <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${(reanalyzeProgress.current / reanalyzeProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             {libraryLoading ? (
               <Card className="p-12 text-center">
