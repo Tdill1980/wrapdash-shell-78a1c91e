@@ -4012,6 +4012,75 @@ export type Database = {
           },
         ]
       }
+      story_engagement_log: {
+        Row: {
+          contact_id: string | null
+          conversation_id: string | null
+          converted_to_quote: boolean | null
+          created_at: string
+          dm_received_at: string | null
+          id: string
+          intent_type: string | null
+          message_text: string | null
+          organization_id: string | null
+          quote_id: string | null
+          sender_id: string
+          sender_username: string | null
+          story_content: string | null
+          story_id: string | null
+          story_posted_at: string | null
+        }
+        Insert: {
+          contact_id?: string | null
+          conversation_id?: string | null
+          converted_to_quote?: boolean | null
+          created_at?: string
+          dm_received_at?: string | null
+          id?: string
+          intent_type?: string | null
+          message_text?: string | null
+          organization_id?: string | null
+          quote_id?: string | null
+          sender_id: string
+          sender_username?: string | null
+          story_content?: string | null
+          story_id?: string | null
+          story_posted_at?: string | null
+        }
+        Update: {
+          contact_id?: string | null
+          conversation_id?: string | null
+          converted_to_quote?: boolean | null
+          created_at?: string
+          dm_received_at?: string | null
+          id?: string
+          intent_type?: string | null
+          message_text?: string | null
+          organization_id?: string | null
+          quote_id?: string | null
+          sender_id?: string
+          sender_username?: string | null
+          story_content?: string | null
+          story_id?: string | null
+          story_posted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_engagement_log_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_engagement_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null

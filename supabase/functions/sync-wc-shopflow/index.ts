@@ -476,32 +476,53 @@ function extractOrderInfo(lineItems: any[]): any {
     quantity: firstItem.quantity || 1,
   };
   
-  console.log('📦 Extracting order info from line item metadata...');
+  console.log('📦 ===== EXTRACTING ORDER INFO =====');
+  console.log('📦 ALL LINE ITEM META DATA KEYS:');
   
   for (const meta of metaData) {
-    const key = meta.key?.toLowerCase();
+    const key = meta.key?.toLowerCase() || '';
+    const displayKey = meta.key || 'unknown';
     const value = meta.value;
     
-    // Extract quantity
-    if (key?.includes('quantity') || key?.includes('qty')) {
+    // Log EVERY key for debugging
+    console.log(`  📋 Key: "${displayKey}" = "${typeof value === 'object' ? JSON.stringify(value) : value}"`);
+    
+    // Extract quantity - check multiple variations
+    if (key.includes('quantity') || key.includes('qty') || key === 'pa_quantity') {
       orderInfo.quantity = parseInt(value) || orderInfo.quantity;
-      console.log(`  ✓ Found quantity: ${orderInfo.quantity}`);
+      console.log(`    ✓ MATCHED quantity: ${orderInfo.quantity}`);
     }
     
-    // Extract square footage
-    if (key?.includes('square') || key?.includes('sqft') || key?.includes('sq ft') || key?.includes('square_footage')) {
+    // Extract square footage - check ALL possible keys
+    if (key.includes('square') || key.includes('sqft') || key.includes('sq_ft') || 
+        key.includes('sq ft') || key.includes('square_footage') || key.includes('size') ||
+        key.includes('area') || key.includes('footage') || key === 'pa_size' || 
+        key === 'pa_square-footage' || key.includes('dimension')) {
       orderInfo.square_footage = parseFloat(value) || value;
-      console.log(`  ✓ Found square footage: ${orderInfo.square_footage}`);
+      console.log(`    ✓ MATCHED square footage: ${orderInfo.square_footage}`);
     }
     
-    // Extract shipping speed
-    if (key?.includes('shipping') && (key?.includes('speed') || key?.includes('method'))) {
+    // Extract shipping speed - check multiple variations
+    if ((key.includes('shipping') && (key.includes('speed') || key.includes('method'))) ||
+        key === 'pa_shipping' || key.includes('delivery')) {
       orderInfo.shipping_speed = value;
-      console.log(`  ✓ Found shipping speed: ${orderInfo.shipping_speed}`);
+      console.log(`    ✓ MATCHED shipping speed: ${orderInfo.shipping_speed}`);
+    }
+    
+    // Extract any other potentially useful fields
+    if (key.includes('vehicle') || key.includes('year') || key.includes('make') || key.includes('model')) {
+      orderInfo[key.replace(/^pa_/, '').replace(/-/g, '_')] = value;
+      console.log(`    ✓ MATCHED vehicle info: ${key} = ${value}`);
+    }
+    
+    // Capture color/finish info
+    if (key.includes('color') || key.includes('finish') || key.includes('material')) {
+      orderInfo[key.replace(/^pa_/, '').replace(/-/g, '_')] = value;
+      console.log(`    ✓ MATCHED color/finish: ${key} = ${value}`);
     }
   }
   
-  console.log('📦 Final order info:', orderInfo);
+  console.log('📦 FINAL ORDER INFO:', JSON.stringify(orderInfo, null, 2));
   return orderInfo;
 }
 

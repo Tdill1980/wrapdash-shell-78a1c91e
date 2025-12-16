@@ -230,7 +230,33 @@ serve(async (req) => {
       console.log("Message saved successfully");
 
       // ---------------------------------------------------------------------
-      // 8. ROUTE THROUGH INGEST-MESSAGE FOR AI PROCESSING (WITH FILES)
+      // 8. LOG STORY ENGAGEMENT (Track DMs that may be story responses)
+      // ---------------------------------------------------------------------
+      try {
+        // Check if message might be a story response (Instagram includes story_reply in some cases)
+        const isStoryReply = event.message?.reply_to?.story || event.message?.is_story_reply;
+        const storyMention = text.toLowerCase().includes('story') || text.toLowerCase().includes('saw') || text.toLowerCase().includes('post');
+        
+        // Log all DMs to story_engagement for pattern analysis
+        // Hot leads: people who DM after seeing content
+        await supabase.from("story_engagement_log").insert({
+          story_id: event.message?.reply_to?.story?.id || null,
+          dm_received_at: new Date().toISOString(),
+          sender_id: senderId,
+          sender_username: usernameDisplay,
+          message_text: text,
+          intent_type: isStoryReply ? 'story_reply' : (storyMention ? 'story_mention' : 'organic_dm'),
+          conversation_id: conversation.id,
+          contact_id: contact.id
+        });
+        
+        console.log(`📊 Story engagement logged: ${isStoryReply ? 'STORY_REPLY' : (storyMention ? 'STORY_MENTION' : 'ORGANIC_DM')}`);
+      } catch (storyErr) {
+        console.error("Story engagement log error:", storyErr);
+      }
+
+      // ---------------------------------------------------------------------
+      // 9. ROUTE THROUGH INGEST-MESSAGE FOR AI PROCESSING (WITH FILES)
       // ---------------------------------------------------------------------
       try {
         const ingestResponse = await fetch(`${SUPABASE_URL}/functions/v1/ingest-message`, {
