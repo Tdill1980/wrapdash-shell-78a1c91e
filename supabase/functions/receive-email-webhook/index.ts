@@ -154,7 +154,7 @@ serve(async (req) => {
         direction: 'inbound',
         content: body,
         sender_name: fromName,
-        sender_id: fromEmail,
+        sender_email: fromEmail,
         channel: 'email',
         metadata: {
           subject: subject,
