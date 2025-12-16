@@ -146,41 +146,68 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       });
     }
 
-    // 5. Handle quote requests - try to auto-quote if vehicle info available
-    let quickQuoteInfo: { materialCost: number; pricePerSqft: number; productName: string; sqft: number } | null = null;
-    if (parsed.type === "quote" && parsed.vehicle?.year && parsed.vehicle?.make && parsed.vehicle?.model) {
-      // Look up vehicle SQFT from database
-      const { data: vehicleData } = await supabase
-        .from("vehicle_dimensions")
-        .select("corrected_sqft")
-        .ilike("make", `%${parsed.vehicle.make}%`)
-        .ilike("model", `%${parsed.vehicle.model}%`)
-        .gte("year_end", parseInt(parsed.vehicle.year) || 2024)
-        .lte("year_start", parseInt(parsed.vehicle.year) || 2024)
-        .maybeSingle();
-
-      if (vehicleData?.corrected_sqft) {
-        const quoteCalc = calculateQuickQuote(vehicleData.corrected_sqft, parsed.wrap_type || 'avery');
-        quickQuoteInfo = { ...quoteCalc, sqft: vehicleData.corrected_sqft };
-        console.log("💰 Quick quote calculated:", quickQuoteInfo);
-      }
-    }
-
-    // Create ai_action for quote requests
+    // 5. Handle quote requests - AUTO-CREATE REAL QUOTES when vehicle info is available
+    let autoQuoteResult: any = null;
+    const hasCompleteVehicle = parsed.vehicle?.year && parsed.vehicle?.make && parsed.vehicle?.model;
+    
     if (parsed.type === "quote") {
+      if (hasCompleteVehicle) {
+        // CALL ai-auto-quote to create REAL quote in database
+        console.log("🚀 Auto-generating quote for:", parsed.vehicle);
+        
+        try {
+          const autoQuoteResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-auto-quote`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SERVICE_ROLE}`
+            },
+            body: JSON.stringify({
+              vehicleYear: parsed.vehicle.year,
+              vehicleMake: parsed.vehicle.make,
+              vehicleModel: parsed.vehicle.model,
+              customerName: body.sender_username || body.sender_id,
+              customerEmail: parsed.customer_email || null,
+              productType: parsed.wrap_type === 'color_change' ? 'Full Color Change Wrap' : 
+                          parsed.wrap_type === 'commercial' ? 'Commercial Wrap' : 'Full Color Change Wrap',
+              conversationId: conversation?.id,
+              autoEmail: !!parsed.customer_email // Auto-send email if we have their email
+            })
+          });
+          
+          if (autoQuoteResponse.ok) {
+            autoQuoteResult = await autoQuoteResponse.json();
+            console.log("✅ Auto-quote created:", autoQuoteResult);
+          } else {
+            const errorText = await autoQuoteResponse.text();
+            console.error("❌ Auto-quote failed:", errorText);
+          }
+        } catch (autoQuoteErr) {
+          console.error("❌ Auto-quote error:", autoQuoteErr);
+        }
+      }
+      
+      // Also log to ai_actions for MCP visibility
       const { error: actionError } = await supabase.from("ai_actions").insert({
         action_type: "create_quote",
         priority: parsed.urgency,
+        resolved: !!autoQuoteResult?.success, // Mark resolved if quote was auto-created
+        resolved_at: autoQuoteResult?.success ? new Date().toISOString() : null,
         action_payload: {
           source: body.platform,
           sender_id: body.sender_id,
           vehicle: parsed.vehicle,
           message: body.message_text,
-          quick_quote: quickQuoteInfo
+          auto_quote: autoQuoteResult?.success ? {
+            quote_id: autoQuoteResult.quote?.id,
+            quote_number: autoQuoteResult.quote?.quoteNumber,
+            total_price: autoQuoteResult.quote?.totalPrice,
+            email_sent: autoQuoteResult.emailSent
+          } : null
         },
       });
       if (actionError) console.error("AI action error:", actionError);
-      console.log("📝 Quote request created in ai_actions");
+      console.log("📝 Quote request logged to ai_actions", autoQuoteResult?.success ? "(AUTO-CREATED)" : "(NEEDS FOLLOW-UP)");
     }
 
     // 5b. Handle file received - escalate to design team
@@ -243,9 +270,9 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
     const intentPrompts: Record<string, string> = {
       quote: parsed.needs_vehicle_info 
         ? "Ask for their vehicle YEAR, MAKE, and MODEL. Be friendly and quick."
-        : quickQuoteInfo 
-          ? `You have a quote ready! Tell them: "${parsed.vehicle.year} ${parsed.vehicle.make} ${parsed.vehicle.model} full wrap is approximately $${quickQuoteInfo.materialCost.toFixed(0)} for materials (${quickQuoteInfo.sqft} sqft @ $${quickQuoteInfo.pricePerSqft}/sqft). Ask for their email to send a detailed breakdown!"`
-          : "They provided vehicle info. Confirm details and ask for their email to send a formal quote.",
+        : autoQuoteResult?.success 
+          ? `QUOTE CREATED! Tell them: "Great news! I just generated your quote for the ${parsed.vehicle.year} ${parsed.vehicle.make} ${parsed.vehicle.model} - ${autoQuoteResult.quote?.formattedPrice}! ${autoQuoteResult.emailSent ? 'Check your email for the full breakdown!' : 'Drop your email and I\'ll send the full quote details!'}" Be excited!`
+          : "They provided vehicle info but quote failed. Confirm details and ask for their email to send a formal quote.",
       design: "Ask what style they're looking for. Offer to show examples.",
       support: "Ask for their order number so you can help track it.",
       file_received: "Thank them for sending files! Confirm you're forwarding to the design team. Ask for their email so the team can send a quote.",
@@ -340,7 +367,7 @@ RULES:
       }
     }
 
-    return new Response(JSON.stringify({ reply: aiReply, intent: parsed, quick_quote: quickQuoteInfo }), {
+    return new Response(JSON.stringify({ reply: aiReply, intent: parsed, auto_quote: autoQuoteResult }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
