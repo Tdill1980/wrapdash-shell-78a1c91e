@@ -200,3 +200,6 @@ verify_jwt = false
 
 [functions.backfill-order-totals]
 verify_jwt = false
+
+[functions.receive-email-webhook]
+verify_jwt = false
