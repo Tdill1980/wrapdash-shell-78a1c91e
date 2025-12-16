@@ -1,37 +1,38 @@
-// WPW Official Product Pricing - Updated from official pricing sheet
-// These are the EXACT prices as shown on WePrintWraps.com
+// WPW Official Product Pricing - LUIGI'S PRICING BIBLE
+// Last Updated: December 2024
+// THESE ARE THE ONLY PRICES LUIGI SHOULD EVER USE
 
 export const WPW_PRICING = {
   // Per Square Foot Products
   perSqft: {
     averyPrintedWrap: {
-      name: "Printed Wrap Film (Avery Brand, UV Lamination)",
+      name: "Avery MPI 1105 EGRS with DOZ Lamination",
       pricePerSqft: 5.27,
-      description: "Standard full-color wrap on Avery",
+      description: "Excellent quality, great value, 5-7 year durability",
       wooProductId: 79
     },
     threeMWrap: {
-      name: "3M IJ180CV3 + 8518 Lamination",
-      pricePerSqft: 5.90,
-      description: "Max print width 53.5\"",
+      name: "3M IJ180Cv3 with 8518 Lamination",
+      pricePerSqft: 6.32,
+      description: "Premium option, easiest install, 7-10 year durability",
       wooProductId: 72
     },
     averyContourCut: {
-      name: "Avery Cut Contour Vinyl Graphics",
-      pricePerSqft: 6.32,
-      description: "Includes cutting, max artwork 50\"",
+      name: "Avery Cut Contour Vinyl",
+      pricePerSqft: 5.92,
+      description: "Weeded and masked, ready to install",
       wooProductId: 108
     },
     threeMContourCut: {
-      name: "3M Cut Contour Vinyl Graphics",
-      pricePerSqft: 6.92,
-      description: "Includes cutting, max artwork 50\"",
+      name: "3M Cut Contour Vinyl",
+      pricePerSqft: 6.22,
+      description: "Weeded and masked, ready to install",
       wooProductId: 19420
     },
     perforatedWindow: {
-      name: "Perforated Window Vinyl 50/50",
-      pricePerSqft: 5.95,
-      description: "54\" roll, unlaminated",
+      name: "Window Perf 50/50 Unlaminated",
+      pricePerSqft: 5.32,
+      description: "See-through window vinyl",
       wooProductId: 80
     }
   },
@@ -54,30 +55,53 @@ export const WPW_PRICING = {
     },
     customDesign: {
       name: "Custom Vehicle Wrap Design",
-      price: 349,
-      description: "Professional custom design",
+      price: 750,
+      description: "Full custom professional design",
       wooProductId: 234
+    },
+    designSetup: {
+      name: "Design Setup / File Output",
+      price: 50,
+      description: "File preparation and output"
+    },
+    hourlyDesign: {
+      name: "Hourly Design Work",
+      pricePerHour: 150,
+      description: "Per hour design services"
     }
   }
 };
 
-// Build pricing string for AI context
+// Build pricing string for AI context - LUIGI'S PRICING BIBLE
 export function getPricingContext(): string {
-  return `OFFICIAL WPW PRICING (use these EXACT numbers):
-• Printed Wrap Film (Avery): $5.27/sqft
-• 3M IJ180CV3 Wrap Film: $5.90/sqft
-• Avery Contour-Cut Graphics: $6.32/sqft
-• 3M Contour-Cut Graphics: $6.92/sqft
-• Perforated Window Vinyl: $5.95/sqft
-• Pre-Designed Fade Wraps: Starting at $600 (both sides)
-• Wrap By The Yard: $600 per side
-• Custom Design: $349
+  return `WEPRINTWRAPS WHOLESALE PRICING - LUIGI'S REFERENCE
+THESE ARE THE ONLY PRICES LUIGI SHOULD EVER USE
 
-QUOTE CALCULATION FORMULA:
-1. Get vehicle SQFT from database (or ask for measurements)
-2. Multiply SQFT × price per sqft for material cost
-3. Add $600 for fade wraps if that's what they want
-4. Typical full wrap: 200-350 sqft depending on vehicle size`;
+WRAP MATERIALS:
+• Avery MPI 1105 EGRS with DOZ Lamination: $5.27/sqft
+• 3M IJ180Cv3 with 8518 Lamination: $6.32/sqft
+• Avery Cut Contour Vinyl: $5.92/sqft
+• 3M Cut Contour Vinyl: $6.22/sqft
+• Window Perf 50/50 Unlaminated: $5.32/sqft
+
+SPECIALTY PRODUCTS:
+• Fade Wraps (Sides): Starting at $600
+• Custom Design: Starting at $750
+• Design Setup/File Output: $50
+• Hourly Design Work: $150/hour
+
+POLICIES:
+• FREE shipping on all orders over $750
+• Production time: 1-2 business days
+• Shipping time: 1-3 days anywhere in continental US
+• All wraps include lamination (customer chooses gloss, matte, or satin)
+• All wraps come pre-paneled and ready to install
+• Cut vinyl comes weeded and masked
+
+IMPORTANT URLS:
+• Main catalog: https://weprintwraps.com/our-products/
+• Fade wraps: https://weprintwraps.com/our-products/pre-designed-fade-wraps/
+• Design services: https://weprintwraps.com/our-products/custom-wrap-design/`;
 }
 
 // Calculate quick quote based on vehicle sqft
