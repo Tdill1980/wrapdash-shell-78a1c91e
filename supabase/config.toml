@@ -188,3 +188,12 @@ verify_jwt = false
 
 [functions.extract-vin-ocr]
 verify_jwt = false
+
+[functions.ai-scan-content-library]
+verify_jwt = false
+
+[functions.ai-match-music]
+verify_jwt = false
+
+[functions.ai-execute-edits]
+verify_jwt = false

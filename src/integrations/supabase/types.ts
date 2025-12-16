@@ -2992,6 +2992,59 @@ export type Database = {
           },
         ]
       }
+      music_library: {
+        Row: {
+          bpm: number | null
+          created_at: string
+          duration_seconds: number | null
+          energy: string | null
+          file_url: string
+          genre: string | null
+          id: string
+          is_global: boolean | null
+          mood: string | null
+          organization_id: string | null
+          tags: string[] | null
+          title: string
+        }
+        Insert: {
+          bpm?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          energy?: string | null
+          file_url: string
+          genre?: string | null
+          id?: string
+          is_global?: boolean | null
+          mood?: string | null
+          organization_id?: string | null
+          tags?: string[] | null
+          title: string
+        }
+        Update: {
+          bpm?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          energy?: string | null
+          file_url?: string
+          genre?: string | null
+          id?: string
+          is_global?: boolean | null
+          mood?: string | null
+          organization_id?: string | null
+          tags?: string[] | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_library_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orchestrator_insights: {
         Row: {
           context: Json | null
@@ -4121,6 +4174,87 @@ export type Database = {
           year?: string
         }
         Relationships: []
+      }
+      video_edit_queue: {
+        Row: {
+          ai_edit_suggestions: Json | null
+          chapters: Json | null
+          content_file_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          final_render_url: string | null
+          id: string
+          organization_id: string | null
+          render_status: string | null
+          selected_music_id: string | null
+          selected_music_url: string | null
+          shorts_extracted: Json | null
+          source_url: string
+          speed_ramps: Json | null
+          status: string | null
+          text_overlays: Json | null
+          title: string | null
+          transcript: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_edit_suggestions?: Json | null
+          chapters?: Json | null
+          content_file_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          final_render_url?: string | null
+          id?: string
+          organization_id?: string | null
+          render_status?: string | null
+          selected_music_id?: string | null
+          selected_music_url?: string | null
+          shorts_extracted?: Json | null
+          source_url: string
+          speed_ramps?: Json | null
+          status?: string | null
+          text_overlays?: Json | null
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_edit_suggestions?: Json | null
+          chapters?: Json | null
+          content_file_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          final_render_url?: string | null
+          id?: string
+          organization_id?: string | null
+          render_status?: string | null
+          selected_music_id?: string | null
+          selected_music_url?: string | null
+          shorts_extracted?: Json | null
+          source_url?: string
+          speed_ramps?: Json | null
+          status?: string | null
+          text_overlays?: Json | null
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_edit_queue_content_file_id_fkey"
+            columns: ["content_file_id"]
+            isOneToOne: false
+            referencedRelation: "content_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_edit_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workspace_ai_memory: {
         Row: {
