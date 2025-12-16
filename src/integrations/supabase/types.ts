@@ -3159,6 +3159,104 @@ export type Database = {
           },
         ]
       }
+      organization_style_profiles: {
+        Row: {
+          accent_color: string | null
+          analysis_count: number | null
+          body_position: string | null
+          created_at: string | null
+          cta_position: string | null
+          font_body: string | null
+          font_headline: string | null
+          font_weight: string | null
+          hook_position: string | null
+          id: string
+          last_analyzed_at: string | null
+          organization_id: string
+          outline_width: number | null
+          primary_text_color: string | null
+          reveal_style: string | null
+          safe_zone_width: string | null
+          secondary_text_color: string | null
+          shadow_blur: number | null
+          shadow_color: string | null
+          source_images: Json | null
+          style_name: string | null
+          text_alignment: string | null
+          text_animation: string | null
+          text_case: string | null
+          text_outline_enabled: boolean | null
+          text_shadow_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          analysis_count?: number | null
+          body_position?: string | null
+          created_at?: string | null
+          cta_position?: string | null
+          font_body?: string | null
+          font_headline?: string | null
+          font_weight?: string | null
+          hook_position?: string | null
+          id?: string
+          last_analyzed_at?: string | null
+          organization_id: string
+          outline_width?: number | null
+          primary_text_color?: string | null
+          reveal_style?: string | null
+          safe_zone_width?: string | null
+          secondary_text_color?: string | null
+          shadow_blur?: number | null
+          shadow_color?: string | null
+          source_images?: Json | null
+          style_name?: string | null
+          text_alignment?: string | null
+          text_animation?: string | null
+          text_case?: string | null
+          text_outline_enabled?: boolean | null
+          text_shadow_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          analysis_count?: number | null
+          body_position?: string | null
+          created_at?: string | null
+          cta_position?: string | null
+          font_body?: string | null
+          font_headline?: string | null
+          font_weight?: string | null
+          hook_position?: string | null
+          id?: string
+          last_analyzed_at?: string | null
+          organization_id?: string
+          outline_width?: number | null
+          primary_text_color?: string | null
+          reveal_style?: string | null
+          safe_zone_width?: string | null
+          secondary_text_color?: string | null
+          shadow_blur?: number | null
+          shadow_color?: string | null
+          source_images?: Json | null
+          style_name?: string | null
+          text_alignment?: string | null
+          text_animation?: string | null
+          text_case?: string | null
+          text_outline_enabled?: boolean | null
+          text_shadow_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_style_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_tradedna: {
         Row: {
           business_category: string | null

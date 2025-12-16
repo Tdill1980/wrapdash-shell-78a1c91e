@@ -1,9 +1,10 @@
 // Creatomate Video Render Edge Function
-// Renders videos using Creatomate API with brand-specific overlays
+// Renders videos using Creatomate API with organization's extracted style from uploaded templates
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { loadVoiceProfile } from "../_shared/voice-engine-loader.ts";
+import { loadOrganizationStyle, OrganizationStyleProfile } from "../_shared/style-profile-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -140,7 +141,18 @@ serve(async (req) => {
         );
       }
 
-      // Load voice profile for brand-specific styling
+      // LOAD ORGANIZATION STYLE PROFILE (extracted from uploaded Canva templates)
+      let orgStyle: OrganizationStyleProfile | null = null;
+      if (organization_id) {
+        try {
+          orgStyle = await loadOrganizationStyle(organization_id);
+          console.log('[render-video-reel] Loaded org style profile:', orgStyle.style_name || 'Custom Style');
+        } catch (e) {
+          console.warn('[render-video-reel] Could not load org style:', e);
+        }
+      }
+
+      // Load voice profile for additional brand context
       let voiceProfile = null;
       if (organization_id) {
         try {
@@ -156,66 +168,121 @@ serve(async (req) => {
         if (text.length <= maxLength) return text;
         const truncated = text.substring(0, maxLength);
         const lastSpace = truncated.lastIndexOf(" ");
-        // If there's a space in a reasonable position, cut there
         if (lastSpace > maxLength * 0.4) {
           return truncated.substring(0, lastSpace);
         }
         return truncated;
       };
 
-      // Build modifications object with SAFE ZONE text positioning
+      // Build modifications object
       const modifications: Record<string, string | number | boolean> = {
         'Video.source': video_url,
       };
 
-      // Add additional clips if provided (for multi-clip templates)
+      // Add additional clips if provided
       if (additional_clips && additional_clips.length > 0) {
         additional_clips.forEach((clipUrl, idx) => {
           modifications[`Video-${idx + 2}.source`] = clipUrl;
         });
       }
 
-      // SAFE ZONE TEXT SETTINGS - 70% width for better mobile readability
+      // ============ APPLY ORGANIZATION STYLE (from uploaded templates) ============
+      // This is the key fix - use extracted style from user's Canva templates
+      const style = orgStyle || {
+        safe_zone_width: '70%',
+        hook_position: '18%',
+        body_position: '50%',
+        cta_position: '82%',
+        text_alignment: 'center',
+        font_headline: 'Bebas Neue',
+        font_body: 'Poppins',
+        font_weight: 'bold',
+        text_case: 'uppercase',
+        primary_text_color: '#FFFFFF',
+        secondary_text_color: '#FFFFFF',
+        accent_color: '#FF6B35',
+        text_shadow_enabled: true,
+        shadow_blur: 10,
+        shadow_color: 'rgba(0,0,0,0.8)',
+        text_outline_enabled: false,
+        outline_width: 2,
+      };
+
+      console.log('[render-video-reel] Using style:', {
+        font: style.font_headline,
+        hookPos: style.hook_position,
+        color: style.primary_text_color,
+        shadow: style.text_shadow_enabled,
+      });
+
+      // Text settings from ORG STYLE
       const textSettings = {
-        width: '70%',
+        width: style.safe_zone_width,
         x: '50%',
         x_alignment: '50%',
-        font_size_hook: '64',    // Bigger for hooks
-        font_size_body: '48',    // Standard for body
-        font_size_cta: '40',     // Smaller for CTA
+        font_size_hook: '64',
+        font_size_body: '48',
+        font_size_cta: '40',
         line_height: '110%',
       };
 
-      // Add text overlays with proper positioning and word-boundary truncation
+      // Add headline with ORG STYLE positioning and formatting
       if (headline) {
-        // MAX 12 chars for hooks, truncate at word boundary
         const shortHeadline = truncateAtWord(headline, 12);
-        modifications['Text-1.text'] = shortHeadline.toUpperCase();
+        const formattedHeadline = style.text_case === 'uppercase' 
+          ? shortHeadline.toUpperCase() 
+          : style.text_case === 'lowercase' 
+            ? shortHeadline.toLowerCase() 
+            : shortHeadline;
+        
+        modifications['Text-1.text'] = formattedHeadline;
         modifications['Text-1.width'] = textSettings.width;
         modifications['Text-1.x'] = textSettings.x;
         modifications['Text-1.x_alignment'] = textSettings.x_alignment;
         modifications['Text-1.font_size'] = textSettings.font_size_hook;
-        modifications['Text-1.y'] = '18%'; // Top safe zone
+        modifications['Text-1.y'] = style.hook_position;
         modifications['Text-1.line_height'] = textSettings.line_height;
+        modifications['Text-1.font_family'] = style.font_headline;
+        modifications['Text-1.font_weight'] = style.font_weight === 'black' ? '900' : style.font_weight === 'bold' ? '700' : '400';
+        modifications['Text-1.fill_color'] = style.primary_text_color;
+        
+        // Apply shadow from org style
+        if (style.text_shadow_enabled) {
+          modifications['Text-1.shadow_blur'] = style.shadow_blur;
+          modifications['Text-1.shadow_color'] = style.shadow_color;
+          modifications['Text-1.shadow_x'] = 2;
+          modifications['Text-1.shadow_y'] = 2;
+        }
       }
+
+      // Add subtext/CTA with ORG STYLE
       if (subtext) {
-        // MAX 15 chars for CTA, truncate at word boundary
         const shortSubtext = truncateAtWord(subtext, 15);
         modifications['Text-2.text'] = shortSubtext;
         modifications['Text-2.width'] = textSettings.width;
         modifications['Text-2.x'] = textSettings.x;
         modifications['Text-2.x_alignment'] = textSettings.x_alignment;
         modifications['Text-2.font_size'] = textSettings.font_size_cta;
-        modifications['Text-2.y'] = '82%'; // Bottom safe zone
+        modifications['Text-2.y'] = style.cta_position;
         modifications['Text-2.line_height'] = textSettings.line_height;
+        modifications['Text-2.font_family'] = style.font_body;
+        modifications['Text-2.fill_color'] = style.accent_color || style.secondary_text_color;
+        
+        if (style.text_shadow_enabled) {
+          modifications['Text-2.shadow_blur'] = Math.max(style.shadow_blur - 2, 6);
+          modifications['Text-2.shadow_color'] = style.shadow_color;
+        }
       }
 
-      // Add dynamic overlays from request (AI-generated) with safe zone positioning
+      // Add dynamic overlays with ORG STYLE
       if (requestOverlays && requestOverlays.length > 0) {
+        const yPositions = [style.hook_position, style.body_position, style.cta_position];
+        
         requestOverlays.forEach((overlay, idx) => {
-          // MAX 15 chars, truncate at word boundary
           const shortText = truncateAtWord(overlay.text, 15);
-          modifications[`Overlay-${idx + 1}.text`] = shortText.toUpperCase();
+          const formattedText = style.text_case === 'uppercase' ? shortText.toUpperCase() : shortText;
+          
+          modifications[`Overlay-${idx + 1}.text`] = formattedText;
           modifications[`Overlay-${idx + 1}.time`] = overlay.time;
           modifications[`Overlay-${idx + 1}.duration`] = overlay.duration;
           modifications[`Overlay-${idx + 1}.width`] = textSettings.width;
@@ -223,9 +290,14 @@ serve(async (req) => {
           modifications[`Overlay-${idx + 1}.x_alignment`] = textSettings.x_alignment;
           modifications[`Overlay-${idx + 1}.font_size`] = textSettings.font_size_body;
           modifications[`Overlay-${idx + 1}.line_height`] = textSettings.line_height;
-          // Position: first at top, second center, third bottom
-          const yPositions = ['20%', '50%', '80%'];
           modifications[`Overlay-${idx + 1}.y`] = yPositions[idx % 3];
+          modifications[`Overlay-${idx + 1}.font_family`] = style.font_headline;
+          modifications[`Overlay-${idx + 1}.fill_color`] = style.primary_text_color;
+          
+          if (style.text_shadow_enabled) {
+            modifications[`Overlay-${idx + 1}.shadow_blur`] = style.shadow_blur;
+            modifications[`Overlay-${idx + 1}.shadow_color`] = style.shadow_color;
+          }
         });
       }
 
@@ -234,44 +306,31 @@ serve(async (req) => {
         modifications['Audio.source'] = music_url;
       }
 
-      // APPLY INSPO STYLE - Use extracted visual style from user's inspo images
-      if (inspo_style) {
-        console.log('[render-video-reel] Applying inspo style:', inspo_style);
+      // LEGACY: Apply inspo_style if passed directly (backwards compatibility)
+      if (inspo_style && !orgStyle) {
+        console.log('[render-video-reel] Applying legacy inspo_style:', inspo_style);
         
-        // Apply text color from inspo
         if (inspo_style.text_color) {
           modifications['Text-1.fill_color'] = inspo_style.text_color;
           modifications['Text-2.fill_color'] = inspo_style.text_color;
-          modifications['Overlay-1.fill_color'] = inspo_style.text_color;
-          modifications['Overlay-2.fill_color'] = inspo_style.text_color;
-          modifications['Overlay-3.fill_color'] = inspo_style.text_color;
         }
         
-        // Apply accent color for secondary text
         if (inspo_style.accent_color) {
           modifications['Text-2.fill_color'] = inspo_style.accent_color;
         }
         
-        // Apply text shadow if detected in inspo - stronger for readability
         if (inspo_style.text_shadow) {
           modifications['Text-1.shadow_blur'] = 12;
           modifications['Text-1.shadow_color'] = 'rgba(0,0,0,0.9)';
-          modifications['Text-1.shadow_x'] = 2;
-          modifications['Text-1.shadow_y'] = 2;
-          modifications['Text-2.shadow_blur'] = 10;
-          modifications['Text-2.shadow_color'] = 'rgba(0,0,0,0.8)';
-          modifications['Overlay-1.shadow_blur'] = 12;
-          modifications['Overlay-1.shadow_color'] = 'rgba(0,0,0,0.9)';
         }
         
-        // Apply font weight - bold for hooks
         if (inspo_style.font_weight === 'black' || inspo_style.font_weight === 'bold') {
           modifications['Text-1.font_weight'] = '900';
-          modifications['Text-2.font_weight'] = '700';
-          modifications['Overlay-1.font_weight'] = '900';
         }
-      } else {
-        // Fallback: Apply brand colors if available from merged overlays OR brand_defaults
+      }
+
+      // Fallback to voice profile colors if no org style
+      if (!orgStyle && !inspo_style) {
         const overlays = voiceProfile?.merged?.overlays || voiceProfile?.brand_defaults?.brand_overlays;
         if (overlays) {
           if (overlays.primary_color) {
@@ -281,16 +340,17 @@ serve(async (req) => {
             modifications['Text-2.fill_color'] = overlays.secondary_color;
           }
         }
-        
-        // Default: Add text shadow for readability on video
-        modifications['Text-1.shadow_blur'] = 10;
-        modifications['Text-1.shadow_color'] = 'rgba(0,0,0,0.8)';
-        modifications['Overlay-1.shadow_blur'] = 10;
-        modifications['Overlay-1.shadow_color'] = 'rgba(0,0,0,0.8)';
       }
 
       console.log('[render-video-reel] Starting render with template:', template_id || DEFAULT_TEMPLATE_ID);
-      console.log('[render-video-reel] Modifications:', JSON.stringify(modifications, null, 2));
+      console.log('[render-video-reel] Key modifications:', {
+        video: video_url.substring(0, 50) + '...',
+        headline: modifications['Text-1.text'],
+        font: modifications['Text-1.font_family'],
+        hookPosition: modifications['Text-1.y'],
+        textColor: modifications['Text-1.fill_color'],
+        hasShadow: !!modifications['Text-1.shadow_blur'],
+      });
 
       const renderResponse = await fetch(CREATOMATE_API_URL, {
         method: 'POST',
@@ -318,13 +378,11 @@ serve(async (req) => {
       }
 
       const renderResult = await renderResponse.json();
-      
-      // Creatomate returns an array of renders
       const render = Array.isArray(renderResult) ? renderResult[0] : renderResult;
       
       console.log('[render-video-reel] Render started:', render.id, 'status:', render.status);
 
-      // Log to database for tracking
+      // Log to database
       try {
         const supabase = createClient(
           Deno.env.get("SUPABASE_URL")!,
@@ -336,7 +394,6 @@ serve(async (req) => {
           organization_id: organization_id || null,
           generation_type: 'video_render',
           status: 'processing',
-          content_file_id: null, // Would link to content_files if we have one
         });
       } catch (dbError) {
         console.warn('[render-video-reel] Could not log to database:', dbError);
@@ -348,12 +405,12 @@ serve(async (req) => {
           render_id: render.id,
           status: render.status,
           message: 'Render started successfully',
+          style_applied: orgStyle ? 'organization_style' : inspo_style ? 'inspo_style' : 'defaults',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Unknown action
     return new Response(
       JSON.stringify({ success: false, error: 'Unknown action. Use "start" or "status".' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

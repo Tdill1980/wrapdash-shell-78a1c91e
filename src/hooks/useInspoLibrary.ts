@@ -33,20 +33,20 @@ export function useInspoLibrary() {
     },
   });
 
-  // Upload file to storage and create record
+  // Upload file to storage and create record, then auto-analyze for style extraction
   const uploadFile = useMutation({
     mutationFn: async (file: File) => {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Get organization ID
-      let organizationId = null;
+      let organizationId: string | null = null;
       if (user) {
         const { data: orgMember } = await supabase
           .from("organization_members")
           .select("organization_id")
           .eq("user_id", user.id)
           .single();
-        organizationId = orgMember?.organization_id;
+        organizationId = orgMember?.organization_id || null;
       }
 
       // Determine file type
@@ -68,7 +68,7 @@ export function useInspoLibrary() {
         .from("media-library")
         .getPublicUrl(storagePath);
 
-      // Insert record into content_files
+      // Insert record into content_files with proper tags for template recognition
       const { data, error } = await supabase
         .from("content_files")
         .insert({
@@ -78,17 +78,42 @@ export function useInspoLibrary() {
           original_filename: file.name,
           source: "inspo_upload",
           content_category: "inspo_reference",
-          tags: ["inspo", "reference", fileType],
+          tags: ["inspo", "reference", "template", fileType],
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // AUTO-ANALYZE: If it's an image, automatically trigger style extraction
+      // This updates the organization_style_profiles table with extracted style
+      if (fileType === "image" && organizationId) {
+        console.log("[useInspoLibrary] Auto-analyzing uploaded template for style extraction");
+        
+        // Fire and forget - don't block upload completion
+        supabase.functions.invoke("analyze-inspo-image", {
+          body: { 
+            imageUrl: urlData.publicUrl, 
+            organizationId, 
+            contentFileId: data.id 
+          },
+        }).then(({ data: analysisData, error: analysisError }) => {
+          if (analysisError) {
+            console.error("[useInspoLibrary] Auto-analysis failed:", analysisError);
+          } else {
+            console.log("[useInspoLibrary] Style extracted:", analysisData?.analysis?.styleName);
+            toast.success("Style extracted from your template!", {
+              description: `${analysisData?.analysis?.styleName || "Template style"} will be used for video rendering`,
+            });
+          }
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspo-library"] });
-      toast.success("File uploaded successfully!");
+      toast.success("File uploaded! Extracting style...");
     },
     onError: (error) => {
       console.error("Upload error:", error);

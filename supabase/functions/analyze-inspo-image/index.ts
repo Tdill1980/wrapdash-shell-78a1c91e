@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { updateOrganizationStyle } from "../_shared/style-profile-loader.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,38 +30,87 @@ serve(async (req) => {
       );
     }
 
-    // AI Vision prompt for style analysis
-    const systemPrompt = `You are an expert visual designer and marketing strategist specializing in social media ad analysis.
-Analyze this image and extract its visual style, design elements, and marketing approach.
+    // Enhanced AI Vision prompt for RENDERING-READY style extraction
+    const systemPrompt = `You are an expert visual designer analyzing Canva templates and social media ads.
+Your job is to extract EXACT visual style specifications that can be used for video rendering.
 
-Return a JSON object with these fields:
+Analyze this image and extract:
+
+1. TYPOGRAPHY - Extract exact font characteristics:
+   - Font family (identify specific fonts like "Bebas Neue", "Poppins", "Montserrat", "Impact", "Oswald")
+   - Font weight (light/regular/medium/bold/black/900)
+   - Text case (uppercase/lowercase/capitalize/mixed)
+
+2. TEXT POSITIONING - Identify where text is placed:
+   - Hook/headline position (% from top, e.g. "15%", "20%", "10%")
+   - Body text position (% from top, e.g. "50%", "45%")
+   - CTA/bottom text position (% from top, e.g. "85%", "80%", "90%")
+   - Text alignment (left/center/right)
+
+3. COLORS - Extract exact hex codes:
+   - Primary text color (main headline color)
+   - Secondary text color (body/CTA color)
+   - Accent color (highlights, underlines)
+   - Shadow color if present
+
+4. TEXT EFFECTS:
+   - Has text shadow? (true/false)
+   - Shadow blur amount (1-20)
+   - Has text outline/stroke? (true/false)
+   - Outline width if present (1-5)
+
+5. ANIMATION STYLE (infer from design):
+   - Text animation type (fade_in/slide_up/scale_pop/typewriter/none)
+   - Reveal style (scale_pop/fade/slide/zoom)
+
+6. LAYOUT:
+   - Safe zone width (how much horizontal space text uses: "60%", "70%", "80%")
+
+Return JSON ONLY with this exact structure:
 {
-  "styleName": "Descriptive name for this style (e.g., 'Bold Minimal', 'Vintage Aesthetic')",
-  "colorPalette": ["#hex1", "#hex2", "#hex3", "#hex4"] // Extract 4-6 dominant colors,
-  "colorMood": "Description of color mood (e.g., 'dark and moody', 'bright and energetic')",
-  "typography": {
-    "style": "Description of font style used",
-    "weight": "light" | "regular" | "bold" | "black",
-    "case": "uppercase" | "lowercase" | "mixed",
-    "position": "top" | "center" | "bottom" | "overlay"
+  "styleName": "Descriptive name like 'Bold Impact Style' or 'Clean Minimal'",
+  
+  "rendering": {
+    "font_headline": "Bebas Neue",
+    "font_body": "Poppins",
+    "font_weight": "bold",
+    "text_case": "uppercase",
+    
+    "hook_position": "15%",
+    "body_position": "50%",
+    "cta_position": "85%",
+    "text_alignment": "center",
+    
+    "primary_text_color": "#FFFFFF",
+    "secondary_text_color": "#FFFFFF",
+    "accent_color": "#FF6B35",
+    "shadow_color": "rgba(0,0,0,0.8)",
+    
+    "text_shadow_enabled": true,
+    "shadow_blur": 10,
+    "text_outline_enabled": false,
+    "outline_width": 2,
+    
+    "text_animation": "fade_in",
+    "reveal_style": "scale_pop",
+    
+    "safe_zone_width": "70%"
   },
-  "layout": {
-    "type": "minimal" | "busy" | "balanced" | "asymmetric",
-    "focusPoint": "Description of where eye is drawn",
-    "whitespace": "generous" | "moderate" | "tight"
-  },
-  "hooks": ["List of text hooks/headlines visible"],
+  
+  "colorPalette": ["#hex1", "#hex2", "#hex3", "#hex4"],
+  "hooks": ["Any visible text hooks/headlines"],
   "cta": "Call-to-action text if visible",
-  "visualElements": ["List of key visual elements: shapes, icons, overlays"],
-  "marketingAngle": "Description of the marketing approach/angle",
-  "targetEmotion": "Primary emotion being targeted",
-  "brandVoice": "Description of brand voice/tone",
-  "recommendations": ["3-5 suggestions for recreating this style"]
+  "marketingAngle": "Brief description of marketing approach",
+  "recommendations": ["2-3 tips for recreating this style"]
 }
 
-Be specific about colors (use actual hex codes), fonts, and positioning.`;
+Be PRECISE with:
+- Font identification (look at letter shapes, serifs, weight)
+- Color hex codes (extract actual colors from image)
+- Position percentages (measure where text sits vertically)
+- Shadow/outline detection (look for glow, drop shadow, strokes)`;
 
-    console.log("Analyzing image:", imageUrl);
+    console.log("[analyze-inspo-image] Analyzing image:", imageUrl);
 
     // Call Lovable AI with image
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -78,7 +128,7 @@ Be specific about colors (use actual hex codes), fonts, and positioning.`;
             content: [
               {
                 type: "text",
-                text: "Analyze this image and extract its visual style for recreation. Return valid JSON only.",
+                text: "Analyze this image and extract its visual style for video rendering. Focus on fonts, colors, text positions, and effects. Return valid JSON only.",
               },
               {
                 type: "image_url",
@@ -87,13 +137,13 @@ Be specific about colors (use actual hex codes), fonts, and positioning.`;
             ],
           },
         ],
-        max_tokens: 2000,
+        max_tokens: 2500,
       }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error("AI API error:", errorText);
+      console.error("[analyze-inspo-image] AI API error:", errorText);
       
       if (aiResponse.status === 429) {
         return new Response(
@@ -114,7 +164,6 @@ Be specific about colors (use actual hex codes), fonts, and positioning.`;
     // Parse JSON from response
     let analysis;
     try {
-      // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         analysis = JSON.parse(jsonMatch[0]);
@@ -122,31 +171,45 @@ Be specific about colors (use actual hex codes), fonts, and positioning.`;
         throw new Error("No JSON found in response");
       }
     } catch (parseError) {
-      console.error("JSON parse error:", parseError);
-      // Return a default structure if parsing fails
+      console.error("[analyze-inspo-image] JSON parse error:", parseError);
       analysis = {
         styleName: "Analyzed Style",
-        colorPalette: ["#000000", "#FFFFFF", "#FF6B35", "#4EEAFF"],
-        colorMood: "Unable to determine",
-        typography: { style: "Modern", weight: "bold", case: "mixed", position: "center" },
-        layout: { type: "balanced", focusPoint: "center", whitespace: "moderate" },
+        rendering: {
+          font_headline: "Bebas Neue",
+          font_body: "Poppins",
+          font_weight: "bold",
+          text_case: "uppercase",
+          hook_position: "15%",
+          body_position: "50%",
+          cta_position: "85%",
+          text_alignment: "center",
+          primary_text_color: "#FFFFFF",
+          secondary_text_color: "#FFFFFF",
+          accent_color: "#FF6B35",
+          shadow_color: "rgba(0,0,0,0.8)",
+          text_shadow_enabled: true,
+          shadow_blur: 10,
+          text_outline_enabled: false,
+          outline_width: 2,
+          text_animation: "fade_in",
+          reveal_style: "scale_pop",
+          safe_zone_width: "70%",
+        },
+        colorPalette: ["#FFFFFF", "#000000", "#FF6B35"],
         hooks: [],
         cta: "",
-        visualElements: [],
         marketingAngle: "General marketing",
-        targetEmotion: "Interest",
-        brandVoice: "Professional",
-        recommendations: ["Use similar color scheme", "Match typography style", "Follow layout pattern"],
+        recommendations: ["Use similar color scheme", "Match typography style"],
         rawResponse: content,
       };
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Save to inspo_analyses table
     if (organizationId) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
       const { error: insertError } = await supabase
         .from("inspo_analyses")
         .insert({
@@ -158,18 +221,49 @@ Be specific about colors (use actual hex codes), fonts, and positioning.`;
         });
 
       if (insertError) {
-        console.error("Failed to save analysis:", insertError);
+        console.error("[analyze-inspo-image] Failed to save analysis:", insertError);
+      }
+
+      // UPDATE ORGANIZATION STYLE PROFILE with extracted rendering settings
+      if (analysis.rendering) {
+        try {
+          await updateOrganizationStyle(organizationId, {
+            style_name: analysis.styleName,
+            font_headline: analysis.rendering.font_headline,
+            font_body: analysis.rendering.font_body,
+            font_weight: analysis.rendering.font_weight,
+            text_case: analysis.rendering.text_case,
+            hook_position: analysis.rendering.hook_position,
+            body_position: analysis.rendering.body_position,
+            cta_position: analysis.rendering.cta_position,
+            primary_text_color: analysis.rendering.primary_text_color,
+            secondary_text_color: analysis.rendering.secondary_text_color,
+            accent_color: analysis.rendering.accent_color,
+            shadow_color: analysis.rendering.shadow_color,
+            text_shadow_enabled: analysis.rendering.text_shadow_enabled,
+            shadow_blur: analysis.rendering.shadow_blur,
+            text_outline_enabled: analysis.rendering.text_outline_enabled,
+            outline_width: analysis.rendering.outline_width,
+            text_animation: analysis.rendering.text_animation,
+            reveal_style: analysis.rendering.reveal_style,
+            safe_zone_width: analysis.rendering.safe_zone_width,
+            text_alignment: analysis.rendering.text_alignment,
+          }, imageUrl);
+          console.log("[analyze-inspo-image] Updated org style profile with extracted style");
+        } catch (styleErr) {
+          console.error("[analyze-inspo-image] Failed to update style profile:", styleErr);
+        }
       }
     }
 
-    console.log("Analysis complete:", analysis.styleName);
+    console.log("[analyze-inspo-image] Analysis complete:", analysis.styleName);
 
     return new Response(
       JSON.stringify({ success: true, analysis }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
-    console.error("Error:", error);
+    console.error("[analyze-inspo-image] Error:", error);
     const message = error instanceof Error ? error.message : "Analysis failed";
     return new Response(
       JSON.stringify({ error: message }),
