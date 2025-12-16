@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export interface InspoFile {
   id: string;
@@ -16,6 +17,7 @@ export interface InspoFile {
 
 export function useInspoLibrary() {
   const queryClient = useQueryClient();
+  const [reanalyzeProgress, setReanalyzeProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Fetch all uploaded inspo content from content_files
   const { data: library, isLoading } = useQuery({
@@ -85,28 +87,26 @@ export function useInspoLibrary() {
 
       if (error) throw error;
 
-      // AUTO-ANALYZE: If it's an image, automatically trigger style extraction
-      // This updates the organization_style_profiles table with extracted style
-      if (fileType === "image" && organizationId) {
+      // AUTO-ANALYZE: Trigger style extraction for both images and videos
+      if (organizationId) {
         console.log("[useInspoLibrary] Auto-analyzing uploaded template for style extraction");
         
-        // Fire and forget - don't block upload completion
-        supabase.functions.invoke("analyze-inspo-image", {
-          body: { 
-            imageUrl: urlData.publicUrl, 
-            organizationId, 
-            contentFileId: data.id 
-          },
-        }).then(({ data: analysisData, error: analysisError }) => {
-          if (analysisError) {
-            console.error("[useInspoLibrary] Auto-analysis failed:", analysisError);
-          } else {
-            console.log("[useInspoLibrary] Style extracted:", analysisData?.analysis?.styleName);
-            toast.success("Style extracted from your template!", {
-              description: `${analysisData?.analysis?.styleName || "Template style"} will be used for video rendering`,
-            });
-          }
-        });
+        const functionName = fileType === "video" ? "analyze-inspo-video" : "analyze-inspo-image";
+        const bodyPayload = fileType === "video" 
+          ? { videoUrl: urlData.publicUrl, platform: "upload", organizationId }
+          : { imageUrl: urlData.publicUrl, organizationId, contentFileId: data.id };
+        
+        supabase.functions.invoke(functionName, { body: bodyPayload })
+          .then(({ data: analysisData, error: analysisError }) => {
+            if (analysisError) {
+              console.error("[useInspoLibrary] Auto-analysis failed:", analysisError);
+            } else {
+              console.log("[useInspoLibrary] Style extracted:", analysisData?.analysis?.styleName || "Complete");
+              toast.success("Style extracted from your template!", {
+                description: `Your ${fileType} style will be used for video rendering`,
+              });
+            }
+          });
       }
 
       return data;
@@ -120,6 +120,76 @@ export function useInspoLibrary() {
       toast.error("Failed to upload file");
     },
   });
+
+  // Re-analyze all existing files to extract styles
+  const reanalyzeAll = async () => {
+    if (!library || library.length === 0) {
+      toast.error("No files to analyze");
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Please log in first");
+      return;
+    }
+
+    const { data: orgMember } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id)
+      .single();
+    
+    const organizationId = orgMember?.organization_id;
+    if (!organizationId) {
+      toast.error("No organization found");
+      return;
+    }
+
+    setReanalyzeProgress({ current: 0, total: library.length });
+    toast.info(`Re-analyzing ${library.length} files to extract your style...`);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < library.length; i++) {
+      const file = library[i];
+      setReanalyzeProgress({ current: i + 1, total: library.length });
+
+      try {
+        const isVideo = file.file_type === "video";
+        const functionName = isVideo ? "analyze-inspo-video" : "analyze-inspo-image";
+        const bodyPayload = isVideo
+          ? { videoUrl: file.file_url, platform: "library", organizationId }
+          : { imageUrl: file.file_url, organizationId, contentFileId: file.id };
+
+        const { error } = await supabase.functions.invoke(functionName, { body: bodyPayload });
+        
+        if (error) {
+          console.error(`Failed to analyze ${file.original_filename}:`, error);
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Error analyzing ${file.original_filename}:`, err);
+        errorCount++;
+      }
+
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    setReanalyzeProgress(null);
+    
+    if (successCount > 0) {
+      toast.success(`Style extracted from ${successCount} files!`, {
+        description: errorCount > 0 ? `${errorCount} files failed` : "Your style profile has been updated",
+      });
+    } else {
+      toast.error("Failed to analyze files");
+    }
+  };
 
   // Delete file
   const deleteFile = useMutation({
@@ -143,5 +213,7 @@ export function useInspoLibrary() {
     uploadFile: uploadFile.mutateAsync,
     isUploading: uploadFile.isPending,
     deleteFile: deleteFile.mutate,
+    reanalyzeAll,
+    reanalyzeProgress,
   };
 }

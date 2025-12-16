@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { updateOrganizationStyle } from "../_shared/style-profile-loader.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,7 +29,8 @@ serve(async (req) => {
 
     console.log(`Analyzing video from ${platform}: ${videoUrl}`);
 
-    const systemPrompt = `You are an expert video content analyst specializing in social media reels, TikToks, and short-form video content. Analyze the provided video URL and extract detailed style information.
+    // Enhanced prompt to extract style info that can be used for rendering
+    const systemPrompt = `You are an expert video content analyst specializing in social media reels, TikToks, and short-form video content. Analyze the provided video URL and extract detailed style information that can be used to recreate this style in new videos.
 
 Return a JSON object with the following structure:
 {
@@ -55,6 +57,29 @@ Return a JSON object with the following structure:
     "position": "top" | "center" | "bottom",
     "animation": string
   },
+  "typography": {
+    "font_headline": string (font family name like "Bebas Neue", "Montserrat", "Impact"),
+    "font_body": string (font family for body text),
+    "font_weight": "400" | "500" | "600" | "700" | "800" | "900",
+    "text_case": "uppercase" | "lowercase" | "capitalize" | "none"
+  },
+  "text_positions": {
+    "hook_position": string (percentage like "15%", "20%"),
+    "body_position": string (percentage like "50%"),
+    "cta_position": string (percentage like "85%")
+  },
+  "colors": {
+    "primary_text_color": string (hex color),
+    "secondary_text_color": string (hex color),
+    "accent_color": string (hex color),
+    "shadow_color": string (rgba color)
+  },
+  "text_effects": {
+    "text_shadow_enabled": boolean,
+    "shadow_blur": number (pixels),
+    "text_outline_enabled": boolean,
+    "outline_width": number (pixels)
+  },
   "hooks": string[] (3-5 hook phrases detected or suggested),
   "cta": string (call to action text),
   "music": {
@@ -65,11 +90,18 @@ Return a JSON object with the following structure:
   "transitions": string[] (transition types used)
 }
 
-Be specific and actionable. This analysis will be used to recreate the style in new videos.`;
+Be specific about fonts, colors, and positions. This analysis will be used to render new videos with the exact same style.`;
 
     const userPrompt = `Analyze this ${platform || "social media"} video: ${videoUrl}
 
-Based on the URL and platform, provide a detailed style breakdown that could be applied to vehicle wrap industry content. Focus on what makes this content engaging and how the style elements could be adapted for automotive/wrap shop marketing.`;
+Based on the URL and platform, provide a detailed style breakdown focusing on:
+1. Typography - what fonts are used, are they bold/thin, uppercase/lowercase
+2. Text positions - where do text overlays appear (top %, center, bottom %)
+3. Colors - exact hex colors used for text, backgrounds, accents
+4. Text effects - shadows, outlines, animations
+5. Overall visual style that makes this content engaging
+
+This is for vehicle wrap industry content creation.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -130,6 +162,10 @@ Based on the URL and platform, provide a detailed style breakdown that could be 
           cta: { duration: 3, style: "Direct ask" }
         },
         overlays: { textStyle: "Bold sans-serif", fontSize: "large", fontWeight: "bold", position: "center", animation: "pop-in" },
+        typography: { font_headline: "Bebas Neue", font_body: "Poppins", font_weight: "700", text_case: "uppercase" },
+        text_positions: { hook_position: "15%", body_position: "50%", cta_position: "85%" },
+        colors: { primary_text_color: "#FFFFFF", secondary_text_color: "#FF6B35", accent_color: "#FF6B35", shadow_color: "rgba(0,0,0,0.8)" },
+        text_effects: { text_shadow_enabled: true, shadow_blur: 8, text_outline_enabled: false, outline_width: 0 },
         hooks: ["Watch this transformation", "You won't believe this", "Before vs After"],
         cta: "DM us for a quote",
         music: { genre: "Hip-hop/Electronic", energy: "high", bpm: 120 },
@@ -143,6 +179,7 @@ Based on the URL and platform, provide a detailed style breakdown that could be 
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
+      // Store analysis record
       await supabase.from("inspo_analyses").insert({
         organization_id: organizationId,
         source_url: videoUrl,
@@ -150,6 +187,29 @@ Based on the URL and platform, provide a detailed style breakdown that could be 
         analysis_data: analysis,
         title: `${platform || "Video"} Analysis - ${new Date().toLocaleDateString()}`,
       });
+
+      // UPDATE ORGANIZATION STYLE PROFILE for video rendering
+      // Extract rendering-specific settings from the analysis
+      const styleUpdate = {
+        font_headline: analysis.typography?.font_headline || "Bebas Neue",
+        font_body: analysis.typography?.font_body || "Poppins",
+        font_weight: analysis.typography?.font_weight || "700",
+        text_case: analysis.typography?.text_case || "uppercase",
+        hook_position: analysis.text_positions?.hook_position || "15%",
+        body_position: analysis.text_positions?.body_position || "50%",
+        cta_position: analysis.text_positions?.cta_position || "85%",
+        primary_text_color: analysis.colors?.primary_text_color || "#FFFFFF",
+        secondary_text_color: analysis.colors?.secondary_text_color || analysis.color?.palette?.[0] || "#FF6B35",
+        accent_color: analysis.colors?.accent_color || analysis.color?.palette?.[1] || "#FF6B35",
+        shadow_color: analysis.colors?.shadow_color || "rgba(0,0,0,0.8)",
+        text_shadow_enabled: analysis.text_effects?.text_shadow_enabled ?? true,
+        shadow_blur: analysis.text_effects?.shadow_blur || 8,
+        text_outline_enabled: analysis.text_effects?.text_outline_enabled ?? false,
+        outline_width: analysis.text_effects?.outline_width || 0,
+      };
+
+      console.log("[analyze-inspo-video] Updating organization style profile:", styleUpdate);
+      await updateOrganizationStyle(organizationId, styleUpdate, videoUrl);
     }
 
     return new Response(
