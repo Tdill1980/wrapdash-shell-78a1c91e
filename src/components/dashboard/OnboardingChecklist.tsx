@@ -36,6 +36,25 @@ export function OnboardingChecklist() {
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      
+      setIsAdmin(!!data);
+    };
+    checkAdminRole();
+  }, []);
 
   const checklistItems: ChecklistItem[] = [
     {
@@ -47,13 +66,14 @@ export function OnboardingChecklist() {
       badge: "Powers AI",
       checkFn: async () => {
         if (!organizationId) return false;
+        // Check for actual tradedna_profile data (not is_active which doesn't exist)
         const { data } = await supabase
           .from("organization_tradedna" as any)
-          .select("id")
+          .select("id, tradedna_profile")
           .eq("organization_id", organizationId)
-          .eq("is_active", true)
           .maybeSingle();
-        return !!data;
+        // Consider complete if record exists with tradedna_profile data
+        return !!(data && (data as any).tradedna_profile);
       },
     },
     {
@@ -178,8 +198,8 @@ export function OnboardingChecklist() {
     (completedItems.size / checklistItems.length) * 100
   );
 
-  // Don't show if dismissed or 100% complete
-  if (dismissed || completionPercentage === 100) {
+  // Don't show if dismissed, 100% complete, or admin user
+  if (dismissed || completionPercentage === 100 || isAdmin) {
     return null;
   }
 
