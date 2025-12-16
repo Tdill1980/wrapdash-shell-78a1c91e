@@ -123,6 +123,7 @@ const navigationItems: NavigationItem[] = [
     name: "ShopFlow Internal", 
     path: "/shopflow-internal", 
     icon: Package,
+    roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-medium">
         <span className="text-white">Shop</span>
@@ -135,6 +136,7 @@ const navigationItems: NavigationItem[] = [
     name: "ShopFlow Bulk Admin", 
     path: "/shopflow-bulk-admin", 
     icon: Package,
+    roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-medium">
         <span className="text-white">Shop</span>
