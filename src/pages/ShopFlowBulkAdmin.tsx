@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { RefreshCw, Zap, Search, Package } from "lucide-react";
+import { RefreshCw, Zap, Search, Package, DollarSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export default function ShopFlowBulkAdmin() {
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch all orders
@@ -132,6 +133,31 @@ export default function ShopFlowBulkAdmin() {
     }
   };
 
+  const handleBackfillOrderTotals = async () => {
+    setIsBackfilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-order-totals");
+
+      if (error) throw error;
+
+      toast({
+        title: "Backfill complete",
+        description: `Updated ${data.success} orders. ${data.failed} failed. ${data.skipped} skipped.`,
+      });
+
+      await refetch();
+    } catch (error: any) {
+      console.error("Backfill error:", error);
+      toast({
+        title: "Backfill failed",
+        description: error.message || "Failed to backfill order totals",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
   return (
     <MainLayout userName="Admin">
       <div className="space-y-6">
@@ -190,6 +216,20 @@ export default function ShopFlowBulkAdmin() {
               >
                 <Package className="w-4 h-4" />
                 Mark Shipped
+              </Button>
+              <Button
+                onClick={handleBackfillOrderTotals}
+                disabled={isBackfilling}
+                size="sm"
+                variant="secondary"
+                className="gap-2"
+              >
+                {isBackfilling ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <DollarSign className="w-4 h-4" />
+                )}
+                {isBackfilling ? "Backfilling..." : "Backfill Order Totals"}
               </Button>
             </div>
 
@@ -251,6 +291,16 @@ export default function ShopFlowBulkAdmin() {
                       <p className="text-xs text-muted-foreground">
                         {order.product_type}
                       </p>
+                      {order.order_total > 0 && (
+                        <p className="text-sm font-semibold text-green-400 mt-1">
+                          ${order.order_total.toFixed(2)}
+                        </p>
+                      )}
+                      {(!order.order_total || order.order_total === 0) && (
+                        <p className="text-xs text-yellow-500 mt-1">
+                          ⚠️ Missing order total
+                        </p>
+                      )}
                     </div>
                     <div className="text-right text-xs text-muted-foreground">
                       <p>Created: {new Date(order.created_at).toLocaleDateString()}</p>

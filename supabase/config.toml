@@ -197,3 +197,6 @@ verify_jwt = false
 
 [functions.ai-execute-edits]
 verify_jwt = false
+
+[functions.backfill-order-totals]
+verify_jwt = false

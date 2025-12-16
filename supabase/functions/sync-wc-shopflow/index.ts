@@ -276,7 +276,7 @@ serve(async (req) => {
         updatedTimeline[updatedCustomerStage] = new Date().toISOString();
       }
       
-      // Update existing order
+      // Update existing order (also capture order_total if missing)
       await supabase
         .from('shopflow_orders')
         .update({
@@ -285,11 +285,12 @@ serve(async (req) => {
           timeline: updatedTimeline,
           files: updatedFiles,
           customer_email: customerEmail,
-        vehicle_info: orderInfo,
+          vehicle_info: orderInfo,
           affiliate_ref_code: affiliateRefCode,
           product_image_url: productImageUrl,
           woo_order_id: internalId ? parseInt(internalId) : null,
           woo_order_number: displayNumber ? parseInt(displayNumber) : null,
+          order_total: parseFloat(payload.total || '0'),
           updated_at: new Date().toISOString(),
         })
         .eq('order_number', orderNumber);
@@ -369,6 +370,7 @@ serve(async (req) => {
         approveflow_project_id: approveflowProject?.id || null,
         priority: 'normal',
         affiliate_ref_code: affiliateRefCode,
+        order_total: parseFloat(payload.total || '0'),
       })
       .select()
       .single();
