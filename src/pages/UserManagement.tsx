@@ -20,7 +20,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 interface UserRole {
   id: string;
   user_id: string;
-  role: "admin" | "moderator" | "user";
+  role: "admin" | "moderator" | "orchestrator" | "user";
   created_at: string;
 }
 
@@ -31,7 +31,7 @@ export default function UserManagement() {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUserId, setNewUserId] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"admin" | "moderator" | "user">("user");
+  const [newUserRole, setNewUserRole] = useState<"admin" | "moderator" | "orchestrator" | "user">("user");
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -192,6 +192,7 @@ export default function UserManagement() {
               <SelectContent>
                 <SelectItem value="user">User</SelectItem>
                 <SelectItem value="moderator">Moderator</SelectItem>
+                <SelectItem value="orchestrator">Orchestrator</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>

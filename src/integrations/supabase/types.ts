@@ -1771,6 +1771,8 @@ export type Database = {
           metadata: Json | null
           organization_id: string | null
           priority: string | null
+          recipient_inbox: string | null
+          review_status: string | null
           status: string | null
           subject: string | null
           unread_count: number | null
@@ -1786,6 +1788,8 @@ export type Database = {
           metadata?: Json | null
           organization_id?: string | null
           priority?: string | null
+          recipient_inbox?: string | null
+          review_status?: string | null
           status?: string | null
           subject?: string | null
           unread_count?: number | null
@@ -1801,6 +1805,8 @@ export type Database = {
           metadata?: Json | null
           organization_id?: string | null
           priority?: string | null
+          recipient_inbox?: string | null
+          review_status?: string | null
           status?: string | null
           subject?: string | null
           unread_count?: number | null
@@ -4174,6 +4180,63 @@ export type Database = {
           },
         ]
       }
+      team_commands: {
+        Row: {
+          command_payload: Json | null
+          command_text: string | null
+          command_type: string
+          conversation_id: string | null
+          created_at: string | null
+          executed_at: string | null
+          from_user_id: string | null
+          id: string
+          quote_id: string | null
+          status: string | null
+          to_agent: string
+        }
+        Insert: {
+          command_payload?: Json | null
+          command_text?: string | null
+          command_type: string
+          conversation_id?: string | null
+          created_at?: string | null
+          executed_at?: string | null
+          from_user_id?: string | null
+          id?: string
+          quote_id?: string | null
+          status?: string | null
+          to_agent: string
+        }
+        Update: {
+          command_payload?: Json | null
+          command_text?: string | null
+          command_type?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          executed_at?: string | null
+          from_user_id?: string | null
+          id?: string
+          quote_id?: string | null
+          status?: string | null
+          to_agent?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_commands_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_commands_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -4615,7 +4678,7 @@ export type Database = {
       is_organization_owner: { Args: { _org_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "orchestrator"
       organization_role: "beta_shop" | "affiliate" | "admin"
     }
     CompositeTypes: {
@@ -4744,7 +4807,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "orchestrator"],
       organization_role: ["beta_shop", "affiliate", "admin"],
     },
   },
