@@ -186,6 +186,18 @@ const navigationItems: NavigationItem[] = [
     )
   },
   { 
+    name: "MightyEdit", 
+    path: "/mighty-edit", 
+    icon: Film,
+    roles: ["admin"],
+    customRender: (
+      <span className="font-medium">
+        <span className="text-primary">Mighty</span>
+        <span className="text-white">Edit</span>
+      </span>
+    )
+  },
+  {
     name: "Ad Vault", 
     path: "/ad-vault", 
     icon: Image,

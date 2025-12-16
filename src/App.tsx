@@ -64,6 +64,7 @@ import AutoSplit from "./pages/organic/AutoSplit";
 import StaticCreator from "./pages/organic/StaticCreator";
 import Atomizer from "./pages/organic/Atomizer";
 import YouTubeEditor from "./pages/organic/YouTubeEditor";
+import MightyEdit from "./pages/MightyEdit";
 import MyProducts from "./pages/settings/MyProducts";
 import AdminOrganizations from "./pages/AdminOrganizations";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
@@ -116,6 +117,7 @@ const App = () => (
             <Route path="/content-creator" element={<ContentCreator />} />
             <Route path="/content-schedule" element={<ContentSchedule />} />
             <Route path="/organic" element={<OrganicHub />} />
+            <Route path="/mighty-edit" element={<MightyEdit />} />
             <Route path="/organic/reel-builder" element={<ReelBuilder />} />
             <Route path="/organic/inspo" element={<InspirationHub />} />
             <Route path="/organic/auto-split" element={<AutoSplit />} />
