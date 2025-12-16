@@ -155,6 +155,17 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
         // CALL ai-auto-quote to create REAL quote in database
         console.log("🚀 Auto-generating quote for:", parsed.vehicle);
         
+        // Map wrap_type to WPW product types (uses wpw-pricing.ts)
+        // WPW PRODUCTS: avery ($5.27), 3m ($5.90), contour ($6.32), 3m-contour ($6.92), window ($5.95)
+        let wpwProductType = 'avery'; // Default to Avery Printed Wrap $5.27/sqft
+        if (parsed.wrap_type === '3m' || parsed.message?.toLowerCase().includes('3m')) {
+          wpwProductType = '3m';
+        } else if (parsed.wrap_type === 'window' || parsed.message?.toLowerCase().includes('window') || parsed.message?.toLowerCase().includes('perf')) {
+          wpwProductType = 'window';
+        } else if (parsed.wrap_type === 'contour' || parsed.message?.toLowerCase().includes('contour') || parsed.message?.toLowerCase().includes('cut')) {
+          wpwProductType = 'contour';
+        }
+        
         try {
           const autoQuoteResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-auto-quote`, {
             method: 'POST',
@@ -168,8 +179,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
               vehicleModel: parsed.vehicle.model,
               customerName: body.sender_username || body.sender_id,
               customerEmail: parsed.customer_email || null,
-              productType: parsed.wrap_type === 'color_change' ? 'Full Color Change Wrap' : 
-                          parsed.wrap_type === 'commercial' ? 'Commercial Wrap' : 'Full Color Change Wrap',
+              productType: wpwProductType, // Use WPW product type
               conversationId: conversation?.id,
               autoEmail: !!parsed.customer_email // Auto-send email if we have their email
             })
@@ -202,6 +212,8 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
             quote_id: autoQuoteResult.quote?.id,
             quote_number: autoQuoteResult.quote?.quoteNumber,
             total_price: autoQuoteResult.quote?.totalPrice,
+            price_per_sqft: autoQuoteResult.quote?.pricePerSqft,
+            product_name: autoQuoteResult.quote?.productName,
             email_sent: autoQuoteResult.emailSent
           } : null
         },
