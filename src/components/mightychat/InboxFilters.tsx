@@ -125,19 +125,19 @@ export function InboxFilters({ activeFilter, onFilterChange, counts }: InboxFilt
 export function AgentBadge({ channel, recipientInbox }: { channel: string; recipientInbox?: string | null }) {
   const getAgentInfo = () => {
     if (channel === 'instagram') {
-      return { label: 'IG', color: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' };
+      return { label: 'Casey', color: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' };
     }
     if (channel === 'website') {
-      return { label: 'Luigi', color: 'bg-green-500 text-white' };
+      return { label: 'Jordan', color: 'bg-blue-500 text-white' };
     }
     if (channel === 'email') {
       if (recipientInbox?.includes('design')) {
-        return { label: 'Design', color: 'bg-purple-500 text-white' };
+        return { label: 'Grant', color: 'bg-purple-500 text-white' };
       }
       if (recipientInbox?.includes('jackson')) {
-        return { label: 'Jackson', color: 'bg-orange-500 text-white' };
+        return { label: 'Ops', color: 'bg-red-500 text-white' };
       }
-      return { label: 'Hello', color: 'bg-blue-500 text-white' };
+      return { label: 'Alex', color: 'bg-green-500 text-white' };
     }
     return { label: channel.slice(0, 2).toUpperCase(), color: 'bg-muted text-muted-foreground' };
   };

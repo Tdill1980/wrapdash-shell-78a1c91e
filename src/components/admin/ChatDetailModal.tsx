@@ -64,7 +64,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium opacity-70">
-                          {msg.sender_name || (msg.direction === 'inbound' ? 'Visitor' : 'Luigi')}
+                          {msg.sender_name || (msg.direction === 'inbound' ? 'Visitor' : 'Jordan')}
                         </span>
                         {msg.created_at && (
                           <span className="text-xs opacity-50">
