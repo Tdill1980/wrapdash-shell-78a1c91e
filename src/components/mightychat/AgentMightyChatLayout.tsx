@@ -727,7 +727,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                               {msg.sender_name}
                             </div>
                           )}
-                          <div className="relative inline-block">
+                          <div className="relative inline-block group">
                             <div
                               className={cn(
                                 "p-2 md:p-3 rounded-lg",
