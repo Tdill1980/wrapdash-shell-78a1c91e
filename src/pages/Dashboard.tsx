@@ -42,6 +42,7 @@ import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { QuoteRequestCard } from "@/components/dashboard/QuoteRequestCard";
 import { ContentFactoryCard } from "@/components/dashboard/ContentFactoryCard";
 import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
+import { SalesGoalTracker } from "@/components/dashboard/SalesGoalTracker";
 
 const metrics = [
   {
@@ -316,6 +317,9 @@ export default function Dashboard() {
 
       {/* Onboarding Checklist - Beta */}
       <OnboardingChecklist />
+
+      {/* Sales Goal Tracker */}
+      <SalesGoalTracker />
 
       {/* MightyChat - Prominent Unified Inbox */}
       <MightyChatCard />
