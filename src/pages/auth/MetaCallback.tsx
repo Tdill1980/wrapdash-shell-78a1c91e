@@ -14,10 +14,39 @@ export default function MetaCallback() {
     handleCallback();
   }, []);
 
+  const notifyOpenerAndClose = (success: boolean, message?: string) => {
+    // Notify opener window via postMessage
+    if (window.opener) {
+      window.opener.postMessage(
+        { 
+          type: success ? "META_AUTH_SUCCESS" : "META_AUTH_ERROR",
+          message 
+        },
+        window.location.origin
+      );
+      // Close popup after short delay
+      setTimeout(() => window.close(), 2000);
+    } else {
+      // Not a popup - redirect normally
+      setTimeout(() => navigate("/settings/instagram"), 2000);
+    }
+  };
+
   const handleCallback = async () => {
     const code = searchParams.get("code");
+    const state = searchParams.get("state");
     const error = searchParams.get("error");
     const errorDescription = searchParams.get("error_description");
+
+    // Validate state for CSRF protection
+    const savedState = localStorage.getItem("meta_oauth_state");
+    if (state && savedState && state !== savedState) {
+      setStatus("error");
+      setMessage("Security validation failed - please try again");
+      notifyOpenerAndClose(false, "Security validation failed");
+      return;
+    }
+    localStorage.removeItem("meta_oauth_state");
 
     if (error) {
       setStatus("error");
@@ -25,22 +54,20 @@ export default function MetaCallback() {
       toast.error("Failed to connect Instagram", {
         description: errorDescription || "Please try again"
       });
-      setTimeout(() => navigate("/settings/instagram"), 3000);
+      notifyOpenerAndClose(false, errorDescription);
       return;
     }
 
     if (!code) {
       setStatus("error");
       setMessage("No authorization code received from Facebook");
-      setTimeout(() => navigate("/settings/instagram"), 3000);
+      notifyOpenerAndClose(false, "No authorization code received");
       return;
     }
 
     try {
       setMessage("Exchanging authorization code...");
 
-      // Step 1: Exchange code for short-lived token (must be done server-side)
-      // We'll call an edge function to handle the OAuth token exchange
       const { data, error: fnError } = await supabase.functions.invoke("meta-oauth-exchange", {
         body: { 
           code,
@@ -55,22 +82,24 @@ export default function MetaCallback() {
       }
 
       setStatus("success");
-      setMessage(`Connected to ${data.page_name || "Facebook Page"}${data.instagram_username ? ` (@${data.instagram_username})` : ""}`);
+      const successMsg = `Connected to ${data.page_name || "Facebook Page"}${data.instagram_username ? ` (@${data.instagram_username})` : ""}`;
+      setMessage(successMsg);
       
       toast.success("Instagram connected!", {
         description: "You can now receive and reply to DMs in MightyChat"
       });
 
-      setTimeout(() => navigate("/settings/instagram"), 2000);
+      notifyOpenerAndClose(true);
 
     } catch (err) {
       console.error("Meta callback error:", err);
+      const errorMsg = err instanceof Error ? err.message : "Failed to connect Instagram";
       setStatus("error");
-      setMessage(err instanceof Error ? err.message : "Failed to connect Instagram");
+      setMessage(errorMsg);
       toast.error("Connection failed", {
-        description: err instanceof Error ? err.message : "Please try again"
+        description: errorMsg
       });
-      setTimeout(() => navigate("/settings/instagram"), 3000);
+      notifyOpenerAndClose(false, errorMsg);
     }
   };
 
@@ -95,7 +124,7 @@ export default function MetaCallback() {
             </h1>
             <p className="text-muted-foreground">{message}</p>
             <p className="text-sm text-muted-foreground">
-              Redirecting to settings...
+              {window.opener ? "This window will close automatically..." : "Redirecting to settings..."}
             </p>
           </>
         )}
@@ -108,7 +137,7 @@ export default function MetaCallback() {
             </h1>
             <p className="text-muted-foreground">{message}</p>
             <p className="text-sm text-muted-foreground">
-              Redirecting to settings...
+              {window.opener ? "This window will close automatically..." : "Redirecting to settings..."}
             </p>
           </>
         )}

@@ -30,6 +30,21 @@ export default function InstagramSettings() {
     }
   })();
 
+  // Listen for postMessage from popup callback
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "META_AUTH_SUCCESS") {
+        toast.success("Instagram connected!");
+        loadTokenInfo();
+      } else if (event.data?.type === "META_AUTH_ERROR") {
+        toast.error("Connection failed", { description: event.data?.message });
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   useEffect(() => {
     loadTokenInfo();
   }, []);
@@ -54,8 +69,7 @@ export default function InstagramSettings() {
   };
 
   const handleConnect = () => {
-    // Facebook blocks embedded/iframe auth screens. Lovable preview runs in an iframe,
-    // so we must open the app in a real browser tab first.
+    // Facebook blocks embedded/iframe auth screens
     if (isEmbedded) {
       toast.error("Facebook login can't run inside the preview", {
         description: "Opening this page in a new tab — click Connect again there."
@@ -64,7 +78,11 @@ export default function InstagramSettings() {
       return;
     }
 
-    const appId = "1099408548599498"; // Your Meta App ID
+    // Generate state for CSRF protection
+    const state = crypto.randomUUID();
+    localStorage.setItem("meta_oauth_state", state);
+
+    const appId = "1099408548599498";
     const redirectUri = encodeURIComponent(`${window.location.origin}/auth/meta/callback`);
     const scopes = [
       "pages_show_list",
@@ -75,8 +93,14 @@ export default function InstagramSettings() {
       "instagram_manage_messages"
     ].join(",");
 
-    const oauthUrl = `https://www.facebook.com/v24.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code`;
-    window.location.href = oauthUrl;
+    const oauthUrl = `https://www.facebook.com/v24.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code&state=${state}`;
+
+    // Try popup first, fallback to redirect if blocked
+    const popup = window.open(oauthUrl, "_blank", "width=600,height=700,scrollbars=yes");
+    if (!popup || popup.closed || typeof popup.closed === "undefined") {
+      // Popup blocked - fallback to full redirect
+      window.location.href = oauthUrl;
+    }
   };
 
   const handleRefresh = async () => {
