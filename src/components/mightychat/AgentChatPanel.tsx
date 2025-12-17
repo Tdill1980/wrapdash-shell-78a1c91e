@@ -41,7 +41,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     closeChat,
   } = useAgentChat();
 
-  // Start chat when panel opens with an agent
+  // Start (or resume) chat when panel opens with an agent
   useEffect(() => {
     if (open && agentId && !chatId) {
       startChat(agentId, context);
@@ -55,7 +55,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     }
   }, [messages]);
 
-  const handleClose = () => {
+  const handleEndChat = () => {
     closeChat();
     onOpenChange(false);
   };
@@ -78,7 +78,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     const result = await delegateTask(description);
     if (result.success) {
       setShowDelegateModal(false);
-      handleClose();
+      // Keep panel open so the user can still see the chat history + confirmation.
     }
   };
 
@@ -103,7 +103,9 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
 
   return (
     <>
-      <Sheet open={open} onOpenChange={handleClose}>
+      <Sheet open={open} onOpenChange={(nextOpen) => {
+        if (!nextOpen) onOpenChange(false);
+      }}>
         <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border/50">
             <div className="flex items-center justify-between">
@@ -111,7 +113,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
                 <span>🧠</span>
                 Agent Chat
               </SheetTitle>
-              <Button variant="ghost" size="icon" onClick={handleClose}>
+              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -185,9 +187,9 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={handleClose}
+                onClick={handleEndChat}
               >
-                Cancel
+                End chat
               </Button>
               <Button
                 className="flex-1"

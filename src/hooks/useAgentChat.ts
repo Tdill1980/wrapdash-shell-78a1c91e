@@ -50,7 +50,12 @@ export function useAgentChat(): UseAgentChatReturn {
     try {
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id;
-      
+
+      if (!userId) {
+        toast.error("Please sign in to use Agent Chat");
+        return;
+      }
+
       // Get organization_id
       const { data: orgMember } = await supabase
         .from("organization_members")
