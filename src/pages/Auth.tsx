@@ -90,9 +90,16 @@ export default function Auth() {
         });
       }
     } catch (error: any) {
+      const rawMessage = typeof error?.message === "string" ? error.message : "Something went wrong";
+      const friendlyMessage = rawMessage.includes("Invalid login credentials")
+        ? "That email/password combo doesn’t match an account yet. If this is your first time here, click ‘Sign up’ to create your account." 
+        : rawMessage.includes("User already registered")
+          ? "That email is already registered — switch to ‘Sign in’ instead." 
+          : rawMessage;
+
       toast({
         title: "Error",
-        description: error.message,
+        description: friendlyMessage,
         variant: "destructive",
       });
     } finally {
