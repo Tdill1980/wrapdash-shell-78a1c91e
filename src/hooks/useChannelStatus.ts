@@ -145,8 +145,8 @@ export function useChannelStatus() {
           {
             id: "instagram",
             label: "Instagram DMs",
-            owner: "Casey Ramirez",
-            ownerRole: "Social Agent",
+            owner: "Social Team",
+            ownerRole: "Social Media",
             icon: "📸",
             connected: (instagramStats?.count || 0) > 0,
             lastMessageAt: formatLastMessage(instagramStats?.lastMessage || null),
@@ -157,8 +157,8 @@ export function useChannelStatus() {
           {
             id: "facebook",
             label: "Facebook Messages",
-            owner: "Casey Ramirez",
-            ownerRole: "Social Agent",
+            owner: "Social Team",
+            ownerRole: "Social Media",
             icon: "📘",
             connected: false, // Facebook is explicitly not connected
             lastMessageAt: null,

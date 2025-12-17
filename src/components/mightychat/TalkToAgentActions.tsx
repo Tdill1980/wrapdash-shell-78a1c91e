@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Mail, 
   Palette, 
-  MessageCircle, 
+  Heart, 
   Cog, 
   ArrowRight,
   Sparkles,
@@ -43,8 +43,8 @@ const QUICK_AGENTS = [
     id: "casey_ramirez",
     name: "Casey Ramirez",
     label: "Talk to Casey",
-    description: "Social & DMs",
-    icon: MessageCircle,
+    description: "Affiliate Manager",
+    icon: Heart,
     color: "text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-950/30",
   },
   {

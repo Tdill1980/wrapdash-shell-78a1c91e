@@ -117,7 +117,7 @@ export function getExternalHandler(inbox: AgentInbox): string {
     case 'website':
       return 'Jordan';
     case 'dms':
-      return 'Casey';
+      return 'Casey (Affiliates)';
     default:
       return 'Ops Desk';
   }
