@@ -175,14 +175,23 @@ serve(async (req) => {
 
     // ACTION: start - Create new chat
     if (action === "start") {
+      // Check if user_id is a valid UUID, otherwise store in context
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isValidUuid = user_id && uuidRegex.test(user_id);
+      
+      const chatContext = {
+        ...(context || {}),
+        orchestrator: user_id || "unknown", // Store username in context
+      };
+
       const { data: chat, error } = await supabase
         .from("agent_chats")
         .insert({
           organization_id,
-          user_id,
+          user_id: isValidUuid ? user_id : organization_id, // Use org_id as fallback
           agent_id,
           status: "clarifying",
-          context: context || {},
+          context: chatContext,
         })
         .select()
         .single();
