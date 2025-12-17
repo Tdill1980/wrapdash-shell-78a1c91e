@@ -149,7 +149,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeStream, setActiveStream] = useState<WorkStream>('website');
+  const [activeStream, setActiveStream] = useState<WorkStream>('quotes'); // Default to quotes (hello@ inbox) which typically has most traffic
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
 
@@ -207,11 +207,13 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
     if (conv.channel === 'website') return 'website';
     if (conv.channel === 'instagram') return 'dms';
     if (conv.channel === 'email') {
-      if (conv.recipient_inbox?.includes('design')) return 'design';
-      if (conv.recipient_inbox?.includes('jackson')) return 'ops';
-      return 'quotes'; // hello inbox = quotes waiting
+      const inbox = conv.recipient_inbox?.toLowerCase() || '';
+      if (inbox.includes('design')) return 'design';
+      if (inbox.includes('jackson')) return 'ops';
+      // hello, general, or any other email goes to quotes
+      return 'quotes';
     }
-    return 'website';
+    return 'quotes'; // Default to quotes for any unknown channel
   };
 
   // Filter conversations based on active stream
@@ -222,14 +224,15 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
     });
   }, [conversations, activeStream]);
 
-  // Compute stream counts
-  const streamCounts = useMemo(() => ({
-    website: conversations.filter(c => c.channel === 'website').length,
-    quotes: conversations.filter(c => c.channel === 'email' && (!c.recipient_inbox || c.recipient_inbox?.includes('hello'))).length,
-    design: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('design')).length,
-    dms: conversations.filter(c => c.channel === 'instagram').length,
-    ops: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('jackson')).length
-  }), [conversations]);
+  // Compute stream counts - use same logic as getConversationStream
+  const streamCounts = useMemo(() => {
+    const counts = { website: 0, quotes: 0, design: 0, dms: 0, ops: 0 };
+    conversations.forEach(conv => {
+      const stream = getConversationStream(conv);
+      counts[stream]++;
+    });
+    return counts;
+  }, [conversations]);
 
   // Clear selection if not in current stream
   useEffect(() => {
