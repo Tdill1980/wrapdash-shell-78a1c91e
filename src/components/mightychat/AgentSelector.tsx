@@ -15,13 +15,15 @@ import {
   Heart, 
   Megaphone, 
   Camera,
-  BookOpen
+  BookOpen,
+  Globe
 } from "lucide-react";
 
 export interface AgentOption {
   id: string;
   name: string;
   role: string;
+  inbox: string; // Which inbox/channel this agent handles
   icon: React.ElementType;
   color: string;
 }
@@ -31,13 +33,15 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "jordan_lee",
     name: "Jordan Lee",
     role: "Website & Sales",
-    icon: MessageCircle,
+    inbox: "Website Chat Widget",
+    icon: Globe,
     color: "text-blue-500 bg-blue-500/10 hover:bg-blue-500/20",
   },
   {
     id: "alex_morgan",
     name: "Alex Morgan",
     role: "Quotes & Pricing",
+    inbox: "hello@weprintwraps.com",
     icon: Mail,
     color: "text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20",
   },
@@ -45,6 +49,7 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "grant_miller",
     name: "Grant Miller",
     role: "Design & Files",
+    inbox: "design@weprintwraps.com",
     icon: Palette,
     color: "text-purple-500 bg-purple-500/10 hover:bg-purple-500/20",
   },
@@ -52,6 +57,7 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "casey_ramirez",
     name: "Casey Ramirez",
     role: "Social & DMs",
+    inbox: "Instagram DMs",
     icon: Instagram,
     color: "text-pink-500 bg-pink-500/10 hover:bg-pink-500/20",
   },
@@ -59,6 +65,7 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "taylor_brooks",
     name: "Taylor Brooks",
     role: "Partnerships & Sales",
+    inbox: "Field Ops • Invoked by Ops Desk",
     icon: Users,
     color: "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20",
   },
@@ -66,6 +73,7 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "evan_porter",
     name: "Evan Porter",
     role: "Affiliates",
+    inbox: "Affiliate Portal • Invoked by Ops Desk",
     icon: Heart,
     color: "text-red-500 bg-red-500/10 hover:bg-red-500/20",
   },
@@ -73,6 +81,7 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "emily_carter",
     name: "Emily Carter",
     role: "Marketing Content",
+    inbox: "ContentBox • Email Campaigns",
     icon: Megaphone,
     color: "text-cyan-500 bg-cyan-500/10 hover:bg-cyan-500/20",
   },
@@ -80,6 +89,7 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "noah_bennett",
     name: "Noah Bennett",
     role: "Social Content",
+    inbox: "ContentBox • Reels & Stories",
     icon: Camera,
     color: "text-orange-500 bg-orange-500/10 hover:bg-orange-500/20",
   },
@@ -87,6 +97,7 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     id: "ryan_mitchell",
     name: "Ryan Mitchell",
     role: "Editorial (Ink & Edge)",
+    inbox: "Ink & Edge Magazine",
     icon: BookOpen,
     color: "text-indigo-500 bg-indigo-500/10 hover:bg-indigo-500/20",
   },
@@ -109,7 +120,7 @@ export function AgentSelector({ open, onOpenChange, onSelectAgent }: AgentSelect
           </DialogTitle>
         </DialogHeader>
         
-        <div className="grid gap-2 py-4">
+        <div className="grid gap-2 py-4 max-h-[60vh] overflow-y-auto">
           {AVAILABLE_AGENTS.map((agent) => (
             <Button
               key={agent.id}
@@ -124,9 +135,13 @@ export function AgentSelector({ open, onOpenChange, onSelectAgent }: AgentSelect
               }}
             >
               <agent.icon className="w-5 h-5 mr-3 flex-shrink-0" />
-              <div className="text-left">
+              <div className="text-left flex-1">
                 <div className="font-medium">{agent.name}</div>
                 <div className="text-xs text-muted-foreground">{agent.role}</div>
+                <div className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
+                  <Mail className="w-3 h-3" />
+                  {agent.inbox}
+                </div>
               </div>
             </Button>
           ))}
