@@ -20,6 +20,7 @@ import {
   Image,
   BarChart3,
   Sparkles as SparklesIcon,
+  MessageSquare,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -146,6 +147,19 @@ const navigationItems: NavigationItem[] = [
     )
   },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users, roles: ["beta_shop", "admin"] },
+  { 
+    name: "MightyChat", 
+    path: "/mightychat", 
+    icon: MessageSquare,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Mighty</span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Chat</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
   { 
     name: "MightyTask", 
     path: "/tasks", 
