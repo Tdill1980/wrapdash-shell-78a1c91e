@@ -9,36 +9,104 @@ const VERIFY_TOKEN = Deno.env.get("INSTAGRAM_VERIFY_TOKEN") || "wrapcommand_veri
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// Fetch Instagram user profile (username, name, avatar)
+// Fetch Instagram user profile with dual-endpoint strategy for better username capture
 async function getInstagramUserProfile(igUserId: string): Promise<{
   username: string | null;
   name: string | null;
   profile_picture_url: string | null;
+  api_error: string | null;
 }> {
-  try {
-    const url = `https://graph.facebook.com/v18.0/${igUserId}?fields=username,name,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`;
-    
-    console.log(`Fetching IG profile for user: ${igUserId}`);
-    const res = await fetch(url);
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`IG API error (${res.status}):`, errorText);
-      return { username: null, name: null, profile_picture_url: null };
+  // Instagram-Scoped User IDs (IGSID) require specific API endpoints
+  // Try multiple endpoints to maximize success rate
+  const endpoints = [
+    // Instagram Graph API - preferred for IGSID
+    {
+      name: 'Instagram Graph API',
+      url: `https://graph.instagram.com/${igUserId}?fields=name,username,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`
+    },
+    // Facebook Graph API with user_profile field
+    {
+      name: 'Facebook Graph API v18',
+      url: `https://graph.facebook.com/v18.0/${igUserId}?fields=name,username,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`
+    },
+    // Facebook Graph API with different field set
+    {
+      name: 'Facebook Graph API (alt fields)',
+      url: `https://graph.facebook.com/v18.0/${igUserId}?fields=name,profile_pic&access_token=${INSTAGRAM_ACCESS_TOKEN}`
     }
+  ];
 
-    const data = await res.json();
-    console.log("IG profile data:", JSON.stringify(data));
-    
-    return {
-      username: data.username || null,
-      name: data.name || null,
-      profile_picture_url: data.profile_picture_url || null
-    };
-  } catch (err) {
-    console.error("Error fetching IG profile:", err);
-    return { username: null, name: null, profile_picture_url: null };
+  const errors: string[] = [];
+
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`🔍 Trying ${endpoint.name} for user ${igUserId}...`);
+      
+      const res = await fetch(endpoint.url);
+      const responseText = await res.text();
+      
+      // Log raw response for debugging
+      console.log(`📥 ${endpoint.name} response (${res.status}): ${responseText.substring(0, 500)}`);
+      
+      if (!res.ok) {
+        const errorMsg = `${endpoint.name}: HTTP ${res.status} - ${responseText.substring(0, 200)}`;
+        errors.push(errorMsg);
+        console.error(`❌ ${errorMsg}`);
+        continue;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        errors.push(`${endpoint.name}: Failed to parse JSON`);
+        continue;
+      }
+
+      // Check for API error in response body
+      if (data.error) {
+        const errorMsg = `${endpoint.name}: ${data.error.message || data.error.type || 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error(`❌ API Error: ${JSON.stringify(data.error)}`);
+        continue;
+      }
+
+      // Check if we got useful profile data
+      const username = data.username || null;
+      const name = data.name || null;
+      const profilePic = data.profile_picture_url || data.profile_pic || null;
+
+      if (username || name) {
+        console.log(`✅ SUCCESS via ${endpoint.name}: @${username || 'no-username'} / ${name || 'no-name'}`);
+        return {
+          username,
+          name,
+          profile_picture_url: profilePic,
+          api_error: null
+        };
+      }
+
+      // Got response but no useful data
+      errors.push(`${endpoint.name}: Empty response - no username or name returned`);
+      console.log(`⚠️ ${endpoint.name} returned empty profile data`);
+
+    } catch (err) {
+      const errorMsg = `${endpoint.name}: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      errors.push(errorMsg);
+      console.error(`❌ Exception: ${errorMsg}`);
+    }
   }
+
+  // All endpoints failed - return detailed error for debugging
+  const combinedError = errors.join(' | ');
+  console.error(`🚫 All profile fetch attempts failed for ${igUserId}: ${combinedError}`);
+  
+  return {
+    username: null,
+    name: null,
+    profile_picture_url: null,
+    api_error: combinedError
+  };
 }
 
 serve(async (req) => {
@@ -96,8 +164,12 @@ serve(async (req) => {
       
       const displayName = profile.name || profile.username || `IG User ${senderId.slice(-6)}`;
       const usernameDisplay = profile.username ? `@${profile.username}` : `ig_${senderId.slice(-6)}`;
+      const profileFetchFailed = !profile.username && !profile.name;
 
-      console.log(`User profile: ${displayName} (${usernameDisplay})`);
+      console.log(`👤 User profile: ${displayName} (${usernameDisplay}) ${profileFetchFailed ? '⚠️ PROFILE FETCH FAILED' : '✅'}`);
+      if (profile.api_error) {
+        console.log(`🔴 API Error stored: ${profile.api_error}`);
+      }
 
       // ---------------------------------------------------------------------
       // 4. INSERT INGEST LOG WITH FILE INFO
@@ -122,7 +194,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!contact) {
-        // Create new contact with full profile data
+        // Create new contact with full profile data + error tracking
         const result = await supabase
           .from("contacts")
           .insert({
@@ -132,36 +204,53 @@ serve(async (req) => {
               instagram_sender_id: senderId,
               username: profile.username,
               avatar_url: profile.profile_picture_url,
-              profile_url: profile.username ? `https://instagram.com/${profile.username}` : null
+              profile_url: profile.username ? `https://instagram.com/${profile.username}` : null,
+              profile_fetch_failed: profileFetchFailed,
+              profile_api_error: profile.api_error,
+              last_profile_attempt: new Date().toISOString()
             }
           })
           .select()
           .single();
         contact = result.data;
-        console.log("Created new contact:", contact?.id);
+        console.log(`📝 Created new contact: ${contact?.id} ${profileFetchFailed ? '(profile fetch failed)' : ''}`);
       } else {
-        // Update existing contact with latest profile data if available
-        if (profile.username || profile.name || profile.profile_picture_url) {
-          const updatedMetadata = {
-            ...((contact.metadata as object) || {}),
-            instagram_sender_id: senderId,
-            username: profile.username || (contact.metadata as any)?.username,
-            avatar_url: profile.profile_picture_url || (contact.metadata as any)?.avatar_url,
-            profile_url: profile.username 
-              ? `https://instagram.com/${profile.username}` 
-              : (contact.metadata as any)?.profile_url
-          };
-          
-          await supabase
-            .from("contacts")
-            .update({ 
-              name: displayName,
-              metadata: updatedMetadata 
-            })
-            .eq("id", contact.id);
-          
-          console.log("Updated existing contact:", contact.id);
+        // Check if existing contact has generic name and we should retry profile fetch
+        const existingMeta = (contact.metadata as any) || {};
+        const hasGenericName = contact.name?.startsWith('IG User') || contact.name?.startsWith('ig_');
+        const shouldRetryFetch = hasGenericName && !existingMeta.username;
+        
+        if (shouldRetryFetch) {
+          console.log(`🔄 Existing contact ${contact.id} has generic name - profile was fetched again`);
         }
+        // Update existing contact with latest profile data OR update error tracking
+        const updatedMetadata = {
+          ...existingMeta,
+          instagram_sender_id: senderId,
+          username: profile.username || existingMeta.username,
+          avatar_url: profile.profile_picture_url || existingMeta.avatar_url,
+          profile_url: profile.username 
+            ? `https://instagram.com/${profile.username}` 
+            : existingMeta.profile_url,
+          profile_fetch_failed: profileFetchFailed && !existingMeta.username,
+          profile_api_error: profileFetchFailed ? profile.api_error : null,
+          last_profile_attempt: new Date().toISOString()
+        };
+        
+        // Update name only if we got a real profile OR contact still has generic name
+        const newName = (profile.username || profile.name) 
+          ? displayName 
+          : (hasGenericName ? contact.name : displayName);
+        
+        await supabase
+          .from("contacts")
+          .update({ 
+            name: newName,
+            metadata: updatedMetadata 
+          })
+          .eq("id", contact.id);
+        
+        console.log(`📝 Updated contact ${contact.id}: ${newName} ${profile.username ? '✅ Got username!' : (profileFetchFailed ? '⚠️ Profile still unavailable' : '')}`);
       }
 
       // ---------------------------------------------------------------------
