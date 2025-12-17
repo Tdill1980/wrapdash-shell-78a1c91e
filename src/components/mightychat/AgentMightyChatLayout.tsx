@@ -331,10 +331,33 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "just now";
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return "yesterday";
+    return `${days}d ago`;
+  };
+
+  const isVeryRecent = (dateStr: string | null) => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    return diff < 60 * 60 * 1000; // less than 1 hour
+  };
+
+  const formatAbsoluteTime = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
   const getMessageAvatar = (msg: Message) => {
@@ -602,7 +625,16 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                         </div>
 
                         <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[11px] text-muted-foreground">
+                          <span 
+                            className={cn(
+                              "text-[11px]",
+                              isVeryRecent(conv.last_message_at) 
+                                ? "text-emerald-600 dark:text-emerald-400 font-medium" 
+                                : "text-muted-foreground"
+                            )}
+                            title={formatAbsoluteTime(conv.last_message_at)}
+                          >
+                            {isVeryRecent(conv.last_message_at) && "🟢 "}
                             {formatTime(conv.last_message_at)}
                           </span>
                           {isUrgent && (
