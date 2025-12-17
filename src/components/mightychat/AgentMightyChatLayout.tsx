@@ -627,14 +627,16 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                         <div className="flex items-center gap-2 mt-1.5">
                           <span 
                             className={cn(
-                              "text-[11px]",
+                              "text-[11px] flex items-center gap-1",
                               isVeryRecent(conv.last_message_at) 
                                 ? "text-emerald-600 dark:text-emerald-400 font-medium" 
                                 : "text-muted-foreground"
                             )}
                             title={formatAbsoluteTime(conv.last_message_at)}
                           >
-                            {isVeryRecent(conv.last_message_at) && "🟢 "}
+                            {isVeryRecent(conv.last_message_at) && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            )}
                             {formatTime(conv.last_message_at)}
                           </span>
                           {isUrgent && (
