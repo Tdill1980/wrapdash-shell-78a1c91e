@@ -5,7 +5,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { checkCorrections, loadKnowledgeContext } from "../_shared/knowledge-loader.ts";
+import { loadKnowledgeContext, isTopicCovered, getKBSilentResponse } from "../_shared/kb-loader.ts";
 import { WPW_TEAM, SILENT_CC, detectEscalation, getEscalationResponse } from "../_shared/wpw-team-config.ts";
 import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
 import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
@@ -96,11 +96,8 @@ serve(async (req) => {
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check for corrections FIRST (prevents hallucinations)
-    const correctionOverride = await checkCorrections(supabase, message_text);
-    
-    // Load knowledge context for grounding
-    const knowledgeContext = await loadKnowledgeContext(supabase, message_text);
+    // Load knowledge context for grounding (Jordan Lee agent)
+    const knowledgeContext = await loadKnowledgeContext(supabase, "jordan_lee", message_text);
 
     // Extract info from message
     const lowerMessage = message_text.toLowerCase();
@@ -324,26 +321,6 @@ serve(async (req) => {
       }
     }
 
-    // If correction override exists, use it directly
-    if (correctionOverride) {
-      await supabase.from('messages').insert({
-        conversation_id: conversationId,
-        channel: 'website',
-        direction: 'outbound',
-        content: correctionOverride,
-        sender_name: 'Jordan Lee',
-        metadata: { ai_generated: true, agent: 'jordan_lee', from_correction: true }
-      });
-
-      return new Response(JSON.stringify({ 
-        reply: correctionOverride,
-        conversation_id: conversationId,
-        agent: 'jordan_lee',
-        escalation: escalationType
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
 
     // ============================================
     // AI RESPONSE GENERATION
