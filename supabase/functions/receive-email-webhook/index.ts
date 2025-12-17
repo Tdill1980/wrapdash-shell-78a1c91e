@@ -57,11 +57,15 @@ serve(async (req) => {
 
     // Determine recipient inbox based on to_email
     let recipientInbox = 'general';
-    if (toEmail.toLowerCase().includes('design@')) {
+    const toEmailLower = String(toEmail || '').toLowerCase();
+
+    if (toEmailLower.includes('design@')) {
       recipientInbox = 'design';
-    } else if (toEmail.toLowerCase().includes('hello@')) {
+    } else if (toEmailLower.includes('hello@')) {
       recipientInbox = 'hello';
-    } else if (toEmail.toLowerCase().includes('support@')) {
+    } else if (toEmailLower.includes('jackson@')) {
+      recipientInbox = 'jackson';
+    } else if (toEmailLower.includes('support@')) {
       recipientInbox = 'support';
     }
 
