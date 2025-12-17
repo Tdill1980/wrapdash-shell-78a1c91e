@@ -33,6 +33,10 @@ interface Conversation {
   recipient_inbox?: string | null;
   review_status?: string | null;
   metadata?: Record<string, unknown> | null;
+  // Joined data
+  contact_name?: string | null;
+  contact_email?: string | null;
+  last_message_content?: string | null;
 }
 
 interface Message {
@@ -189,17 +193,52 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
 
     const sinceIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
-    // Show threads active in the last 48h.
-    // Some older threads have recent replies (last_message_at) but an old created_at.
+    // Show threads active in the last 48h with contact info
     const { data, error } = await supabase
       .from("conversations")
-      .select("*")
+      .select(`
+        *,
+        contacts:contact_id (name, email)
+      `)
       .or(`last_message_at.gte.${sinceIso},and(last_message_at.is.null,created_at.gte.${sinceIso})`)
       .order("last_message_at", { ascending: false })
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      setConversations(data as unknown as Conversation[]);
+      // Map the joined data to flat structure
+      const enrichedConversations = data.map((conv: any) => ({
+        ...conv,
+        contact_name: conv.contacts?.name || null,
+        contact_email: conv.contacts?.email || null,
+        contacts: undefined // Remove nested object
+      }));
+      
+      // Fetch last message for each conversation (batch query)
+      const convIds = enrichedConversations.map((c: any) => c.id);
+      if (convIds.length > 0) {
+        // Get latest message per conversation using a simple approach
+        const { data: lastMessages } = await supabase
+          .from("messages")
+          .select("conversation_id, content, created_at")
+          .in("conversation_id", convIds)
+          .order("created_at", { ascending: false });
+        
+        if (lastMessages) {
+          // Group by conversation_id and take first (most recent)
+          const lastMsgMap = new Map<string, string>();
+          lastMessages.forEach((msg: any) => {
+            if (!lastMsgMap.has(msg.conversation_id)) {
+              lastMsgMap.set(msg.conversation_id, msg.content);
+            }
+          });
+          
+          enrichedConversations.forEach((conv: any) => {
+            conv.last_message_content = lastMsgMap.get(conv.id) || null;
+          });
+        }
+      }
+      
+      setConversations(enrichedConversations as Conversation[]);
     }
     setLoading(false);
   };
@@ -513,13 +552,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                           loadConversation(conv.id);
                         }}
                       >
+                        {/* Customer Name / Subject */}
                         <div className="flex items-center gap-2">
                           <AgentBadge channel={conv.channel} recipientInbox={conv.recipient_inbox} />
                           <span className={cn(
                             "font-medium flex-1 truncate text-sm",
                             hasUnread && "font-semibold"
                           )}>
-                            {conv.subject || `${conv.channel} conversation`}
+                            {conv.contact_name || conv.contact_email?.split('@')[0] || conv.subject || `${conv.channel} conversation`}
                           </span>
                           {hasUnread && (
                             <Badge 
@@ -530,6 +570,20 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                             </Badge>
                           )}
                         </div>
+
+                        {/* Subject line for emails */}
+                        {conv.subject && conv.contact_name && (
+                          <div className="mt-0.5 pl-0.5 text-xs text-foreground/80 truncate">
+                            {conv.subject}
+                          </div>
+                        )}
+
+                        {/* Message Preview */}
+                        {conv.last_message_content && (
+                          <div className="mt-1 pl-0.5 text-[11px] text-muted-foreground truncate max-w-full">
+                            {conv.last_message_content.slice(0, 80)}{conv.last_message_content.length > 80 ? '...' : ''}
+                          </div>
+                        )}
 
                         {/* Ownership / Inbox */}
                         <div className="mt-1 pl-0.5 text-[10px] text-muted-foreground flex items-center gap-1">
