@@ -11,7 +11,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, ArrowLeft, RefreshCw } from "lucide-react";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
 import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
-import { InboxFilters, AgentBadge, QuoteStatusBadge, type InboxFilter } from "@/components/mightychat/InboxFilters";
+import { AgentInboxTabs, type AgentInbox } from "@/components/mightychat/AgentInboxTabs";
+import { ConversationContextHeader } from "@/components/mightychat/ConversationContextHeader";
+import { ThreadScopeBanner, DisabledReplyBox } from "@/components/mightychat/ThreadScopeLabel";
+import { OpsDeskPanel } from "@/components/mightychat/OpsDeskPanel";
+import { ConversationActionsBar } from "@/components/mightychat/ConversationActionsBar";
+import { AgentBadge, QuoteStatusBadge } from "@/components/mightychat/InboxFilters";
+import { useMightyPermissions, isExternalConversation, getExternalHandler } from "@/hooks/useMightyPermissions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -51,7 +57,11 @@ export default function MightyChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<InboxFilter>('all');
+  const [activeInbox, setActiveInbox] = useState<AgentInbox>('website');
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+
+  const permissions = useMightyPermissions();
 
   useEffect(() => {
     loadConversations();
@@ -70,7 +80,6 @@ export default function MightyChat() {
       .order("last_message_at", { ascending: false });
     
     if (!error && data) {
-      // Cast metadata to proper type
       setConversations(data as unknown as Conversation[]);
     }
     setLoading(false);
@@ -91,13 +100,53 @@ export default function MightyChat() {
         setMessages(msgs as Message[]);
       }
 
-      // Mark as read
       await supabase
         .from("conversations")
         .update({ unread_count: 0 })
         .eq("id", id);
     }
   };
+
+  // Map conversation to inbox
+  const getConversationInbox = (conv: Conversation): AgentInbox => {
+    if (conv.channel === 'website') return 'website';
+    if (conv.channel === 'instagram') return 'dms';
+    if (conv.channel === 'email') {
+      if (conv.recipient_inbox?.includes('design')) return 'design';
+      if (conv.recipient_inbox?.includes('jackson')) return 'ops_desk';
+      return 'hello';
+    }
+    return 'website';
+  };
+
+  // Filter conversations based on active inbox
+  const filteredConversations = useMemo(() => {
+    return conversations.filter(conv => {
+      const inbox = getConversationInbox(conv);
+      return inbox === activeInbox;
+    });
+  }, [conversations, activeInbox]);
+
+  // Compute inbox counts
+  const inboxCounts = useMemo(() => ({
+    website: conversations.filter(c => c.channel === 'website').length,
+    hello: conversations.filter(c => c.channel === 'email' && (!c.recipient_inbox || c.recipient_inbox?.includes('hello'))).length,
+    design: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('design')).length,
+    dms: conversations.filter(c => c.channel === 'instagram').length,
+    ops_desk: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('jackson')).length
+  }), [conversations]);
+
+  // Clear selection if not in current inbox
+  useEffect(() => {
+    if (selectedConversation && !filteredConversations.some(c => c.id === selectedConversation.id)) {
+      setSelectedConversation(null);
+      setMessages([]);
+    }
+  }, [activeInbox, filteredConversations, selectedConversation]);
+
+  // Determine if current conversation is external and if user can reply
+  const isExternal = selectedConversation ? isExternalConversation(selectedConversation.channel) : false;
+  const canReply = permissions.canReplyExternal(activeInbox) || !isExternal;
 
   const getPriorityColor = (priority: string | null) => {
     switch (priority) {
@@ -132,16 +181,11 @@ export default function MightyChat() {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const [backfillLoading, setBackfillLoading] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-
   const handleBackfillProfiles = async () => {
     setBackfillLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("backfill-instagram-profiles");
-      
       if (error) throw error;
-      
       toast.success(`Updated ${data.updated} of ${data.total} Instagram contacts`);
       loadConversations();
     } catch (err) {
@@ -153,14 +197,13 @@ export default function MightyChat() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation || !canReply) return;
 
     setSendingMessage(true);
     const messageText = newMessage.trim();
     setNewMessage("");
 
     try {
-      // Get the contact to find Instagram sender ID
       const { data: contact } = await supabase
         .from("contacts")
         .select("metadata")
@@ -170,18 +213,12 @@ export default function MightyChat() {
       const instagramSenderId = (contact?.metadata as any)?.instagram_sender_id;
 
       if (selectedConversation.channel === "instagram" && instagramSenderId) {
-        // Send via Instagram DM
         const { error } = await supabase.functions.invoke("send-instagram-reply", {
-          body: {
-            recipient: instagramSenderId,
-            message: messageText
-          }
+          body: { recipient: instagramSenderId, message: messageText }
         });
-
         if (error) throw error;
       }
 
-      // Save message to database
       const { data: savedMsg, error: dbError } = await supabase
         .from("messages")
         .insert({
@@ -197,13 +234,11 @@ export default function MightyChat() {
 
       if (dbError) throw dbError;
 
-      // Update conversation
       await supabase
         .from("conversations")
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", selectedConversation.id);
 
-      // Add to local messages
       if (savedMsg) {
         setMessages(prev => [...prev, savedMsg as Message]);
       }
@@ -214,65 +249,25 @@ export default function MightyChat() {
     } catch (err) {
       console.error("Send message error:", err);
       toast.error("Failed to send message");
-      setNewMessage(messageText); // Restore message on error
+      setNewMessage(messageText);
     } finally {
       setSendingMessage(false);
     }
   };
 
-  // Filter conversations based on active filter
-  const filteredConversations = useMemo(() => {
-    if (activeFilter === 'all') return conversations;
-    
-    return conversations.filter(conv => {
-      switch (activeFilter) {
-        case 'instagram':
-          return conv.channel === 'instagram';
-        case 'website':
-          return conv.channel === 'website';
-        case 'hello':
-          return conv.channel === 'email' && (!conv.recipient_inbox || conv.recipient_inbox?.includes('hello'));
-        case 'design':
-          return conv.channel === 'email' && conv.recipient_inbox?.includes('design');
-        case 'jackson':
-          return conv.channel === 'email' && conv.recipient_inbox?.includes('jackson');
-        case 'quotes':
-          return conv.review_status === 'pending_review' || (conv.metadata as any)?.has_quote_request;
-        default:
-          return true;
-      }
-    });
-  }, [conversations, activeFilter]);
-
-  // Compute filter counts
-  const filterCounts = useMemo(() => ({
-    all: conversations.length,
-    hello: conversations.filter(c => c.channel === 'email' && (!c.recipient_inbox || c.recipient_inbox?.includes('hello'))).length,
-    design: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('design')).length,
-    jackson: conversations.filter(c => c.channel === 'email' && c.recipient_inbox?.includes('jackson')).length,
-    instagram: conversations.filter(c => c.channel === 'instagram').length,
-    website: conversations.filter(c => c.channel === 'website').length,
-    pendingQuotes: conversations.filter(c => c.review_status === 'pending_review' || (c.metadata as any)?.has_quote_request).length
-  }), [conversations]);
-
-
-  // If the selected conversation isn't in the current filter, clear it (prevents showing IG while in Jackson inbox)
-  useEffect(() => {
-    if (selectedConversation && !filteredConversations.some(c => c.id === selectedConversation.id)) {
-      setSelectedConversation(null);
-      setMessages([]);
-    }
-  }, [activeFilter, filteredConversations, selectedConversation]);
+  // Show Ops Desk panel when that inbox is selected
+  const showOpsDesk = activeInbox === 'ops_desk';
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-4">
+        {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">
               Mighty<span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>™
             </h1>
-            <p className="text-muted-foreground">Unified Inbox: DM, Email, SMS</p>
+            <p className="text-muted-foreground text-sm">Unified Inbox: DM, Email, SMS</p>
           </div>
           <Button 
             variant="outline" 
@@ -285,16 +280,15 @@ export default function MightyChat() {
           </Button>
         </div>
 
-        {/* Inbox Filters */}
-        <div className="mb-4">
-          <InboxFilters 
-            activeFilter={activeFilter} 
-            onFilterChange={setActiveFilter}
-            counts={filterCounts}
-          />
-        </div>
+        {/* Agent Inbox Tabs - HARD TABS, NO "ALL" */}
+        <AgentInboxTabs
+          activeInbox={activeInbox}
+          onInboxChange={setActiveInbox}
+          counts={inboxCounts}
+          allowedInboxes={permissions.allowedInboxes}
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-260px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-260px)] mt-4">
           {/* Conversation List - 3 cols */}
           <Card className="lg:col-span-3">
             <CardHeader className="pb-2">
@@ -310,8 +304,8 @@ export default function MightyChat() {
                 {loading ? (
                   <div className="p-4 text-muted-foreground">Loading...</div>
                 ) : filteredConversations.length === 0 ? (
-                  <div className="p-4 text-muted-foreground">
-                    {activeFilter === 'all' ? 'No conversations yet' : `No ${activeFilter} conversations`}
+                  <div className="p-4 text-muted-foreground text-center">
+                    No conversations in this inbox
                   </div>
                 ) : (
                   filteredConversations.map((conv) => {
@@ -358,106 +352,145 @@ export default function MightyChat() {
             </CardContent>
           </Card>
 
-          {/* Message Thread - 6 cols */}
-          <Card className="lg:col-span-6">
-            {selectedConversation ? (
-              <>
-                <CardHeader className="border-b pb-3">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="lg:hidden"
-                      onClick={() => setSelectedConversation(null)}
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                    </Button>
-                    <ChannelIcon channel={selectedConversation.channel} className="w-5 h-5" />
-                    <CardTitle className="text-lg flex-1">
-                      {selectedConversation.subject || `${selectedConversation.channel} conversation`}
-                    </CardTitle>
-                    <ChannelBadge channel={selectedConversation.channel} size="md" />
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0 flex flex-col h-[calc(100vh-350px)]">
-                  <ScrollArea className="flex-1 p-4">
-                    {messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`mb-4 flex ${
-                          msg.direction === "outbound" ? "justify-end" : "justify-start"
-                        }`}
+          {/* Message Thread OR Ops Desk Panel - 6 cols */}
+          {showOpsDesk ? (
+            <div className="lg:col-span-6">
+              <OpsDeskPanel />
+            </div>
+          ) : (
+            <Card className="lg:col-span-6 flex flex-col">
+              {selectedConversation ? (
+                <>
+                  {/* Conversation Context Header */}
+                  <ConversationContextHeader
+                    agentId={activeInbox}
+                    agentName={activeInbox}
+                    channel={selectedConversation.channel}
+                    recipientInbox={selectedConversation.recipient_inbox}
+                    isExternal={isExternal}
+                  />
+
+                  {/* External Warning Banner */}
+                  <ThreadScopeBanner isExternal={isExternal} />
+
+                  <CardHeader className="border-b pb-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="lg:hidden"
+                        onClick={() => setSelectedConversation(null)}
                       >
-                        {msg.direction === "inbound" && (
-                          <Avatar className="w-8 h-8 mr-2 flex-shrink-0">
-                            <AvatarImage src={getMessageAvatar(msg) || undefined} />
-                            <AvatarFallback className="text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
-                              {getMessageInitials(msg)}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className={`max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
-                          {msg.sender_name && msg.direction === "inbound" && (
-                            <div className="text-xs text-muted-foreground mb-1">
-                              {msg.sender_name}
-                            </div>
+                        <ArrowLeft className="w-4 h-4" />
+                      </Button>
+                      <ChannelIcon channel={selectedConversation.channel} className="w-5 h-5" />
+                      <CardTitle className="text-lg flex-1">
+                        {selectedConversation.subject || `${selectedConversation.channel} conversation`}
+                      </CardTitle>
+                      <ChannelBadge channel={selectedConversation.channel} size="md" />
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="p-0 flex flex-col flex-1">
+                    <ScrollArea className="flex-1 p-4 h-[calc(100vh-520px)]">
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`mb-4 flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                        >
+                          {msg.direction === "inbound" && (
+                            <Avatar className="w-8 h-8 mr-2 flex-shrink-0">
+                              <AvatarImage src={getMessageAvatar(msg) || undefined} />
+                              <AvatarFallback className="text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
+                                {getMessageInitials(msg)}
+                              </AvatarFallback>
+                            </Avatar>
                           )}
-                          <div
-                            className={`inline-block p-3 rounded-lg ${
-                              msg.direction === "outbound"
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted"
-                            }`}
-                          >
-                            <p className="text-sm">{msg.content}</p>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {formatTime(msg.created_at)}
+                          <div className={`max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
+                            {msg.sender_name && msg.direction === "inbound" && (
+                              <div className="text-xs text-muted-foreground mb-1">
+                                {msg.sender_name}
+                              </div>
+                            )}
+                            <div
+                              className={`inline-block p-3 rounded-lg ${
+                                msg.direction === "outbound"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted"
+                              }`}
+                            >
+                              <p className="text-sm">{msg.content}</p>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {formatTime(msg.created_at)}
+                            </div>
                           </div>
                         </div>
+                      ))}
+                    </ScrollArea>
+                    
+                    {/* Quick Actions Bar */}
+                    <ConversationActionsBar
+                      conversationId={selectedConversation.id}
+                      contactId={selectedConversation.contact_id}
+                      channel={selectedConversation.channel}
+                      customerName={selectedConversation.subject || undefined}
+                    />
+
+                    {/* Reply Input OR Disabled Box */}
+                    {canReply ? (
+                      <div className="p-4 border-t">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Type a message..."
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            disabled={sendingMessage}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
+                                handleSendMessage();
+                              }
+                            }}
+                          />
+                          <Button 
+                            size="icon" 
+                            onClick={handleSendMessage}
+                            disabled={sendingMessage || !newMessage.trim()}
+                          >
+                            <Send className={`w-4 h-4 ${sendingMessage ? "animate-pulse" : ""}`} />
+                          </Button>
+                        </div>
                       </div>
-                    ))}
-                  </ScrollArea>
-                  
-                  {/* Reply Input */}
-                  <div className="p-4 border-t">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        disabled={sendingMessage}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
-                            handleSendMessage();
-                          }
-                        }}
+                    ) : (
+                      <DisabledReplyBox
+                        reason="You cannot reply to external threads in this inbox."
+                        handler={getExternalHandler(activeInbox)}
                       />
-                      <Button 
-                        size="icon" 
-                        onClick={handleSendMessage}
-                        disabled={sendingMessage || !newMessage.trim()}
-                      >
-                        <Send className={`w-4 h-4 ${sendingMessage ? "animate-pulse" : ""}`} />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                Select a conversation to view messages
-              </div>
-            )}
-          </Card>
+                    )}
+                  </CardContent>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  Select a conversation to view messages
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Contact Sidebar - 3 cols */}
           <div className="lg:col-span-3 hidden lg:block">
-            <ContactSidebar 
+            <ContactSidebar
               contactId={selectedConversation?.contact_id || null}
-              channel={selectedConversation?.channel || ""}
+              channel={selectedConversation?.channel}
             />
           </div>
+        </div>
+
+        {/* Footer Rule */}
+        <div className="mt-4 text-center">
+          <p className="text-xs text-muted-foreground italic">
+            Talk in chat. Execute in Ops Desk. Design in ApproveFlow.
+          </p>
         </div>
       </div>
     </MainLayout>
