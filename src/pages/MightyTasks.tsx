@@ -183,13 +183,13 @@ export default function MightyTasks() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight font-poppins">
+            <h1 className="text-3xl font-bold tracking-tight font-['Poppins',sans-serif]">
               <span className="text-foreground">Mighty</span>
-              <span className="text-gradient">Tasks</span>
-              <span className="text-muted-foreground text-sm align-super">™</span>
+              <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Task</span>
+              <span className="text-muted-foreground text-lg align-super">™</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Track job progress with auto-generated checklists
+              Your orchestrator task list — track job progress with auto-generated checklists
             </p>
           </div>
         </div>
