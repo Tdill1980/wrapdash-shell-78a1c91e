@@ -138,14 +138,15 @@ export function useAgentChat(): UseAgentChatReturn {
 
     try {
       const { data: session } = await supabase.auth.getSession();
-      const userName = session?.session?.user?.email?.split("@")[0] || "Unknown";
+      const userId = session?.session?.user?.id || null;
 
       const { data, error } = await supabase.functions.invoke("agent-chat", {
         body: {
           action: "delegate",
           chat_id: chatId,
           description,
-          assigned_to: userName,
+          // IMPORTANT: `tasks.assigned_to` is a UUID in the database
+          assigned_to: userId,
         },
       });
 
