@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,27 @@ interface GlobalHeaderProps {
 export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMenuOpen }: GlobalHeaderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(!!session);
+      setEmail(session?.user?.email ?? null);
+    });
+
+    supabase.auth.getSession().then(({ data }) => {
+      setIsSignedIn(!!data.session);
+      setEmail(data.session?.user?.email ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const displayName = useMemo(() => {
+    if (email) return email.split("@")[0];
+    return userName;
+  }, [email, userName]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -66,40 +87,44 @@ export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMe
 
         {/* Right-side controls */}
         <div className="flex items-center gap-2 sm:gap-4">
-          {/* Organization Switcher */}
-          <OrganizationSwitcher />
-          
-          {/* Offline Indicator */}
-          <OfflineIndicator />
+          {isSignedIn ? (
+            <>
+              <OrganizationSwitcher />
+              <OfflineIndicator />
 
-          {/* User profile dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-3 text-white/80 hover:text-white transition-colors cursor-pointer focus:outline-none">
-              <span className="hidden sm:inline">Hi, {userName}</span>
-              <div className="h-8 w-8 rounded-full border border-white/20 bg-gradient-to-br from-[#2F81F7] to-[#15D1FF] flex items-center justify-center text-white font-semibold text-sm hover:border-white/40 transition-all">
-                {userName.charAt(0).toUpperCase()}
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-[#1A1D24] border-white/10 z-[100]">
-              <DropdownMenuLabel className="text-white/90">My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem 
-                onClick={() => navigate("/settings")}
-                className="text-white/70 hover:text-white hover:bg-white/5 cursor-pointer"
-              >
-                <User className="mr-2 h-4 w-4" />
-                <span>Account Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem 
-                onClick={handleLogout}
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-3 text-white/80 hover:text-white transition-colors cursor-pointer focus:outline-none">
+                  <span className="hidden sm:inline">Hi, {displayName}</span>
+                  <div className="h-8 w-8 rounded-full border border-white/20 bg-gradient-to-br from-[#2F81F7] to-[#15D1FF] flex items-center justify-center text-white font-semibold text-sm hover:border-white/40 transition-all">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-[#1A1D24] border-white/10 z-[100]">
+                  <DropdownMenuLabel className="text-white/90">My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuItem
+                    onClick={() => navigate("/settings")}
+                    className="text-white/70 hover:text-white hover:bg-white/5 cursor-pointer"
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Account Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button variant="outline" onClick={() => navigate("/auth")}>
+              Sign in
+            </Button>
+          )}
         </div>
       </header>
 
