@@ -22,6 +22,36 @@ import { cn } from "@/lib/utils";
 import { formatTimeAZ } from "@/lib/timezone";
 import type { AgentInbox } from "@/components/mightychat/AgentInboxTabs";
 
+// Helper to strip HTML tags and extract readable text from email content
+const stripHtmlTags = (html: string): string => {
+  if (!html) return "";
+  
+  // Check if content looks like HTML
+  if (!html.includes("<") || !html.includes(">")) {
+    return html;
+  }
+  
+  // Create a temporary element to parse HTML
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  
+  // Remove script and style elements
+  const scripts = doc.querySelectorAll("script, style");
+  scripts.forEach(el => el.remove());
+  
+  // Get text content
+  let text = doc.body?.textContent || doc.documentElement?.textContent || html;
+  
+  // Clean up whitespace
+  text = text.replace(/\s+/g, " ").trim();
+  
+  // If we ended up with empty content, return a placeholder
+  if (!text || text.length < 3) {
+    return "[Email content - view original]";
+  }
+  
+  return text;
+};
+
 interface Conversation {
   id: string;
   channel: string;
@@ -618,7 +648,10 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                         {/* Message Preview */}
                         {conv.last_message_content && (
                           <div className="mt-1 pl-0.5 text-[11px] text-muted-foreground truncate max-w-full">
-                            {conv.last_message_content.slice(0, 80)}{conv.last_message_content.length > 80 ? '...' : ''}
+                            {(() => {
+                              const cleanContent = conv.channel === "email" ? stripHtmlTags(conv.last_message_content) : conv.last_message_content;
+                              return cleanContent.slice(0, 80) + (cleanContent.length > 80 ? '...' : '');
+                            })()}
                           </div>
                         )}
 
@@ -736,7 +769,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                                   : "bg-muted"
                               )}
                             >
-                              <p className="text-xs md:text-sm">{msg.content}</p>
+                              <p className="text-xs md:text-sm whitespace-pre-wrap">{msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content}</p>
                             </div>
                             <button
                               onClick={() => handleDeleteMessage(msg.id)}
