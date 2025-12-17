@@ -60,7 +60,8 @@ export default function InstagramSettings() {
 
     const oauthUrl = `https://www.facebook.com/v24.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code`;
     
-    window.location.href = oauthUrl;
+    // Open in new window to avoid iframe restrictions (Facebook blocks X-Frame-Options)
+    window.open(oauthUrl, "_blank", "width=600,height=700,scrollbars=yes");
   };
 
   const handleRefresh = async () => {
