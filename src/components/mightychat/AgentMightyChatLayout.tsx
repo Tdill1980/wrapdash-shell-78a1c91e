@@ -260,46 +260,85 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
     }
   };
 
+  // Mobile: show list when no conversation selected, show thread when selected
+  const showMobileList = !selectedConversation;
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
+      <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-3xl font-bold truncate">
             Mighty<span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>™
           </h1>
-          <p className="text-muted-foreground text-sm">Work Streams • Focus Mode</p>
+          <p className="text-muted-foreground text-xs md:text-sm hidden sm:block">Work Streams • Focus Mode</p>
         </div>
         <Button 
           variant="outline" 
           size="sm"
           onClick={handleBackfillProfiles}
           disabled={backfillLoading}
+          className="hidden md:flex"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${backfillLoading ? "animate-spin" : ""}`} />
           {backfillLoading ? "Updating..." : "Refresh IG Profiles"}
         </Button>
       </div>
 
-      {/* Main 3-column layout with sidebar */}
-      <div className="flex flex-1 gap-4 min-h-0">
-        {/* LEFT: Work Streams Sidebar */}
-        <WorkStreamsSidebar
-          activeStream={activeStream}
-          onStreamChange={setActiveStream}
-          onOpenOpsDesk={onOpenOpsDesk}
-          counts={streamCounts}
-          signals={streamSignals}
-        />
+      {/* Mobile Stream Tabs */}
+      <div className="flex lg:hidden gap-1 mb-2 overflow-x-auto pb-1 -mx-1 px-1">
+        {(['website', 'quotes', 'design', 'dms'] as const).map((stream) => (
+          <Button
+            key={stream}
+            variant={activeStream === stream ? "default" : "outline"}
+            size="sm"
+            className="text-xs whitespace-nowrap flex-shrink-0"
+            onClick={() => setActiveStream(stream)}
+          >
+            {stream === 'website' && '🌐'}
+            {stream === 'quotes' && '📧'}
+            {stream === 'design' && '🎨'}
+            {stream === 'dms' && '💬'}
+            <span className="ml-1">{streamCounts[stream] || 0}</span>
+          </Button>
+        ))}
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs whitespace-nowrap flex-shrink-0"
+          onClick={onOpenOpsDesk}
+        >
+          ⚙️ Ops
+        </Button>
+      </div>
+
+      {/* Main layout - responsive */}
+      <div className="flex flex-1 gap-2 md:gap-4 min-h-0">
+        {/* LEFT: Work Streams Sidebar - hidden on mobile */}
+        <div className="hidden lg:block">
+          <WorkStreamsSidebar
+            activeStream={activeStream}
+            onStreamChange={setActiveStream}
+            onOpenOpsDesk={onOpenOpsDesk}
+            counts={streamCounts}
+            signals={streamSignals}
+          />
+        </div>
 
         {/* CENTER: Conversation List + Thread */}
-        <div className="flex-1 flex gap-4 min-h-0">
-          {/* Conversation List */}
-          <Card className="w-[280px] flex-shrink-0 flex flex-col">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center justify-between">
+        <div className="flex-1 flex gap-2 md:gap-4 min-h-0">
+          {/* Conversation List - full width on mobile when no selection */}
+          <Card className={cn(
+            "flex flex-col transition-all",
+            // Desktop: fixed width
+            "lg:w-[280px] lg:flex-shrink-0",
+            // Mobile: full width or hidden based on selection
+            selectedConversation ? "hidden md:flex md:w-[240px]" : "flex-1 md:flex-1 lg:flex-none"
+          )}>
+            <CardHeader className="pb-2 px-3 md:px-6">
+              <CardTitle className="text-base md:text-lg flex items-center justify-between">
                 <span>Conversations</span>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-[10px] md:text-xs">
                   {filteredConversations.length}
                 </Badge>
               </CardTitle>
@@ -380,8 +419,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
             </CardContent>
           </Card>
 
-          {/* Message Thread */}
-          <Card className="flex-1 flex flex-col min-h-0">
+          {/* Message Thread - full width on mobile when selected */}
+          <Card className={cn(
+            "flex flex-col min-h-0",
+            // Desktop: always show, flexible width
+            "lg:flex lg:flex-1",
+            // Mobile: full width when selected, hidden when not
+            selectedConversation ? "flex flex-1" : "hidden md:flex md:flex-1"
+          )}>
             {selectedConversation ? (
               <>
                 <ConversationContextHeader
@@ -394,18 +439,18 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
 
                 <ThreadScopeBanner isExternal={isExternal} />
 
-                <CardHeader className="border-b pb-3">
+                <CardHeader className="border-b pb-2 md:pb-3 px-3 md:px-6">
                   <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="lg:hidden"
+                      className="md:hidden -ml-2"
                       onClick={() => setSelectedConversation(null)}
                     >
                       <ArrowLeft className="w-4 h-4" />
                     </Button>
-                    <ChannelIcon channel={selectedConversation.channel} className="w-5 h-5" />
-                    <CardTitle className="text-lg flex-1">
+                    <ChannelIcon channel={selectedConversation.channel} className="w-4 h-4 md:w-5 md:h-5" />
+                    <CardTitle className="text-sm md:text-lg flex-1 truncate">
                       {selectedConversation.subject || `${selectedConversation.channel} conversation`}
                     </CardTitle>
                     <ChannelBadge channel={selectedConversation.channel} size="md" />
@@ -413,36 +458,37 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
                 </CardHeader>
 
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
-                  <ScrollArea className="flex-1 p-4">
+                  <ScrollArea className="flex-1 p-2 md:p-4">
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`mb-4 flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                        className={`mb-3 md:mb-4 flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
                       >
                         {msg.direction === "inbound" && (
-                          <Avatar className="w-8 h-8 mr-2 flex-shrink-0">
+                          <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
                             <AvatarImage src={getMessageAvatar(msg) || undefined} />
-                            <AvatarFallback className="text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
+                            <AvatarFallback className="text-[10px] md:text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
                               {getMessageInitials(msg)}
                             </AvatarFallback>
                           </Avatar>
                         )}
-                        <div className={`max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
+                        <div className={`max-w-[85%] md:max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
                           {msg.sender_name && msg.direction === "inbound" && (
-                            <div className="text-xs text-muted-foreground mb-1">
+                            <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
                               {msg.sender_name}
                             </div>
                           )}
                           <div
-                            className={`inline-block p-3 rounded-lg ${
+                            className={cn(
+                              "inline-block p-2 md:p-3 rounded-lg",
                               msg.direction === "outbound"
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted"
-                            }`}
+                            )}
                           >
-                            <p className="text-sm">{msg.content}</p>
+                            <p className="text-xs md:text-sm">{msg.content}</p>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
+                          <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
                             {formatTime(msg.created_at)}
                           </div>
                         </div>
@@ -458,13 +504,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
                   />
 
                   {canReply ? (
-                    <div className="p-4 border-t">
+                    <div className="p-2 md:p-4 border-t">
                       <div className="flex gap-2">
                         <Input
                           placeholder="Type a message..."
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
                           disabled={sendingMessage}
+                          className="text-sm"
                           onKeyDown={(e) => {
                             if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
                               handleSendMessage();
