@@ -15,6 +15,7 @@ import {
   Calendar,
   Tag
 } from "lucide-react";
+import { TalkToAgentActions } from "./TalkToAgentActions";
 
 interface Contact {
   id: string;
@@ -36,9 +37,11 @@ interface Contact {
 interface ContactSidebarProps {
   contactId: string | null;
   channel: string;
+  conversationId?: string;
+  subject?: string;
 }
 
-export function ContactSidebar({ contactId, channel }: ContactSidebarProps) {
+export function ContactSidebar({ contactId, channel, conversationId, subject }: ContactSidebarProps) {
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -255,6 +258,20 @@ export function ContactSidebar({ contactId, channel }: ContactSidebarProps) {
             Create Quote
           </Button>
         </div>
+
+        {/* Talk to Agent Actions */}
+        {conversationId && (
+          <>
+            <Separator />
+            <TalkToAgentActions
+              conversationId={conversationId}
+              contactId={contactId}
+              channel={channel}
+              customerName={contact.name}
+              subject={subject}
+            />
+          </>
+        )}
       </CardContent>
     </Card>
   );

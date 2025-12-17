@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { OpsDeskCommandPanel } from "./OpsDeskCommandPanel";
 
 interface OpsTask {
   id: string;
@@ -170,6 +171,9 @@ export function OpsDeskScreen({ onClose }: OpsDeskScreenProps) {
           </Button>
         </div>
       </div>
+
+      {/* Command Panel - NEW */}
+      <OpsDeskCommandPanel />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 p-4 border-b bg-muted/30">
