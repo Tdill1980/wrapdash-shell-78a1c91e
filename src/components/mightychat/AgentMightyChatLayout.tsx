@@ -478,7 +478,25 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                     const isUrgent = conv.priority === 'urgent';
                     const isHigh = conv.priority === 'high';
                     const hasUnread = (conv.unread_count ?? 0) > 0;
-                    
+
+                    const getOwnerAndInbox = () => {
+                      if (conv.channel === 'website') {
+                        return { owner: 'Jordan Lee', inbox: 'Website Chat' };
+                      }
+                      if (conv.channel === 'instagram') {
+                        return { owner: 'Casey Ramirez', inbox: 'Instagram DMs' };
+                      }
+                      if (conv.channel === 'email') {
+                        const inbox = conv.recipient_inbox?.toLowerCase() || '';
+                        if (inbox.includes('design')) return { owner: 'Grant Miller', inbox: 'design@weprintwraps.com' };
+                        if (inbox.includes('jackson')) return { owner: 'Manny Chen', inbox: 'jackson@weprintwraps.com' };
+                        return { owner: 'Alex Morgan', inbox: 'hello@weprintwraps.com' };
+                      }
+                      return { owner: 'Alex Morgan', inbox: conv.channel };
+                    };
+
+                    const ownerInfo = getOwnerAndInbox();
+
                     return (
                       <div
                         key={conv.id}
@@ -512,6 +530,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                             </Badge>
                           )}
                         </div>
+
+                        {/* Ownership / Inbox */}
+                        <div className="mt-1 pl-0.5 text-[10px] text-muted-foreground flex items-center gap-1">
+                          <span className="font-medium text-foreground/70">{ownerInfo.owner}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="truncate">{ownerInfo.inbox}</span>
+                        </div>
+
                         <div className="flex items-center gap-2 mt-1.5">
                           <span className="text-[11px] text-muted-foreground">
                             {formatTime(conv.last_message_at)}

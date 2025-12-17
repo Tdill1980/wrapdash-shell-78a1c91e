@@ -259,7 +259,24 @@ function ConversationCard({
   getChannelColor: (channel: string) => string;
 }) {
   const lastMessage = conversation.messages?.[0];
-  
+
+  const getOwnerAndInbox = () => {
+    const channel = conversation.channel;
+    const recipientInbox = (conversation.recipient_inbox || "").toLowerCase();
+
+    if (channel === "instagram") return { owner: "Casey Ramirez", inbox: "Instagram DMs" };
+    // Some older code uses website_chat; newer pipeline uses website
+    if (channel === "website" || channel === "website_chat") return { owner: "Jordan Lee", inbox: "Website Chat" };
+    if (channel === "email") {
+      if (recipientInbox.includes("design")) return { owner: "Grant Miller", inbox: "design@weprintwraps.com" };
+      if (recipientInbox.includes("jackson")) return { owner: "Manny Chen", inbox: "jackson@weprintwraps.com" };
+      return { owner: "Alex Morgan", inbox: "hello@weprintwraps.com" };
+    }
+    return { owner: "Alex Morgan", inbox: String(channel || "unknown") };
+  };
+
+  const ownerInfo = getOwnerAndInbox();
+
   return (
     <Card className="hover:bg-accent/50 transition-colors">
       <CardContent className="p-3">
@@ -274,6 +291,14 @@ function ConversationCard({
                 {formatDistanceToNow(new Date(conversation.created_at), { addSuffix: true })}
               </span>
             </div>
+
+            {/* Owner / inbox */}
+            <div className="text-[11px] text-muted-foreground mb-1">
+              <span className="font-medium text-foreground/80">{ownerInfo.owner}</span>
+              <span className="mx-1">•</span>
+              <span className="truncate">{ownerInfo.inbox}</span>
+            </div>
+
             <p className="font-medium truncate">
               {conversation.contacts?.name || conversation.contacts?.email || "Unknown"}
             </p>
