@@ -212,6 +212,17 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
         onOpenChange={setShowDelegateModal}
         agentName={agent?.name || "Agent"}
         suggestedTask={suggestedTask}
+        linkedThread={{
+          subject: (context?.subject as string | undefined) || (context?.customerName as string | undefined),
+          inboxLabel: context?.channel === "email"
+            ? (context?.recipientInbox as string | undefined) || (context?.recipient_inbox as string | undefined)
+            : (context?.channel as string | undefined),
+          conversationId: (context?.conversationId as string | undefined) || (context?.conversation_id as string | undefined),
+        }}
+        onOpenThread={(conversationId) => {
+          // Navigate to the thread and close the modal/panel
+          window.location.href = `/mightychat?id=${conversationId}`;
+        }}
         onDelegate={handleDelegate}
       />
     </>

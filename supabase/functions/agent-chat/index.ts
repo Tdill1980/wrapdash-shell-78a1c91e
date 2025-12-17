@@ -166,7 +166,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, agent_id, message, chat_id, context, organization_id, user_id } = await req.json();
+    const body = await req.json();
+    const { action, agent_id, message, chat_id, context, organization_id, user_id, description, assigned_to } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -333,18 +334,34 @@ Use this sales context when relevant:
         throw new Error("Cannot delegate: agent has not confirmed understanding");
       }
 
-      const { task_type, description, assigned_to } = await req.json();
+      const safeDescription = (description || "").toString().trim();
+      if (!safeDescription) throw new Error("Missing description");
 
-      // Create task
+      const ctx = (chat.context || {}) as Record<string, unknown>;
+      const conversationId = (ctx.conversationId || ctx.conversation_id) as string | undefined;
+      const contactId = (ctx.contactId || ctx.contact_id) as string | undefined;
+      const subject = (ctx.subject as string | undefined) || undefined;
+      const recipientInbox = (ctx.recipientInbox as string | undefined) || (ctx.recipient_inbox as string | undefined) || undefined;
+      const channel = (ctx.channel as string | undefined) || undefined;
+
+      const linkedLine = subject
+        ? `\n\nLinked thread: ${subject}${recipientInbox ? ` • ${recipientInbox}` : ""}${channel ? ` • ${channel}` : ""}`
+        : "";
+
+      // Create task (linked to the exact conversation when available)
       const { data: task, error: taskError } = await supabase
         .from("tasks")
         .insert({
           organization_id: chat.organization_id,
-          title: description || `Task delegated to ${AGENT_CONFIGS[chat.agent_id]?.name || chat.agent_id}`,
-          description: `Delegated from agent chat. Agent: ${chat.agent_id}`,
+          title: safeDescription,
+          description: `Delegated from agent chat. Agent: ${chat.agent_id}${linkedLine}`,
           assigned_agent: chat.agent_id,
           status: "pending",
           priority: "normal",
+          conversation_id: conversationId || null,
+          contact_id: contactId || null,
+          customer: subject || null,
+          assigned_to: assigned_to || null,
         })
         .select()
         .single();
@@ -356,7 +373,7 @@ Use this sales context when relevant:
         agent_chat_id: chat_id,
         task_id: task.id,
         delegated_by: assigned_to || "Unknown",
-        summary: description || "Task delegated from agent chat",
+        summary: safeDescription,
       });
 
       // Update chat status
