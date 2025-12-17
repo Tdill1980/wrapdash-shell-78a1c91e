@@ -9,30 +9,56 @@ const corsHeaders = {
 const INSTAGRAM_ACCESS_TOKEN = Deno.env.get("INSTAGRAM_ACCESS_TOKEN") || "";
 
 async function getInstagramUserProfile(igUserId: string) {
-  try {
-    const url = `https://graph.facebook.com/v18.0/${igUserId}?fields=username,name,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`;
-    
-    console.log(`Fetching IG profile for user: ${igUserId}`);
-    const res = await fetch(url);
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error(`IG API error (${res.status}):`, errorText);
-      return null;
+  const endpoints = [
+    // Try Instagram Graph API first (more reliable for IG-specific data)
+    {
+      url: `https://graph.instagram.com/${igUserId}?fields=username,name&access_token=${INSTAGRAM_ACCESS_TOKEN}`,
+      name: "graph.instagram.com"
+    },
+    // Fallback to Facebook Graph API with profile_picture_url
+    {
+      url: `https://graph.facebook.com/v18.0/${igUserId}?fields=username,name,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`,
+      name: "graph.facebook.com/v18.0"
+    },
+    // Try without version
+    {
+      url: `https://graph.facebook.com/${igUserId}?fields=username,name,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`,
+      name: "graph.facebook.com"
     }
+  ];
 
-    const data = await res.json();
-    console.log("IG profile data:", JSON.stringify(data));
-    
-    return {
-      username: data.username || null,
-      name: data.name || null,
-      profile_picture_url: data.profile_picture_url || null
-    };
-  } catch (err) {
-    console.error("Error fetching IG profile:", err);
-    return null;
+  let lastError = null;
+
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`[Backfill] Trying ${endpoint.name} for user ${igUserId}`);
+      const res = await fetch(endpoint.url);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log(`[Backfill] SUCCESS from ${endpoint.name}:`, JSON.stringify(data));
+        
+        if (data.username || data.name) {
+          return {
+            username: data.username || null,
+            name: data.name || null,
+            profile_picture_url: data.profile_picture_url || null,
+            source: endpoint.name
+          };
+        }
+      } else {
+        const errorText = await res.text();
+        console.log(`[Backfill] ${endpoint.name} returned ${res.status}: ${errorText}`);
+        lastError = { endpoint: endpoint.name, status: res.status, error: errorText };
+      }
+    } catch (err) {
+      console.error(`[Backfill] ${endpoint.name} exception:`, err);
+      lastError = { endpoint: endpoint.name, error: String(err) };
+    }
   }
+
+  console.error(`[Backfill] All endpoints failed for user ${igUserId}. Last error:`, lastError);
+  return { error: lastError };
 }
 
 serve(async (req) => {
@@ -56,14 +82,15 @@ serve(async (req) => {
       throw new Error(`Failed to fetch contacts: ${contactsError.message}`);
     }
 
-    console.log(`Found ${contacts?.length || 0} Instagram contacts to backfill`);
+    console.log(`[Backfill] Found ${contacts?.length || 0} Instagram contacts to process`);
 
     const results = {
       total: contacts?.length || 0,
       updated: 0,
       skipped: 0,
       errors: 0,
-      details: [] as Array<{ id: string; name: string; status: string }>
+      api_errors: 0,
+      details: [] as Array<{ id: string; name: string; status: string; newName?: string; error?: any }>
     };
 
     for (const contact of contacts || []) {
@@ -79,9 +106,31 @@ serve(async (req) => {
       // Fetch profile from Instagram
       const profile = await getInstagramUserProfile(senderId);
 
-      if (!profile || (!profile.username && !profile.name)) {
+      if (profile.error) {
+        results.api_errors++;
+        // Store the error in metadata for debugging
+        const updatedMetadata = {
+          ...metadata,
+          backfill_error: profile.error,
+          backfill_attempted_at: new Date().toISOString()
+        };
+        await supabase
+          .from("contacts")
+          .update({ metadata: updatedMetadata })
+          .eq("id", contact.id);
+        
+        results.details.push({ 
+          id: contact.id, 
+          name: contact.name, 
+          status: "api_error",
+          error: profile.error
+        });
+        continue;
+      }
+
+      if (!profile.username && !profile.name) {
         results.errors++;
-        results.details.push({ id: contact.id, name: contact.name, status: "error - could not fetch profile" });
+        results.details.push({ id: contact.id, name: contact.name, status: "error - no username or name returned" });
         continue;
       }
 
@@ -90,7 +139,9 @@ serve(async (req) => {
         ...metadata,
         username: profile.username,
         avatar_url: profile.profile_picture_url,
-        profile_url: profile.username ? `https://instagram.com/${profile.username}` : null
+        profile_url: profile.username ? `https://instagram.com/${profile.username}` : null,
+        backfill_source: profile.source,
+        backfill_at: new Date().toISOString()
       };
 
       // Update contact
@@ -122,22 +173,23 @@ serve(async (req) => {
       results.updated++;
       results.details.push({ 
         id: contact.id, 
-        name: displayName, 
-        status: `updated - @${profile.username || 'no username'}` 
+        name: contact.name,
+        newName: displayName,
+        status: `updated via ${profile.source} - @${profile.username || 'no username'}` 
       });
 
       // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    console.log("Backfill complete:", results);
+    console.log("[Backfill] Complete:", JSON.stringify(results, null, 2));
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (err) {
-    console.error("Backfill error:", err);
+    console.error("[Backfill] Fatal error:", err);
     const errorMessage = err instanceof Error ? err.message : "Unknown error";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
