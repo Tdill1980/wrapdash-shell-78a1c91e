@@ -350,12 +350,18 @@ Use this sales context when relevant:
       const conversationId = (ctx.conversationId || ctx.conversation_id) as string | undefined;
       const contactId = (ctx.contactId || ctx.contact_id) as string | undefined;
       const subject = (ctx.subject as string | undefined) || undefined;
-      const recipientInbox = (ctx.recipientInbox as string | undefined) || (ctx.recipient_inbox as string | undefined) || undefined;
+      const recipientInbox = (ctx.recipientInbox as string | undefined) ||
+        (ctx.recipient_inbox as string | undefined) ||
+        undefined;
       const channel = (ctx.channel as string | undefined) || undefined;
 
       const linkedLine = subject
         ? `\n\nLinked thread: ${subject}${recipientInbox ? ` • ${recipientInbox}` : ""}${channel ? ` • ${channel}` : ""}`
         : "";
+
+      // `tasks.assigned_to` is a UUID. Guard against accidentally passing usernames like "trish".
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const assignedToUuid = typeof assigned_to === "string" && uuidRegex.test(assigned_to) ? assigned_to : null;
 
       // Create task (linked to the exact conversation when available)
       const { data: task, error: taskError } = await supabase
@@ -370,7 +376,7 @@ Use this sales context when relevant:
           conversation_id: conversationId || null,
           contact_id: contactId || null,
           customer: subject || null,
-          assigned_to: assigned_to || null,
+          assigned_to: assignedToUuid,
         })
         .select()
         .single();
