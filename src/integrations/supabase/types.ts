@@ -600,6 +600,82 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_chat_messages: {
+        Row: {
+          agent_chat_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          sender: string
+        }
+        Insert: {
+          agent_chat_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          sender: string
+        }
+        Update: {
+          agent_chat_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          sender?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_chat_messages_agent_chat_id_fkey"
+            columns: ["agent_chat_id"]
+            isOneToOne: false
+            referencedRelation: "agent_chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_chats: {
+        Row: {
+          agent_id: string
+          context: Json | null
+          created_at: string | null
+          id: string
+          organization_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_chats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_actions: {
         Row: {
           action_payload: Json | null
@@ -1913,6 +1989,48 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      delegation_log: {
+        Row: {
+          agent_chat_id: string | null
+          delegated_at: string | null
+          delegated_by: string
+          id: string
+          summary: string
+          task_id: string | null
+        }
+        Insert: {
+          agent_chat_id?: string | null
+          delegated_at?: string | null
+          delegated_by: string
+          id?: string
+          summary: string
+          task_id?: string | null
+        }
+        Update: {
+          agent_chat_id?: string | null
+          delegated_at?: string | null
+          delegated_by?: string
+          id?: string
+          summary?: string
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delegation_log_agent_chat_id_fkey"
+            columns: ["agent_chat_id"]
+            isOneToOne: false
+            referencedRelation: "agent_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegation_log_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       design_panel_folders: {
         Row: {

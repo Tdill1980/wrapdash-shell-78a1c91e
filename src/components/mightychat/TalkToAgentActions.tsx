@@ -1,16 +1,17 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Mail, 
   Palette, 
   MessageCircle, 
   Cog, 
-  User,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Brain
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AgentSelector } from "./AgentSelector";
+import { AgentChatPanel } from "./AgentChatPanel";
 
 interface TalkToAgentActionsProps {
   conversationId: string;
@@ -21,47 +22,38 @@ interface TalkToAgentActionsProps {
   className?: string;
 }
 
-const AGENT_ROUTES = [
+const QUICK_AGENTS = [
   {
-    id: "alex",
+    id: "alex_morgan",
     name: "Alex Morgan",
-    label: "Route to Alex",
-    description: "Quote follow-up",
+    label: "Talk to Alex",
+    description: "Quotes & Pricing",
     icon: Mail,
     color: "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30",
-    actionType: "route_to_quotes",
-    stream: "quotes",
   },
   {
-    id: "grant",
+    id: "grant_miller",
     name: "Grant Miller",
-    label: "Route to Grant",
-    description: "Design review",
+    label: "Talk to Grant",
+    description: "Design & Files",
     icon: Palette,
     color: "text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/30",
-    actionType: "route_to_design",
-    stream: "design",
   },
   {
-    id: "casey",
+    id: "casey_ramirez",
     name: "Casey Ramirez",
-    label: "Ask Casey",
-    description: "Social engagement",
+    label: "Talk to Casey",
+    description: "Social & DMs",
     icon: MessageCircle,
     color: "text-pink-600 hover:bg-pink-50 dark:hover:bg-pink-950/30",
-    actionType: "route_to_social",
-    stream: "dms",
   },
   {
-    id: "ops",
+    id: "ops_desk",
     name: "Ops Desk",
     label: "Flag Ops Desk",
     description: "Needs approval",
     icon: Cog,
     color: "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30",
-    actionType: "flag_ops_desk",
-    stream: "ops",
-    priority: "urgent",
   },
 ];
 
@@ -73,44 +65,32 @@ export function TalkToAgentActions({
   subject,
   className,
 }: TalkToAgentActionsProps) {
-  
-  const handleRouteToAgent = async (agent: typeof AGENT_ROUTES[0]) => {
-    try {
-      const { error } = await supabase
-        .from('ai_actions')
-        .insert({
-          action_type: agent.actionType,
-          action_payload: {
-            conversation_id: conversationId,
-            contact_id: contactId,
-            channel,
-            customer_name: customerName || 'Unknown',
-            subject: subject || 'Conversation',
-            requested_by: 'MightyChat Quick Action',
-            assigned_to: agent.name,
-            revenue_impact: agent.id === 'alex' ? 'high' : 'medium',
-          },
-          priority: agent.priority || 'normal',
-          resolved: false,
-        });
+  const [showSelector, setShowSelector] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
-      if (error) throw error;
+  const context = {
+    conversation_id: conversationId,
+    contact_id: contactId,
+    channel,
+    customer_name: customerName || "Unknown",
+    subject: subject || "Conversation",
+  };
 
-      // Update conversation assignment
-      await supabase
-        .from('conversations')
-        .update({ 
-          assigned_to: agent.name,
-          recipient_inbox: agent.stream,
-        })
-        .eq('id', conversationId);
+  const handleQuickAgent = (agentId: string) => {
+    setSelectedAgentId(agentId);
+    setShowChat(true);
+  };
 
-      toast.success(`Routed to ${agent.name}`, {
-        description: `${agent.description} task created`,
-      });
-    } catch (err) {
-      console.error('Route to agent error:', err);
-      toast.error(`Failed to route to ${agent.name}`);
+  const handleSelectAgent = (agentId: string) => {
+    setSelectedAgentId(agentId);
+    setShowChat(true);
+  };
+
+  const handleCloseChat = (open: boolean) => {
+    setShowChat(open);
+    if (!open) {
+      setSelectedAgentId(null);
     }
   };
 
@@ -124,7 +104,7 @@ export function TalkToAgentActions({
       </div>
       
       <div className="space-y-1.5">
-        {AGENT_ROUTES.map((agent) => (
+        {QUICK_AGENTS.map((agent) => (
           <Button
             key={agent.id}
             variant="ghost"
@@ -133,7 +113,7 @@ export function TalkToAgentActions({
               "w-full justify-start text-xs h-auto py-2 px-3",
               agent.color
             )}
-            onClick={() => handleRouteToAgent(agent)}
+            onClick={() => handleQuickAgent(agent.id)}
           >
             <agent.icon className="w-4 h-4 mr-2 flex-shrink-0" />
             <div className="flex-1 text-left">
@@ -143,11 +123,38 @@ export function TalkToAgentActions({
             <ArrowRight className="w-3 h-3 opacity-50" />
           </Button>
         ))}
+
+        {/* More agents button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-xs h-auto py-2 px-3 text-muted-foreground hover:text-foreground"
+          onClick={() => setShowSelector(true)}
+        >
+          <Brain className="w-4 h-4 mr-2 flex-shrink-0" />
+          <div className="flex-1 text-left">
+            <div className="font-medium">More Agents...</div>
+            <div className="text-[10px]">See all available agents</div>
+          </div>
+        </Button>
       </div>
       
       <p className="text-[10px] text-muted-foreground text-center mt-3 italic">
-        Click = route with full context attached
+        Click to start a conversation with the agent
       </p>
+
+      <AgentSelector
+        open={showSelector}
+        onOpenChange={setShowSelector}
+        onSelectAgent={handleSelectAgent}
+      />
+
+      <AgentChatPanel
+        open={showChat}
+        onOpenChange={handleCloseChat}
+        agentId={selectedAgentId}
+        context={context}
+      />
     </div>
   );
 }

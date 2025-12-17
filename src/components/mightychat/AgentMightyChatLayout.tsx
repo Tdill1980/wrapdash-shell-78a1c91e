@@ -15,6 +15,7 @@ import { ConversationContextHeader } from "@/components/mightychat/ConversationC
 import { ThreadScopeBanner, DisabledReplyBox } from "@/components/mightychat/ThreadScopeLabel";
 import { ConversationActionsBar } from "@/components/mightychat/ConversationActionsBar";
 import { AgentBadge, QuoteStatusBadge } from "@/components/mightychat/InboxFilters";
+import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
 import { useMightyPermissions, isExternalConversation, getExternalHandler } from "@/hooks/useMightyPermissions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -380,16 +381,23 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
           </h1>
           <p className="text-muted-foreground text-xs md:text-sm hidden sm:block">Work Streams • Focus Mode</p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleBackfillProfiles}
-          disabled={backfillLoading}
-          className="hidden md:flex"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${backfillLoading ? "animate-spin" : ""}`} />
-          {backfillLoading ? "Updating..." : "Refresh IG Profiles"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <AskAgentButton 
+            variant="outline" 
+            size="sm"
+            className="hidden md:flex"
+          />
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleBackfillProfiles}
+            disabled={backfillLoading}
+            className="hidden md:flex"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${backfillLoading ? "animate-spin" : ""}`} />
+            {backfillLoading ? "Updating..." : "Refresh IG Profiles"}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Stream Tabs */}
