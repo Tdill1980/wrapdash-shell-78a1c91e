@@ -304,7 +304,7 @@ serve(async (req) => {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              from: 'Jordan @ WPW <onboarding@resend.dev>',
+              from: 'Jordan @ WPW <hello@weprintwraps.com>',
               to: [teamMember.email],
               cc: SILENT_CC,
               subject: `${mode === 'test' ? '[TEST] ' : ''}Customer Request: ${teamMember.role}`,

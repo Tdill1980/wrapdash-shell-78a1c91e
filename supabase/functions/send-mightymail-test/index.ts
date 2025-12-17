@@ -64,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
       for (const recipient of TEST_RECIPIENTS) {
         try {
           const emailResponse = await resend.emails.send({
-            from: "MightyMail <onboarding@resend.dev>",
+            from: "WePrintWraps <hello@weprintwraps.com>",
             to: [recipient],
             subject: subject,
             html: html,
@@ -95,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
     const html = generateTestEmailHTML(campaignName, campaignEvent || 'customer_welcome');
 
     const emailResponse = await resend.emails.send({
-      from: "MightyMail <onboarding@resend.dev>",
+      from: "WePrintWraps <hello@weprintwraps.com>",
       to: [testEmail],
       subject: `[TEST] ${campaignName}`,
       html: html,
@@ -143,7 +143,7 @@ function wrapEmailHTML(bodyHtml: string, flowName: string): string {
           ${bodyHtml}
         </div>
         <div class="footer">
-          <p>© 2025 WrapCommand™. Powered by MightyMail™</p>
+          <p>© 2025 WePrintWraps.com - Premium Vehicle Wrap Printing</p>
           <p style="color: #F59E0B; font-weight: bold;">This is a TEST email</p>
         </div>
       </div>
@@ -183,7 +183,7 @@ function generateTestEmailHTML(campaignName: string, campaignEvent: string): str
           <a href="#" class="button">View Your Project</a>
         </div>
         <div class="footer">
-          <p>© 2025 WrapCommand™. Powered by MightyMail™</p>
+          <p>© 2025 WePrintWraps.com - Premium Vehicle Wrap Printing</p>
         </div>
       </div>
     `,
@@ -200,7 +200,7 @@ function generateTestEmailHTML(campaignName: string, campaignEvent: string): str
           <p>Event type: ${campaignEvent}</p>
         </div>
         <div class="footer">
-          <p>© 2025 WrapCommand™. Powered by MightyMail™</p>
+          <p>© 2025 WePrintWraps.com - Premium Vehicle Wrap Printing</p>
         </div>
       </div>
     `,

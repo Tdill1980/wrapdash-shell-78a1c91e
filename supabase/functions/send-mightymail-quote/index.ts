@@ -93,8 +93,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResponse = await resend.emails.send({
       from: branding?.sender_name
-        ? `${branding.sender_name} <onboarding@resend.dev>`
-        : "MightyMail <onboarding@resend.dev>",
+        ? `${branding.sender_name} <hello@weprintwraps.com>`
+        : "WePrintWraps <hello@weprintwraps.com>",
       to: [customerEmail],
       subject: subject,
       html: emailHTML,
@@ -270,7 +270,7 @@ function renderEmailTemplate(
       <body>
         <div class="container">
           <div class="header">
-            <h1>WrapCommand™</h1>
+            <h1>WePrintWraps</h1>
           </div>
           <div class="content">
             <h2>Hi ${data.customer_name || "there"},</h2>
@@ -291,7 +291,7 @@ function renderEmailTemplate(
             <p style="margin-top: 30px;">${tonePreset.closing}</p>
           </div>
           <div class="footer">
-            <p>© ${new Date().getFullYear()} WrapCommand™. Powered by MightyMail™</p>
+            <p>© ${new Date().getFullYear()} WePrintWraps.com - Premium Vehicle Wrap Printing</p>
             ${data.footer_text ? `<p>${data.footer_text}</p>` : ""}
           </div>
         </div>

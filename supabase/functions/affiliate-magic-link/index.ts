@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     const magicLink = `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '')}/affiliate/dashboard?token=${token}`;
     
     const { error: emailError } = await resend.emails.send({
-      from: 'WrapCommand <onboarding@resend.dev>',
+      from: 'WePrintWraps <hello@weprintwraps.com>',
       to: [founder.email],
       subject: 'Login to Your Affiliate Dashboard',
       html: `

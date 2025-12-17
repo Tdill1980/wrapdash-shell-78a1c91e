@@ -36,7 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: from || "MightyMail <onboarding@resend.dev>",
+      from: from || "WePrintWraps <hello@weprintwraps.com>",
       to: [to],
       subject: subject,
       html: html,

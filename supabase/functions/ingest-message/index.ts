@@ -310,7 +310,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                from: "WPW AI <notifications@resend.dev>",
+                from: "WePrintWraps <hello@weprintwraps.com>",
                 to: ["Design@WePrintWraps.com"],
                 cc: ["Trish@WePrintWraps.com"],
                 subject: `📁 New Files Received via Instagram DM - ${body.sender_username || body.sender_id}`,

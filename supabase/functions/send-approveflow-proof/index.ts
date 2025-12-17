@@ -118,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'ApproveFlow <onboarding@resend.dev>',
+        from: 'WePrintWraps Design Team <hello@weprintwraps.com>',
         to: [customerEmail],
         subject: `Your Design Proof is Ready - Order #${orderNumber}`,
         html: emailHtml,
