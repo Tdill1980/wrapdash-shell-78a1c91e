@@ -180,11 +180,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
 
     const sinceIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
+    // Show threads active in the last 48h.
+    // Some older threads have recent replies (last_message_at) but an old created_at.
     const { data, error } = await supabase
       .from("conversations")
       .select("*")
-      .gte("created_at", sinceIso)
-      .order("last_message_at", { ascending: false });
+      .or(`last_message_at.gte.${sinceIso},and(last_message_at.is.null,created_at.gte.${sinceIso})`)
+      .order("last_message_at", { ascending: false })
+      .order("created_at", { ascending: false });
 
     if (!error && data) {
       setConversations(data as unknown as Conversation[]);
