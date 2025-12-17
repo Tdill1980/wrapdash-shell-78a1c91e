@@ -17,6 +17,12 @@ interface DelegateTaskModalProps {
   agentName: string;
   suggestedTask: { type: string; description: string } | null;
   onDelegate: (description: string) => void;
+  linkedThread?: {
+    subject?: string;
+    inboxLabel?: string;
+    conversationId?: string;
+  };
+  onOpenThread?: (conversationId: string) => void;
 }
 
 export function DelegateTaskModal({
@@ -25,6 +31,8 @@ export function DelegateTaskModal({
   agentName,
   suggestedTask,
   onDelegate,
+  linkedThread,
+  onOpenThread,
 }: DelegateTaskModalProps) {
   const [description, setDescription] = useState(suggestedTask?.description || "");
   const [delegating, setDelegating] = useState(false);
@@ -56,6 +64,30 @@ export function DelegateTaskModal({
               <div className="text-xs text-muted-foreground">will execute this task</div>
             </div>
           </div>
+
+          {linkedThread?.subject && (
+            <div className="p-3 rounded-lg border bg-card/40">
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Replying to
+              </div>
+              <div className="text-sm font-medium mt-1 truncate">{linkedThread.subject}</div>
+              {linkedThread.inboxLabel && (
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">{linkedThread.inboxLabel}</div>
+              )}
+              {linkedThread.conversationId && onOpenThread && (
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onOpenThread(linkedThread.conversationId!)}
+                  >
+                    Open thread
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="task-description">Task Description</Label>
