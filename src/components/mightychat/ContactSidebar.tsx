@@ -16,6 +16,7 @@ import {
   Tag
 } from "lucide-react";
 import { TalkToAgentActions } from "./TalkToAgentActions";
+import { formatDateAZ } from "@/lib/timezone";
 
 interface Contact {
   id: string;
@@ -67,14 +68,7 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
     setLoading(false);
   };
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    });
-  };
+  const formatDate = (dateStr: string | null) => formatDateAZ(dateStr);
 
   const getChannelBadge = () => {
     const badges: Record<string, { icon: React.ReactNode; label: string; className: string }> = {

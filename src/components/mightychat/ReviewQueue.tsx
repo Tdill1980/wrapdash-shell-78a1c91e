@@ -18,7 +18,7 @@ import { AgentSelector } from "./AgentSelector";
 import { AgentChatPanel } from "./AgentChatPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow } from "date-fns";
+import { formatRelativeAZ } from "@/lib/timezone";
 
 interface ReviewQueueProps {
   onSelectConversation?: (conversationId: string) => void;
@@ -125,7 +125,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
         <div>
           <h2 className="text-lg font-semibold">Review Queue</h2>
           <p className="text-sm text-muted-foreground">
-            Last 48 hours • Updated {dataUpdatedAt ? formatDistanceToNow(new Date(dataUpdatedAt), { addSuffix: true }) : "just now"}
+            Last 48 hours • Updated {dataUpdatedAt ? formatRelativeAZ(new Date(dataUpdatedAt).toISOString()) : "just now"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -368,7 +368,7 @@ function ConversationCard({
                 <span className="ml-1 capitalize">{conversation.channel?.replace("_", " ")}</span>
               </Badge>
               <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(conversation.created_at), { addSuffix: true })}
+                {formatRelativeAZ(conversation.created_at)}
               </span>
             </div>
 

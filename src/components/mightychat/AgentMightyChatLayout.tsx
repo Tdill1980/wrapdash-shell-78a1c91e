@@ -19,6 +19,7 @@ import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
 import { useMightyPermissions, isExternalConversation, getExternalHandler } from "@/hooks/useMightyPermissions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatTimeAZ } from "@/lib/timezone";
 import type { AgentInbox } from "@/components/mightychat/AgentInboxTabs";
 
 interface Conversation {
@@ -325,20 +326,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
     quoteValue: 0 // Would come from actual quote data
   }), [conversations]);
 
-  const formatTime = (dateStr: string | null) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return "yesterday";
-    return `${days}d ago`;
-  };
+  const formatTime = (dateStr: string | null) => formatTimeAZ(dateStr);
 
   const isVeryRecent = (dateStr: string | null) => {
     if (!dateStr) return false;
