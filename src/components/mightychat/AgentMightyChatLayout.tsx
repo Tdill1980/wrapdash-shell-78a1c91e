@@ -153,13 +153,13 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
   const isExternal = selectedConversation ? isExternalConversation(selectedConversation.channel) : false;
   const canReply = permissions.canReplyExternal(activeInbox) || !isExternal;
 
-  const getPriorityColor = (priority: string | null) => {
-    switch (priority) {
-      case "urgent": return "bg-red-500";
-      case "high": return "bg-orange-500";
-      default: return "bg-muted";
-    }
-  };
+  // Compute signals for sidebar
+  const streamSignals = useMemo(() => ({
+    hotLeads: conversations.filter(c => c.channel === 'website' && c.priority === 'urgent').length,
+    cxRiskCount: conversations.filter(c => c.priority === 'urgent' || c.priority === 'high').length,
+    pendingReviews: conversations.filter(c => c.review_status === 'pending_review').length,
+    quoteValue: 0 // Would come from actual quote data
+  }), [conversations]);
 
   const formatTime = (dateStr: string | null) => {
     if (!dateStr) return "";
@@ -289,6 +289,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
           onStreamChange={setActiveStream}
           onOpenOpsDesk={onOpenOpsDesk}
           counts={streamCounts}
+          signals={streamSignals}
         />
 
         {/* CENTER: Conversation List + Thread */}
@@ -313,15 +314,21 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
                   </div>
                 ) : (
                   filteredConversations.map((conv) => {
-                    const hasQuoteRequest = conv.review_status === 'pending_review' || (conv.metadata as any)?.has_quote_request;
+                    const hasQuoteRequest = conv.review_status === 'pending_review';
+                    const isUrgent = conv.priority === 'urgent';
+                    const isHigh = conv.priority === 'high';
+                    const hasUnread = (conv.unread_count ?? 0) > 0;
                     
                     return (
                       <div
                         key={conv.id}
                         className={cn(
-                          "p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors",
-                          selectedConversation?.id === conv.id && "bg-muted",
-                          hasQuoteRequest && conv.review_status === 'pending_review' && "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20"
+                          "p-3 border-b cursor-pointer transition-all duration-200",
+                          "hover:bg-muted/50 hover:translate-x-0.5",
+                          selectedConversation?.id === conv.id && "bg-muted shadow-sm",
+                          hasQuoteRequest && "border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-950/20",
+                          isUrgent && !hasQuoteRequest && "border-l-4 border-l-orange-500",
+                          isHigh && !hasQuoteRequest && !isUrgent && "border-l-2 border-l-amber-400"
                         )}
                         onClick={() => {
                           setSelectedConversation(conv);
@@ -330,23 +337,40 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
                       >
                         <div className="flex items-center gap-2">
                           <AgentBadge channel={conv.channel} recipientInbox={conv.recipient_inbox} />
-                          <span className="font-medium flex-1 truncate text-sm">
+                          <span className={cn(
+                            "font-medium flex-1 truncate text-sm",
+                            hasUnread && "font-semibold"
+                          )}>
                             {conv.subject || `${conv.channel} conversation`}
                           </span>
-                          {(conv.unread_count ?? 0) > 0 && (
-                            <Badge variant="destructive" className="text-xs h-5 min-w-[20px] flex items-center justify-center">
+                          {hasUnread && (
+                            <Badge 
+                              variant="destructive" 
+                              className="text-[10px] h-5 min-w-[20px] flex items-center justify-center animate-pulse"
+                            >
                               {conv.unread_count}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[11px] text-muted-foreground">
                             {formatTime(conv.last_message_at)}
                           </span>
-                          {conv.priority && conv.priority !== "normal" && (
-                            <div className={`w-2 h-2 rounded-full ${getPriorityColor(conv.priority)}`} />
+                          {isUrgent && (
+                            <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
+                              URGENT
+                            </Badge>
                           )}
-                          <QuoteStatusBadge reviewStatus={conv.review_status} />
+                          {isHigh && !isUrgent && (
+                            <Badge variant="outline" className="text-[9px] h-4 px-1.5 text-amber-600 border-amber-300">
+                              HIGH
+                            </Badge>
+                          )}
+                          {hasQuoteRequest && (
+                            <Badge className="text-[9px] h-4 px-1.5 bg-red-500 text-white animate-pulse">
+                              REVIEW
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     );

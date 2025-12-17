@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Globe, Mail, Palette, MessageSquare, Cog, Shield, AlertTriangle } from "lucide-react";
+import { Globe, Mail, Palette, MessageSquare, Cog, Shield, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AgentInbox } from "./AgentInboxTabs";
 
@@ -14,63 +13,50 @@ interface ConversationContextHeaderProps {
 
 const AGENT_INFO: Record<AgentInbox, {
   displayName: string;
-  role: string;
+  shortRole: string;
   icon: React.ReactNode;
   color: string;
   bgColor: string;
-  canDo: string[];
-  cantDo: string[];
 }> = {
   website: {
-    displayName: 'Jordan Lee',
-    role: 'Website Chat',
-    icon: <Globe className="w-4 h-4" />,
+    displayName: 'Jordan',
+    shortRole: 'Web Chat',
+    icon: <Globe className="w-3.5 h-3.5" />,
     color: 'text-blue-600',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/40',
-    canDo: ['Answer questions', 'Qualify leads', 'Route to quotes'],
-    cantDo: ['Quote pricing', 'Design work', 'Commit partnerships']
+    bgColor: 'bg-blue-50 dark:bg-blue-950/30'
   },
   hello: {
-    displayName: 'Alex Morgan',
-    role: 'Quotes & Customer Service',
-    icon: <Mail className="w-4 h-4" />,
-    color: 'text-green-600',
-    bgColor: 'bg-green-100 dark:bg-green-900/40',
-    canDo: ['Send quotes', 'Answer pricing', 'Enforce policies'],
-    cantDo: ['Review files', 'Design work', 'Commit partnerships']
+    displayName: 'Alex',
+    shortRole: 'Quotes',
+    icon: <Mail className="w-3.5 h-3.5" />,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/30'
   },
   design: {
-    displayName: 'Grant Miller',
-    role: 'Design Ops',
-    icon: <Palette className="w-4 h-4" />,
+    displayName: 'Grant',
+    shortRole: 'Design',
+    icon: <Palette className="w-3.5 h-3.5" />,
     color: 'text-purple-600',
-    bgColor: 'bg-purple-100 dark:bg-purple-900/40',
-    canDo: ['Review files', 'Preflight checks', 'Create ApproveFlow projects'],
-    cantDo: ['Quote pricing', 'Commit partnerships', 'Talk to customers about pricing']
+    bgColor: 'bg-purple-50 dark:bg-purple-950/30'
   },
   dms: {
-    displayName: 'Casey Ramirez',
-    role: 'Social Media',
-    icon: <MessageSquare className="w-4 h-4" />,
+    displayName: 'Casey',
+    shortRole: 'Social',
+    icon: <MessageSquare className="w-3.5 h-3.5" />,
     color: 'text-pink-600',
-    bgColor: 'bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30',
-    canDo: ['Reply to DMs', 'Route leads', 'Create content tasks'],
-    cantDo: ['Quote pricing', 'Design decisions', 'Commit partnerships']
+    bgColor: 'bg-pink-50 dark:bg-pink-950/30'
   },
   ops_desk: {
     displayName: 'Ops Desk',
-    role: 'Execution Gateway',
-    icon: <Cog className="w-4 h-4" />,
-    color: 'text-red-600',
-    bgColor: 'bg-red-100 dark:bg-red-900/40',
-    canDo: ['Execute tasks', 'Create MightyTasks', 'Escalate blockers'],
-    cantDo: ['Decide', 'Talk to customers', 'Commit anything']
+    shortRole: 'Execution',
+    icon: <Cog className="w-3.5 h-3.5" />,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/30'
   }
 };
 
 export function ConversationContextHeader({
   agentId,
-  agentName,
   channel,
   recipientInbox,
   isExternal
@@ -79,79 +65,57 @@ export function ConversationContextHeader({
   
   const getChannelLabel = () => {
     if (channel === 'email' && recipientInbox) {
-      return `${recipientInbox}@weprintwraps.com`;
+      return `${recipientInbox}@`;
     }
     return channel;
   };
 
   return (
     <div className={cn(
-      "flex items-center justify-between px-4 py-2 border-b",
+      "flex items-center justify-between px-4 py-2 border-b transition-colors",
       agentInfo.bgColor
     )}>
       <div className="flex items-center gap-3">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-full",
-                agentInfo.bgColor,
-                "border border-current/20"
-              )}>
-                <span className={agentInfo.color}>{agentInfo.icon}</span>
-                <span className={cn("font-semibold text-sm", agentInfo.color)}>
-                  {agentInfo.displayName}
-                </span>
-                <Badge variant="outline" className="text-[10px] h-5">
-                  {agentInfo.role}
-                </Badge>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-xs">
-              <div className="space-y-2">
-                <p className="font-semibold">{agentInfo.displayName}</p>
-                <div>
-                  <p className="text-xs text-green-600 font-medium">Can do:</p>
-                  <ul className="text-xs list-disc list-inside">
-                    {agentInfo.canDo.map((item, i) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-xs text-red-600 font-medium">Cannot do:</p>
-                  <ul className="text-xs list-disc list-inside">
-                    {agentInfo.cantDo.map((item, i) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {/* Agent badge - simplified */}
+        <div className={cn(
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-full",
+          "bg-white/60 dark:bg-black/20 border border-current/10"
+        )}>
+          <span className={agentInfo.color}>{agentInfo.icon}</span>
+          <span className={cn("font-medium text-xs", agentInfo.color)}>
+            {agentInfo.displayName}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            • {agentInfo.shortRole}
+          </span>
+        </div>
 
-        <Badge variant="outline" className={cn("text-xs", agentInfo.color)}>
-          Channel: {getChannelLabel()}
-        </Badge>
+        {/* Channel - minimal */}
+        <span className="text-xs text-muted-foreground">
+          via {getChannelLabel()}
+        </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        {isExternal ? (
-          <Badge variant="destructive" className="flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" />
-            EXTERNAL
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-700 dark:bg-green-900/40">
-            <Shield className="w-3 h-3" />
-            INTERNAL
-          </Badge>
+      {/* External/Internal indicator - simplified */}
+      <Badge 
+        variant={isExternal ? "destructive" : "secondary"} 
+        className={cn(
+          "text-[10px] h-5 font-medium transition-all",
+          !isExternal && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
         )}
-        <Badge variant="outline" className="text-[10px]">
-          Execution: Via Ops Desk
-        </Badge>
-      </div>
+      >
+        {isExternal ? (
+          <>
+            <ExternalLink className="w-3 h-3 mr-1" />
+            External
+          </>
+        ) : (
+          <>
+            <Shield className="w-3 h-3 mr-1" />
+            Internal
+          </>
+        )}
+      </Badge>
     </div>
   );
 }
