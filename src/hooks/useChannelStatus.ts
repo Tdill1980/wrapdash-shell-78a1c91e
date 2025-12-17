@@ -28,18 +28,14 @@ export function useChannelStatus() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!organizationId) {
-      setLoading(false);
-      return;
-    }
-
     const fetchChannelStatus = async () => {
       try {
-        // Query conversations grouped by channel and recipient_inbox
+        // Query conversations from last 48 hours grouped by channel and recipient_inbox
+        // Don't filter by org for now to ensure visibility
         const { data, error } = await supabase
           .from('conversations')
           .select('channel, recipient_inbox, created_at')
-          .eq('organization_id', organizationId);
+          .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString());
 
         if (error) {
           console.error('Error fetching channel status:', error);
@@ -180,10 +176,10 @@ export function useChannelStatus() {
 
     fetchChannelStatus();
 
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchChannelStatus, 60000);
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchChannelStatus, 30000);
     return () => clearInterval(interval);
-  }, [organizationId]);
+  }, []);
 
   return { channels, loading };
 }
