@@ -1,8 +1,15 @@
+// Website Chat Edge Function - Jordan Lee Agent
+// Handles website chat via WePrintWraps chat widget
+// Routes all execution through Ops Desk
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkCorrections, loadKnowledgeContext } from "../_shared/knowledge-loader.ts";
 import { WPW_TEAM, SILENT_CC, detectEscalation, getEscalationResponse } from "../_shared/wpw-team-config.ts";
+import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
+import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
+import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,107 +26,53 @@ const VEHICLE_PATTERNS = {
 // Email extraction pattern
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
-// Luigi's persona - he's a REAL WPW team member
-const LUIGI_PERSONA = `You are "Luigi" — a REAL team member at WePrintWraps.com. You've been here 12 years and genuinely love wrapping vehicles.
+// Partnership/sponsorship signal detection
+const PARTNERSHIP_PATTERNS = /\b(collab|sponsor|film|commercial|partner|brand|ambassador|influencer|content creator|media|press|feature)\b/i;
 
-YOUR IDENTITY:
-- You're part of the WPW team, working alongside Jackson (Operations) and Lance (Graphics)
-- You're NOT a bot - you're casual, friendly, use phrases like "Nice!", "That's gonna look sick!", "Oh man, great choice!"
-- Use emojis sparingly: 🔥 💪 👊 (1-2 max per message)
-- You genuinely care about helping customers get the best wrap
+// Jordan Lee's persona - replaces Luigi
+const JORDAN_PERSONA = `You are "Jordan Lee" — a friendly website chat specialist at WePrintWraps.com.
 
-YOUR TEAM (You can mention these to customers):
-- **Jackson** (Operations Manager) - bulk discounts, rush orders, fleet pricing, wholesale accounts
-- **Lance** (Graphics Manager) - design questions, file issues, quality concerns, reprints  
-- **Design Team** - file reviews, artwork checks, custom quote requests
+YOUR ROLE:
+- Educate visitors about wrap options and materials
+- Give BALLPARK pricing only (not formal quotes)
+- Collect email addresses before detailed pricing
+- Identify partnership/sponsorship opportunities
+- Route formal quote requests to the quoting team
 
-=== CONVERSATION TEMPLATES (Use these as your guide) ===
+YOUR TEAM (mention naturally when routing):
+- Alex (Quoting Team) - handles formal quotes and pricing
+- Grant (Design Team) - handles design questions and file reviews
+- Taylor (Partnerships) - handles collabs and sponsorships
 
-GREETING:
-"Hey there! I can get you an instant wholesale wrap quote in under 60 seconds. What type of vehicle are we wrapping today?"
+PRICING APPROACH (CRITICAL):
+1. When customer asks for price WITHOUT email:
+   - Give ballpark range ONLY: "Full wraps typically run $1,000-$2,000 depending on vehicle size"
+   - Say: "I can give you a rough idea, but we send official pricing by email so nothing gets lost. What's your email?"
 
-MATERIAL EXPLANATION (when asked about Avery vs 3M):
-"Great question! Here's the quick difference:
-- Avery ($5.27/sqft) - Excellent quality, great value, 5-7 year durability
-- 3M ($6.32/sqft) - Premium option, easiest install, 7-10 year durability
-Both include your choice of lamination. Which works better for your project?"
+2. When customer provides email:
+   - Acknowledge and confirm you're routing to quoting team
+   - Say: "Perfect — I've got that. Our quoting team will email you a full breakdown shortly."
 
-QUOTE PRESENTATION (after you have email + vehicle):
-"Perfect! Here's your wholesale quote:
-Vehicle: [Vehicle Type]
-Material: [Selected Material]
-Square Footage: [X] sq ft
-Price per sq ft: $[Y]
-Total: $[Total]
-✅ Includes lamination
-✅ FREE shipping (orders over $750)
-✅ Ready to install panels
-Can I get your email to send this quote?"
+3. NEVER give exact per-sqft pricing without email capture
 
-DESIGN HELP RESPONSE:
-"I'd love to help with your design needs! Our professional design team can create exactly what you're looking for. Full custom designs start at $750. Want me to connect you with Lance?"
+ROUTING RULES:
+- Quote requests with email → "I'm sending this to our quoting team"
+- Partnership/sponsorship signals → "Let me loop in our partnerships team"
+- Design/file questions → "I'll get our design team on this"
 
-=== END TEMPLATES ===
-
-QUOTING STRATEGY (CRITICAL):
-1. When customer asks for price WITH vehicle info:
-   - DO NOT give price immediately!
-   - Say: "I can give you a price right here AND email you a full written breakdown. What's your email?"
-   
-2. Once you have their email:
-   - NOW give the price using the template above
-   - Confirm: "Just sent the full breakdown to your email! 💪"
-
-3. If they resist giving email:
-   - Give rough range: "Full wraps typically run $1,000-$2,000 depending on vehicle size"
-   - Still try: "Happy to email you exact specs when you're ready!"
-
-ESCALATION RULES (Follow these exactly):
-
-1. **Bulk/Fleet/Wholesale/10+ vehicles**: 
-   → "Great question! Let me check with Jackson, our Operations Manager. He'll email you the pricing details shortly."
-   
-2. **Rush job/Urgent timeline**:
-   → "Let me check with Jackson on availability for a rush. He'll get back to you ASAP!"
-   
-3. **Quality issue/Bubbles/Defect/Reprint**:
-   → "I'm so sorry to hear that! Let me get Lance, our Graphics Manager, on this right away. He'll contact you directly to make this right."
-   
-4. **Design question/File issues**:
-   → "Great question! Let me loop in Lance from our design team."
-   
-5. **"Can you check my files" + Quote request**:
-   → "Absolutely! I've sent your file review request to our design team. They'll check your files and get you a custom quote."
-
-WPW PRICING (THESE ARE THE ONLY PRICES TO USE):
-- Avery MPI 1105 EGRS with DOZ Lamination: $5.27/sqft
-- 3M IJ180Cv3 with 8518 Lamination: $6.32/sqft
-- Avery Cut Contour Vinyl: $5.92/sqft
-- 3M Cut Contour Vinyl: $6.22/sqft
-- Window Perf 50/50: $5.32/sqft
-- Custom Design: Starting at $750
-- Design Setup: $50
-- Hourly Design: $150/hour
+COMMUNICATION STYLE:
+- Friendly and helpful (not salesy)
+- Concise (2-3 sentences max)
+- Light emoji use (🔥 💪 - 1-2 max)
+- Always confirm human follow-up
 
 WPW GROUND TRUTH:
-- Turnaround: 1-2 business days for print, ships in 1-3 days
-- FREE shipping on orders over $750
-- Print exactly what you need - no minimums, no maximums
-- All wraps come paneled and ready to install
-- All wraps include lamination (gloss, matte, or satin)
-- Cut vinyl comes weeded and masked
-- File formats: PDF, AI, EPS only (no Corel or Publisher)
-- Min resolution: 72 DPI
-- Quality guarantee: 100% - we reprint at no cost if there's an issue
-- Design team: design@weprintwraps.com
-- Support: hello@weprintwraps.com | 602-595-3200
+- Turnaround: 1-2 business days for print
+- FREE shipping over $750
+- All wraps include lamination
+- Quality guarantee: 100% - we reprint at no cost
 
-RESPONSE RULES:
-- Keep responses concise (2-4 sentences max)
-- Always try to collect: email, vehicle info, project details
-- Never make up specific prices - use the exact prices above
-- If you don't know something, say you'll check with the team
-- End with a question or call to action when appropriate`;
+${WPW_CONSTITUTION.humanConfirmation}`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -129,7 +82,7 @@ serve(async (req) => {
   try {
     const { org, agent, mode, session_id, message_text, page_url, referrer, geo } = await req.json();
 
-    console.log('[Luigi] Received message:', { org, session_id, message_text: message_text?.substring(0, 50) });
+    console.log('[JordanLee] Received message:', { org, session_id, message_text: message_text?.substring(0, 50) });
 
     if (!message_text || !session_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -159,16 +112,22 @@ serve(async (req) => {
     const extractedEmail = message_text.match(EMAIL_PATTERN)?.[0] || null;
     const hasCompleteVehicle = extractedVehicle.year && extractedVehicle.make && extractedVehicle.model;
     
-    console.log('[Luigi] Extracted:', { vehicle: extractedVehicle, email: extractedEmail, complete: hasCompleteVehicle });
+    console.log('[JordanLee] Extracted:', { vehicle: extractedVehicle, email: extractedEmail, complete: hasCompleteVehicle });
 
-    // Check for escalation triggers
+    // Detect intent signals
+    const pricingIntent = lowerMessage.includes('price') || 
+                          lowerMessage.includes('cost') || 
+                          lowerMessage.includes('how much') ||
+                          lowerMessage.includes('quote');
+    const partnershipSignal = PARTNERSHIP_PATTERNS.test(message_text);
     const escalationType = detectEscalation(message_text);
-    console.log('[Luigi] Escalation detected:', escalationType);
+    
+    console.log('[JordanLee] Intent:', { pricing: pricingIntent, partnership: partnershipSignal, escalation: escalationType });
 
     // Find or create conversation
     let contactId: string | null = null;
     let conversationId: string;
-    let chatState: Record<string, any> = {};
+    let chatState: Record<string, unknown> = {};
 
     const { data: existingConvo } = await supabase
       .from('conversations')
@@ -180,8 +139,8 @@ serve(async (req) => {
     if (existingConvo) {
       conversationId = existingConvo.id;
       contactId = existingConvo.contact_id;
-      chatState = existingConvo.chat_state || {};
-      console.log('[Luigi] Existing conversation:', conversationId, 'State:', chatState);
+      chatState = (existingConvo.chat_state as Record<string, unknown>) || {};
+      console.log('[JordanLee] Existing conversation:', conversationId);
     } else {
       // Create anonymous contact
       const { data: newContact } = await supabase
@@ -194,7 +153,7 @@ serve(async (req) => {
             session_id,
             first_page: page_url,
             referrer,
-            created_via: 'luigi_chat'
+            created_via: 'jordan_lee_chat'
           }
         })
         .select()
@@ -202,7 +161,7 @@ serve(async (req) => {
 
       contactId = newContact?.id || null;
 
-      // Create conversation with initial state and geo
+      // Create conversation with initial state
       const { data: newConvo, error: convoError } = await supabase
         .from('conversations')
         .insert({
@@ -212,7 +171,7 @@ serve(async (req) => {
           status: 'open',
           priority: 'normal',
           chat_state: { stage: 'initial', escalations_sent: [] },
-          metadata: { session_id, agent, org, mode, page_url, geo: geo || null }
+          metadata: { session_id, agent: 'jordan_lee', org, mode, page_url, geo: geo || null }
         })
         .select()
         .single();
@@ -220,7 +179,7 @@ serve(async (req) => {
       if (convoError) throw convoError;
       conversationId = newConvo.id;
       chatState = { stage: 'initial', escalations_sent: [] };
-      console.log('[Luigi] Created conversation:', conversationId);
+      console.log('[JordanLee] Created conversation:', conversationId);
     }
 
     // Update chat state with extracted info
@@ -234,14 +193,14 @@ serve(async (req) => {
           .from('contacts')
           .update({ 
             email: extractedEmail,
-            tags: ['website', 'chat', 'email_captured', 'luigi_lead'],
+            tags: ['website', 'chat', 'email_captured', 'jordan_lead'],
             metadata: { 
-              email_source: 'luigi_chat_capture',
+              email_source: 'jordan_lee_chat_capture',
               email_captured_at: new Date().toISOString()
             }
           })
           .eq('id', contactId);
-        console.log('[Luigi] Captured email:', extractedEmail);
+        console.log('[JordanLee] Captured email:', extractedEmail);
       }
     }
 
@@ -269,28 +228,72 @@ serve(async (req) => {
       })
       .eq('id', conversationId);
 
-    // Handle escalation if detected
+    // ============================================
+    // OPS DESK ROUTING (New architecture)
+    // Jordan NEVER executes directly - routes through Ops Desk
+    // ============================================
+
+    // Route quote requests with email to Alex Morgan via Ops Desk
+    if (pricingIntent && chatState.customer_email) {
+      const revenuePriority = calculateRevenuePriority({
+        isCommercial: lowerMessage.includes('fleet') || lowerMessage.includes('business'),
+        sqft: hasCompleteVehicle ? 100 : undefined, // Estimate for priority
+      });
+
+      await routeToOpsDesk(supabase, {
+        action: 'create_task',
+        requested_by: 'jordan_lee',
+        target: 'alex_morgan',
+        context: {
+          description: `Website chat quote request: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''}`.trim() || 'Vehicle TBD',
+          customer: String(chatState.customer_email),
+          revenue_impact: revenuePriority,
+          notes: `Message: ${message_text}\nEmail: ${chatState.customer_email}`,
+          conversation_id: conversationId,
+        },
+      });
+      console.log('[JordanLee] Routed to Ops Desk → alex_morgan');
+    }
+
+    // Route partnership opportunities to Taylor Brooks via Ops Desk
+    if (partnershipSignal) {
+      await routeToOpsDesk(supabase, {
+        action: 'create_task',
+        requested_by: 'jordan_lee',
+        target: 'taylor_brooks',
+        context: {
+          description: 'Website chat partnership/sponsorship opportunity',
+          customer: String(chatState.customer_email) || `Visitor-${session_id.substring(0, 8)}`,
+          revenue_impact: 'high',
+          notes: `Original message: ${message_text}`,
+          conversation_id: conversationId,
+        },
+      });
+      console.log('[JordanLee] Routed to Ops Desk → taylor_brooks (partnership)');
+    }
+
+    // Handle escalation if detected (existing team escalation)
     let escalationSent = false;
     if (escalationType && resendKey) {
       const teamMember = WPW_TEAM[escalationType];
-      const alreadyEscalated = chatState.escalations_sent?.includes(escalationType);
+      const escalationsSent = (chatState.escalations_sent as string[]) || [];
+      const alreadyEscalated = escalationsSent.includes(escalationType);
       
       if (teamMember && !alreadyEscalated) {
-        console.log('[Luigi] Sending escalation to:', teamMember.email);
+        console.log('[JordanLee] Sending escalation to:', teamMember.email);
         
-        // Build escalation email
         const escalationHtml = `
           <h2>🔔 Customer Request via Website Chat</h2>
+          <p><strong>Agent:</strong> Jordan Lee (Website Chat)</p>
           <p><strong>Type:</strong> ${teamMember.role}</p>
           <hr>
           <p><strong>Customer Message:</strong></p>
           <blockquote style="background:#f5f5f5;padding:15px;border-left:4px solid #0066cc;">
             ${message_text}
           </blockquote>
-          ${extractedEmail ? `<p><strong>Customer Email:</strong> ${extractedEmail}</p>` : '<p><em>Email not yet captured</em></p>'}
+          ${chatState.customer_email ? `<p><strong>Customer Email:</strong> ${chatState.customer_email}</p>` : '<p><em>Email not yet captured</em></p>'}
           ${hasCompleteVehicle ? `<p><strong>Vehicle:</strong> ${extractedVehicle.year} ${extractedVehicle.make} ${extractedVehicle.model}</p>` : ''}
           <p><strong>Page:</strong> ${page_url}</p>
-          <p><strong>Session:</strong> ${session_id}</p>
           <hr>
           <p><a href="https://wrapcommandai.com/mightychat" style="background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">View in MightyChat</a></p>
           ${mode === 'test' ? '<p style="color:red;"><strong>[TEST MODE]</strong></p>' : ''}
@@ -304,47 +307,21 @@ serve(async (req) => {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              from: 'Luigi @ WPW <onboarding@resend.dev>',
+              from: 'Jordan @ WPW <onboarding@resend.dev>',
               to: [teamMember.email],
-              cc: SILENT_CC, // Trish CC'd silently
+              cc: SILENT_CC,
               subject: `${mode === 'test' ? '[TEST] ' : ''}Customer Request: ${teamMember.role}`,
               html: escalationHtml
             })
           });
           
           escalationSent = true;
-          chatState.escalations_sent = [...(chatState.escalations_sent || []), escalationType];
-          console.log('[Luigi] Escalation email sent to:', teamMember.email, 'CC:', SILENT_CC);
+          chatState.escalations_sent = [...escalationsSent, escalationType];
+          console.log('[JordanLee] Escalation email sent');
         } catch (emailErr) {
-          console.error('[Luigi] Escalation email error:', emailErr);
+          console.error('[JordanLee] Escalation email error:', emailErr);
         }
       }
-    }
-
-    // Handle file review + quote request (creates pending quote for team)
-    let pendingQuote = null;
-    if (escalationType === 'design' && lowerMessage.includes('quote')) {
-      const quoteNumber = `WPW-REQ-${Date.now().toString().slice(-6)}`;
-      
-      const { data: quote } = await supabase
-        .from('quotes')
-        .insert({
-          quote_number: quoteNumber,
-          customer_name: extractedEmail ? extractedEmail.split('@')[0] : `Visitor-${session_id.substring(0, 8)}`,
-          customer_email: extractedEmail || 'pending@capture.local',
-          vehicle_year: extractedVehicle.year,
-          vehicle_make: extractedVehicle.make,
-          vehicle_model: extractedVehicle.model,
-          total_price: 0,
-          status: 'pending_team_pricing',
-          ai_generated: false,
-          ai_message: message_text
-        })
-        .select()
-        .single();
-      
-      pendingQuote = quote;
-      console.log('[Luigi] Created pending quote:', quoteNumber);
     }
 
     // If correction override exists, use it directly
@@ -354,70 +331,44 @@ serve(async (req) => {
         channel: 'website',
         direction: 'outbound',
         content: correctionOverride,
-        sender_name: 'Luigi',
-        metadata: { ai_generated: true, agent, from_correction: true }
+        sender_name: 'Jordan Lee',
+        metadata: { ai_generated: true, agent: 'jordan_lee', from_correction: true }
       });
 
       return new Response(JSON.stringify({ 
         reply: correctionOverride,
         conversation_id: conversationId,
+        agent: 'jordan_lee',
         escalation: escalationType
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // AUTO-QUOTE: Generate if we have vehicle + email
-    let autoQuoteResult = null;
-    const shouldAutoQuote = hasCompleteVehicle && chatState.customer_email && !escalationType;
-    
-    if (shouldAutoQuote) {
-      console.log('[Luigi] Triggering auto-quote for:', extractedVehicle);
-      
-      try {
-        const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/ai-auto-quote`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseKey}`
-          },
-          body: JSON.stringify({
-            vehicleYear: extractedVehicle.year,
-            vehicleMake: extractedVehicle.make,
-            vehicleModel: extractedVehicle.model,
-            customerName: chatState.customer_email.split('@')[0],
-            customerEmail: chatState.customer_email,
-            conversationId: conversationId,
-            autoEmail: true
-          })
-        });
-
-        if (quoteResponse.ok) {
-          autoQuoteResult = await quoteResponse.json();
-          chatState.stage = 'quoted';
-          console.log('[Luigi] Auto-quote generated:', autoQuoteResult);
-        }
-      } catch (quoteError) {
-        console.error('[Luigi] Auto-quote error:', quoteError);
-      }
-    }
+    // ============================================
+    // AI RESPONSE GENERATION
+    // Jordan educates and routes - never sends formal quotes
+    // ============================================
 
     // Build context for AI response
     let contextNotes = '';
     
     if (escalationType && escalationSent) {
       contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
+    } else if (pricingIntent && !chatState.customer_email) {
+      // Email required before formal pricing
+      contextNotes = `STAGE: Customer asked about pricing but no email yet. Give ballpark range and ask for email!`;
+    } else if (pricingIntent && chatState.customer_email) {
+      contextNotes = `QUOTE ROUTED: You've sent this to our quoting team. Confirm the customer will receive an email with full pricing.`;
+    } else if (partnershipSignal) {
+      contextNotes = `PARTNERSHIP ROUTED: You've looped in the partnerships team. Tell the customer someone will follow up shortly.`;
     } else if (hasCompleteVehicle && !chatState.customer_email) {
       contextNotes = `STAGE: Customer gave vehicle info but no email. Ask for their email to send the full breakdown!`;
-    } else if (autoQuoteResult?.success) {
-      contextNotes = `QUOTE GENERATED: Tell them the price is ${autoQuoteResult.quote.formattedPrice} for the ${autoQuoteResult.quote.vehicle}. Confirm the email was sent!`;
-    } else if (pendingQuote) {
-      contextNotes = `FILE REVIEW QUOTE: You've created a quote request for the design team. Ask for their email if not captured.`;
     }
 
-    // Generate AI response
+    // Generate AI response using Jordan's persona
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    let aiReply = "Hey! Thanks for reaching out. I'm Luigi from the WPW team - how can I help you today? 🔥";
+    let aiReply = "Hey! Thanks for reaching out. I'm Jordan from the WPW team - how can I help you today? 🔥";
 
     if (lovableApiKey) {
       try {
@@ -432,7 +383,7 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: `${LUIGI_PERSONA}
+                content: `${JORDAN_PERSONA}
 
 CURRENT CONTEXT:
 ${contextNotes}
@@ -440,8 +391,8 @@ ${contextNotes}
 CONVERSATION STATE:
 - Stage: ${chatState.stage || 'initial'}
 - Customer Email: ${chatState.customer_email || 'NOT CAPTURED YET'}
-- Vehicle: ${chatState.vehicle ? `${chatState.vehicle.year} ${chatState.vehicle.make} ${chatState.vehicle.model}` : 'Not provided'}
-- Escalations Sent: ${chatState.escalations_sent?.join(', ') || 'None'}
+- Vehicle: ${chatState.vehicle ? `${(chatState.vehicle as Record<string, string>).year} ${(chatState.vehicle as Record<string, string>).make} ${(chatState.vehicle as Record<string, string>).model}` : 'Not provided'}
+- Escalations Sent: ${(chatState.escalations_sent as string[])?.join(', ') || 'None'}
 
 KNOWLEDGE BASE:
 ${knowledgeContext}
@@ -464,8 +415,17 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
           }
         }
       } catch (aiError) {
-        console.error('[Luigi] AI generation error:', aiError);
+        console.error('[JordanLee] AI generation error:', aiError);
       }
+    }
+
+    // Format response according to Jordan's style
+    const jordanAgent = AGENTS.jordan_lee;
+    aiReply = formatAgentResponse(jordanAgent, aiReply);
+
+    // Add human confirmation (mandatory per constitution)
+    if (!aiReply.includes('reviewed') && !aiReply.includes('team')) {
+      aiReply += `\n\n${WPW_CONSTITUTION.humanConfirmation}`;
     }
 
     // Save final state and insert response
@@ -479,8 +439,8 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       channel: 'website',
       direction: 'outbound',
       content: aiReply,
-      sender_name: 'Luigi',
-      metadata: { ai_generated: true, agent, escalation: escalationType }
+      sender_name: 'Jordan Lee',
+      metadata: { ai_generated: true, agent: 'jordan_lee', escalation: escalationType }
     });
 
     // Log to message_ingest_log
@@ -488,25 +448,25 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       platform: 'website',
       sender_id: session_id,
       message_text,
-      intent: escalationType || 'general',
+      intent: escalationType || (pricingIntent ? 'pricing' : 'general'),
       processed: true,
-      raw_payload: { org, agent, mode, page_url, chatState }
+      raw_payload: { org, agent: 'jordan_lee', mode, page_url, chatState }
     });
 
-    console.log('[Luigi] Response sent:', aiReply.substring(0, 50));
+    console.log('[JordanLee] Response sent:', aiReply.substring(0, 50));
 
     return new Response(JSON.stringify({ 
       reply: aiReply,
       conversation_id: conversationId,
+      agent: AGENTS.jordan_lee.displayName,
       escalation: escalationType,
-      auto_quote: autoQuoteResult?.success ? autoQuoteResult.quote : null,
-      pending_quote: pendingQuote?.quote_number || null
+      partnership_detected: partnershipSignal,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {
-    console.error('[Luigi] Error:', error);
+    console.error('[JordanLee] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

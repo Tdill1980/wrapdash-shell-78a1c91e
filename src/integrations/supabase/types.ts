@@ -3063,6 +3063,88 @@ export type Database = {
           },
         ]
       }
+      ops_corrections: {
+        Row: {
+          corrected_by: string
+          created_at: string | null
+          customer: string | null
+          description: string
+          id: string
+          notes: string | null
+          organization_id: string | null
+          target: string
+        }
+        Insert: {
+          corrected_by: string
+          created_at?: string | null
+          customer?: string | null
+          description: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          target: string
+        }
+        Update: {
+          corrected_by?: string
+          created_at?: string | null
+          customer?: string | null
+          description?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          target?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ops_corrections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ops_escalations: {
+        Row: {
+          created_at: string | null
+          customer: string | null
+          description: string
+          escalated_by: string
+          escalation_targets: string[]
+          id: string
+          notes: string | null
+          organization_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer?: string | null
+          description: string
+          escalated_by: string
+          escalation_targets: string[]
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer?: string | null
+          description?: string
+          escalated_by?: string
+          escalation_targets?: string[]
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ops_escalations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orchestrator_insights: {
         Row: {
           context: Json | null
@@ -4101,55 +4183,67 @@ export type Database = {
       }
       tasks: {
         Row: {
+          assigned_agent: string | null
           assigned_to: string | null
           completed_at: string | null
           contact_id: string | null
           conversation_id: string | null
           created_at: string | null
           created_by: string | null
+          customer: string | null
           description: string | null
           due_date: string | null
           id: string
+          notes: string | null
           order_id: string | null
           organization_id: string | null
           priority: string | null
           quote_id: string | null
+          revenue_impact: string | null
           status: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
+          assigned_agent?: string | null
           assigned_to?: string | null
           completed_at?: string | null
           contact_id?: string | null
           conversation_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          customer?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          notes?: string | null
           order_id?: string | null
           organization_id?: string | null
           priority?: string | null
           quote_id?: string | null
+          revenue_impact?: string | null
           status?: string | null
           title: string
           updated_at?: string | null
         }
         Update: {
+          assigned_agent?: string | null
           assigned_to?: string | null
           completed_at?: string | null
           contact_id?: string | null
           conversation_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          customer?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          notes?: string | null
           order_id?: string | null
           organization_id?: string | null
           priority?: string | null
           quote_id?: string | null
+          revenue_impact?: string | null
           status?: string | null
           title?: string
           updated_at?: string | null
