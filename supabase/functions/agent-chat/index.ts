@@ -179,10 +179,38 @@ serve(async (req) => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isValidUuid = user_id && uuidRegex.test(user_id);
       
-      const chatContext = {
+      const chatContext: Record<string, unknown> = {
         ...(context || {}),
         orchestrator: user_id || "unknown", // Store username in context
       };
+
+      // If there's a conversation_id in context, fetch the email thread
+      const conversationId = chatContext.conversation_id || chatContext.conversationId;
+      if (conversationId) {
+        console.log("Loading messages for conversation:", conversationId);
+        const { data: threadMessages, error: threadError } = await supabase
+          .from("messages")
+          .select("id, direction, sender_name, content, created_at")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: true })
+          .limit(20); // Limit to last 20 messages
+
+        if (threadError) {
+          console.error("Failed to load thread messages:", threadError);
+        } else if (threadMessages && threadMessages.length > 0) {
+          // Format the email thread for the agent
+          const formattedThread = threadMessages.map((msg: any) => {
+            const direction = msg.direction === "inbound" ? "CUSTOMER" : "WPW TEAM";
+            const sender = msg.sender_name || direction;
+            const time = new Date(msg.created_at).toLocaleString();
+            return `[${direction}] ${sender} (${time}):\n${msg.content}`;
+          }).join("\n\n---\n\n");
+
+          chatContext.email_thread = formattedThread;
+          chatContext.thread_message_count = threadMessages.length;
+          console.log(`Loaded ${threadMessages.length} messages into context`);
+        }
+      }
 
       const { data: chat, error } = await supabase
         .from("agent_chats")
@@ -210,6 +238,7 @@ serve(async (req) => {
             role: agentConfig.role,
           },
           messages: [],
+          thread_loaded: !!chatContext.email_thread,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -258,8 +287,35 @@ serve(async (req) => {
         console.error("Failed to load sales context:", e);
       }
 
-      // Build system prompt with sales context
+      // Extract email thread from chat context if available
+      const chatContext = (chat?.context || {}) as Record<string, unknown>;
+      const emailThread = chatContext.email_thread as string | undefined;
+      const threadSubject = chatContext.subject as string | undefined;
+      const threadChannel = chatContext.channel as string | undefined;
+      const customerName = chatContext.customer_name as string | undefined;
+
+      // Build email thread section for system prompt
+      let emailThreadSection = "";
+      if (emailThread) {
+        emailThreadSection = `
+=== EMAIL/MESSAGE THREAD YOU ARE RESPONDING TO ===
+Subject: ${threadSubject || "No subject"}
+Channel: ${threadChannel || "Unknown"}
+Customer: ${customerName || "Unknown"}
+
+${emailThread}
+
+=== END OF THREAD ===
+
+IMPORTANT: You have full visibility into this conversation. Reference specific details from the thread when discussing with the orchestrator.
+`;
+        console.log("Including email thread in system prompt");
+      }
+
+      // Build system prompt with sales context and email thread
       const enhancedSystemPrompt = `${agentConfig.systemPrompt}
+
+${emailThreadSection}
 
 ${salesContext}
 
