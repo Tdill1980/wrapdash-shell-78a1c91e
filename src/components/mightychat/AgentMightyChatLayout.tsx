@@ -634,7 +634,9 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
         <div className="w-[280px] flex-shrink-0 hidden xl:block">
           <ContactSidebar
             contactId={selectedConversation?.contact_id || null}
-            channel={selectedConversation?.channel}
+            channel={selectedConversation?.channel || 'website'}
+            conversationId={selectedConversation?.id}
+            subject={selectedConversation?.subject || undefined}
           />
         </div>
       </div>

@@ -71,6 +71,7 @@ import MightyEdit from "./pages/MightyEdit";
 import MyProducts from "./pages/settings/MyProducts";
 import AdminOrganizations from "./pages/AdminOrganizations";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
+import OperationsSOP from "./pages/OperationsSOP";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -131,6 +132,7 @@ const App = () => (
             <Route path="/paid-ads-performance" element={<PaidAdsPerformance />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/tasks" element={<MightyTasks />} />
+            <Route path="/operations-sop" element={<OperationsSOP />} />
             <Route path="/tradedna" element={<TradeDNA />} />
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />
