@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, ArrowLeft, RefreshCw } from "lucide-react";
+import { Send, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
 import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
 import { WorkStreamsSidebar, type WorkStream, mapStreamToInbox } from "@/components/mightychat/WorkStreamsSidebar";
@@ -447,6 +447,23 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from("messages")
+        .delete()
+        .eq("id", messageId);
+
+      if (error) throw error;
+
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      toast.success("Message deleted");
+    } catch (err) {
+      console.error("Delete message error:", err);
+      toast.error("Failed to delete message");
+    }
+  };
+
   // Mobile: show list when no conversation selected, show thread when selected
   const showMobileList = !selectedConversation;
 
@@ -706,7 +723,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`mb-3 md:mb-4 flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                        className={`mb-3 md:mb-4 flex group ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
                       >
                         {msg.direction === "inbound" && (
                           <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
@@ -722,15 +739,27 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                               {msg.sender_name}
                             </div>
                           )}
-                          <div
-                            className={cn(
-                              "inline-block p-2 md:p-3 rounded-lg",
-                              msg.direction === "outbound"
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted"
-                            )}
-                          >
-                            <p className="text-xs md:text-sm">{msg.content}</p>
+                          <div className="relative inline-block">
+                            <div
+                              className={cn(
+                                "p-2 md:p-3 rounded-lg",
+                                msg.direction === "outbound"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted"
+                              )}
+                            >
+                              <p className="text-xs md:text-sm">{msg.content}</p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className={cn(
+                                "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20",
+                                msg.direction === "outbound" ? "-left-6" : "-right-6"
+                              )}
+                              title="Delete message"
+                            >
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </button>
                           </div>
                           <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
                             {formatTime(msg.created_at)}
