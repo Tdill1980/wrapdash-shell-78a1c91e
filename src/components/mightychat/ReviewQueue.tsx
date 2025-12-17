@@ -36,7 +36,10 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
     queryFn: async () => {
       const fortyEightHoursAgo = new Date();
       fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+      const iso = fortyEightHoursAgo.toISOString();
 
+      // Include threads that were created earlier but received new messages recently
+      // (last_message_at can be null for brand new threads)
       const { data, error } = await supabase
         .from("conversations")
         .select(`
@@ -44,9 +47,10 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
           contacts (name, email, phone),
           messages (content, sender, created_at)
         `)
-        .gte("created_at", fortyEightHoursAgo.toISOString())
+        .or(`last_message_at.gte.${iso},and(last_message_at.is.null,created_at.gte.${iso})`)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
 
       if (error) throw error;
       return data || [];
