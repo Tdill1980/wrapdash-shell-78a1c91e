@@ -68,7 +68,7 @@ export default function InstagramSettings() {
     }
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     // Facebook blocks embedded/iframe auth screens
     if (isEmbedded) {
       toast.error("Facebook login can't run inside the preview", {
@@ -82,7 +82,16 @@ export default function InstagramSettings() {
     const state = crypto.randomUUID();
     localStorage.setItem("meta_oauth_state", state);
 
-    const appId = "1099408548599498";
+    // Read the App ID from backend config (avoids hardcoded mismatch)
+    const { data: cfg, error: cfgErr } = await supabase.functions.invoke("meta-oauth-config");
+    if (cfgErr || !cfg?.appId) {
+      toast.error("Meta OAuth is not configured", {
+        description: "Missing app configuration in backend."
+      });
+      return;
+    }
+
+    const appId = String(cfg.appId);
     const redirectUri = encodeURIComponent(`${window.location.origin}/auth/meta/callback`);
     const scopes = [
       "pages_show_list",
@@ -93,12 +102,11 @@ export default function InstagramSettings() {
       "instagram_manage_messages"
     ].join(",");
 
-    const oauthUrl = `https://www.facebook.com/v24.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code&state=${state}`;
+    const oauthUrl = `https://www.facebook.com/v24.0/dialog/oauth?client_id=${encodeURIComponent(appId)}&redirect_uri=${redirectUri}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(state)}`;
 
     // Try popup first, fallback to redirect if blocked
     const popup = window.open(oauthUrl, "_blank", "width=600,height=700,scrollbars=yes");
     if (!popup || popup.closed || typeof popup.closed === "undefined") {
-      // Popup blocked - fallback to full redirect
       window.location.href = oauthUrl;
     }
   };
