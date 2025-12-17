@@ -51,6 +51,95 @@ interface AgentMightyChatLayoutProps {
   onOpenOpsDesk: () => void;
 }
 
+// Empty state explanations for each stream
+function EmptyStreamState({ stream }: { stream: WorkStream }) {
+  const streamConfig: Record<WorkStream, { 
+    title: string; 
+    agent: string;
+    inputs: string[]; 
+    reason: string;
+    action?: string;
+  }> = {
+    website: {
+      title: "Website Leads",
+      agent: "Jordan Lee",
+      inputs: ["Website Chat Widget"],
+      reason: "Chat widget may not be deployed on weprintwraps.com, or no visitors have started a chat yet.",
+      action: "Check if embed code is placed before </body> tag on website"
+    },
+    quotes: {
+      title: "Quotes Waiting",
+      agent: "Alex Morgan",
+      inputs: ["hello@weprintwraps.com", "Website (pricing intent)", "Instagram (pricing intent)"],
+      reason: "No emails received at hello@ inbox, or no pricing inquiries detected from other channels.",
+      action: "Verify Power Automate flow is active for hello@weprintwraps.com"
+    },
+    design: {
+      title: "Design Reviews",
+      agent: "Grant Miller",
+      inputs: ["design@weprintwraps.com"],
+      reason: "No emails received at design@ inbox.",
+      action: "Verify Power Automate flow is active for design@weprintwraps.com"
+    },
+    dms: {
+      title: "Social DMs",
+      agent: "Casey Ramirez",
+      inputs: ["Instagram DMs", "Facebook Messages"],
+      reason: "Instagram webhook may not be receiving messages, and Facebook Messages is not connected.",
+      action: "Check Meta webhook configuration and FB Messenger permissions"
+    },
+    ops: {
+      title: "Ops Desk",
+      agent: "Manny Chen",
+      inputs: ["jackson@weprintwraps.com", "Internal routing"],
+      reason: "No emails received at jackson@ inbox or no items routed for approval.",
+    }
+  };
+
+  const config = streamConfig[stream];
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="text-center">
+        <p className="text-sm font-medium text-foreground mb-1">No conversations</p>
+        <p className="text-xs text-muted-foreground">{config.title} • {config.agent}</p>
+      </div>
+      
+      <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+        <div>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+            INPUTS FOR THIS STREAM
+          </p>
+          <ul className="text-xs text-foreground space-y-0.5">
+            {config.inputs.map((input, i) => (
+              <li key={i} className="flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-muted-foreground" />
+                {input}
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        <div className="pt-2 border-t border-border/50">
+          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1">
+            LIKELY REASON
+          </p>
+          <p className="text-xs text-muted-foreground">{config.reason}</p>
+        </div>
+        
+        {config.action && (
+          <div className="pt-2 border-t border-border/50">
+            <p className="text-[10px] font-semibold text-blue-500 uppercase tracking-wide mb-1">
+              SUGGESTED ACTION
+            </p>
+            <p className="text-xs text-foreground">{config.action}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutProps) {
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("id");
@@ -348,9 +437,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
                 {loading ? (
                   <div className="p-4 text-muted-foreground">Loading...</div>
                 ) : filteredConversations.length === 0 ? (
-                  <div className="p-4 text-muted-foreground text-center">
-                    No conversations in this stream
-                  </div>
+                  <EmptyStreamState stream={activeStream} />
                 ) : (
                   filteredConversations.map((conv) => {
                     const hasQuoteRequest = conv.review_status === 'pending_review';
