@@ -80,7 +80,8 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
     switch (channel) {
       case "email": return <Mail className="w-4 h-4" />;
       case "instagram": return <Instagram className="w-4 h-4" />;
-      case "website_chat": return <MessageCircle className="w-4 h-4" />;
+      case "website_chat": 
+      case "website": return <MessageCircle className="w-4 h-4" />;
       default: return <MessageCircle className="w-4 h-4" />;
     }
   };
@@ -89,7 +90,8 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
     switch (channel) {
       case "email": return "bg-green-500/20 text-green-400";
       case "instagram": return "bg-pink-500/20 text-pink-400";
-      case "website_chat": return "bg-blue-500/20 text-blue-400";
+      case "website_chat": 
+      case "website": return "bg-blue-500/20 text-blue-400";
       default: return "bg-muted text-muted-foreground";
     }
   };
@@ -213,7 +215,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
           </TabsContent>
 
           <TabsContent value="chat" className="mt-0 space-y-2">
-            {recentConversations?.filter(c => c.channel === "website_chat").map((conv) => (
+            {recentConversations?.filter(c => c.channel === "website_chat" || c.channel === "website").map((conv) => (
               <ConversationCard
                 key={conv.id}
                 conversation={conv}
