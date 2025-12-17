@@ -4658,6 +4658,62 @@ export type Database = {
           },
         ]
       }
+      wpw_knowledge_base: {
+        Row: {
+          applies_to_agents: string[] | null
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          organization_id: string | null
+          priority: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          applies_to_agents?: string[] | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          organization_id?: string | null
+          priority?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          applies_to_agents?: string[] | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          organization_id?: string | null
+          priority?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wpw_knowledge_base_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wrapbox_kits: {
         Row: {
           created_at: string | null
