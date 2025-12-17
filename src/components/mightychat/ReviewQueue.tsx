@@ -11,7 +11,8 @@ import {
   Instagram, 
   CheckSquare,
   Clock,
-  Brain
+  Brain,
+  RefreshCw
 } from "lucide-react";
 import { AgentSelector } from "./AgentSelector";
 import { AgentChatPanel } from "./AgentChatPanel";
@@ -30,7 +31,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const [taskContext, setTaskContext] = useState<Record<string, unknown> | undefined>();
 
   // Fetch recent conversations from last 48 hours
-  const { data: recentConversations, isLoading } = useQuery({
+  const { data: recentConversations, isLoading, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["review-queue-conversations"],
     queryFn: async () => {
       const fortyEightHoursAgo = new Date();
@@ -50,6 +51,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
       if (error) throw error;
       return data || [];
     },
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   const handleNewTask = () => {
@@ -96,18 +98,42 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
     }
   };
 
+  // Filter helpers
+  const filterByInbox = (inbox: string) => {
+    return recentConversations?.filter(c => {
+      if (c.channel !== "email") return false;
+      const recipientInbox = (c.recipient_inbox || "").toLowerCase();
+      return recipientInbox.includes(inbox);
+    }) || [];
+  };
+
+  const helloEmails = filterByInbox("hello");
+  const designEmails = filterByInbox("design");
+  const jacksonEmails = filterByInbox("jackson");
+  const allEmails = recentConversations?.filter(c => c.channel === "email") || [];
+  const socialConvos = recentConversations?.filter(c => c.channel === "instagram") || [];
+  const websiteConvos = recentConversations?.filter(c => c.channel === "website_chat" || c.channel === "website") || [];
+
   return (
     <div className="h-full flex flex-col">
       {/* Header with New Task button */}
       <div className="p-4 border-b border-border flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Review Queue</h2>
-          <p className="text-sm text-muted-foreground">Last 48 hours</p>
+          <p className="text-sm text-muted-foreground">
+            Last 48 hours • Updated {dataUpdatedAt ? formatDistanceToNow(new Date(dataUpdatedAt), { addSuffix: true }) : "just now"}
+          </p>
         </div>
-        <Button onClick={handleNewTask} className="gap-2">
-          <Plus className="w-4 h-4" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1">
+            <RefreshCw className="w-3 h-3" />
+            Refresh
+          </Button>
+          <Button onClick={handleNewTask} className="gap-2">
+            <Plus className="w-4 h-4" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       {/* Quick Task Shortcuts */}
@@ -155,11 +181,13 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
 
       {/* Tabs for different views */}
       <Tabs defaultValue="all" className="flex-1 flex flex-col">
-        <TabsList className="mx-4 mt-2">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="email">Email</TabsTrigger>
-          <TabsTrigger value="social">Social</TabsTrigger>
-          <TabsTrigger value="chat">Website</TabsTrigger>
+        <TabsList className="mx-4 mt-2 flex-wrap h-auto gap-1">
+          <TabsTrigger value="all">All ({recentConversations?.length || 0})</TabsTrigger>
+          <TabsTrigger value="hello" className="text-green-400">hello@ ({helloEmails.length})</TabsTrigger>
+          <TabsTrigger value="design" className="text-purple-400">design@ ({designEmails.length})</TabsTrigger>
+          <TabsTrigger value="jackson" className="text-orange-400">jackson@ ({jacksonEmails.length})</TabsTrigger>
+          <TabsTrigger value="social" className="text-pink-400">Instagram ({socialConvos.length})</TabsTrigger>
+          <TabsTrigger value="chat" className="text-blue-400">Website ({websiteConvos.length})</TabsTrigger>
         </TabsList>
 
         <ScrollArea className="flex-1 p-4">
@@ -188,43 +216,89 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
             )}
           </TabsContent>
 
-          <TabsContent value="email" className="mt-0 space-y-2">
-            {recentConversations?.filter(c => c.channel === "email").map((conv) => (
-              <ConversationCard
-                key={conv.id}
-                conversation={conv}
-                onAskAgent={() => handleAskAboutConversation(conv)}
-                onSelect={() => onSelectConversation?.(conv.id)}
-                getChannelIcon={getChannelIcon}
-                getChannelColor={getChannelColor}
-              />
-            ))}
+          <TabsContent value="hello" className="mt-0 space-y-2">
+            {helloEmails.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No hello@ emails</div>
+            ) : (
+              helloEmails.map((conv) => (
+                <ConversationCard
+                  key={conv.id}
+                  conversation={conv}
+                  onAskAgent={() => handleAskAboutConversation(conv)}
+                  onSelect={() => onSelectConversation?.(conv.id)}
+                  getChannelIcon={getChannelIcon}
+                  getChannelColor={getChannelColor}
+                />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="design" className="mt-0 space-y-2">
+            {designEmails.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No design@ emails</div>
+            ) : (
+              designEmails.map((conv) => (
+                <ConversationCard
+                  key={conv.id}
+                  conversation={conv}
+                  onAskAgent={() => handleAskAboutConversation(conv)}
+                  onSelect={() => onSelectConversation?.(conv.id)}
+                  getChannelIcon={getChannelIcon}
+                  getChannelColor={getChannelColor}
+                />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="jackson" className="mt-0 space-y-2">
+            {jacksonEmails.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No jackson@ emails</div>
+            ) : (
+              jacksonEmails.map((conv) => (
+                <ConversationCard
+                  key={conv.id}
+                  conversation={conv}
+                  onAskAgent={() => handleAskAboutConversation(conv)}
+                  onSelect={() => onSelectConversation?.(conv.id)}
+                  getChannelIcon={getChannelIcon}
+                  getChannelColor={getChannelColor}
+                />
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="social" className="mt-0 space-y-2">
-            {recentConversations?.filter(c => c.channel === "instagram").map((conv) => (
-              <ConversationCard
-                key={conv.id}
-                conversation={conv}
-                onAskAgent={() => handleAskAboutConversation(conv)}
-                onSelect={() => onSelectConversation?.(conv.id)}
-                getChannelIcon={getChannelIcon}
-                getChannelColor={getChannelColor}
-              />
-            ))}
+            {socialConvos.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No Instagram DMs</div>
+            ) : (
+              socialConvos.map((conv) => (
+                <ConversationCard
+                  key={conv.id}
+                  conversation={conv}
+                  onAskAgent={() => handleAskAboutConversation(conv)}
+                  onSelect={() => onSelectConversation?.(conv.id)}
+                  getChannelIcon={getChannelIcon}
+                  getChannelColor={getChannelColor}
+                />
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="chat" className="mt-0 space-y-2">
-            {recentConversations?.filter(c => c.channel === "website_chat" || c.channel === "website").map((conv) => (
-              <ConversationCard
-                key={conv.id}
-                conversation={conv}
-                onAskAgent={() => handleAskAboutConversation(conv)}
-                onSelect={() => onSelectConversation?.(conv.id)}
-                getChannelIcon={getChannelIcon}
-                getChannelColor={getChannelColor}
-              />
-            ))}
+            {websiteConvos.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No website chats</div>
+            ) : (
+              websiteConvos.map((conv) => (
+                <ConversationCard
+                  key={conv.id}
+                  conversation={conv}
+                  onAskAgent={() => handleAskAboutConversation(conv)}
+                  onSelect={() => onSelectConversation?.(conv.id)}
+                  getChannelIcon={getChannelIcon}
+                  getChannelColor={getChannelColor}
+                />
+              ))
+            )}
           </TabsContent>
         </ScrollArea>
       </Tabs>
