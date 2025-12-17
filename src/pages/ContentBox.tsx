@@ -40,6 +40,7 @@ import { ContentPlannerCalendar } from "@/components/calendar";
 import { MetaVideoAdFastPanel } from "@/components/ads/MetaVideoAdFastPanel";
 import { StaticAdDesigner } from "@/components/ads/StaticAdDesigner";
 import { InspirationAIPanel } from "@/components/contentbox/InspirationAIPanel";
+import { ContentRequestPanel } from "@/components/contentbox/ContentRequestPanel";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -446,6 +447,9 @@ export default function ContentBox() {
 
   return (
     <MainLayout>
+      {/* Content Request Panel - Ask the right agent */}
+      <ContentRequestPanel />
+
       {/* Header - Mobile Responsive */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
