@@ -1,13 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Target, TrendingUp, TrendingDown, AlertTriangle, Calendar, DollarSign } from "lucide-react";
+import { Target, TrendingUp, TrendingDown, AlertTriangle, Calendar, DollarSign, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, differenceInDays, startOfMonth, endOfMonth } from "date-fns";
-
-const MONTHLY_TARGET = 400000;
-const DAILY_TARGET = 10000;
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 interface SalesGoalData {
   currentRevenue: number;
@@ -18,68 +16,30 @@ interface SalesGoalData {
   percentComplete: number;
   status: "ON_TRACK" | "BEHIND" | "CRITICAL" | "AHEAD";
   todayRevenue: number;
+  monthlyTarget: number;
+  dailyTarget: number;
+  lastYearRevenue: number;
+  lastYearOrderCount: number;
+  yoyDifference: number;
+  yoyPercentChange: number;
+  suggestions: string[];
+  dataSource: string;
+  lastUpdated: string;
 }
 
 export function SalesGoalTracker() {
-  const { data: salesData, isLoading } = useQuery({
-    queryKey: ["sales-goal-data"],
+  const { data: salesData, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["sales-goal-data-woocommerce"],
     queryFn: async (): Promise<SalesGoalData> => {
-      const now = new Date();
-      const monthStart = startOfMonth(now);
-      const monthEnd = endOfMonth(now);
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const { data, error } = await supabase.functions.invoke("sync-woocommerce-sales");
       
-      // Get all orders for this month
-      const { data: orders, error } = await supabase
-        .from("shopflow_orders")
-        .select("order_total, created_at")
-        .gte("created_at", monthStart.toISOString())
-        .lte("created_at", monthEnd.toISOString());
-
       if (error) throw error;
-
-      const currentRevenue = orders?.reduce((sum, o) => sum + (o.order_total || 0), 0) || 0;
-      const orderCount = orders?.length || 0;
+      if (data.error) throw new Error(data.error);
       
-      // Today's revenue
-      const todayOrders = orders?.filter(o => new Date(o.created_at) >= todayStart) || [];
-      const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.order_total || 0), 0);
-      
-      const daysElapsed = differenceInDays(now, monthStart) + 1;
-      const daysRemaining = differenceInDays(monthEnd, now);
-      const remainingTarget = MONTHLY_TARGET - currentRevenue;
-      const dailyPaceRequired = daysRemaining > 0 ? remainingTarget / daysRemaining : 0;
-      const percentComplete = (currentRevenue / MONTHLY_TARGET) * 100;
-      
-      // Expected progress based on days elapsed
-      const expectedPercent = (daysElapsed / differenceInDays(monthEnd, monthStart)) * 100;
-      const progressDiff = percentComplete - expectedPercent;
-      
-      let status: SalesGoalData["status"];
-      if (percentComplete >= 100) {
-        status = "AHEAD";
-      } else if (progressDiff >= 5) {
-        status = "AHEAD";
-      } else if (progressDiff >= -10) {
-        status = "ON_TRACK";
-      } else if (progressDiff >= -25) {
-        status = "BEHIND";
-      } else {
-        status = "CRITICAL";
-      }
-
-      return {
-        currentRevenue,
-        orderCount,
-        daysRemaining,
-        daysElapsed,
-        dailyPaceRequired,
-        percentComplete,
-        status,
-        todayRevenue,
-      };
+      return data as SalesGoalData;
     },
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 300000,
+    staleTime: 60000,
   });
 
   if (isLoading || !salesData) {
@@ -100,30 +60,28 @@ export function SalesGoalTracker() {
       color: "bg-green-500/20 text-green-400 border-green-500/30",
       icon: TrendingUp,
       label: "Ahead of Goal",
-      progressColor: "bg-green-500",
     },
     ON_TRACK: {
       color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
       icon: TrendingUp,
       label: "On Track",
-      progressColor: "bg-blue-500",
     },
     BEHIND: {
       color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
       icon: TrendingDown,
       label: "Behind Pace",
-      progressColor: "bg-yellow-500",
     },
     CRITICAL: {
       color: "bg-red-500/20 text-red-400 border-red-500/30",
       icon: AlertTriangle,
       label: "Critical",
-      progressColor: "bg-red-500",
     },
   };
 
   const config = statusConfig[salesData.status];
   const StatusIcon = config.icon;
+  const MONTHLY_TARGET = salesData.monthlyTarget || 400000;
+  const DAILY_TARGET = salesData.dailyTarget || 10000;
 
   return (
     <Card className="dashboard-card overflow-hidden">
@@ -133,10 +91,21 @@ export function SalesGoalTracker() {
             <Target className="w-5 h-5 text-primary" />
             <span>Sales Goal Tracker</span>
           </CardTitle>
-          <Badge variant="outline" className={config.color}>
-            <StatusIcon className="w-3 h-3 mr-1" />
-            {config.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="h-7 w-7 p-0"
+            >
+              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+            <Badge variant="outline" className={config.color}>
+              <StatusIcon className="w-3 h-3 mr-1" />
+              {config.label}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -145,7 +114,7 @@ export function SalesGoalTracker() {
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Monthly Goal</span>
             <span className="font-semibold">
-              ${salesData.currentRevenue.toLocaleString()} / ${MONTHLY_TARGET.toLocaleString()}
+              ${salesData.currentRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })} / ${MONTHLY_TARGET.toLocaleString()}
             </span>
           </div>
           <div className="relative">
@@ -165,23 +134,39 @@ export function SalesGoalTracker() {
           </div>
         </div>
 
+        {/* Year-over-Year Comparison */}
+        <div className={`rounded-lg p-3 border ${salesData.yoyDifference >= 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">vs. Last Year (Same Period)</span>
+            <span className={`text-sm font-bold ${salesData.yoyDifference >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {salesData.yoyDifference >= 0 ? '+' : ''}${Math.round(salesData.yoyDifference).toLocaleString()}
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-xs text-muted-foreground">
+              Last year: ${salesData.lastYearRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </span>
+            <span className={`text-xs ${salesData.yoyPercentChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {salesData.yoyPercentChange >= 0 ? '+' : ''}{salesData.yoyPercentChange.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Today's Revenue */}
           <div className="bg-background/50 rounded-lg p-3 border border-border">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
               <DollarSign className="w-3 h-3" />
               Today's Revenue
             </div>
             <div className="text-lg font-bold">
-              ${salesData.todayRevenue.toLocaleString()}
+              ${salesData.todayRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
             <div className="text-xs text-muted-foreground">
               Goal: ${DAILY_TARGET.toLocaleString()}/day
             </div>
           </div>
 
-          {/* Required Daily Pace */}
           <div className="bg-background/50 rounded-lg p-3 border border-border">
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
               <Calendar className="w-3 h-3" />
@@ -196,23 +181,24 @@ export function SalesGoalTracker() {
           </div>
         </div>
 
-        {/* Alert for Critical Status */}
-        {salesData.status === "CRITICAL" && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-red-400 text-sm font-medium mb-1">
+        {/* AI Suggestions */}
+        {salesData.suggestions && salesData.suggestions.length > 0 && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-amber-400 text-sm font-medium mb-2">
               <AlertTriangle className="w-4 h-4" />
-              Action Required
+              AI Recovery Suggestions
             </div>
-            <p className="text-xs text-red-300/80">
-              Revenue is significantly behind pace. Need ${Math.round(salesData.dailyPaceRequired).toLocaleString()}/day 
-              for the next {salesData.daysRemaining} days to hit the monthly goal.
-            </p>
+            <ul className="text-xs text-amber-300/80 space-y-1">
+              {salesData.suggestions.slice(0, 3).map((suggestion, i) => (
+                <li key={i}>• {suggestion}</li>
+              ))}
+            </ul>
           </div>
         )}
 
         {/* Orders count */}
         <div className="text-xs text-muted-foreground text-center pt-2 border-t border-border">
-          {salesData.orderCount} orders this month • Updated {format(new Date(), "h:mm a")}
+          {salesData.orderCount} orders this month • Live from WooCommerce • {format(new Date(salesData.lastUpdated), "h:mm a")}
         </div>
       </CardContent>
     </Card>
