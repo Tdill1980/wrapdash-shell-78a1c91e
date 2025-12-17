@@ -22,6 +22,14 @@ export default function InstagramSettings() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const isEmbedded = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+
   useEffect(() => {
     loadTokenInfo();
   }, []);
@@ -46,12 +54,21 @@ export default function InstagramSettings() {
   };
 
   const handleConnect = () => {
-    // Meta OAuth URL - redirect to Facebook Login
+    // Facebook blocks embedded/iframe auth screens. Lovable preview runs in an iframe,
+    // so we must open the app in a real browser tab first.
+    if (isEmbedded) {
+      toast.error("Facebook login can't run inside the preview", {
+        description: "Opening this page in a new tab — click Connect again there."
+      });
+      window.open(window.location.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+
     const appId = "1099408548599498"; // Your Meta App ID
     const redirectUri = encodeURIComponent(`${window.location.origin}/auth/meta/callback`);
     const scopes = [
       "pages_show_list",
-      "business_management", 
+      "business_management",
       "pages_read_engagement",
       "pages_messaging",
       "instagram_basic",
@@ -59,9 +76,7 @@ export default function InstagramSettings() {
     ].join(",");
 
     const oauthUrl = `https://www.facebook.com/v24.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scopes}&response_type=code`;
-    
-    // Open in new window to avoid iframe restrictions (Facebook blocks X-Frame-Options)
-    window.open(oauthUrl, "_blank", "width=600,height=700,scrollbars=yes");
+    window.location.href = oauthUrl;
   };
 
   const handleRefresh = async () => {
