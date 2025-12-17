@@ -267,16 +267,25 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
 
   // Map conversation to stream
   const getConversationStream = (conv: Conversation): WorkStream => {
-    if (conv.channel === 'website') return 'website';
-    if (conv.channel === 'instagram') return 'dms';
-    if (conv.channel === 'email') {
+    const channel = conv.channel?.toLowerCase() || '';
+    
+    // Website chat (both 'website' and 'website_chat')
+    if (channel === 'website' || channel === 'website_chat') return 'website';
+    
+    // Social DMs (Instagram, Facebook)
+    if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') return 'dms';
+    
+    // Email routing based on inbox
+    if (channel === 'email') {
       const inbox = conv.recipient_inbox?.toLowerCase() || '';
       if (inbox.includes('design')) return 'design';
       if (inbox.includes('jackson')) return 'ops';
       // hello, general, or any other email goes to quotes
       return 'quotes';
     }
-    return 'quotes'; // Default to quotes for any unknown channel
+    
+    // Default to quotes for any unknown channel
+    return 'quotes';
   };
 
   // Filter conversations based on active stream
