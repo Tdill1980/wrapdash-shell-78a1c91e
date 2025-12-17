@@ -203,3 +203,6 @@ verify_jwt = false
 
 [functions.receive-email-webhook]
 verify_jwt = false
+
+[functions.agent-chat]
+verify_jwt = false

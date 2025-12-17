@@ -14,6 +14,7 @@ import { LogOut, User, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
+import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
 
 interface GlobalHeaderProps {
   userName?: string;
@@ -89,6 +90,11 @@ export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMe
         <div className="flex items-center gap-2 sm:gap-4">
           {isSignedIn ? (
             <>
+              <AskAgentButton 
+                variant="ghost" 
+                size="sm"
+                className="hidden sm:flex text-white/80 hover:text-white hover:bg-white/10"
+              />
               <OrganizationSwitcher />
               <OfflineIndicator />
 
