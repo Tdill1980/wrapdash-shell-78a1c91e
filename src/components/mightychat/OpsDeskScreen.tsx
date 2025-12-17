@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatTimeAZ } from "@/lib/timezone";
 import { toast } from "sonner";
 import { OpsDeskCommandPanel } from "./OpsDeskCommandPanel";
 
@@ -137,17 +138,7 @@ export function OpsDeskScreen({ onClose }: OpsDeskScreenProps) {
     return (payload?.customer_name as string) || 'Unknown';
   };
 
-  const formatTime = (dateStr: string | null) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  };
+  const formatTime = (dateStr: string | null) => formatTimeAZ(dateStr);
 
   const pendingCount = tasks.filter(t => !t.resolved).length;
   const cxRiskCount = tasks.filter(t => t.priority === 'urgent').length;
