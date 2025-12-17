@@ -49,8 +49,8 @@ const AGENT_INFO: Record<AgentInbox, {
   },
   dms: {
     displayName: 'Casey Ramirez',
-    shortRole: 'Social',
-    fullRole: 'Social DMs Agent',
+    shortRole: 'Affiliates',
+    fullRole: 'Affiliate Manager',
     icon: <MessageSquare className="w-4 h-4" />,
     color: 'text-pink-600 dark:text-pink-400',
     bgColor: 'bg-pink-500/10',

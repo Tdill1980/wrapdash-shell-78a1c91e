@@ -266,7 +266,7 @@ function ConversationCard({
     const channel = conversation.channel;
     const recipientInbox = (conversation.recipient_inbox || "").toLowerCase();
 
-    if (channel === "instagram") return { owner: "Casey Ramirez", inbox: "Instagram DMs" };
+    if (channel === "instagram") return { owner: "Social Team", inbox: "Instagram DMs" };
     // Some older code uses website_chat; newer pipeline uses website
     if (channel === "website" || channel === "website_chat") return { owner: "Jordan Lee", inbox: "Website Chat" };
     if (channel === "email") {

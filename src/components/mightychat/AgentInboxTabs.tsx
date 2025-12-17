@@ -50,7 +50,7 @@ const INBOX_CONFIGS: InboxConfig[] = [
   },
   {
     id: 'dms',
-    label: 'DMs',
+    label: 'Affiliates',
     agent: 'Casey',
     icon: <MessageSquare className="w-4 h-4" />,
     color: 'text-pink-600',

@@ -125,7 +125,7 @@ export function InboxFilters({ activeFilter, onFilterChange, counts }: InboxFilt
 export function AgentBadge({ channel, recipientInbox }: { channel: string; recipientInbox?: string | null }) {
   const getAgentInfo = () => {
     if (channel === 'instagram') {
-      return { label: 'Casey', color: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' };
+      return { label: 'Social', color: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' };
     }
     if (channel === 'website') {
       return { label: 'Jordan', color: 'bg-blue-500 text-white' };

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const AGENTS = {
   alex: { name: "Alex Morgan", role: "Quotes Agent", stream: "quotes" },
   grant: { name: "Grant Miller", role: "Design Agent", stream: "design" },
-  casey: { name: "Casey Ramirez", role: "Social Agent", stream: "dms" },
+  casey: { name: "Casey Ramirez", role: "Affiliate Manager", stream: "affiliates" },
   jordan: { name: "Jordan Lee", role: "Sales Agent", stream: "website" },
   evan: { name: "Evan Porter", role: "Affiliate Ops", stream: "affiliates" },
   emily: { name: "Emily Carter", role: "Marketing Content", stream: "content" },
@@ -25,7 +25,7 @@ type AgentKey = keyof typeof AGENTS;
 const EXAMPLE_COMMANDS = [
   "Alex — follow up on quotes older than 24 hours",
   "Grant — review design@ for scope creep",
-  "Casey — monitor IG comments for pricing questions",
+  "Casey — send update email to sponsored wrap artists",
   "Evan — identify affiliates worth sponsoring this week",
   "Emily — draft a 3-email promo for turnaround speed",
 ];

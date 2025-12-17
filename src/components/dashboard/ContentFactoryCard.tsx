@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Video, Sparkles, Calendar, Zap, MessageSquare, Palette, Film } from "lucide-react";
+import { Video, Sparkles, Calendar, Zap, Heart, Palette, Film } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
@@ -42,11 +42,11 @@ export function ContentFactoryCard() {
             variant="outline"
             size="sm"
             className="flex flex-col h-auto py-3 gap-1 hover:border-pink-500/50 text-xs"
-            context={{ type: "content_request", content_type: "social" }}
+            context={{ type: "content_request", content_type: "affiliate" }}
           >
-            <MessageSquare className="h-4 w-4 text-pink-500" />
+            <Heart className="h-4 w-4 text-pink-500" />
             <span>Casey</span>
-            <span className="text-[10px] text-muted-foreground">Social</span>
+            <span className="text-[10px] text-muted-foreground">Affiliates</span>
           </AskAgentButton>
           <AskAgentButton
             agentId="noah_bennett"

@@ -88,11 +88,11 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
       action: "Verify Power Automate flow is active for design@weprintwraps.com"
     },
     dms: {
-      title: "Social DMs",
+      title: "Affiliates",
       agent: "Casey Ramirez",
-      inputs: ["Instagram DMs", "Facebook Messages"],
-      reason: "Instagram webhook may not be receiving messages, and Facebook Messages is not connected.",
-      action: "Check Meta webhook configuration and FB Messenger permissions"
+      inputs: ["MightyAffiliate", "Sponsored Artist Emails"],
+      reason: "No affiliate communications in last 48h.",
+      action: "Check MightyAffiliate portal for pending messages"
     },
     ops: {
       title: "Ops Desk",
@@ -555,7 +555,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
                         return { owner: 'Jordan Lee', inbox: 'Website Chat' };
                       }
                       if (conv.channel === 'instagram') {
-                        return { owner: 'Casey Ramirez', inbox: 'Instagram DMs' };
+                        return { owner: 'Social Team', inbox: 'Instagram DMs' };
                       }
                       if (conv.channel === 'email') {
                         const inbox = conv.recipient_inbox?.toLowerCase() || '';

@@ -56,9 +56,9 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
   {
     id: "casey_ramirez",
     name: "Casey Ramirez",
-    role: "Social & DMs",
-    inbox: "Instagram DMs",
-    icon: Instagram,
+    role: "Affiliate Manager",
+    inbox: "MightyAffiliate • Sponsored Artists",
+    icon: Heart,
     color: "text-pink-500 bg-pink-500/10 hover:bg-pink-500/20",
   },
   {
