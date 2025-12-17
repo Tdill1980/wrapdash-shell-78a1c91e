@@ -36,7 +36,13 @@ const getSubdomain = () => {
   const parts = hostname.split('.');
   // vinylvixen.wrapcommand.ai -> 'vinylvixen'
   // wrapcommand.ai or localhost -> 'main'
-  if (hostname === 'localhost' || parts.length <= 2) {
+  // lovableproject.com (preview) -> 'main'
+  if (
+    hostname === 'localhost' || 
+    parts.length <= 2 ||
+    hostname.includes('lovableproject.com') ||
+    hostname.includes('lovable.app')
+  ) {
     return 'main';
   }
   return parts[0];
@@ -75,15 +81,42 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
       try {
         const subdomain = getSubdomain();
         
-        const { data, error } = await supabase
+        // First try by subdomain
+        let { data, error } = await supabase
           .from('organizations')
           .select('*')
           .eq('subdomain', subdomain)
           .maybeSingle();
 
         if (error) {
-          console.error('Error loading organization:', error);
-          return;
+          console.error('Error loading organization by subdomain:', error);
+        }
+
+        // If no org found by subdomain and user is logged in, try by membership
+        if (!data && user) {
+          const { data: memberData, error: memberError } = await supabase
+            .from('organization_members')
+            .select('organization_id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (memberError) {
+            console.error('Error loading organization membership:', memberError);
+          }
+
+          if (memberData?.organization_id) {
+            const { data: orgData, error: orgError } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('id', memberData.organization_id)
+              .maybeSingle();
+
+            if (orgError) {
+              console.error('Error loading organization by id:', orgError);
+            }
+            data = orgData;
+          }
         }
 
         if (data) {
@@ -105,7 +138,7 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
     };
 
     loadOrganization();
-  }, []);
+  }, [user]);
 
   const updateOrganization = async (settings: Partial<OrganizationSettings>) => {
     if (!organizationId) return;
