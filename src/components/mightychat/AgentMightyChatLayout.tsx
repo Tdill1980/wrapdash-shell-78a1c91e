@@ -169,11 +169,23 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
   }, [selectedId, conversations]);
 
   const loadConversations = async () => {
+    // Email threads are access-controlled; if you're not signed in you'll see an empty result.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setConversations([]);
+      setLoading(false);
+      toast.error("Please sign in to view email inboxes");
+      return;
+    }
+
+    const sinceIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from("conversations")
       .select("*")
+      .gte("created_at", sinceIso)
       .order("last_message_at", { ascending: false });
-    
+
     if (!error && data) {
       setConversations(data as unknown as Conversation[]);
     }

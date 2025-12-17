@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrganization } from "@/contexts/OrganizationContext";
 
 export interface ChannelStatus {
   id: string;
@@ -23,15 +22,16 @@ interface ChannelQueryResult {
 }
 
 export function useChannelStatus() {
-  const { organizationId } = useOrganization();
   const [channels, setChannels] = useState<ChannelStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchChannelStatus = async () => {
       try {
-        // Query conversations from last 48 hours grouped by channel and recipient_inbox
-        // Don't filter by org for now to ensure visibility
+        const { data: sessionData } = await supabase.auth.getSession();
+        const isSignedIn = !!sessionData.session;
+
+        // Pull last 48h for the status panel (if not signed in, this will likely only show public channels)
         const { data, error } = await supabase
           .from('conversations')
           .select('channel, recipient_inbox, created_at')
@@ -100,11 +100,11 @@ export function useChannelStatus() {
             owner: "Jordan Lee",
             ownerRole: "Sales Agent",
             icon: "🌐",
-            connected: (websiteStats?.count || 0) > 0, // Assume connected if has messages
+            connected: (websiteStats?.count || 0) > 0,
             lastMessageAt: formatLastMessage(websiteStats?.lastMessage || null),
             messageCount: websiteStats?.count || 0,
             status: getStatus(websiteStats, true),
-            notes: websiteStats?.count ? undefined : "Widget may not be deployed on website",
+            notes: websiteStats?.count ? undefined : "No website chats in last 48h",
           },
           {
             id: "hello_email",
@@ -116,7 +116,7 @@ export function useChannelStatus() {
             lastMessageAt: formatLastMessage(helloStats?.lastMessage || null),
             messageCount: helloStats?.count || 0,
             status: getStatus(helloStats, true),
-            notes: helloStats?.count ? undefined : "Power Automate webhook may not be firing",
+            notes: helloStats?.count ? undefined : (isSignedIn ? "No hello@ emails in last 48h" : "Sign in to view email inboxes"),
           },
           {
             id: "design_email",
@@ -128,6 +128,7 @@ export function useChannelStatus() {
             lastMessageAt: formatLastMessage(designStats?.lastMessage || null),
             messageCount: designStats?.count || 0,
             status: getStatus(designStats, true),
+            notes: designStats?.count ? undefined : (isSignedIn ? "No design@ emails in last 48h" : "Sign in to view email inboxes"),
           },
           {
             id: "jackson_email",
@@ -139,6 +140,7 @@ export function useChannelStatus() {
             lastMessageAt: formatLastMessage(jacksonStats?.lastMessage || null),
             messageCount: jacksonStats?.count || 0,
             status: getStatus(jacksonStats, true),
+            notes: jacksonStats?.count ? undefined : (isSignedIn ? "No jackson@ emails in last 48h" : "Sign in to view email inboxes"),
           },
           {
             id: "instagram",
@@ -149,8 +151,8 @@ export function useChannelStatus() {
             connected: (instagramStats?.count || 0) > 0,
             lastMessageAt: formatLastMessage(instagramStats?.lastMessage || null),
             messageCount: instagramStats?.count || 0,
-            status: getStatus(instagramStats, (instagramStats?.count || 0) > 0),
-            notes: instagramStats?.count ? undefined : "Instagram webhook not receiving messages",
+            status: getStatus(instagramStats, true),
+            notes: instagramStats?.count ? undefined : "No Instagram DMs in last 48h",
           },
           {
             id: "facebook",
