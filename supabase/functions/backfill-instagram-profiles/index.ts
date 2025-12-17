@@ -6,23 +6,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const INSTAGRAM_ACCESS_TOKEN = Deno.env.get("INSTAGRAM_ACCESS_TOKEN") || "";
+let ACCESS_TOKEN = "";
+
+async function loadAccessToken(supabase: any) {
+  // Try database first (new OAuth model)
+  const { data } = await supabase
+    .from("instagram_tokens")
+    .select("page_access_token, access_token")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (data?.page_access_token) {
+    ACCESS_TOKEN = data.page_access_token;
+    console.log("[Backfill] Using page_access_token from database");
+    return;
+  }
+  if (data?.access_token) {
+    ACCESS_TOKEN = data.access_token;
+    console.log("[Backfill] Using access_token from database");
+    return;
+  }
+  
+  // Fallback to env var
+  ACCESS_TOKEN = Deno.env.get("INSTAGRAM_ACCESS_TOKEN") || "";
+  console.log("[Backfill] Using INSTAGRAM_ACCESS_TOKEN from env");
+}
 
 async function getInstagramUserProfile(igUserId: string) {
   const endpoints = [
-    // Try Instagram Graph API first (more reliable for IG-specific data)
     {
-      url: `https://graph.instagram.com/${igUserId}?fields=username,name&access_token=${INSTAGRAM_ACCESS_TOKEN}`,
+      url: `https://graph.instagram.com/${igUserId}?fields=username,name&access_token=${ACCESS_TOKEN}`,
       name: "graph.instagram.com"
     },
-    // Fallback to Facebook Graph API with profile_picture_url
     {
-      url: `https://graph.facebook.com/v18.0/${igUserId}?fields=username,name,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`,
-      name: "graph.facebook.com/v18.0"
+      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=username,name,profile_picture_url&access_token=${ACCESS_TOKEN}`,
+      name: "graph.facebook.com/v24.0"
     },
-    // Try without version
     {
-      url: `https://graph.facebook.com/${igUserId}?fields=username,name,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`,
+      url: `https://graph.facebook.com/${igUserId}?fields=username,name,profile_picture_url&access_token=${ACCESS_TOKEN}`,
       name: "graph.facebook.com"
     }
   ];
@@ -71,6 +93,9 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
+
+    // Load access token from database or env
+    await loadAccessToken(supabase);
 
     // Get all Instagram contacts
     const { data: contacts, error: contactsError } = await supabase

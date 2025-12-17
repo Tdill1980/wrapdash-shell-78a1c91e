@@ -2669,8 +2669,12 @@ export type Database = {
           instagram_username: string | null
           last_refreshed_at: string | null
           organization_id: string | null
+          page_access_token: string | null
+          page_id: string | null
+          page_name: string | null
           token_type: string | null
           updated_at: string | null
+          user_access_token: string | null
         }
         Insert: {
           access_token: string
@@ -2681,8 +2685,12 @@ export type Database = {
           instagram_username?: string | null
           last_refreshed_at?: string | null
           organization_id?: string | null
+          page_access_token?: string | null
+          page_id?: string | null
+          page_name?: string | null
           token_type?: string | null
           updated_at?: string | null
+          user_access_token?: string | null
         }
         Update: {
           access_token?: string
@@ -2693,8 +2701,12 @@ export type Database = {
           instagram_username?: string | null
           last_refreshed_at?: string | null
           organization_id?: string | null
+          page_access_token?: string | null
+          page_id?: string | null
+          page_name?: string | null
           token_type?: string | null
           updated_at?: string | null
+          user_access_token?: string | null
         }
         Relationships: [
           {
