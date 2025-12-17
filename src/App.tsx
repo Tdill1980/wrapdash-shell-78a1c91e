@@ -52,6 +52,7 @@ import { AffiliateOnboarding } from "./modules/affiliate/pages/AffiliateOnboardi
 import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
 import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
+import JordanLeeAdminDashboard from "./pages/JordanLeeAdminDashboard";
 import ChatWidgetDemo from "./pages/ChatWidgetDemo";
 import InstagramTokenExchange from "./pages/InstagramTokenExchange";
 import InstagramSettings from "./pages/settings/InstagramSettings";
@@ -135,7 +136,7 @@ const App = () => (
             <Route path="/admin/products" element={<ProductAdmin />} />
             <Route path="/admin/designvault" element={<DesignVaultAdmin />} />
             <Route path="/admin/dashboard-hero" element={<DashboardHeroAdmin />} />
-            <Route path="/admin/website-agent" element={<WebsiteAgentAdmin />} />
+            <Route path="/admin/website-agent" element={<JordanLeeAdminDashboard />} />
             <Route path="/admin/chat-widget-demo" element={<ChatWidgetDemo />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
