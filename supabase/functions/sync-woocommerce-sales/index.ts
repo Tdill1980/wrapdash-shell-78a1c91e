@@ -20,15 +20,77 @@ serve(async (req) => {
       throw new Error("WooCommerce credentials not configured");
     }
 
-    // Get current month date range
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Store timezone (used for "today" + month-to-date calculations)
+    const STORE_TIMEZONE = Deno.env.get("STORE_TIMEZONE") || "America/Los_Angeles";
 
-    // Get last year same period for comparison
-    const lastYearStart = new Date(now.getFullYear() - 1, now.getMonth(), 1);
-    const lastYearEnd = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    function getTimeZoneOffsetMs(date: Date, timeZone: string) {
+      const dtf = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+
+      const parts = dtf.formatToParts(date);
+      const map = Object.fromEntries(
+        parts
+          .filter((p) => p.type !== "literal")
+          .map((p) => [p.type, p.value])
+      ) as Record<string, string>;
+
+      // Treat the formatted parts as if they were UTC, then compare to actual epoch.
+      const asIfUtc = Date.UTC(
+        Number(map.year),
+        Number(map.month) - 1,
+        Number(map.day),
+        Number(map.hour),
+        Number(map.minute),
+        Number(map.second)
+      );
+
+      return asIfUtc - date.getTime();
+    }
+
+    function zonedMidnightToUtc(year: number, month0: number, day: number, timeZone: string) {
+      // Initial guess: midnight "as if" UTC
+      const guess = new Date(Date.UTC(year, month0, day, 0, 0, 0));
+      const offsetMs = getTimeZoneOffsetMs(guess, timeZone);
+      return new Date(guess.getTime() - offsetMs);
+    }
+
+    // Get current month date range in STORE_TIMEZONE
+    const now = new Date();
+    const nowParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: STORE_TIMEZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(now);
+    const nowMap = Object.fromEntries(
+      nowParts
+        .filter((p) => p.type !== "literal")
+        .map((p) => [p.type, p.value])
+    ) as Record<string, string>;
+
+    const tzYear = Number(nowMap.year);
+    const tzMonth0 = Number(nowMap.month) - 1;
+    const tzDay = Number(nowMap.day);
+
+    const monthStart = zonedMidnightToUtc(tzYear, tzMonth0, 1, STORE_TIMEZONE);
+    const todayStart = zonedMidnightToUtc(tzYear, tzMonth0, tzDay, STORE_TIMEZONE);
+
+    // Month-to-date ends "now" (prevents end-of-month boundary issues)
+    const monthEnd = now;
+
+    // Last year same period (month-to-date) ends at the same local day start offset
+    const lastYearStart = zonedMidnightToUtc(tzYear - 1, tzMonth0, 1, STORE_TIMEZONE);
+    const lastYearEnd = new Date(now.getTime());
+    lastYearEnd.setFullYear(lastYearEnd.getFullYear() - 1);
+
 
     // Fetch current month orders from WooCommerce
     const currentMonthUrl = `${wooUrl}/wp-json/wc/v3/orders?after=${monthStart.toISOString()}&before=${monthEnd.toISOString()}&per_page=100&status=completed,processing&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
@@ -63,7 +125,12 @@ serve(async (req) => {
 
     while (hasMore) {
       const response = await fetch(`${lastYearUrl}&page=${page}`);
-      if (!response.ok) break;
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        console.error("WooCommerce API error (last year):", response.status, body);
+        throw new Error(`WooCommerce API error (last year): ${response.status}`);
+      }
+
       const orders = await response.json();
       if (orders.length === 0) {
         hasMore = false;
@@ -81,14 +148,16 @@ serve(async (req) => {
 
     const orderCount = allCurrentOrders.length;
 
-    // Today's revenue
-    const todayOrders = allCurrentOrders.filter(order => {
-      const orderDate = new Date(order.date_created);
+    // Today's revenue (compare against STORE_TIMEZONE midnight, using Woo's GMT timestamp when available)
+    const todayOrders = allCurrentOrders.filter((order) => {
+      const stamp = order.date_created_gmt || order.date_created;
+      const orderDate = new Date(stamp);
       return orderDate >= todayStart;
     });
     const todayRevenue = todayOrders.reduce((sum, order) => {
       return sum + parseFloat(order.total || 0);
     }, 0);
+
 
     // Last year same period totals
     const lastYearRevenue = allLastYearOrders.reduce((sum, order) => {
