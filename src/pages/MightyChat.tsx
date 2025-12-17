@@ -255,6 +255,15 @@ export default function MightyChat() {
     pendingQuotes: conversations.filter(c => c.review_status === 'pending_review' || (c.metadata as any)?.has_quote_request).length
   }), [conversations]);
 
+
+  // If the selected conversation isn't in the current filter, clear it (prevents showing IG while in Jackson inbox)
+  useEffect(() => {
+    if (selectedConversation && !filteredConversations.some(c => c.id === selectedConversation.id)) {
+      setSelectedConversation(null);
+      setMessages([]);
+    }
+  }, [activeFilter, filteredConversations, selectedConversation]);
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
