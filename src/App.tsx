@@ -54,6 +54,8 @@ import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGen
 import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
 import ChatWidgetDemo from "./pages/ChatWidgetDemo";
 import InstagramTokenExchange from "./pages/InstagramTokenExchange";
+import InstagramSettings from "./pages/settings/InstagramSettings";
+import MetaCallback from "./pages/auth/MetaCallback";
 import AICorrectionsAdmin from "./pages/AICorrectionsAdmin";
 import AdVault from "./pages/AdVault";
 import PaidAdsPerformance from "./pages/PaidAdsPerformance";
@@ -146,6 +148,8 @@ const App = () => (
           } />
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/settings/products" element={<MyProducts />} />
+            <Route path="/settings/instagram" element={<InstagramSettings />} />
+            <Route path="/auth/meta/callback" element={<MetaCallback />} />
             <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
             <Route path="/affiliate/signup" element={<AffiliateSignup />} />

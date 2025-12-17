@@ -1,13 +1,55 @@
 // INSTAGRAM WEBHOOK WITH USERNAME/AVATAR LOOKUP + FILE HANDLING
+// Updated to load PAGE_ACCESS_TOKEN from database for 60-day token model
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const INSTAGRAM_ACCESS_TOKEN = Deno.env.get("INSTAGRAM_ACCESS_TOKEN")!;
 const VERIFY_TOKEN = Deno.env.get("INSTAGRAM_VERIFY_TOKEN") || "wrapcommand_verify_2024";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// Cache for access token (refreshed once per request batch)
+let cachedAccessToken: string | null = null;
+let tokenSource: string = "unknown";
+
+// Load access token from database (preferred) or fallback to secret
+async function getAccessToken(): Promise<string> {
+  if (cachedAccessToken) return cachedAccessToken;
+
+  // Try to load from database first (new OAuth model)
+  const { data: tokenRecord } = await supabase
+    .from("instagram_tokens")
+    .select("page_access_token, access_token, expires_at, page_name")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (tokenRecord?.page_access_token) {
+    cachedAccessToken = tokenRecord.page_access_token;
+    tokenSource = `DB (${tokenRecord.page_name || 'page'})`;
+    console.log(`🔑 Using page_access_token from database: ${tokenSource}`);
+    return tokenRecord.page_access_token;
+  }
+
+  if (tokenRecord?.access_token) {
+    cachedAccessToken = tokenRecord.access_token;
+    tokenSource = "DB (legacy access_token)";
+    console.log(`🔑 Using legacy access_token from database`);
+    return tokenRecord.access_token;
+  }
+
+  // Fallback to environment variable (legacy)
+  const envToken = Deno.env.get("INSTAGRAM_ACCESS_TOKEN");
+  if (envToken) {
+    cachedAccessToken = envToken;
+    tokenSource = "ENV (INSTAGRAM_ACCESS_TOKEN)";
+    console.log(`🔑 Using access_token from environment variable`);
+    return envToken;
+  }
+
+  throw new Error("No Instagram access token available - please connect via Settings");
+}
 
 // Fetch Instagram user profile with dual-endpoint strategy for better username capture
 async function getInstagramUserProfile(igUserId: string): Promise<{
@@ -16,23 +58,35 @@ async function getInstagramUserProfile(igUserId: string): Promise<{
   profile_picture_url: string | null;
   api_error: string | null;
 }> {
+  let accessToken: string;
+  try {
+    accessToken = await getAccessToken();
+  } catch (err) {
+    return {
+      username: null,
+      name: null,
+      profile_picture_url: null,
+      api_error: "No access token available"
+    };
+  }
+
   // Instagram-Scoped User IDs (IGSID) require specific API endpoints
   // Try multiple endpoints to maximize success rate
   const endpoints = [
     // Instagram Graph API - preferred for IGSID
     {
       name: 'Instagram Graph API',
-      url: `https://graph.instagram.com/${igUserId}?fields=name,username,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`
+      url: `https://graph.instagram.com/${igUserId}?fields=name,username,profile_picture_url&access_token=${accessToken}`
     },
-    // Facebook Graph API with user_profile field
+    // Facebook Graph API v24 (current)
     {
-      name: 'Facebook Graph API v18',
-      url: `https://graph.facebook.com/v18.0/${igUserId}?fields=name,username,profile_picture_url&access_token=${INSTAGRAM_ACCESS_TOKEN}`
+      name: 'Facebook Graph API v24',
+      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=name,username,profile_picture_url&access_token=${accessToken}`
     },
     // Facebook Graph API with different field set
     {
       name: 'Facebook Graph API (alt fields)',
-      url: `https://graph.facebook.com/v18.0/${igUserId}?fields=name,profile_pic&access_token=${INSTAGRAM_ACCESS_TOKEN}`
+      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=name,profile_pic&access_token=${accessToken}`
     }
   ];
 
@@ -40,7 +94,7 @@ async function getInstagramUserProfile(igUserId: string): Promise<{
 
   for (const endpoint of endpoints) {
     try {
-      console.log(`🔍 Trying ${endpoint.name} for user ${igUserId}...`);
+      console.log(`🔍 Trying ${endpoint.name} for user ${igUserId}... (token source: ${tokenSource})`);
       
       const res = await fetch(endpoint.url);
       const responseText = await res.text();
