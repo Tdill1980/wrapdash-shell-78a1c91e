@@ -1,9 +1,25 @@
+// supabase/functions/receive-email-webhook/index.ts
+// Email webhook with MCP agent routing: Alex (hello@), Grant (design@), Jackson (ops_desk)
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
+import { AGENTS } from "../_shared/agent-config.ts";
+import { routeToOpsDesk } from "../_shared/ops-desk-router.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Map inbox to assigned agent
+const INBOX_AGENT_MAP: Record<string, string> = {
+  hello: 'alex_morgan',      // Quoting & follow-up
+  design: 'grant_miller',    // Design file review
+  jackson: 'ops_desk',       // Direct to operations
+  support: 'alex_morgan',    // Support routes to Alex
+  general: 'alex_morgan',    // Default to Alex
 };
 
 serve(async (req) => {
@@ -21,15 +37,12 @@ serve(async (req) => {
     let fromName: string;
     
     if (typeof payload.from === 'object' && payload.from?.emailAddress) {
-      // Office 365 format: { emailAddress: { name: "...", address: "..." } }
       fromEmail = payload.from.emailAddress.address || '';
       fromName = payload.from.emailAddress.name || fromEmail;
     } else if (typeof payload.from_email === 'string') {
-      // Already extracted format
       fromEmail = payload.from_email;
       fromName = payload.from_name || fromEmail;
     } else if (typeof payload.from === 'string') {
-      // Simple string format
       fromEmail = payload.from;
       fromName = payload.from_name || fromEmail;
     } else {
@@ -69,7 +82,26 @@ serve(async (req) => {
       recipientInbox = 'support';
     }
 
-    console.log(`📬 Routing to inbox: ${recipientInbox}`);
+    // Get assigned agent for this inbox
+    const assignedAgent = INBOX_AGENT_MAP[recipientInbox] || 'alex_morgan';
+    const agentConfig = AGENTS[assignedAgent];
+    
+    console.log(`📬 Routing to inbox: ${recipientInbox} → Agent: ${agentConfig?.displayName || assignedAgent}`);
+
+    // Detect intent signals for task prioritization
+    const emailContent = `${subject} ${body}`.toLowerCase();
+    const pricingIntent = emailContent.includes('price') || emailContent.includes('quote') || emailContent.includes('cost') || emailContent.includes('how much');
+    const designIntent = emailContent.includes('design') || emailContent.includes('proof') || emailContent.includes('file') || emailContent.includes('artwork');
+    const partnershipIntent = emailContent.includes('partner') || emailContent.includes('collab') || emailContent.includes('sponsor') || emailContent.includes('wholesale');
+    const urgentIntent = emailContent.includes('urgent') || emailContent.includes('asap') || emailContent.includes('rush');
+
+    // Calculate revenue impact
+    let revenueImpact: 'high' | 'medium' | 'low' = 'medium';
+    if (partnershipIntent || urgentIntent) {
+      revenueImpact = 'high';
+    } else if (pricingIntent) {
+      revenueImpact = 'medium';
+    }
 
     // Find or create contact
     let contact;
@@ -116,13 +148,13 @@ serve(async (req) => {
 
     if (existingConvo) {
       conversation = existingConvo;
-      // Update last message time
       await supabase
         .from('conversations')
         .update({ 
           last_message_at: new Date().toISOString(),
           unread_count: (existingConvo.unread_count || 0) + 1,
-          subject: subject // Update subject with latest
+          subject: subject,
+          assigned_to: assignedAgent,
         })
         .eq('id', existingConvo.id);
       console.log('💬 Updated existing conversation:', conversation.id);
@@ -136,6 +168,7 @@ serve(async (req) => {
           organization_id: WPW_ORG_ID,
           subject: subject,
           recipient_inbox: recipientInbox,
+          assigned_to: assignedAgent,
           last_message_at: new Date().toISOString(),
           unread_count: 1,
         })
@@ -165,6 +198,7 @@ serve(async (req) => {
           message_id: messageId,
           to_email: toEmail,
           recipient_inbox: recipientInbox,
+          assigned_agent: assignedAgent,
         },
       })
       .select()
@@ -176,7 +210,57 @@ serve(async (req) => {
     }
 
     console.log('✅ Message saved:', message.id);
-    console.log(`✅ Email from ${fromEmail} routed to MightyChat (${recipientInbox} inbox)`);
+
+    // Route to Ops Desk for task creation based on inbox
+    let taskDescription = '';
+    let taskTarget = assignedAgent;
+
+    if (recipientInbox === 'hello' || recipientInbox === 'support' || recipientInbox === 'general') {
+      // Alex handles quoting and general inquiries
+      if (pricingIntent) {
+        taskDescription = `Quote request via email: ${subject}`;
+      } else {
+        taskDescription = `Email inquiry: ${subject}`;
+      }
+    } else if (recipientInbox === 'design') {
+      // Grant handles design
+      taskDescription = `Design email: ${subject}`;
+      if (designIntent) {
+        taskDescription = `Design file/proof request: ${subject}`;
+      }
+    } else if (recipientInbox === 'jackson') {
+      // Direct to ops - high priority
+      taskDescription = `Operations email (direct to Jackson): ${subject}`;
+      revenueImpact = 'high';
+    }
+
+    // Partnership signals get routed to Taylor Brooks
+    if (partnershipIntent) {
+      taskTarget = 'taylor_brooks';
+      taskDescription = `Partnership/sponsorship inquiry: ${subject}`;
+      revenueImpact = 'high';
+    }
+
+    // Create task through Ops Desk
+    try {
+      await routeToOpsDesk(supabase, {
+        action: 'create_task',
+        requested_by: assignedAgent,
+        target: taskTarget,
+        context: {
+          description: taskDescription,
+          customer: fromName,
+          revenue_impact: revenueImpact,
+          notes: `From: ${fromEmail}\nSubject: ${subject}\nInbox: ${recipientInbox}\nConversation: ${conversation.id}`,
+        },
+      });
+      console.log(`📋 Task created for ${taskTarget}: ${taskDescription}`);
+    } catch (taskError) {
+      console.error('⚠️ Task creation failed (non-blocking):', taskError);
+      // Don't fail the webhook for task creation errors
+    }
+
+    console.log(`✅ Email from ${fromEmail} routed to ${agentConfig?.displayName || assignedAgent} (${recipientInbox} inbox)`);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -184,6 +268,9 @@ serve(async (req) => {
       conversation_id: conversation.id,
       contact_id: contact.id,
       inbox: recipientInbox,
+      assigned_agent: assignedAgent,
+      agent_name: agentConfig?.displayName,
+      revenue_impact: revenueImpact,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

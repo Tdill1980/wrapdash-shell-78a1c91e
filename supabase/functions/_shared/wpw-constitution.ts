@@ -59,7 +59,7 @@ export const WPW_CONSTITUTION = {
   },
   
   // Human confirmation messaging
-  humanConfirmation: "This will be reviewed and handled by our team.",
+  humanConfirmation: "This was reviewed and handled by our team.",
   
 } as const;
 
