@@ -50,6 +50,7 @@ interface Message {
 
 interface AgentMightyChatLayoutProps {
   onOpenOpsDesk: () => void;
+  initialConversationId?: string | null;
 }
 
 // Empty state explanations for each stream
@@ -141,7 +142,7 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
   );
 }
 
-export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutProps) {
+export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: AgentMightyChatLayoutProps) {
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("id");
   
@@ -168,6 +169,13 @@ export function AgentMightyChatLayout({ onOpenOpsDesk }: AgentMightyChatLayoutPr
       loadConversation(selectedId);
     }
   }, [selectedId, conversations]);
+
+  // Handle initialConversationId from ReviewQueue
+  useEffect(() => {
+    if (initialConversationId && conversations.length > 0) {
+      loadConversation(initialConversationId);
+    }
+  }, [initialConversationId, conversations]);
 
   const loadConversations = async () => {
     // Email threads are access-controlled; if you're not signed in you'll see an empty result.
