@@ -91,7 +91,15 @@ export default function InstagramSettings() {
       return;
     }
 
-    const appId = String(cfg.appId);
+    const appId = String(cfg.appId).trim();
+    // Basic sanity-check: Meta App IDs are numeric.
+    if (!/^\d{8,20}$/.test(appId)) {
+      toast.error("Meta OAuth App ID looks invalid", {
+        description: "Please update the backend secret INSTAGRAM_APP_ID to your Meta App's numeric ID."
+      });
+      return;
+    }
+
     const redirectUri = encodeURIComponent(`${window.location.origin}/auth/meta/callback`);
     const scopes = [
       "pages_show_list",
