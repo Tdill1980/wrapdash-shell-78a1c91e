@@ -164,7 +164,7 @@ const navigationItems: NavigationItem[] = [
   },
   { 
     name: "MightyTask", 
-    path: "/tasks", 
+    path: "/mightytask", 
     icon: CheckCircle,
     roles: ["beta_shop", "admin"],
     customRender: (
@@ -175,11 +175,6 @@ const navigationItems: NavigationItem[] = [
       </span>
     )
   },
-  { name: "📕 Ink & Edge Magazine", path: "/mightytask/ink-edge-magazine", icon: CheckCircle, roles: ["beta_shop", "admin"] },
-  { name: "💰 WPW Campaigns", path: "/mightytask/wpw-campaigns", icon: CheckCircle, roles: ["beta_shop", "admin"] },
-  { name: "📰 Ink & Edge Dist", path: "/mightytask/ink-edge-distribution", icon: CheckCircle, roles: ["beta_shop", "admin"] },
-  { name: "🎥 WrapTVWorld", path: "/mightytask/wraptvworld", icon: CheckCircle, roles: ["beta_shop", "admin"] },
-  { name: "🟢 Luigi Chat", path: "/mightytask/luigi", icon: MessageSquare, roles: ["beta_shop", "admin"] },
   { 
     name: "MightyPortfolio", 
     path: "/portfolio", 
