@@ -117,7 +117,58 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
 
     console.log("🎯 Classified:", parsed);
 
-    // 3. Find or create conversation
+    // 3. Find or create contact and conversation
+    const WPW_ORG_ID = '51aa96db-c06d-41ae-b3cb-25b045c75caf';
+    
+    // First, check if contact exists for this sender
+    let { data: contact } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("organization_id", WPW_ORG_ID)
+      .or(`metadata->>instagram_id.eq.${body.sender_id},metadata->>sender_id.eq.${body.sender_id}`)
+      .maybeSingle();
+    
+    if (!contact) {
+      // Create new contact
+      const { data: newContact, error: contactErr } = await supabase
+        .from("contacts")
+        .insert({
+          name: body.sender_username || body.sender_id || 'Unknown',
+          email: parsed.customer_email || `${body.sender_id}@capture.local`,
+          source: body.platform,
+          organization_id: WPW_ORG_ID,
+          metadata: {
+            sender_id: body.sender_id,
+            instagram_id: body.platform === 'instagram' ? body.sender_id : null,
+            username: body.sender_username,
+          },
+          tags: parsed.wants_pricing ? ['lead', 'pricing_interest'] : ['lead'],
+        })
+        .select()
+        .single();
+      
+      if (!contactErr) {
+        contact = newContact;
+        console.log("👤 Created new contact:", contact.id);
+      } else {
+        console.error("Contact create error:", contactErr);
+      }
+    } else if (parsed.customer_email && !contact.email?.includes('@capture.local')) {
+      // Update existing contact with real email if captured
+      // Only update if we have a REAL email (not capture.local)
+      if (parsed.customer_email && !parsed.customer_email.includes('@capture.local') && contact.email?.includes('@capture.local')) {
+        await supabase
+          .from("contacts")
+          .update({ 
+            email: parsed.customer_email,
+            tags: [...(contact.tags || []), 'email_captured'].filter((v, i, a) => a.indexOf(v) === i),
+          })
+          .eq("id", contact.id);
+        console.log("📧 Updated contact with real email:", parsed.customer_email);
+      }
+    }
+
+    // Find or create conversation
     let { data: conversation } = await supabase
       .from("conversations")
       .select("*")
@@ -134,6 +185,8 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
           unread_count: 1,
           priority: parsed.urgency === "high" ? "high" : "normal",
           status: "open",
+          contact_id: contact?.id || null,
+          organization_id: WPW_ORG_ID,
         })
         .select()
         .single();
@@ -141,12 +194,17 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       if (convError) console.error("Conversation create error:", convError);
       conversation = newConv;
     } else {
+      // Update conversation with contact link if missing
+      const updateData: any = { 
+        unread_count: (conversation.unread_count || 0) + 1,
+        last_message_at: new Date().toISOString()
+      };
+      if (!conversation.contact_id && contact?.id) {
+        updateData.contact_id = contact.id;
+      }
       await supabase
         .from("conversations")
-        .update({ 
-          unread_count: (conversation.unread_count || 0) + 1,
-          last_message_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq("id", conversation.id);
     }
 
@@ -359,6 +417,16 @@ FILE HANDLING RULES (CRITICAL):
 - When files ARE received: "Got it! 👊 Forwarding to Lance and the design team - they'll review and email your quote!"
 - Always ask for their email after receiving files so team can follow up`;
 
+    // Check if we have their email already
+    const hasEmail = parsed.customer_email && !parsed.customer_email.includes('@capture.local');
+    const emailCapturePrompt = hasEmail ? '' : `
+EMAIL CAPTURE (CRITICAL - DO THIS FIRST):
+- You DO NOT have their email yet!
+- BEFORE giving ANY pricing info, you MUST ask: "Drop your email and I'll send the full quote breakdown! 📧"
+- If they ask about cost/price/quote, say: "I'd love to help! Quick - what's your email so I can send pricing details?"
+- Be natural but ALWAYS work in the email ask
+- Examples: "Sure thing! What email should I send the quote to?" or "Got it! Drop your email and I'll get you a quote!"`;
+
     const replyPrompt = `You are WPW AI TEAM - the friendly AI assistant for WePrintWraps.com.
 
 BRAND VOICE:
@@ -369,11 +437,13 @@ BRAND VOICE:
 
 INTENT: ${parsed.type}
 ${intentPrompts[parsed.type] || intentPrompts.general}
+${emailCapturePrompt}
 
 ${parsed.vehicle?.year ? `Vehicle detected: ${parsed.vehicle.year} ${parsed.vehicle.make} ${parsed.vehicle.model}` : ''}
 ${parsed.wrap_type ? `Wrap type: ${parsed.wrap_type}` : ''}
 ${hasFiles ? `FILES RECEIVED: Customer just sent ${fileUrls.length} file(s)! Thank them and confirm forwarding to design team.` : ''}
 ${parsed.has_file_intent ? `Customer mentioned files/artwork - encourage them to send it!` : ''}
+${hasEmail ? `CUSTOMER EMAIL: ${parsed.customer_email}` : 'NO EMAIL CAPTURED YET - Ask for it!'}
 
 ${pricingContext}
 
@@ -385,7 +455,8 @@ RULES:
 - Be direct and helpful
 - Direct them to weprintwraps.com for instant quotes
 - NEVER make up prices - only use the pricing listed above
-- When you have vehicle info + sqft, give them the actual price!`;
+- When you have vehicle info + sqft, give them the actual price!
+- ${hasEmail ? '' : 'ALWAYS ask for their email if you dont have it yet!'}`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
