@@ -155,7 +155,8 @@ export default function MightyTaskUnified() {
         .order("created_at", { ascending: false });
 
       if (organizationId) {
-        query = query.eq("organization_id", organizationId);
+        // Include tasks with matching org OR null org (shared tasks)
+        query = query.or(`organization_id.eq.${organizationId},organization_id.is.null`);
       }
 
       const { data, error } = await query;
