@@ -16,6 +16,7 @@ import { ThreadScopeBanner, DisabledReplyBox } from "@/components/mightychat/Thr
 import { ConversationActionsBar } from "@/components/mightychat/ConversationActionsBar";
 import { AgentBadge, QuoteStatusBadge } from "@/components/mightychat/InboxFilters";
 import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
+import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
 import { useMightyPermissions, isExternalConversation, getExternalHandler } from "@/hooks/useMightyPermissions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,7 @@ interface Message {
 interface AgentMightyChatLayoutProps {
   onOpenOpsDesk: () => void;
   initialConversationId?: string | null;
+  initialAgentChatId?: string | null;
 }
 
 // Empty state explanations for each stream
@@ -177,7 +179,7 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
   );
 }
 
-export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: AgentMightyChatLayoutProps) {
+export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, initialAgentChatId }: AgentMightyChatLayoutProps) {
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("id");
   
@@ -189,11 +191,19 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
   const [activeStream, setActiveStream] = useState<WorkStream>('quotes'); // Default to quotes (hello@ inbox) which typically has most traffic
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showAgentChatPanel, setShowAgentChatPanel] = useState(false);
 
   const permissions = useMightyPermissions();
 
   // Map stream to AgentInbox for permission checks
   const activeInbox: AgentInbox = mapStreamToInbox(activeStream) as AgentInbox;
+
+  // Open agent chat panel if initialAgentChatId is provided
+  useEffect(() => {
+    if (initialAgentChatId) {
+      setShowAgentChatPanel(true);
+    }
+  }, [initialAgentChatId]);
 
   useEffect(() => {
     loadConversations();
@@ -847,6 +857,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId }: 
           />
         </div>
       </div>
+
+      {/* Agent Chat Panel - opened from Agent History */}
+      <AgentChatPanel
+        open={showAgentChatPanel}
+        onOpenChange={setShowAgentChatPanel}
+        agentId={null}
+        initialChatId={initialAgentChatId}
+      />
     </div>
   );
 }

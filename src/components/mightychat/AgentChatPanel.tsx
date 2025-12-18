@@ -23,9 +23,10 @@ interface AgentChatPanelProps {
   onOpenChange: (open: boolean) => void;
   agentId: string | null;
   context?: Record<string, unknown>;
+  initialChatId?: string | null;
 }
 
-export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentChatPanelProps) {
+export function AgentChatPanel({ open, onOpenChange, agentId, context, initialChatId }: AgentChatPanelProps) {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showDelegateModal, setShowDelegateModal] = useState(false);
@@ -59,24 +60,32 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     }
   }, [open]);
 
-  // Load recent chats when panel opens
+  // Handle initialChatId - resume specific chat when provided
   useEffect(() => {
-    if (open && agentId && !initialLoadDone) {
+    if (open && initialChatId && !initialLoadDone) {
+      setInitialLoadDone(true);
+      resumeChat(initialChatId);
+    }
+  }, [open, initialChatId, initialLoadDone, resumeChat]);
+
+  // Load recent chats when panel opens (only if no initialChatId)
+  useEffect(() => {
+    if (open && agentId && !initialLoadDone && !initialChatId) {
       setInitialLoadDone(true);
       loadRecentChats(agentId);
     }
-  }, [open, agentId, initialLoadDone, loadRecentChats]);
+  }, [open, agentId, initialLoadDone, initialChatId, loadRecentChats]);
 
   // After initial load, decide whether to show recent chats or start new chat
   useEffect(() => {
-    if (open && agentId && initialLoadDone && !loadingRecent && !chatId) {
+    if (open && agentId && initialLoadDone && !loadingRecent && !chatId && !initialChatId) {
       if (recentChats.length > 0) {
         setShowRecentChats(true);
       } else {
         startChat(agentId, context);
       }
     }
-  }, [open, agentId, initialLoadDone, loadingRecent, chatId, recentChats.length, startChat, context]);
+  }, [open, agentId, initialLoadDone, loadingRecent, chatId, recentChats.length, startChat, context, initialChatId]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
