@@ -30,7 +30,7 @@ interface UseAgentChatReturn {
   confirmed: boolean;
   suggestedTask: { type: string; description: string } | null;
   startChat: (agentId: string, context?: Record<string, unknown>) => Promise<void>;
-  sendMessage: (message: string) => Promise<void>;
+  sendMessage: (message: string, attachments?: Array<{ url: string; type?: string; name?: string }>) => Promise<void>;
   delegateTask: (description: string) => Promise<{ success: boolean; taskId?: string }>;
   closeChat: () => void;
 }
@@ -89,7 +89,7 @@ export function useAgentChat(): UseAgentChatReturn {
     }
   }, []);
 
-  const sendMessage = useCallback(async (message: string) => {
+  const sendMessage = useCallback(async (message: string, attachments?: Array<{ url: string; type?: string; name?: string }>) => {
     if (!chatId || !message.trim()) return;
 
     setSending(true);
@@ -100,6 +100,7 @@ export function useAgentChat(): UseAgentChatReturn {
       sender: "user",
       content: message,
       created_at: new Date().toISOString(),
+      metadata: attachments?.length ? { attachments } : undefined,
     };
     setMessages((prev) => [...prev, tempUserMsg]);
 
@@ -109,6 +110,7 @@ export function useAgentChat(): UseAgentChatReturn {
           action: "send",
           chat_id: chatId,
           message,
+          attachments,
         },
       });
 
