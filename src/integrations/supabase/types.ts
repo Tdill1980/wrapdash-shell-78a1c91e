@@ -4851,6 +4851,7 @@ export type Database = {
           channel: string | null
           completed_at: string | null
           contact_id: string | null
+          content_type: string | null
           conversation_id: string | null
           created_at: string | null
           created_by: string | null
@@ -4875,6 +4876,7 @@ export type Database = {
           channel?: string | null
           completed_at?: string | null
           contact_id?: string | null
+          content_type?: string | null
           conversation_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -4899,6 +4901,7 @@ export type Database = {
           channel?: string | null
           completed_at?: string | null
           contact_id?: string | null
+          content_type?: string | null
           conversation_id?: string | null
           created_at?: string | null
           created_by?: string | null
