@@ -18,11 +18,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Regex patterns to extract vehicle info
+// Regex patterns to extract vehicle info - EXPANDED with common models
 const VEHICLE_PATTERNS = {
   year: /\b(19|20)\d{2}\b/,
-  make: /\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|vw|subaru|mazda|hyundai|kia|lexus|acura|infiniti|cadillac|buick|lincoln|chrysler|pontiac|saturn|hummer|mini|porsche|jaguar|land rover|volvo|saab|mitsubishi|suzuki)\b/i,
-  model: /\b(f-?150|f-?250|f-?350|silverado|sierra|ram|tacoma|tundra|camry|accord|civic|altima|mustang|camaro|challenger|charger|corvette|wrangler|bronco|explorer|expedition|tahoe|suburban|yukon|escalade|navigator|pilot|highlander|4runner|rav4|crv|cr-v|forester|outback|model\s?[3sxy]|cybertruck|sprinter|transit|promaster)\b/i,
+  make: /\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|vw|subaru|mazda|hyundai|kia|lexus|acura|infiniti|cadillac|buick|lincoln|chrysler|pontiac|saturn|hummer|mini|porsche|jaguar|land\s*rover|volvo|saab|mitsubishi|suzuki|genesis|rivian|lucid|fiat|alfa\s*romeo|maserati|bentley|rolls\s*royce|ferrari|lamborghini|mclaren|aston\s*martin|lotus|scion|isuzu|freightliner|kenworth|peterbilt|international)\b/i,
+  model: /\b(f-?150|f-?250|f-?350|silverado|sierra|ram|tacoma|tundra|camry|accord|civic|altima|mustang|camaro|challenger|charger|corvette|wrangler|bronco|explorer|expedition|tahoe|suburban|yukon|escalade|navigator|pilot|highlander|4runner|rav4|crv|cr-v|forester|outback|model\s?[3sxy]|cybertruck|sprinter|transit|promaster|prius|corolla|avalon|sienna|venza|sequoia|supra|gr\s*supra|gr86|86|yaris|matrix|celica|mr2|land\s*cruiser|fj\s*cruiser|fit|hr-v|passport|odyssey|ridgeline|insight|element|s2000|nsx|prelude|del\s*sol|mdx|rdx|tlx|ilx|integra|rsx|legend|rl|tl|tsx|zdx|q50|q60|qx50|qx60|qx80|g35|g37|fx35|fx45|m35|m45|ex35|jx35|sentra|maxima|leaf|versa|kicks|murano|pathfinder|armada|frontier|titan|juke|370z|350z|300zx|240sx|gt-r|gtr|z|elantra|sonata|santa\s*fe|tucson|kona|ioniq|veloster|genesis|azera|accent|venue|palisade|stinger|k5|optima|sorento|carnival|soul|seltos|ev6|forte|rio|niro|sportage|telluride|cx-?[3579]|cx-?30|cx-?50|mazda3|mazda6|miata|mx-?5|rx-?[78]|mazdaspeed|impreza|wrx|sti|legacy|ascent|crosstrek|brz|baja|tribeca|svx|jetta|golf|passat|tiguan|atlas|arteon|id\.?4|beetle|gti|r32|cc|touareg|phaeton|rabbit|3\s*series|5\s*series|7\s*series|x[1-7]|m[2-8]|z4|i[348]|ix|a[3-8]|q[3578]|r8|rs[3-7]|tt|e-?tron|c-?class|e-?class|s-?class|g-?class|gl[abc]|gl[es]|amg|sl|slk|clk|cls|ml|maybach|cayman|boxster|cayenne|macan|panamera|taycan|911|carrera|turbo|gt[234]|f-?type|f-?pace|e-?pace|i-?pace|xf|xe|xj|xk|range\s*rover|evoque|discovery|velar|defender|xc40|xc60|xc90|s60|s90|v60|v90|c40|countryman|clubman|cooper|hardtop|500|giulia|stelvio|gv70|gv80|g70|g80|g90|outlander|eclipse\s*cross|lancer|evo|galant|pajero|montero|3000gt|diamante|mirage|r1t|r1s|air|gravity|express|savana|e-?series|nv|metris|colorado|canyon|ranger|maverick|lightning|raptor|tremor|power\s*wagon|trx|rebel|laramie|limited|platinum|lariat|king\s*ranch|denali|slt|at4|trail\s*boss|z71|rst|lt|ss|zl1|z06|zr1|grand\s*sport|stingray|hellcat|scat\s*pack|rt|srt|demon|redeye|super\s*bee|daytona|super\s*stock|shaker|mopar|shelby|gt350|gt500|mach-?[1e]|boss|bullitt|dark\s*horse|ecoboost|coyote|voodoo|predator|godzilla|hemi|cummins|duramax|powerstroke|ecodiesel|pentastar|triton|modular|ls[1-9]|lt[1-5]|lsa|lsx|gen\s*[iv])\b/i,
 };
 
 // Email extraction pattern
@@ -46,7 +46,7 @@ function buildJordanPersona(voiceProfile: VoiceProfile): string {
   const customerPainPoints = organization_dna?.customer_profile?.pain_points || [];
   const emotionalTriggers = organization_dna?.customer_profile?.emotional_triggers || [];
 
-  return `You are "Jordan Lee" — a friendly website chat specialist.
+  return `You are "Jordan Lee" — a friendly website chat specialist at WePrintWraps.
 
 YOUR BRAND VOICE (from TradeDNA):
 - Tone: ${tone}
@@ -60,8 +60,8 @@ ${emotionalTriggers.length > 0 ? `- Emotional triggers that resonate: ${emotiona
 
 YOUR ROLE:
 - Educate visitors about wrap options and materials
-- Give BALLPARK pricing only (not formal quotes)
-- Collect email addresses before detailed pricing
+- Calculate and provide SPECIFIC pricing based on vehicle SQFT
+- Collect email addresses for formal written quotes
 - Identify partnership/sponsorship opportunities
 - Route formal quote requests to the quoting team
 
@@ -70,15 +70,27 @@ YOUR TEAM (mention naturally when routing):
 - Grant (Design Team) - handles design questions and file reviews
 - Taylor (Partnerships) - handles collabs and sponsorships
 
-PRICING APPROACH (CRITICAL):
-1. When customer asks for price WITHOUT email:
-   - Give ballpark range ONLY: "Full wraps typically run $1,000-$2,000 depending on vehicle size"
-   - Ask for email naturally to send detailed pricing
+🔥 PRICING (CRITICAL - Updated December 2024):
+Both Avery AND 3M printed wraps are now $5.27/sqft! 3M just had a PRICE DROP!
 
-2. When customer provides email:
-   - Acknowledge and confirm you're routing to quoting team
+VEHICLE SQFT ESTIMATES (use these to calculate pricing):
+- Compact car (Civic, Corolla, Prius, Sentra): ~175 sqft = ~$922
+- Midsize sedan (Camry, Accord, Altima, Sonata): ~200 sqft = ~$1,054
+- Full-size sedan (Avalon, Maxima, 300): ~210 sqft = ~$1,107
+- Compact SUV (RAV4, CR-V, Tucson, Rogue): ~200 sqft = ~$1,054
+- Midsize SUV (Highlander, Pilot, Explorer): ~225 sqft = ~$1,186
+- Full-size truck (F-150, Silverado, Ram 1500): ~250 sqft = ~$1,318
+- Large SUV (Tahoe, Expedition, Suburban): ~275 sqft = ~$1,449
+- Cargo van (Transit, Sprinter, ProMaster): ~350 sqft = ~$1,845
+- Box truck: ~400+ sqft = ~$2,108+
 
-3. NEVER give exact per-sqft pricing without email capture
+WHEN CUSTOMER ASKS FOR PRICE:
+1. Identify their vehicle
+2. Look up approximate SQFT from the list above
+3. Calculate: SQFT × $5.27 = Material Cost
+4. Give specific estimate: "A [year] [make] [model] is about [X] square feet. At $5.27/sqft, that's around $[total] for the printed wrap material."
+5. ALWAYS mention: "Both Avery and 3M printed wrap are now $5.27/sqft - 3M just dropped their price to match!"
+6. For formal written quote: "Want me to send you a detailed quote? What's your email?"
 
 ROUTING RULES:
 - Quote requests with email → route to quoting team
@@ -89,7 +101,7 @@ COMMUNICATION STYLE:
 - Match the brand tone: ${tone}
 - Concise (2-3 sentences max)
 - Light emoji use (1-2 max)
-- Always confirm human follow-up
+- Give REAL numbers, not vague ranges
 
 WPW GROUND TRUTH:
 - Turnaround: 1-2 business days for print
@@ -361,18 +373,51 @@ serve(async (req) => {
 
     // Build context for AI response
     let contextNotes = '';
+    let vehicleSqft = 0;
+    let estimatedCost = 0;
+    
+    // If we have vehicle info, calculate pricing
+    if (extractedVehicle.make || extractedVehicle.model) {
+      const vehicleKey = `${extractedVehicle.make || ''} ${extractedVehicle.model || ''}`.toLowerCase().trim();
+      // Estimate SQFT based on vehicle type
+      if (/prius|civic|corolla|sentra|versa|yaris|fit|accent|rio|mirage/i.test(vehicleKey)) {
+        vehicleSqft = 175;
+      } else if (/camry|accord|altima|sonata|mazda6|legacy|jetta|passat/i.test(vehicleKey)) {
+        vehicleSqft = 200;
+      } else if (/avalon|maxima|300|charger|impala|taurus/i.test(vehicleKey)) {
+        vehicleSqft = 210;
+      } else if (/rav4|cr-?v|tucson|rogue|forester|crosstrek|cx-?5|tiguan/i.test(vehicleKey)) {
+        vehicleSqft = 200;
+      } else if (/highlander|pilot|explorer|pathfinder|4runner|cx-?9|atlas/i.test(vehicleKey)) {
+        vehicleSqft = 225;
+      } else if (/f-?150|silverado|sierra|ram|tundra|titan/i.test(vehicleKey)) {
+        vehicleSqft = 250;
+      } else if (/tahoe|expedition|suburban|yukon|sequoia|armada/i.test(vehicleKey)) {
+        vehicleSqft = 275;
+      } else if (/transit|sprinter|promaster/i.test(vehicleKey)) {
+        vehicleSqft = 350;
+      } else if (/mustang|camaro|challenger|corvette|supra|370z|86|brz|miata/i.test(vehicleKey)) {
+        vehicleSqft = 180;
+      } else if (/wrangler|bronco/i.test(vehicleKey)) {
+        vehicleSqft = 200;
+      } else {
+        vehicleSqft = 200; // Default mid-size estimate
+      }
+      estimatedCost = Math.round(vehicleSqft * 5.27);
+    }
     
     if (escalationType && escalationSent) {
       contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
+    } else if (pricingIntent && vehicleSqft > 0) {
+      contextNotes = `VEHICLE DETECTED: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''} is approximately ${vehicleSqft} sqft. At $5.27/sqft, that's ~$${estimatedCost} for printed wrap material. GIVE THIS SPECIFIC PRICE! Also mention both Avery and 3M are now $5.27/sqft.${!chatState.customer_email ? ' Ask for email to send formal quote.' : ''}`;
     } else if (pricingIntent && !chatState.customer_email) {
-      // Email required before formal pricing
-      contextNotes = `STAGE: Customer asked about pricing but no email yet. Give ballpark range and ask for email!`;
+      contextNotes = `STAGE: Customer asked about pricing. Ask what vehicle they have so you can calculate the specific price!`;
     } else if (pricingIntent && chatState.customer_email) {
       contextNotes = `QUOTE ROUTED: You've sent this to our quoting team. Confirm the customer will receive an email with full pricing.`;
     } else if (partnershipSignal) {
       contextNotes = `PARTNERSHIP ROUTED: You've looped in the partnerships team. Tell the customer someone will follow up shortly.`;
     } else if (hasCompleteVehicle && !chatState.customer_email) {
-      contextNotes = `STAGE: Customer gave vehicle info but no email. Ask for their email to send the full breakdown!`;
+      contextNotes = `STAGE: Customer gave vehicle info (${vehicleSqft} sqft = ~$${estimatedCost}). Give them the price estimate and ask for email to send formal quote!`;
     }
 
     // Generate AI response using Jordan's persona
