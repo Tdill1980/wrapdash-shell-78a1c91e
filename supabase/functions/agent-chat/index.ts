@@ -505,20 +505,63 @@ When an image is generated, it will be included in your response.
       if (allVideoAttachments.length > 0 && chat?.agent_id === 'noah_bennett') {
         const mostRecentVideo = allVideoAttachments[0];
         const videoContext = `
-🎬 VIDEOS AVAILABLE IN THIS CONVERSATION:
+🎬 VIDEO ASSETS AVAILABLE IN THIS CONVERSATION:
 ${allVideoAttachments.map((v: any, i: number) => `${i + 1}. ${v.name || 'Video'}: ${v.url}${v.uploadedAt ? ` (uploaded earlier)` : ' (just attached)'}`).join('\n')}
 
 MOST RECENT VIDEO URL: ${mostRecentVideo.url}
 
-You can use these in your VIDEO_CONTENT block with:
-source_video: ${mostRecentVideo.url}
-OR simply: source_video: attached (the system will automatically use the most recent video)
+✅ YOU CAN USE THESE VIDEOS DIRECTLY IN YOUR CREATE_CONTENT BLOCK!
+When outputting your CREATE_CONTENT block, use:
 
-When user says "use the video I uploaded" or "use that video", use the most recent video URL.
-DO NOT ask the user to upload a video - they already have ${allVideoAttachments.length} video(s) available!
+asset_source: attached
+attached_assets:
+  - url: ${mostRecentVideo.url}
+    type: video
+    name: ${mostRecentVideo.name || 'Attached Video'}
+
+The user has ${allVideoAttachments.length} video(s) ready. DO NOT ask them to upload - PROCEED to CREATE_CONTENT.
+When they give content creation instructions, emit the CREATE_CONTENT block with the attached video URL.
 `;
         aiMessages.push({ role: "system", content: videoContext });
         console.log(`[agent-chat] Added video context for Noah: ${currentVideoAttachments.length} current + ${historicalVideoAttachments.length} historical = ${allVideoAttachments.length} total video(s)`);
+        
+        // AUTO-PROCEED: If videos attached AND user is requesting content, skip confirmation
+        const lowerMessage = body.message?.toLowerCase() || '';
+        const contentKeywords = ['create', 'make', 'story', 'reel', 'video', 'post', 'instagram', 'content', 'promo', 'sale', 'discount', 'christmas', 'holiday'];
+        const isContentRequest = contentKeywords.some(kw => lowerMessage.includes(kw));
+        
+        if (isContentRequest) {
+          aiMessages.push({
+            role: "system",
+            content: `
+AUTOMATION OVERRIDE: User has attached ${allVideoAttachments.length} video(s) AND is requesting content creation.
+You MUST proceed directly to CREATE_CONTENT output.
+DO NOT ask for confirmation. DO NOT say you "cannot process" the video.
+The video URL is: ${mostRecentVideo.url}
+Include it as attached_assets in your CREATE_CONTENT block like this:
+
+===CREATE_CONTENT===
+action: create_content
+content_type: story
+platform: instagram
+asset_source: attached
+attached_assets:
+  - url: ${mostRecentVideo.url}
+    type: video
+    name: ${mostRecentVideo.name || 'Attached Video'}
+hook: [extract from user message]
+cta: [based on context]
+overlays:
+  - text: [price or key message] start: 2 duration: 3
+caption: [short caption]
+hashtags: #weprintwraps
+===END_CREATE_CONTENT===
+
+EMIT THIS BLOCK NOW. Do not ask for clarification.
+`
+          });
+          console.log(`[agent-chat] AUTOMATION OVERRIDE: Content request detected with video, forcing CREATE_CONTENT`);
+        }
       }
 
       // Add chat history with vision support for attachments
