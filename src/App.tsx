@@ -33,6 +33,7 @@ import MightyMailCampaignSender from "./pages/MightyMailCampaignSender";
 import AIPipeline from "./pages/AIPipeline";
 import ContentBox from "./pages/ContentBox";
 import ContentSchedule from "./pages/ContentSchedule";
+import ContentCalendar30Day from "./pages/ContentCalendar30Day";
 import ContentCreator from "./pages/ContentCreator";
 import MightyChat from "./pages/MightyChat";
 import Portfolio from "./pages/Portfolio";
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/contentbox" element={<ContentBox />} />
             <Route path="/content-creator" element={<ContentCreator />} />
             <Route path="/content-schedule" element={<ContentSchedule />} />
+            <Route path="/content-calendar" element={<ContentCalendar30Day />} />
             <Route path="/organic" element={<OrganicHub />} />
             <Route path="/mighty-edit" element={<MightyEdit />} />
             <Route path="/organic/reel-builder" element={<ReelBuilder />} />
