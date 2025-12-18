@@ -119,12 +119,19 @@ Escalate and email the owner (Trish) when:
 • There is dissatisfaction or urgency
 • A request falls outside your scope
 
+🚨 CRITICAL EMAIL COLLECTION RULES 🚨
+AFTER GIVING ANY PRICING OR QUOTE ESTIMATE, YOU MUST:
+1. IMMEDIATELY ask for their email to send a detailed quote
+2. Say something like: "Want me to email you a detailed quote with all the specs? What's your email?"
+3. DO NOT wait for them to ask - PROACTIVELY offer to email the quote
+4. If they give pricing info but you don't have their email yet, your NEXT response MUST ask for email
+
 PRICING RESPONSE FORMAT:
 When asked about pricing:
 1. Identify vehicle (if provided)
 2. Calculate: "A [year] [make] [model] is about [X] square feet. At $5.27/sqft, that's around $[total] for the printed wrap material."
 3. ALWAYS mention: "Both Avery and 3M are now $5.27/sqft - 3M just dropped their price to match Avery!"
-4. Offer: "Want me to send you a detailed quote? What's your email?"
+4. IMMEDIATELY offer: "Want me to send you a detailed quote? Just drop your email and I'll get that right over! 📧"
 
 GROUND TRUTH:
 - Turnaround: 1-2 business days for print (after artwork approval)
@@ -137,6 +144,133 @@ COMMUNICATION STYLE:
 - Friendly but professional
 - Light emoji use (1-2 max)
 - Give REAL numbers, not vague ranges`;
+
+// WooCommerce order lookup function
+async function fetchWooCommerceOrder(orderNumber: string): Promise<{
+  found: boolean;
+  orderNumber?: string;
+  status?: string;
+  customerName?: string;
+  items?: string[];
+  dateCreated?: string;
+  total?: string;
+  shippingMethod?: string;
+  trackingNumber?: string;
+  error?: string;
+}> {
+  const wooUrl = Deno.env.get('WOO_URL') || 'https://weprintwraps.com';
+  const consumerKey = Deno.env.get('WOO_CONSUMER_KEY');
+  const consumerSecret = Deno.env.get('WOO_CONSUMER_SECRET');
+
+  if (!consumerKey || !consumerSecret) {
+    console.error('[Luigi] WooCommerce credentials not configured');
+    return { found: false, error: 'WooCommerce not configured' };
+  }
+
+  try {
+    // Clean order number - remove # prefix if present
+    const cleanOrderNumber = orderNumber.replace(/^#/, '').replace(/^WPW-?/i, '');
+    
+    // Try searching by order number first
+    const searchUrl = `${wooUrl}/wp-json/wc/v3/orders?search=${cleanOrderNumber}&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+    console.log('[Luigi] Fetching order from WooCommerce:', cleanOrderNumber);
+    
+    const response = await fetch(searchUrl);
+    
+    if (!response.ok) {
+      console.error('[Luigi] WooCommerce API error:', response.status);
+      return { found: false, error: `API error: ${response.status}` };
+    }
+
+    const orders = await response.json();
+    
+    if (!orders || orders.length === 0) {
+      // Try fetching by ID directly
+      const directUrl = `${wooUrl}/wp-json/wc/v3/orders/${cleanOrderNumber}?consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+      const directResponse = await fetch(directUrl);
+      
+      if (directResponse.ok) {
+        const order = await directResponse.json();
+        return parseWooOrder(order);
+      }
+      
+      return { found: false, error: 'Order not found' };
+    }
+
+    // Find exact match or closest match
+    const order = orders.find((o: any) => 
+      o.number === cleanOrderNumber || 
+      o.id.toString() === cleanOrderNumber
+    ) || orders[0];
+
+    return parseWooOrder(order);
+  } catch (err) {
+    console.error('[Luigi] WooCommerce fetch error:', err);
+    return { found: false, error: 'Failed to fetch order' };
+  }
+}
+
+function parseWooOrder(order: any): {
+  found: boolean;
+  status?: string;
+  customerName?: string;
+  items?: string[];
+  dateCreated?: string;
+  total?: string;
+  shippingMethod?: string;
+  trackingNumber?: string;
+  orderNumber?: string;
+} {
+  if (!order) return { found: false };
+
+  // Map WooCommerce status to friendly status
+  const statusMap: Record<string, string> = {
+    'pending': 'Pending Payment',
+    'processing': 'Processing (Being Prepared)',
+    'on-hold': 'On Hold',
+    'completed': 'Completed & Shipped',
+    'cancelled': 'Cancelled',
+    'refunded': 'Refunded',
+    'failed': 'Payment Failed',
+    'checkout-draft': 'Draft',
+    'design-approval': 'Awaiting Design Approval',
+    'in-production': 'In Production (Being Printed)',
+    'shipped': 'Shipped'
+  };
+
+  // Extract line items
+  const items = order.line_items?.map((item: any) => {
+    let itemDesc = item.name;
+    // Check for vehicle info in meta
+    const vehicleMeta = item.meta_data?.find((m: any) => 
+      m.key?.toLowerCase().includes('vehicle') || 
+      m.key?.toLowerCase().includes('year') ||
+      m.key?.toLowerCase().includes('make')
+    );
+    if (vehicleMeta) {
+      itemDesc += ` (${vehicleMeta.display_value || vehicleMeta.value})`;
+    }
+    return itemDesc;
+  }) || [];
+
+  // Check for tracking number in order meta or notes
+  const trackingMeta = order.meta_data?.find((m: any) => 
+    m.key?.toLowerCase().includes('tracking') ||
+    m.key?.toLowerCase().includes('shipment')
+  );
+
+  return {
+    found: true,
+    orderNumber: order.number || order.id?.toString(),
+    status: statusMap[order.status] || order.status,
+    customerName: `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim(),
+    items,
+    dateCreated: order.date_created,
+    total: order.total ? `$${order.total}` : undefined,
+    shippingMethod: order.shipping_lines?.[0]?.method_title,
+    trackingNumber: trackingMeta?.value || undefined
+  };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -177,9 +311,9 @@ serve(async (req) => {
     // Detect intents
     const pricingIntent = lowerMessage.includes('price') || lowerMessage.includes('cost') || 
                           lowerMessage.includes('how much') || lowerMessage.includes('quote') ||
-                          lowerMessage.includes('pricing');
-    const orderStatusIntent = extractedOrderNumber !== null || lowerMessage.includes('order') && 
-                              (lowerMessage.includes('status') || lowerMessage.includes('where') || lowerMessage.includes('track'));
+                          lowerMessage.includes('pricing') || lowerMessage.includes('estimate');
+    const orderStatusIntent = extractedOrderNumber !== null || (lowerMessage.includes('order') && 
+                              (lowerMessage.includes('status') || lowerMessage.includes('where') || lowerMessage.includes('track')));
     const specialtyFilmIntent = lowerMessage.includes('chrome') || lowerMessage.includes('color shift') ||
                                  lowerMessage.includes('textured') || lowerMessage.includes('specialty') ||
                                  lowerMessage.includes('chameleon') || lowerMessage.includes('matte') ||
@@ -255,6 +389,12 @@ serve(async (req) => {
       chatState.vehicle = extractedVehicle;
     }
 
+    // Track when pricing was given to prompt for email
+    if (pricingIntent && hasVehicle) {
+      chatState.pricing_given_at = new Date().toISOString();
+      chatState.pricing_given_count = ((chatState.pricing_given_count as number) || 0) + 1;
+    }
+
     // Calculate pricing if vehicle detected
     let pricingContext = '';
     if (hasVehicle && pricingIntent) {
@@ -268,9 +408,24 @@ Vehicle: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extract
 Estimated SQFT: ${sqft}
 Material Cost at $5.27/sqft: $${materialCost}
 
-TELL THE CUSTOMER THIS EXACT PRICE! Say: "A ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''} is about ${sqft} square feet. At $5.27/sqft, that's around $${materialCost} for the printed wrap material."`;
+TELL THE CUSTOMER THIS EXACT PRICE! Say: "A ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''} is about ${sqft} square feet. At $5.27/sqft, that's around $${materialCost} for the printed wrap material."
+
+🚨 IMPORTANT: After giving this price, IMMEDIATELY ask for their email to send a detailed quote! Say something like: "Want me to email you a detailed quote with all the specs? What's your email?"`;
       
       chatState.calculated_price = { sqft, materialCost };
+    }
+
+    // Build email collection reminder context
+    let emailReminderContext = '';
+    if (!chatState.customer_email && chatState.pricing_given_at) {
+      const pricingCount = (chatState.pricing_given_count as number) || 0;
+      if (pricingCount >= 1) {
+        emailReminderContext = `
+
+⚠️ URGENT: You've given pricing info but DON'T HAVE THEIR EMAIL YET!
+Your response MUST include asking for their email to send a detailed quote.
+Example: "By the way, I'd love to email you a detailed quote with all the specs. What's your email address?"`;
+      }
     }
 
     // Build specialty films context
@@ -280,6 +435,44 @@ TELL THE CUSTOMER THIS EXACT PRICE! Say: "A ${extractedVehicle.year || ''} ${ext
 SPECIALTY FILMS REQUEST DETECTED!
 Direct them to: https://restyleproai.com
 Say: "For specialty films like chrome, color-shift, or textured materials, check out RestyleProAI.com - you can visualize them on your specific vehicle before ordering!"`;
+    }
+
+    // Build order status context if order number detected
+    let orderStatusContext = '';
+    if (orderStatusIntent && extractedOrderNumber) {
+      console.log('[Luigi] Fetching order status for:', extractedOrderNumber);
+      const orderInfo = await fetchWooCommerceOrder(extractedOrderNumber);
+      
+      if (orderInfo.found) {
+        orderStatusContext = `
+ORDER STATUS INFORMATION (from WooCommerce):
+Order Number: ${orderInfo.orderNumber}
+Status: ${orderInfo.status}
+Customer: ${orderInfo.customerName}
+Total: ${orderInfo.total}
+Items: ${orderInfo.items?.join(', ') || 'N/A'}
+Date Created: ${orderInfo.dateCreated ? new Date(orderInfo.dateCreated).toLocaleDateString() : 'N/A'}
+Shipping Method: ${orderInfo.shippingMethod || 'Standard'}
+${orderInfo.trackingNumber ? `Tracking Number: ${orderInfo.trackingNumber}` : ''}
+
+EXPLAIN THIS STATUS TO THE CUSTOMER in a friendly way. If status is "Processing" or "In Production", reassure them the order is being worked on.`;
+        
+        chatState.last_order_lookup = {
+          order_number: extractedOrderNumber,
+          status: orderInfo.status,
+          looked_up_at: new Date().toISOString()
+        };
+      } else {
+        orderStatusContext = `
+ORDER LOOKUP ATTEMPTED for order #${extractedOrderNumber}
+Result: Order not found in system.
+
+Tell the customer: "I couldn't find order #${extractedOrderNumber} in our system. Could you double-check the order number? You can find it in your confirmation email. If you're still having trouble, email hello@weprintwraps.com and we'll help you right away!"`;
+      }
+    } else if (orderStatusIntent && !extractedOrderNumber) {
+      orderStatusContext = `
+ORDER STATUS REQUESTED but no order number provided.
+Ask the customer: "I'd be happy to check your order status! Could you provide your order number? It should be in your confirmation email, usually starting with a # or WPW-."`;
     }
 
     // Insert inbound message
@@ -309,11 +502,20 @@ Say: "For specialty films like chrome, color-shift, or textured materials, check
 
     const conversationHistory = await getConversationHistory(supabase, conversationId);
     
+    const systemPrompt = LUIGI_SYSTEM_PROMPT + pricingContext + emailReminderContext + specialtyContext + orderStatusContext;
+    
     const messages = [
-      { role: 'system', content: LUIGI_SYSTEM_PROMPT + pricingContext + specialtyContext },
+      { role: 'system', content: systemPrompt },
       ...conversationHistory,
       { role: 'user', content: message_text }
     ];
+
+    console.log('[Luigi] Calling AI with context:', { 
+      hasPricing: !!pricingContext, 
+      hasEmailReminder: !!emailReminderContext,
+      hasOrderStatus: !!orderStatusContext,
+      hasSpecialty: !!specialtyContext 
+    });
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -451,7 +653,8 @@ Say: "For specialty films like chrome, color-shift, or textured materials, check
         email: extractedEmail,
         order_number: extractedOrderNumber
       },
-      pricing: chatState.calculated_price || null
+      pricing: chatState.calculated_price || null,
+      order_status: chatState.last_order_lookup || null
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
