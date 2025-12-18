@@ -105,6 +105,24 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     return null;
   }, [messages, agentId]);
 
+  // Find the most recent video attachment from user messages
+  const uploadedVideoUrl = useMemo(() => {
+    // First check current attachments
+    const videoAtt = attachments.find(att => att.type?.startsWith("video/"));
+    if (videoAtt) return videoAtt.url;
+    
+    // Then check message history for video attachments
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.sender === "user" && msg.metadata?.attachments) {
+        const atts = msg.metadata.attachments as Attachment[];
+        const videoAttachment = atts.find(att => att.type?.startsWith("video/"));
+        if (videoAttachment) return videoAttachment.url;
+      }
+    }
+    return null;
+  }, [messages, attachments]);
+
   const getStatusBadge = () => {
     if (confirmed) {
       return (
@@ -187,6 +205,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
                     <ReelRenderPanel 
                       videoContent={videoContent}
                       organizationId={context?.organization_id as string}
+                      initialVideoUrl={uploadedVideoUrl || undefined}
                     />
                   </div>
                 )}

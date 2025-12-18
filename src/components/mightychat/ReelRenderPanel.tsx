@@ -33,10 +33,11 @@ interface ReelRenderPanelProps {
   videoContent: VideoContentPlan | null;
   onClose?: () => void;
   organizationId?: string;
+  initialVideoUrl?: string;
 }
 
-export function ReelRenderPanel({ videoContent, onClose, organizationId }: ReelRenderPanelProps) {
-  const [videoUrl, setVideoUrl] = useState("");
+export function ReelRenderPanel({ videoContent, onClose, organizationId, initialVideoUrl }: ReelRenderPanelProps) {
+  const [videoUrl, setVideoUrl] = useState(initialVideoUrl || "");
   const [editedContent, setEditedContent] = useState<VideoContentPlan | null>(null);
   
   const {
@@ -55,6 +56,13 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId }: ReelR
       setEditedContent(videoContent);
     }
   }, [videoContent]);
+
+  // Update video URL when initialVideoUrl prop changes
+  useEffect(() => {
+    if (initialVideoUrl && !videoUrl) {
+      setVideoUrl(initialVideoUrl);
+    }
+  }, [initialVideoUrl]);
 
   const handleStartRender = async () => {
     if (!videoUrl || !editedContent) return;
@@ -76,7 +84,7 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId }: ReelR
 
   const handleReset = () => {
     reset();
-    setVideoUrl("");
+    setVideoUrl(initialVideoUrl || "");
   };
 
   if (!videoContent && !editedContent) {
@@ -114,11 +122,17 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId }: ReelR
               <Label className="text-xs font-medium flex items-center gap-1.5">
                 <Video className="h-3.5 w-3.5" />
                 Video URL
+                {initialVideoUrl && videoUrl === initialVideoUrl && (
+                  <Badge variant="secondary" className="text-[10px] ml-1 bg-green-500/20 text-green-600">
+                    <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
+                    From Chat
+                  </Badge>
+                )}
               </Label>
               <Input
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="Paste video URL from media library..."
+                placeholder={initialVideoUrl ? "Video detected from chat" : "Paste video URL from media library..."}
                 className="text-sm"
               />
             </div>
