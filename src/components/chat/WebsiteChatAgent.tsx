@@ -67,6 +67,9 @@ export function WebsiteChatAgent() {
           session_id: sessionId,
           message_text: content,
           page_url: window.location.href,
+          // organization_id can be passed here for multi-tenant support
+          // Defaults to WPW org (51aa96db-c06d-41ae-b3cb-25b045c75caf) on backend
+          organization_id: undefined,
         },
       });
 
