@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,20 @@ import { VideoEditCard } from "@/components/mighty-edit/VideoEditCard";
 import { MusicMatcher } from "@/components/mighty-edit/MusicMatcher";
 import { RenderQueue } from "@/components/mighty-edit/RenderQueue";
 
+interface ContentFactoryPreset {
+  action?: string;
+  content_type?: string;
+  platform?: string;
+  hook?: string;
+  cta?: string;
+  overlays?: Array<{ text: string; start: number; duration: number }>;
+  caption?: string;
+  hashtags?: string;
+  attached_assets?: Array<{ url: string; type: string; name: string }>;
+}
+
 export default function MightyEdit() {
+  const location = useLocation();
   const {
     isScanning,
     editQueue,
@@ -32,6 +46,61 @@ export default function MightyEdit() {
 
   const [activeTab, setActiveTab] = useState("scanner");
   const [selectedVideo, setSelectedVideo] = useState<VideoEditItem | null>(null);
+  const [presetApplied, setPresetApplied] = useState(false);
+
+  // Check for preset from Agent Chat (via sessionStorage)
+  useEffect(() => {
+    if (presetApplied) return;
+    
+    const storedPreset = sessionStorage.getItem('mightyedit_preset');
+    if (storedPreset) {
+      try {
+        const preset: ContentFactoryPreset = JSON.parse(storedPreset);
+        console.log('[MightyEdit] Loaded preset from sessionStorage:', preset);
+        
+        // If preset has attached assets, create a video item from them
+        if (preset.attached_assets && preset.attached_assets.length > 0) {
+          const firstAsset = preset.attached_assets[0];
+          const videoFromPreset: VideoEditItem = {
+            id: `preset-${Date.now()}`,
+            organization_id: null,
+            content_file_id: `preset-${Date.now()}`,
+            title: firstAsset.name || 'Agent Upload',
+            source_url: firstAsset.url,
+            transcript: null,
+            duration_seconds: null,
+            ai_edit_suggestions: null,
+            selected_music_id: null,
+            selected_music_url: null,
+            text_overlays: preset.overlays?.map((o) => ({
+              text: o.text,
+              timestamp: `${o.start}s`,
+              style: 'bold',
+              duration: o.duration,
+            })) || [],
+            speed_ramps: [],
+            chapters: [],
+            shorts_extracted: [],
+            final_render_url: null,
+            render_status: 'pending',
+            status: 'ready_for_review',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          
+          console.log('[MightyEdit] Auto-selecting video from preset:', videoFromPreset);
+          setSelectedVideo(videoFromPreset);
+          setActiveTab("editor");
+          setPresetApplied(true);
+          
+          // Clear the preset after use
+          sessionStorage.removeItem('mightyedit_preset');
+        }
+      } catch (e) {
+        console.error('[MightyEdit] Failed to parse preset:', e);
+      }
+    }
+  }, [presetApplied]);
 
   useEffect(() => {
     fetchEditQueue();
