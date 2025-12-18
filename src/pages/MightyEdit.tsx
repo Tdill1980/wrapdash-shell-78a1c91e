@@ -57,6 +57,61 @@ export default function MightyEdit() {
   const [selectedVideo, setSelectedVideo] = useState<VideoEditItem | null>(null);
   const [presetApplied, setPresetApplied] = useState(false);
 
+  // Helper: Ensure video exists in video_edit_queue before executing edits
+  const ensureVideoInQueue = async (video: VideoEditItem): Promise<string | null> => {
+    // First check if it already exists in queue
+    const { data: existing } = await supabase
+      .from('video_edit_queue')
+      .select('id')
+      .eq('id', video.id)
+      .maybeSingle();
+    
+    if (existing) {
+      return existing.id;
+    }
+
+    // Insert the video into the queue
+    const { data: inserted, error } = await supabase
+      .from('video_edit_queue')
+      .insert({
+        id: video.id,
+        organization_id: video.organization_id,
+        content_file_id: video.content_file_id,
+        source_url: video.source_url,
+        transcript: video.transcript,
+        duration_seconds: video.duration_seconds,
+        ai_edit_suggestions: video.ai_edit_suggestions,
+        text_overlays: video.text_overlays,
+        selected_music_id: video.selected_music_id,
+        selected_music_url: video.selected_music_url,
+        render_status: 'pending',
+        status: video.status || 'ready_for_review',
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[MightyEdit] Failed to insert video into queue:', error);
+      return null;
+    }
+
+    console.log('[MightyEdit] Inserted video into queue:', inserted.id);
+    return inserted.id;
+  };
+
+  // Wrapper for executeEdits that ensures video is in queue first
+  const handleExecuteEdits = async (renderType: "full" | "shorts" | "all") => {
+    if (!selectedVideo) return;
+    
+    const queueId = await ensureVideoInQueue(selectedVideo);
+    if (!queueId) {
+      console.error('[MightyEdit] Could not ensure video in queue');
+      return;
+    }
+    
+    await executeEdits(queueId, renderType);
+  };
+
   // Check for preset from Agent Chat (via sessionStorage)
   useEffect(() => {
     if (presetApplied) return;
@@ -480,7 +535,7 @@ export default function MightyEdit() {
                     <Button 
                       className="flex-1" 
                       size="lg"
-                      onClick={() => executeEdits(selectedVideo.id, "full")}
+                      onClick={() => handleExecuteEdits("full")}
                       disabled={isExecuting}
                     >
                       {isExecuting ? (
@@ -500,7 +555,7 @@ export default function MightyEdit() {
                     <Button 
                       variant="outline" 
                       size="lg"
-                      onClick={() => executeEdits(selectedVideo.id, "shorts")}
+                      onClick={() => handleExecuteEdits("shorts")}
                       disabled={isExecuting}
                     >
                       <Scissors className="w-4 h-4 mr-2" />
@@ -511,7 +566,7 @@ export default function MightyEdit() {
                     <Button 
                       variant="outline" 
                       size="lg"
-                      onClick={() => executeEdits(selectedVideo.id, "all")}
+                      onClick={() => handleExecuteEdits("all")}
                       disabled={isExecuting}
                     >
                       <Download className="w-4 h-4 mr-2" />
