@@ -9,11 +9,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Send, X, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { Send, X, CheckCircle2, Clock, Loader2, Image, Film, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAgentChat, type AgentChatMessage } from "@/hooks/useAgentChat";
 import { DelegateTaskModal } from "./DelegateTaskModal";
 import { AVAILABLE_AGENTS } from "./AgentSelector";
+import { AgentChatFileUpload, type Attachment } from "./AgentChatFileUpload";
 
 interface AgentChatPanelProps {
   open: boolean;
@@ -24,6 +25,7 @@ interface AgentChatPanelProps {
 
 export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentChatPanelProps) {
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showDelegateModal, setShowDelegateModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -57,13 +59,16 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
 
   const handleEndChat = () => {
     closeChat();
+    setAttachments([]);
     onOpenChange(false);
   };
 
   const handleSend = () => {
-    if (input.trim() && !sending) {
-      sendMessage(input.trim());
+    if ((input.trim() || attachments.length > 0) && !sending) {
+      const msg = input.trim() || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : "");
+      sendMessage(msg, attachments.length > 0 ? attachments : undefined);
       setInput("");
+      setAttachments([]);
     }
   };
 
@@ -165,18 +170,62 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
 
           {/* Input */}
           <div className="p-4 border-t border-border/50 space-y-3">
-            <div className="flex gap-2">
+            {/* Attachment previews */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-2 bg-muted/30 rounded-lg">
+                {attachments.map((att, idx) => {
+                  const isImage = att.type?.startsWith("image/");
+                  const isVideo = att.type?.startsWith("video/");
+                  const Icon = isImage ? Image : isVideo ? Film : FileText;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="relative group rounded-lg border border-border/50 overflow-hidden bg-background"
+                    >
+                      {isImage ? (
+                        <img
+                          src={att.url}
+                          alt={att.name || "Attachment"}
+                          className="h-14 w-14 object-cover"
+                        />
+                      ) : (
+                        <div className="h-14 w-14 flex flex-col items-center justify-center p-1">
+                          <Icon className="w-5 h-5 text-muted-foreground" />
+                          <span className="text-[9px] text-muted-foreground truncate w-full text-center mt-0.5">
+                            {att.name?.slice(0, 8) || "File"}
+                          </span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex gap-2 items-end">
+              <AgentChatFileUpload
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                disabled={sending || loading}
+              />
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask, clarify, correct..."
+                placeholder="Ask, clarify, or attach files..."
                 disabled={sending || loading}
                 className="flex-1"
               />
               <Button 
                 onClick={handleSend} 
-                disabled={!input.trim() || sending || loading}
+                disabled={(!input.trim() && attachments.length === 0) || sending || loading}
                 size="icon"
               >
                 <Send className="w-4 h-4" />
@@ -234,6 +283,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
 function MessageBubble({ message, agentName }: { message: AgentChatMessage; agentName?: string }) {
   const isUser = message.sender === "user";
   const imageUrl = message.metadata?.image_url as string | undefined;
+  const userAttachments = message.metadata?.attachments;
 
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
@@ -252,6 +302,34 @@ function MessageBubble({ message, agentName }: { message: AgentChatMessage; agen
         )}
         <div className="whitespace-pre-wrap">{message.content}</div>
         
+        {/* Display user attachments */}
+        {isUser && userAttachments && userAttachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {userAttachments.map((att, idx) => {
+              const isImage = att.type?.startsWith("image/");
+              const isVideo = att.type?.startsWith("video/");
+              const Icon = isImage ? Image : isVideo ? Film : FileText;
+
+              return isImage ? (
+                <img
+                  key={idx}
+                  src={att.url}
+                  alt={att.name || "Attachment"}
+                  className="rounded-md max-h-32 object-cover border border-primary-foreground/20"
+                />
+              ) : (
+                <div
+                  key={idx}
+                  className="flex items-center gap-1.5 bg-primary-foreground/10 rounded px-2 py-1 text-xs"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="truncate max-w-[100px]">{att.name || "File"}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Display generated image */}
         {imageUrl && (
           <div className="mt-3">
