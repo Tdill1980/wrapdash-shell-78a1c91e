@@ -279,7 +279,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
         // This is CRITICAL for retargeting - don't lose these leads!
         console.log("📋 Creating PARTIAL quote for retargeting:", quoteNumber);
         
-        const { data: partialQuote, error: quoteErr } = await supabase.from("quotes").insert({
+        const quoteData = {
           quote_number: quoteNumber,
           customer_name: body.sender_username || body.sender_id || 'Unknown',
           customer_email: parsed.customer_email || `pending-${body.sender_id}@capture.local`,
@@ -287,14 +287,24 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
           vehicle_make: parsed.vehicle?.make || null,
           vehicle_model: parsed.vehicle?.model || null,
           product_name: wpwProductType,
-          status: 'lead', // New status for incomplete quotes
+          status: 'lead',
           total_price: 0,
           ai_generated: false,
           ai_message: body.message_text
-        }).select().single();
+        };
+        
+        console.log("📝 Inserting quote with data:", JSON.stringify(quoteData));
+        
+        const { data: partialQuote, error: quoteErr } = await supabase
+          .from("quotes")
+          .insert(quoteData)
+          .select()
+          .single();
         
         if (quoteErr) {
-          console.error("❌ Partial quote error:", quoteErr);
+          console.error("❌ CRITICAL - Quote insert failed:", quoteErr.message);
+          console.error("❌ Quote error details:", JSON.stringify(quoteErr));
+          console.error("❌ Attempted quote data:", JSON.stringify(quoteData));
         } else {
           console.log("✅ LEAD CAPTURED:", quoteNumber, partialQuote?.id);
           autoQuoteResult = { 
