@@ -135,22 +135,24 @@ export function SalesGoalTracker() {
         </div>
 
         {/* Year-over-Year Comparison */}
-        <div className={`rounded-lg p-3 border ${salesData.yoyDifference >= 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">vs. Last Year (Same Period)</span>
-            <span className={`text-sm font-bold ${salesData.yoyDifference >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {salesData.yoyDifference >= 0 ? '+' : ''}${Math.round(salesData.yoyDifference).toLocaleString()}
-            </span>
+        {salesData.lastYearRevenue != null && (
+          <div className={`rounded-lg p-3 border ${(salesData.yoyDifference ?? 0) >= 0 ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">vs. Last Year (Same Period)</span>
+              <span className={`text-sm font-bold ${(salesData.yoyDifference ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {(salesData.yoyDifference ?? 0) >= 0 ? '+' : ''}${Math.round(salesData.yoyDifference ?? 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-xs text-muted-foreground">
+                Last year: ${salesData.lastYearRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+              <span className={`text-xs ${(salesData.yoyPercentChange ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {(salesData.yoyPercentChange ?? 0) >= 0 ? '+' : ''}{(salesData.yoyPercentChange ?? 0).toFixed(1)}%
+              </span>
+            </div>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs text-muted-foreground">
-              Last year: ${salesData.lastYearRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </span>
-            <span className={`text-xs ${salesData.yoyPercentChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {salesData.yoyPercentChange >= 0 ? '+' : ''}{salesData.yoyPercentChange.toFixed(1)}%
-            </span>
-          </div>
-        </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
