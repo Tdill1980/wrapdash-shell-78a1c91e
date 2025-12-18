@@ -25,6 +25,7 @@ import {
   MoreVertical,
   Trash,
   Zap,
+  Play,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +34,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DailyFlywheel } from "@/components/mightytask/DailyFlywheel";
+import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
+import { AVAILABLE_AGENTS } from "@/components/mightychat/AgentSelector";
 
 // Standard job tasks that auto-generate
 export const STANDARD_JOB_TASKS = [
@@ -55,6 +58,7 @@ interface Task {
   due_date: string | null;
   order_id: string | null;
   created_at: string;
+  assigned_agent?: string | null;
 }
 
 type ViewMode = "todo" | "inprogress" | "done" | "all";
@@ -67,6 +71,11 @@ export default function MightyTasks() {
   const [searchQuery, setSearchQuery] = useState("");
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isAddingTask, setIsAddingTask] = useState(false);
+  
+  // Agent execution state
+  const [showAgentPanel, setShowAgentPanel] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [taskContext, setTaskContext] = useState<Record<string, unknown>>({});
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -163,6 +172,30 @@ export default function MightyTasks() {
     } finally {
       setIsAddingTask(false);
     }
+  };
+
+  const executeWithAgent = (task: Task) => {
+    // Determine agent based on task.assigned_agent or default to noah_bennett for content tasks
+    let agentId = task.assigned_agent || "noah_bennett";
+    
+    // Check if agent exists in available agents
+    const validAgent = AVAILABLE_AGENTS.find(a => a.id === agentId);
+    if (!validAgent) {
+      agentId = "noah_bennett"; // Default fallback
+    }
+    
+    setSelectedAgentId(agentId);
+    setTaskContext({
+      task_id: task.id,
+      task_title: task.title,
+      task_description: task.description,
+      task_priority: task.priority,
+      task_due_date: task.due_date,
+      source: "mightytask",
+      initial_prompt: `Execute this task: "${task.title}"${task.description ? `\n\nDetails: ${task.description}` : ""}`,
+    });
+    setShowAgentPanel(true);
+    toast.info(`Opening agent chat to execute: ${task.title}`);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -370,6 +403,22 @@ export default function MightyTasks() {
                       </div>
                     )}
 
+                    {/* Execute with Agent Button */}
+                    {task.status !== "completed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-primary border-primary/30 hover:bg-primary/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          executeWithAgent(task);
+                        }}
+                      >
+                        <Play className="w-3 h-3 mr-1" />
+                        Execute
+                      </Button>
+                    )}
+
                     {/* Actions */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -378,6 +427,10 @@ export default function MightyTasks() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => executeWithAgent(task)}>
+                          <Play className="w-4 h-4 mr-2" />
+                          Execute with Agent
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => updateTaskStatus(task.id, "pending")}>
                           <Circle className="w-4 h-4 mr-2" />
                           Mark To Do
@@ -408,6 +461,14 @@ export default function MightyTasks() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Agent Chat Panel for Task Execution */}
+      <AgentChatPanel
+        open={showAgentPanel}
+        onOpenChange={setShowAgentPanel}
+        agentId={selectedAgentId}
+        context={taskContext}
+      />
     </MainLayout>
   );
 }
