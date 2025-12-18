@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -33,6 +34,7 @@ interface ContentFactoryPreset {
   caption?: string;
   hashtags?: string;
   attached_assets?: Array<{ url: string; type: string; name: string }>;
+  claimed_asset_id?: string;
 }
 
 export default function MightyEdit() {
@@ -62,9 +64,9 @@ export default function MightyEdit() {
         if (preset.attached_assets && preset.attached_assets.length > 0) {
           const firstAsset = preset.attached_assets[0];
           const videoFromPreset: VideoEditItem = {
-            id: `preset-${Date.now()}`,
+            id: preset.claimed_asset_id || `preset-${Date.now()}`,
             organization_id: null,
-            content_file_id: `preset-${Date.now()}`,
+            content_file_id: preset.claimed_asset_id || `preset-${Date.now()}`,
             title: firstAsset.name || 'Agent Upload',
             source_url: firstAsset.url,
             transcript: null,
@@ -101,6 +103,55 @@ export default function MightyEdit() {
       }
     }
   }, [presetApplied]);
+
+  // Fallback: If no preset and no selection, auto-select the most recent video asset
+  useEffect(() => {
+    async function loadFallbackVideo() {
+      if (selectedVideo || presetApplied) return;
+      
+      // Check if we came from agent chat but have no selection yet
+      const storedPreset = sessionStorage.getItem('mightyedit_preset');
+      if (storedPreset) return; // Let the preset handler above take care of it
+      
+      // Fallback: load most recent video from contentbox_assets
+      const { data: latestAsset, error } = await supabase
+        .from('contentbox_assets')
+        .select('*')
+        .eq('asset_type', 'video')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (latestAsset && !error) {
+        console.log('[MightyEdit] Fallback: auto-selecting latest asset:', latestAsset);
+        const fallbackVideo: VideoEditItem = {
+          id: latestAsset.id,
+          organization_id: latestAsset.organization_id,
+          content_file_id: latestAsset.id,
+          title: latestAsset.original_name || 'Latest Video',
+          source_url: latestAsset.file_url,
+          transcript: null,
+          duration_seconds: latestAsset.duration_seconds,
+          ai_edit_suggestions: null,
+          selected_music_id: null,
+          selected_music_url: null,
+          text_overlays: [],
+          speed_ramps: [],
+          chapters: [],
+          shorts_extracted: [],
+          final_render_url: null,
+          render_status: 'pending',
+          status: latestAsset.scan_status === 'ready' ? 'ready_for_review' : 'pending',
+          created_at: latestAsset.created_at,
+          updated_at: latestAsset.created_at,
+        };
+        setSelectedVideo(fallbackVideo);
+        setActiveTab("editor");
+      }
+    }
+    
+    loadFallbackVideo();
+  }, [selectedVideo, presetApplied]);
 
   useEffect(() => {
     fetchEditQueue();

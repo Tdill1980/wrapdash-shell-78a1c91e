@@ -1997,6 +1997,62 @@ export type Database = {
           },
         ]
       }
+      contentbox_assets: {
+        Row: {
+          asset_type: string
+          created_at: string | null
+          duration_seconds: number | null
+          file_url: string
+          height: number | null
+          id: string
+          organization_id: string | null
+          original_name: string | null
+          scan_status: string | null
+          scanned: boolean | null
+          source: string
+          tags: string[] | null
+          width: number | null
+        }
+        Insert: {
+          asset_type: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          file_url: string
+          height?: number | null
+          id?: string
+          organization_id?: string | null
+          original_name?: string | null
+          scan_status?: string | null
+          scanned?: boolean | null
+          source: string
+          tags?: string[] | null
+          width?: number | null
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          file_url?: string
+          height?: number | null
+          id?: string
+          organization_id?: string | null
+          original_name?: string | null
+          scan_status?: string | null
+          scanned?: boolean | null
+          source?: string
+          tags?: string[] | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contentbox_assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           assigned_to: string | null

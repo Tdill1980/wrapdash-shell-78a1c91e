@@ -18,7 +18,8 @@ import { AVAILABLE_AGENTS } from "./AgentSelector";
 import { AgentChatFileUpload, type Attachment } from "./AgentChatFileUpload";
 import { RecentAgentChats } from "./RecentAgentChats";
 import { useNavigate } from "react-router-dom";
-
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 interface AgentChatPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -445,12 +446,44 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                       
                       <Button 
                         className="w-full"
-                        onClick={() => {
-                          // Store preset in sessionStorage for MightyEdit to pick up
-                          // Include attached_assets so MightyEdit can load them
+                        onClick={async () => {
+                          // Claim attachments as ContentBox assets before navigating
+                          const attachedAssets = contentFactoryPreset.attached_assets || [];
+                          let claimedAssetId: string | null = null;
+                          
+                          if (attachedAssets.length > 0) {
+                            try {
+                              // Insert into contentbox_assets to claim ownership
+                              const { data: asset, error } = await supabase
+                                .from('contentbox_assets')
+                                .insert({
+                                  source: 'agent-chat',
+                                  asset_type: attachedAssets[0].type?.startsWith('video') ? 'video' : 'image',
+                                  file_url: attachedAssets[0].url,
+                                  original_name: attachedAssets[0].name,
+                                  scanned: false,
+                                  scan_status: 'pending',
+                                  tags: ['chat-upload', 'agent-created'],
+                                })
+                                .select()
+                                .single();
+                              
+                              if (error) {
+                                console.error('[AgentChatPanel] Failed to claim asset:', error);
+                              } else {
+                                claimedAssetId = asset.id;
+                                console.log('[AgentChatPanel] Claimed asset:', asset);
+                              }
+                            } catch (e) {
+                              console.error('[AgentChatPanel] Error claiming asset:', e);
+                            }
+                          }
+                          
+                          // Store preset with claimed asset ID
                           const presetWithAssets = {
                             ...contentFactoryPreset,
-                            attached_assets: contentFactoryPreset.attached_assets || [],
+                            attached_assets: attachedAssets,
+                            claimed_asset_id: claimedAssetId,
                           };
                           sessionStorage.setItem('mightyedit_preset', JSON.stringify(presetWithAssets));
                           console.log('[AgentChatPanel] Navigating to MightyEdit with preset:', presetWithAssets);
