@@ -1,6 +1,7 @@
 // Website Chat Edge Function - Jordan Lee Agent
 // Handles website chat via WePrintWraps chat widget
 // Routes all execution through Ops Desk
+// Now with TradeDNA integration for dynamic brand voice
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -10,6 +11,7 @@ import { WPW_TEAM, SILENT_CC, detectEscalation, getEscalationResponse } from "..
 import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
 import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
 import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
+import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,8 +31,32 @@ const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 // Partnership/sponsorship signal detection
 const PARTNERSHIP_PATTERNS = /\b(collab|sponsor|film|commercial|partner|brand|ambassador|influencer|content creator|media|press|feature)\b/i;
 
-// Jordan Lee's persona - replaces Luigi
-const JORDAN_PERSONA = `You are "Jordan Lee" — a friendly website chat specialist at WePrintWraps.com.
+// Build Jordan Lee's persona dynamically using TradeDNA
+function buildJordanPersona(voiceProfile: VoiceProfile): string {
+  const { merged, organization_dna } = voiceProfile;
+  
+  // Extract TradeDNA values with fallbacks
+  const tone = merged.tone || 'professional, confident';
+  const persona = merged.persona || 'wrap industry expert';
+  const signaturePhrases = organization_dna?.vocabulary?.signature_phrases || [];
+  const wordsToAvoid = organization_dna?.vocabulary?.words_to_avoid || [];
+  const salesApproach = organization_dna?.sales_style?.approach || 'consultative';
+  const ctaStyle = merged.cta_style || 'action-driven';
+  const pressureLevel = organization_dna?.sales_style?.pressure_level || 'low';
+  const customerPainPoints = organization_dna?.customer_profile?.pain_points || [];
+  const emotionalTriggers = organization_dna?.customer_profile?.emotional_triggers || [];
+
+  return `You are "Jordan Lee" — a friendly website chat specialist.
+
+YOUR BRAND VOICE (from TradeDNA):
+- Tone: ${tone}
+- Persona: ${persona}
+- Sales Approach: ${salesApproach} (pressure level: ${pressureLevel})
+- CTA Style: ${ctaStyle}
+${signaturePhrases.length > 0 ? `- USE these signature phrases when natural: ${signaturePhrases.join(', ')}` : ''}
+${wordsToAvoid.length > 0 ? `- AVOID these words: ${wordsToAvoid.join(', ')}` : ''}
+${customerPainPoints.length > 0 ? `- Customer pain points to address: ${customerPainPoints.join(', ')}` : ''}
+${emotionalTriggers.length > 0 ? `- Emotional triggers that resonate: ${emotionalTriggers.join(', ')}` : ''}
 
 YOUR ROLE:
 - Educate visitors about wrap options and materials
@@ -47,23 +73,22 @@ YOUR TEAM (mention naturally when routing):
 PRICING APPROACH (CRITICAL):
 1. When customer asks for price WITHOUT email:
    - Give ballpark range ONLY: "Full wraps typically run $1,000-$2,000 depending on vehicle size"
-   - Say: "I can give you a rough idea, but we send official pricing by email so nothing gets lost. What's your email?"
+   - Ask for email naturally to send detailed pricing
 
 2. When customer provides email:
    - Acknowledge and confirm you're routing to quoting team
-   - Say: "Perfect — I've got that. Our quoting team will email you a full breakdown shortly."
 
 3. NEVER give exact per-sqft pricing without email capture
 
 ROUTING RULES:
-- Quote requests with email → "I'm sending this to our quoting team"
-- Partnership/sponsorship signals → "Let me loop in our partnerships team"
-- Design/file questions → "I'll get our design team on this"
+- Quote requests with email → route to quoting team
+- Partnership/sponsorship signals → route to partnerships team
+- Design/file questions → route to design team
 
 COMMUNICATION STYLE:
-- Friendly and helpful (not salesy)
+- Match the brand tone: ${tone}
 - Concise (2-3 sentences max)
-- Light emoji use (🔥 💪 - 1-2 max)
+- Light emoji use (1-2 max)
 - Always confirm human follow-up
 
 WPW GROUND TRUTH:
@@ -73,6 +98,7 @@ WPW GROUND TRUTH:
 - Quality guarantee: 100% - we reprint at no cost
 
 ${WPW_CONSTITUTION.humanConfirmation}`;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -80,9 +106,9 @@ serve(async (req) => {
   }
 
   try {
-    const { org, agent, mode, session_id, message_text, page_url, referrer, geo } = await req.json();
+    const { org, agent, mode, session_id, message_text, page_url, referrer, geo, organization_id } = await req.json();
 
-    console.log('[JordanLee] Received message:', { org, session_id, message_text: message_text?.substring(0, 50) });
+    console.log('[JordanLee] Received message:', { org, session_id, organization_id, message_text: message_text?.substring(0, 50) });
 
     if (!message_text || !session_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -95,6 +121,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Load TradeDNA voice profile for this organization
+    // Default to WPW org if not specified: 51aa96db-c06d-41ae-b3cb-25b045c75caf
+    const orgId = organization_id || '51aa96db-c06d-41ae-b3cb-25b045c75caf';
+    const voiceProfile = await loadVoiceProfile(orgId);
+    console.log('[JordanLee] Loaded TradeDNA voice:', { tone: voiceProfile.merged.tone, persona: voiceProfile.merged.persona });
 
     // Load knowledge context for grounding (Jordan Lee agent)
     const knowledgeContext = await loadKnowledgeContext(supabase, "jordan_lee", message_text);
@@ -360,7 +392,7 @@ serve(async (req) => {
             messages: [
               {
                 role: 'system',
-                content: `${JORDAN_PERSONA}
+                content: `${buildJordanPersona(voiceProfile)}
 
 CURRENT CONTEXT:
 ${contextNotes}
