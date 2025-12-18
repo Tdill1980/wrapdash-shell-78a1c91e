@@ -9,6 +9,9 @@ export interface AgentChatMessage {
   created_at: string;
   metadata?: {
     confirmed?: boolean;
+    image_url?: string;
+    image_generated?: boolean;
+    attachments?: Array<{ url: string; type?: string; name?: string }>;
   };
 }
 
@@ -117,7 +120,11 @@ export function useAgentChat(): UseAgentChatReturn {
         sender: "agent",
         content: data.message,
         created_at: new Date().toISOString(),
-        metadata: { confirmed: data.confirmed },
+        metadata: { 
+          confirmed: data.confirmed,
+          image_url: data.image_url,
+          image_generated: !!data.image_url,
+        },
       };
       setMessages((prev) => [...prev, agentMsg]);
 

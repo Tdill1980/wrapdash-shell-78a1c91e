@@ -233,6 +233,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
 
 function MessageBubble({ message, agentName }: { message: AgentChatMessage; agentName?: string }) {
   const isUser = message.sender === "user";
+  const imageUrl = message.metadata?.image_url as string | undefined;
 
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
@@ -250,6 +251,22 @@ function MessageBubble({ message, agentName }: { message: AgentChatMessage; agen
           </div>
         )}
         <div className="whitespace-pre-wrap">{message.content}</div>
+        
+        {/* Display generated image */}
+        {imageUrl && (
+          <div className="mt-3">
+            <img 
+              src={imageUrl} 
+              alt="Generated image"
+              className="rounded-lg max-w-full h-auto border border-border/50"
+              style={{ maxHeight: "300px" }}
+            />
+            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              🎨 AI Generated
+            </div>
+          </div>
+        )}
+        
         {message.metadata?.confirmed && (
           <div className="flex items-center gap-1 mt-2 text-xs text-emerald-500">
             <CheckCircle2 className="w-3 h-3" />
