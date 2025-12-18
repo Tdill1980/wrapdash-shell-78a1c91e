@@ -38,12 +38,13 @@ interface ScheduledContent {
   caption: string | null;
 }
 
-// Channel/Brand definitions
+// Channel/Brand definitions - 4 unified buttons in order
 const CHANNELS = [
   { id: 'all', name: 'All Channels', color: 'bg-muted', borderColor: 'border-muted-foreground' },
-  { id: 'wpw', name: 'WPW', color: 'bg-red-500', borderColor: 'border-red-500', bgLight: 'bg-red-500/10' },
-  { id: 'ink-edge', name: 'Ink & Edge Magazine', color: 'bg-zinc-700', borderColor: 'border-zinc-700', bgLight: 'bg-zinc-700/10' },
+  { id: 'ink-edge-publisher', name: 'Ink & Edge Publisher', color: 'bg-indigo-600', borderColor: 'border-indigo-600', bgLight: 'bg-indigo-600/10' },
+  { id: 'wpw', name: 'WePrintWraps.com', color: 'bg-red-500', borderColor: 'border-red-500', bgLight: 'bg-red-500/10' },
   { id: 'wraptv', name: 'WrapTVWorld', color: 'bg-purple-500', borderColor: 'border-purple-500', bgLight: 'bg-purple-500/10' },
+  { id: 'ink-edge-content', name: 'Ink & Edge Content', color: 'bg-pink-500', borderColor: 'border-pink-500', bgLight: 'bg-pink-500/10' },
 ];
 
 // Content type definitions with icons
@@ -91,15 +92,21 @@ export default function ContentCalendar30Day() {
   const filteredContent = useMemo(() => {
     if (selectedChannel === 'all') return scheduledContent;
     return scheduledContent.filter(item => {
+      const brandLower = item.brand.toLowerCase();
       // Map database brand values to our channel IDs
-      const brandMap: Record<string, string> = {
-        'wpw': 'wpw',
-        'ink-edge': 'ink-edge',
-        'inkedge': 'ink-edge',
-        'wraptv': 'wraptv',
-        'wraptvworld': 'wraptv',
-      };
-      return brandMap[item.brand.toLowerCase()] === selectedChannel || item.brand.toLowerCase() === selectedChannel;
+      if (selectedChannel === 'ink-edge-publisher') {
+        return brandLower === 'ink-edge' || brandLower === 'inkedge' || brandLower === 'ink-edge-publisher';
+      }
+      if (selectedChannel === 'ink-edge-content') {
+        return brandLower === 'ink-edge-content' || brandLower === 'ink-edge-dist';
+      }
+      if (selectedChannel === 'wpw') {
+        return brandLower === 'wpw';
+      }
+      if (selectedChannel === 'wraptv') {
+        return brandLower === 'wraptv' || brandLower === 'wraptvworld';
+      }
+      return false;
     });
   }, [scheduledContent, selectedChannel]);
 
@@ -116,15 +123,17 @@ export default function ContentCalendar30Day() {
   // Stats by channel
   const statsByChannel = useMemo(() => {
     const stats: Record<string, number> = {
+      'ink-edge-publisher': 0,
       wpw: 0,
-      'ink-edge': 0,
       wraptv: 0,
+      'ink-edge-content': 0,
     };
     scheduledContent.forEach(item => {
       const brand = item.brand.toLowerCase();
       if (brand === 'wpw') stats.wpw++;
-      else if (brand === 'ink-edge' || brand === 'inkedge') stats['ink-edge']++;
+      else if (brand === 'ink-edge' || brand === 'inkedge' || brand === 'ink-edge-publisher') stats['ink-edge-publisher']++;
       else if (brand === 'wraptv' || brand === 'wraptvworld') stats.wraptv++;
+      else if (brand === 'ink-edge-content' || brand === 'ink-edge-dist') stats['ink-edge-content']++;
     });
     return stats;
   }, [scheduledContent]);
@@ -141,9 +150,12 @@ export default function ContentCalendar30Day() {
 
   const getChannelStyle = (brand: string) => {
     const brandLower = brand.toLowerCase();
+    if (brandLower === 'ink-edge' || brandLower === 'inkedge' || brandLower === 'ink-edge-publisher') {
+      return { border: 'border-l-4 border-l-indigo-600', bg: 'bg-indigo-600/10' };
+    }
     if (brandLower === 'wpw') return { border: 'border-l-4 border-l-red-500', bg: 'bg-red-500/10' };
-    if (brandLower === 'ink-edge' || brandLower === 'inkedge') return { border: 'border-l-4 border-l-zinc-700', bg: 'bg-zinc-700/10' };
     if (brandLower === 'wraptv' || brandLower === 'wraptvworld') return { border: 'border-l-4 border-l-purple-500', bg: 'bg-purple-500/10' };
+    if (brandLower === 'ink-edge-content' || brandLower === 'ink-edge-dist') return { border: 'border-l-4 border-l-pink-500', bg: 'bg-pink-500/10' };
     return { border: 'border-l-4 border-l-muted', bg: 'bg-muted/10' };
   };
 
@@ -163,9 +175,10 @@ export default function ContentCalendar30Day() {
 
   const getChannelLabel = (brand: string) => {
     const brandLower = brand.toLowerCase();
+    if (brandLower === 'ink-edge' || brandLower === 'inkedge' || brandLower === 'ink-edge-publisher') return 'I&E Publisher';
     if (brandLower === 'wpw') return 'WPW';
-    if (brandLower === 'ink-edge' || brandLower === 'inkedge') return 'Ink & Edge';
     if (brandLower === 'wraptv' || brandLower === 'wraptvworld') return 'WrapTV';
+    if (brandLower === 'ink-edge-content' || brandLower === 'ink-edge-dist') return 'I&E Content';
     return brand;
   };
 
@@ -208,41 +221,29 @@ export default function ContentCalendar30Day() {
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="border-l-4 border-l-indigo-600">
+            <CardContent className="py-3 px-4">
+              <p className="text-2xl font-bold">{statsByChannel['ink-edge-publisher']}</p>
+              <p className="text-xs text-muted-foreground">I&E Publisher</p>
+            </CardContent>
+          </Card>
           <Card className="border-l-4 border-l-red-500">
             <CardContent className="py-3 px-4">
               <p className="text-2xl font-bold">{statsByChannel.wpw}</p>
-              <p className="text-xs text-muted-foreground">WPW</p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-zinc-700">
-            <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{statsByChannel['ink-edge']}</p>
-              <p className="text-xs text-muted-foreground">Ink & Edge</p>
+              <p className="text-xs text-muted-foreground">WePrintWraps.com</p>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-purple-500">
             <CardContent className="py-3 px-4">
               <p className="text-2xl font-bold">{statsByChannel.wraptv}</p>
-              <p className="text-xs text-muted-foreground">WrapTV</p>
+              <p className="text-xs text-muted-foreground">WrapTVWorld</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-l-4 border-l-pink-500">
             <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{statsByType.reel || 0}</p>
-              <p className="text-xs text-muted-foreground">🎬 Reels</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{statsByType.story || 0}</p>
-              <p className="text-xs text-muted-foreground">📖 Stories</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{(statsByType.ad || 0) + (statsByType['reel-ad'] || 0) + (statsByType['static-ad'] || 0)}</p>
-              <p className="text-xs text-muted-foreground">💰 Ads</p>
+              <p className="text-2xl font-bold">{statsByChannel['ink-edge-content']}</p>
+              <p className="text-xs text-muted-foreground">I&E Content</p>
             </CardContent>
           </Card>
         </div>
