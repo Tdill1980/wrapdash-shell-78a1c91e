@@ -85,29 +85,41 @@ function parseCreateContent(message: string): ContentFactoryPreset | null {
     //   - text: 3M Price Drop!
     //     start: 0
     //     duration: 3
-    const overlaysMatch = content.match(/overlays:\s*\n([\s\S]*?)(?=\n[a-z_]+:|===|$)/i);
+    const overlaysMatch = content.match(/overlays:\s*\n([\s\S]*?)(?=\n[a-zA-Z_]+:|\n===|$)/i);
     let overlays: ContentFactoryPreset['overlays'] | undefined;
+    
+    console.log('[parseCreateContent] Looking for overlays in block');
+    console.log('[parseCreateContent] overlaysMatch:', overlaysMatch ? 'found' : 'not found');
+    
     if (overlaysMatch) {
       const overlaysBlock = overlaysMatch[1];
+      console.log('[parseCreateContent] overlaysBlock:', overlaysBlock);
+      
       // Split by "- text:" to get individual overlay blocks
       const overlayParts = overlaysBlock.split(/\n\s*-\s*text:\s*/i).filter(Boolean);
+      console.log('[parseCreateContent] overlayParts count:', overlayParts.length);
       
       if (overlayParts.length > 0) {
-        overlays = overlayParts.map(block => {
-          // The text value is the first line (before any newline or field)
-          const lines = block.split('\n');
-          const textValue = lines[0].trim();
+        overlays = overlayParts.map((chunk, idx) => {
+          // First line contains the text value (after "- text:" was stripped)
+          const lines = chunk.split('\n').map(l => l.trim()).filter(Boolean);
+          const textValue = lines[0]?.replace(/^["']|["']$/g, '') ?? '';
           
           // Look for start and duration in the entire block
-          const startMatch = block.match(/start:\s*(\d+)/i);
-          const durationMatch = block.match(/duration:\s*(\d+)/i);
+          const startMatch = chunk.match(/start:\s*(\d+)/i);
+          const durationMatch = chunk.match(/duration:\s*(\d+)/i);
           
-          return {
+          const overlay = {
             text: textValue,
             start: startMatch ? parseInt(startMatch[1], 10) : 0,
             duration: durationMatch ? parseInt(durationMatch[1], 10) : 3,
           };
-        }).filter(o => o.text); // Only keep overlays with actual text
+          
+          console.log(`[parseCreateContent] Overlay ${idx}:`, overlay);
+          return overlay;
+        }).filter(o => o.text.length > 0); // Only keep overlays with actual text
+        
+        console.log('[parseCreateContent] Final overlays:', overlays);
       }
     }
     
@@ -498,8 +510,10 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                             attached_assets: attachedAssets,
                             claimed_asset_id: claimedAssetId,
                           };
+                          console.log('[AgentChatPanel] Overlays being saved:', contentFactoryPreset.overlays);
+                          console.log('[AgentChatPanel] Full preset being saved:', presetWithAssets);
                           sessionStorage.setItem('mightyedit_preset', JSON.stringify(presetWithAssets));
-                          console.log('[AgentChatPanel] Navigating to MightyEdit with preset:', presetWithAssets);
+                          console.log('[AgentChatPanel] Navigating to MightyEdit with preset');
                           navigate('/mighty-edit');
                         }}
                       >
