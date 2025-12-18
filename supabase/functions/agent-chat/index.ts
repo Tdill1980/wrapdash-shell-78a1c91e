@@ -629,6 +629,108 @@ When an image is generated, it will be included in your response.
       );
     }
 
+    // ACTION: list - List recent chats for a user (optionally filtered by agent)
+    if (action === "list") {
+      if (!user_id) throw new Error("Missing user_id");
+
+      let query = supabase
+        .from("agent_chats")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("updated_at", { ascending: false })
+        .limit(20);
+
+      if (agent_id) {
+        query = query.eq("agent_id", agent_id);
+      }
+
+      const { data: chats, error: chatsError } = await query;
+
+      if (chatsError) throw chatsError;
+
+      // Get last message for each chat
+      const chatsWithPreview = await Promise.all(
+        (chats || []).map(async (chat) => {
+          const { data: lastMsg } = await supabase
+            .from("agent_chat_messages")
+            .select("content, sender, created_at")
+            .eq("agent_chat_id", chat.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          const agentConfig = AGENT_CONFIGS[chat.agent_id];
+
+          return {
+            ...chat,
+            agent_name: agentConfig?.name || chat.agent_id,
+            agent_role: agentConfig?.role || "Agent",
+            last_message: lastMsg?.content?.substring(0, 100) || null,
+            last_message_sender: lastMsg?.sender || null,
+            last_message_at: lastMsg?.created_at || chat.updated_at,
+          };
+        })
+      );
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          chats: chatsWithPreview,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ACTION: resume - Resume an existing chat
+    if (action === "resume") {
+      if (!chat_id) throw new Error("Missing chat_id");
+
+      const { data: chat, error: chatError } = await supabase
+        .from("agent_chats")
+        .select("*")
+        .eq("id", chat_id)
+        .single();
+
+      if (chatError || !chat) throw new Error("Chat not found");
+
+      const { data: messages, error: msgError } = await supabase
+        .from("agent_chat_messages")
+        .select("*")
+        .eq("agent_chat_id", chat_id)
+        .order("created_at", { ascending: true });
+
+      if (msgError) throw msgError;
+
+      const agentConfig = AGENT_CONFIGS[chat.agent_id];
+
+      // Check if chat was already confirmed (look for confirmed message)
+      const hasConfirmedMessage = (messages || []).some(
+        (m) => m.sender === "agent" && m.metadata?.confirmed === true
+      );
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          chat_id: chat.id,
+          agent: {
+            id: chat.agent_id,
+            name: agentConfig?.name || chat.agent_id,
+            role: agentConfig?.role || "Agent",
+          },
+          messages: (messages || []).map((m) => ({
+            id: m.id,
+            sender: m.sender,
+            content: m.content,
+            created_at: m.created_at,
+            metadata: m.metadata,
+          })),
+          confirmed: hasConfirmedMessage,
+          status: chat.status,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     throw new Error(`Unknown action: ${action}`);
   } catch (error) {
     console.error("Agent chat error:", error);

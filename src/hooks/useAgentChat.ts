@@ -21,6 +21,20 @@ export interface AgentInfo {
   role: string;
 }
 
+export interface RecentChat {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  agent_role: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  last_message: string | null;
+  last_message_sender: string | null;
+  last_message_at: string;
+  context?: Record<string, unknown>;
+}
+
 interface UseAgentChatReturn {
   chatId: string | null;
   agent: AgentInfo | null;
@@ -29,10 +43,14 @@ interface UseAgentChatReturn {
   sending: boolean;
   confirmed: boolean;
   suggestedTask: { type: string; description: string } | null;
+  recentChats: RecentChat[];
+  loadingRecent: boolean;
   startChat: (agentId: string, context?: Record<string, unknown>) => Promise<void>;
   sendMessage: (message: string, attachments?: Array<{ url: string; type?: string; name?: string }>) => Promise<void>;
   delegateTask: (description: string) => Promise<{ success: boolean; taskId?: string }>;
   closeChat: () => void;
+  loadRecentChats: (agentId?: string) => Promise<void>;
+  resumeChat: (chatId: string) => Promise<void>;
 }
 
 export function useAgentChat(): UseAgentChatReturn {
@@ -43,6 +61,74 @@ export function useAgentChat(): UseAgentChatReturn {
   const [sending, setSending] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [suggestedTask, setSuggestedTask] = useState<{ type: string; description: string } | null>(null);
+  const [recentChats, setRecentChats] = useState<RecentChat[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+
+  const loadRecentChats = useCallback(async (agentId?: string) => {
+    setLoadingRecent(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+
+      if (!userId) return;
+
+      const { data, error } = await supabase.functions.invoke("agent-chat", {
+        body: {
+          action: "list",
+          user_id: userId,
+          agent_id: agentId,
+        },
+      });
+
+      if (error) throw error;
+      setRecentChats(data.chats || []);
+    } catch (err) {
+      console.error("Load recent chats error:", err);
+    } finally {
+      setLoadingRecent(false);
+    }
+  }, []);
+
+  const resumeChat = useCallback(async (existingChatId: string) => {
+    setLoading(true);
+    setMessages([]);
+    setConfirmed(false);
+    setSuggestedTask(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("agent-chat", {
+        body: {
+          action: "resume",
+          chat_id: existingChatId,
+        },
+      });
+
+      if (error) throw error;
+
+      setChatId(data.chat_id);
+      setAgent(data.agent);
+      setMessages(data.messages || []);
+      setConfirmed(data.confirmed || false);
+
+      // Extract suggested task from last confirmed message
+      if (data.confirmed) {
+        const lastAgentMsg = [...(data.messages || [])].reverse().find(
+          (m: AgentChatMessage) => m.sender === "agent" && m.metadata?.confirmed
+        );
+        if (lastAgentMsg) {
+          const match = lastAgentMsg.content.match(/I will ([^.]+)\./i);
+          if (match) {
+            setSuggestedTask({ type: "general", description: match[1].trim() });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Resume chat error:", err);
+      toast.error("Failed to resume chat");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const startChat = useCallback(async (agentId: string, context?: Record<string, unknown>) => {
     setLoading(true);
@@ -191,9 +277,13 @@ export function useAgentChat(): UseAgentChatReturn {
     sending,
     confirmed,
     suggestedTask,
+    recentChats,
+    loadingRecent,
     startChat,
     sendMessage,
     delegateTask,
     closeChat,
+    loadRecentChats,
+    resumeChat,
   };
 }

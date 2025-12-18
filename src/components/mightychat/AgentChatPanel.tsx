@@ -9,13 +9,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Send, X, CheckCircle2, Clock, Loader2, Image, Film, FileText } from "lucide-react";
+import { Send, X, CheckCircle2, Clock, Loader2, Image, Film, FileText, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAgentChat, type AgentChatMessage } from "@/hooks/useAgentChat";
 import { DelegateTaskModal } from "./DelegateTaskModal";
 import { AVAILABLE_AGENTS } from "./AgentSelector";
 import { AgentChatFileUpload, type Attachment } from "./AgentChatFileUpload";
 import { ReelRenderPanel, parseVideoContent } from "./ReelRenderPanel";
+import { RecentAgentChats } from "./RecentAgentChats";
 
 interface AgentChatPanelProps {
   open: boolean;
@@ -28,6 +29,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showDelegateModal, setShowDelegateModal] = useState(false);
+  const [showRecentChats, setShowRecentChats] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -38,18 +40,34 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     sending,
     confirmed,
     suggestedTask,
+    recentChats,
+    loadingRecent,
     startChat,
     sendMessage,
     delegateTask,
     closeChat,
+    loadRecentChats,
+    resumeChat,
   } = useAgentChat();
 
-  // Start (or resume) chat when panel opens with an agent
+  // Load recent chats when panel opens
   useEffect(() => {
-    if (open && agentId && !chatId) {
-      startChat(agentId, context);
+    if (open && agentId) {
+      loadRecentChats(agentId);
     }
-  }, [open, agentId, chatId, startChat, context]);
+  }, [open, agentId, loadRecentChats]);
+
+  // Start a new chat when panel opens with an agent (only if no recent chats view)
+  useEffect(() => {
+    if (open && agentId && !chatId && !showRecentChats && !loadingRecent) {
+      // If there are recent chats, show the recent chats view first
+      if (recentChats.length > 0) {
+        setShowRecentChats(true);
+      } else {
+        startChat(agentId, context);
+      }
+    }
+  }, [open, agentId, chatId, startChat, context, showRecentChats, loadingRecent, recentChats.length]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -61,6 +79,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
   const handleEndChat = () => {
     closeChat();
     setAttachments([]);
+    setShowRecentChats(false);
     onOpenChange(false);
   };
 
@@ -84,7 +103,26 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     const result = await delegateTask(description);
     if (result.success) {
       setShowDelegateModal(false);
-      // Keep panel open so the user can still see the chat history + confirmation.
+    }
+  };
+
+  const handleResumeChat = async (existingChatId: string) => {
+    setShowRecentChats(false);
+    await resumeChat(existingChatId);
+  };
+
+  const handleNewChat = () => {
+    setShowRecentChats(false);
+    if (agentId) {
+      startChat(agentId, context);
+    }
+  };
+
+  const handleShowHistory = () => {
+    closeChat();
+    setShowRecentChats(true);
+    if (agentId) {
+      loadRecentChats(agentId);
     }
   };
 
@@ -140,6 +178,41 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     );
   };
 
+  // Show recent chats view
+  if (showRecentChats && !chatId) {
+    return (
+      <Sheet open={open} onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          setShowRecentChats(false);
+          onOpenChange(false);
+        }
+      }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="flex items-center gap-2 text-lg">
+                <History className="w-5 h-5" />
+                Chat History
+              </SheetTitle>
+              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </SheetHeader>
+          
+          <RecentAgentChats
+            recentChats={recentChats}
+            loading={loadingRecent}
+            agentId={agentId || undefined}
+            onResumeChat={handleResumeChat}
+            onNewChat={handleNewChat}
+            onLoadChats={loadRecentChats}
+          />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   return (
     <>
       <Sheet open={open} onOpenChange={(nextOpen) => {
@@ -152,9 +225,21 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
                 <span>🧠</span>
                 Agent Chat
               </SheetTitle>
-              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-                <X className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {recentChats.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleShowHistory}
+                    title="View chat history"
+                  >
+                    <History className="w-4 h-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
             
             {agent && (
