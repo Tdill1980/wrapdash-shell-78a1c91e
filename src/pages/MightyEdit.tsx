@@ -86,11 +86,24 @@ export default function MightyEdit() {
 
     console.log('[MightyEdit] Inserting new video into queue...');
     
-    // First, create content_files record if we have a source_url from Agent Chat
+    // First, create/resolve a valid content_files record for this video (video_edit_queue has an FK)
     let contentFileId: string | null = null;
-    
-    // Check if we need to create a content_files record (for Agent Chat uploads)
-    if (video.source_url && (!video.content_file_id || video.content_file_id.startsWith('preset-'))) {
+
+    // If we were given a content_file_id, verify it exists in content_files before using it.
+    if (video.content_file_id && !video.content_file_id.startsWith('preset-')) {
+      const { data: existingContentFile, error: existingCfErr } = await supabase
+        .from('content_files')
+        .select('id')
+        .eq('id', video.content_file_id)
+        .maybeSingle();
+
+      if (!existingCfErr && existingContentFile?.id) {
+        contentFileId = existingContentFile.id;
+      }
+    }
+
+    // If we still don't have a valid content file id, create one (common for Agent Chat uploads)
+    if (!contentFileId && video.source_url) {
       const { data: contentFile, error: cfError } = await supabase
         .from('content_files')
         .insert({
@@ -102,17 +115,14 @@ export default function MightyEdit() {
         })
         .select('id')
         .single();
-      
+
       if (cfError) {
         console.warn('[MightyEdit] Could not create content_files record, proceeding without:', cfError);
-        // We can still proceed with content_file_id as null
+        // Proceed with content_file_id as null (FK allows null)
       } else {
         contentFileId = contentFile.id;
         console.log('[MightyEdit] Created content_files record:', contentFileId);
       }
-    } else if (video.content_file_id && !video.content_file_id.startsWith('preset-')) {
-      // Use existing valid content_file_id
-      contentFileId = video.content_file_id;
     }
 
     // Insert the video into the queue with the real (or null) content_file_id
@@ -172,9 +182,10 @@ export default function MightyEdit() {
         if (preset.attached_assets && preset.attached_assets.length > 0) {
           const firstAsset = preset.attached_assets[0];
           const videoFromPreset: VideoEditItem = {
+            // This is a local-only placeholder; ensureVideoInQueue will create the DB row.
             id: preset.claimed_asset_id || `preset-${Date.now()}`,
             organization_id: null,
-            content_file_id: preset.claimed_asset_id || `preset-${Date.now()}`,
+            content_file_id: null,
             title: firstAsset.name || 'Agent Upload',
             source_url: firstAsset.url,
             transcript: null,
