@@ -14,14 +14,15 @@ import { Send, Eye, Loader2, CheckCircle } from "lucide-react";
 import declarationEmailHtml from "@/lib/email-templates/ink-edge-declaration.html?raw";
 
 const SUBJECT_OPTIONS = [
-  "We Went Quiet on Purpose. Here's Why.",
-  "Why We Stopped Posting (and What We Built Instead)",
-  "We Took a Step Back — This Is What's Coming",
-  "Ink & Edge Is New. WPW Is Backing It."
+  "Why We Went Quiet (and What We Built Instead)",
+  "We've been quiet in your inbox. Here's why.",
+  "The reason we stopped emailing you",
+  "Something's different now.",
+  "We owe you an explanation.",
 ];
 
 const MightyMailCampaignSender = () => {
-  const [subject, setSubject] = useState(SUBJECT_OPTIONS[1]);
+  const [subject, setSubject] = useState(SUBJECT_OPTIONS[0]);
   const [previewText, setPreviewText] = useState("We weren't gone — we were building something worth your time.");
   const [campaignName, setCampaignName] = useState("Ink & Edge Declaration - ClubWPW");
   const [segmentId, setSegmentId] = useState("");
