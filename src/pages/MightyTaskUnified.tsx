@@ -99,6 +99,22 @@ const CHANNEL_AGENT_MAP: Record<string, string> = {
   ink_edge_content: 'noah_bennett',
 };
 
+// Content type to agent mapping - takes priority over channel
+const CONTENT_TYPE_AGENT_MAP: Record<string, string> = {
+  // Noah Bennett - Social Content Creator
+  ig_reel: 'noah_bennett',
+  ig_story: 'noah_bennett',
+  fb_reel: 'noah_bennett',
+  fb_story: 'noah_bennett',
+  youtube_short: 'noah_bennett',
+  youtube_video: 'noah_bennett',
+  meta_ad: 'noah_bennett',
+  // Emily Carter - Marketing Content
+  email: 'emily_carter',
+  // Ryan Mitchell - Editorial Content
+  article: 'ryan_mitchell',
+};
+
 // Content type configuration for badges
 const CONTENT_TYPE_CONFIG: Record<string, { label: string; emoji: string; bgClass: string; textClass: string }> = {
   email: { label: 'Email', emoji: '📧', bgClass: 'bg-purple-500/20', textClass: 'text-purple-400' },
@@ -109,6 +125,7 @@ const CONTENT_TYPE_CONFIG: Record<string, { label: string; emoji: string; bgClas
   meta_ad: { label: 'Meta Ad', emoji: '🎯', bgClass: 'bg-green-500/20', textClass: 'text-green-400' },
   youtube_short: { label: 'YT Short', emoji: '▶️', bgClass: 'bg-red-500/20', textClass: 'text-red-400' },
   youtube_video: { label: 'YouTube', emoji: '🎬', bgClass: 'bg-red-600/20', textClass: 'text-red-500' },
+  article: { label: 'Article', emoji: '📝', bgClass: 'bg-indigo-500/20', textClass: 'text-indigo-400' },
 };
 
 interface Task {
@@ -284,11 +301,22 @@ export default function MightyTaskUnified() {
   const executeWithAgent = (task: Task, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
-    // Determine agent based on channel or assigned_agent
-    let agentId = task.assigned_agent;
+    // Priority: 1) content_type mapping, 2) assigned_agent, 3) channel mapping, 4) default
+    let agentId: string | null = null;
+    
+    // First check content_type for agent mapping
+    if (task.content_type && CONTENT_TYPE_AGENT_MAP[task.content_type]) {
+      agentId = CONTENT_TYPE_AGENT_MAP[task.content_type];
+    }
+    // Then check assigned_agent
+    if (!agentId && task.assigned_agent) {
+      agentId = task.assigned_agent;
+    }
+    // Then check channel mapping
     if (!agentId && task.channel && CHANNEL_AGENT_MAP[task.channel]) {
       agentId = CHANNEL_AGENT_MAP[task.channel];
     }
+    // Default fallback
     if (!agentId) {
       agentId = "noah_bennett";
     }
@@ -298,6 +326,10 @@ export default function MightyTaskUnified() {
       agentId = "noah_bennett";
     }
     
+    const contentTypeLabel = task.content_type && CONTENT_TYPE_CONFIG[task.content_type] 
+      ? CONTENT_TYPE_CONFIG[task.content_type].label 
+      : null;
+    
     setSelectedAgentId(agentId);
     setTaskContext({
       task_id: task.id,
@@ -306,11 +338,14 @@ export default function MightyTaskUnified() {
       task_priority: task.priority,
       task_due_date: task.due_date,
       task_channel: task.channel,
+      task_content_type: task.content_type,
       source: "mightytask",
-      initial_prompt: `Execute this task: "${task.title}"${task.description ? `\n\nDetails: ${task.description}` : ""}`,
+      initial_prompt: `Execute this task: "${task.title}"${contentTypeLabel ? ` (${contentTypeLabel})` : ""}${task.description ? `\n\nDetails: ${task.description}` : ""}`,
     });
     setShowAgentPanel(true);
-    toast.info(`Opening agent chat to execute: ${task.title}`);
+    
+    const agentName = AVAILABLE_AGENTS.find(a => a.id === agentId)?.name || agentId;
+    toast.info(`Opening ${agentName} to execute: ${task.title}`);
   };
 
   const getPriorityColor = (priority: string) => {

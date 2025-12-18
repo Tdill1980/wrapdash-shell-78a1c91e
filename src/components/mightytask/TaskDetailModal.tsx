@@ -16,6 +16,22 @@ import { Calendar, Play, Save, X } from "lucide-react";
 import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
 import { AVAILABLE_AGENTS } from "@/components/mightychat/AgentSelector";
 
+// Content type to agent mapping - takes priority over channel
+const CONTENT_TYPE_AGENT_MAP: Record<string, string> = {
+  // Noah Bennett - Social Content Creator
+  ig_reel: 'noah_bennett',
+  ig_story: 'noah_bennett',
+  fb_reel: 'noah_bennett',
+  fb_story: 'noah_bennett',
+  youtube_short: 'noah_bennett',
+  youtube_video: 'noah_bennett',
+  meta_ad: 'noah_bennett',
+  // Emily Carter - Marketing Content
+  email: 'emily_carter',
+  // Ryan Mitchell - Editorial Content
+  article: 'ryan_mitchell',
+};
+
 interface Task {
   id: string;
   title: string;
@@ -27,6 +43,7 @@ interface Task {
   created_at: string;
   assigned_agent?: string | null;
   channel?: string | null;
+  content_type?: string | null;
 }
 
 interface TaskDetailModalProps {
@@ -70,13 +87,24 @@ export function TaskDetailModal({
   const handleOpenAgentChat = () => {
     if (!editedTask) return;
     
-    // Determine agent based on channel or assigned_agent
-    let agentId = editedTask.assigned_agent;
+    // Priority: 1) content_type mapping, 2) assigned_agent, 3) channel mapping, 4) default
+    let agentId: string | null = null;
+    
+    // First check content_type for agent mapping
+    if (editedTask.content_type && CONTENT_TYPE_AGENT_MAP[editedTask.content_type]) {
+      agentId = CONTENT_TYPE_AGENT_MAP[editedTask.content_type];
+    }
+    // Then check assigned_agent
+    if (!agentId && editedTask.assigned_agent) {
+      agentId = editedTask.assigned_agent;
+    }
+    // Then check channel mapping
     if (!agentId && editedTask.channel && channelAgentMap[editedTask.channel]) {
       agentId = channelAgentMap[editedTask.channel];
     }
+    // Default fallback
     if (!agentId) {
-      agentId = "noah_bennett"; // Default fallback
+      agentId = "noah_bennett";
     }
     
     // Verify agent exists
@@ -93,6 +121,7 @@ export function TaskDetailModal({
       task_priority: editedTask.priority,
       task_due_date: editedTask.due_date,
       task_channel: editedTask.channel,
+      task_content_type: editedTask.content_type,
       source: "mightytask",
       initial_prompt: `Execute this task: "${editedTask.title}"${editedTask.description ? `\n\nDetails: ${editedTask.description}` : ""}`,
     });
