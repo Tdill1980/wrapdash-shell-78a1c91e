@@ -38,6 +38,7 @@ interface ContentFactoryPreset {
     type?: string;
     limit?: number;
   };
+  attached_assets?: Array<{ url: string; type: string; name: string }>;
   hook: string;
   cta: string;
   overlays?: Array<{ text: string; start: number; duration: number }>;
@@ -96,12 +97,30 @@ function parseCreateContent(message: string): ContentFactoryPreset | null {
       }
     }
     
+    // Parse attached_assets block
+    const attachedAssetsMatch = content.match(/attached_assets:\s*\n((?:\s+-.*\n?)+)/i);
+    let attached_assets: ContentFactoryPreset['attached_assets'] | undefined;
+    if (attachedAssetsMatch) {
+      const assetBlocks = attachedAssetsMatch[1].split(/\n\s*-/).filter(Boolean);
+      attached_assets = assetBlocks.map(block => {
+        const urlMatch = block.match(/url:\s*(.+?)(?:\n|$)/i);
+        const typeMatch = block.match(/type:\s*(\w+)/i);
+        const nameMatch = block.match(/name:\s*(.+?)(?:\n|$)/i);
+        return {
+          url: urlMatch ? urlMatch[1].trim() : '',
+          type: typeMatch ? typeMatch[1].trim() : 'video',
+          name: nameMatch ? nameMatch[1].trim() : 'Attached Asset',
+        };
+      }).filter(a => a.url); // Only keep assets with valid URLs
+    }
+    
     return {
       action: getField('action') || 'create_content',
       content_type: getField('content_type') || 'reel',
       platform: getField('platform') || 'instagram',
       asset_source: getField('asset_source') || 'contentbox',
       asset_query,
+      attached_assets,
       hook: getField('hook'),
       cta: getField('cta'),
       overlays,
@@ -428,13 +447,27 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                         className="w-full"
                         onClick={() => {
                           // Store preset in sessionStorage for MightyEdit to pick up
-                          sessionStorage.setItem('mightyedit_preset', JSON.stringify(contentFactoryPreset));
+                          // Include attached_assets so MightyEdit can load them
+                          const presetWithAssets = {
+                            ...contentFactoryPreset,
+                            attached_assets: contentFactoryPreset.attached_assets || [],
+                          };
+                          sessionStorage.setItem('mightyedit_preset', JSON.stringify(presetWithAssets));
+                          console.log('[AgentChatPanel] Navigating to MightyEdit with preset:', presetWithAssets);
                           navigate('/mighty-edit');
                         }}
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Open in MightyEdit
                       </Button>
+                      
+                      {/* Show attached assets info if present */}
+                      {contentFactoryPreset.attached_assets && contentFactoryPreset.attached_assets.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+                          <Film className="h-3 w-3" />
+                          <span>{contentFactoryPreset.attached_assets.length} video(s) attached</span>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
