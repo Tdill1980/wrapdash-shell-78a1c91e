@@ -2294,6 +2294,68 @@ export type Database = {
           },
         ]
       }
+      email_design_tokens: {
+        Row: {
+          accent_color: string | null
+          background_color: string | null
+          body_font: string | null
+          created_at: string | null
+          cta_color: string | null
+          footer_html: string | null
+          headline_color: string | null
+          headline_font: string | null
+          id: string
+          is_default: boolean | null
+          logo_url: string | null
+          organization_id: string | null
+          text_color: string | null
+          token_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          created_at?: string | null
+          cta_color?: string | null
+          footer_html?: string | null
+          headline_color?: string | null
+          headline_font?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_url?: string | null
+          organization_id?: string | null
+          text_color?: string | null
+          token_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          created_at?: string | null
+          cta_color?: string | null
+          footer_html?: string | null
+          headline_color?: string | null
+          headline_font?: string | null
+          id?: string
+          is_default?: boolean | null
+          logo_url?: string | null
+          organization_id?: string | null
+          text_color?: string | null
+          token_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_design_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_events: {
         Row: {
           created_at: string | null
@@ -2829,6 +2891,89 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "instagram_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      klaviyo_campaigns: {
+        Row: {
+          ai_generated: boolean | null
+          campaign_type: string
+          clicked_count: number | null
+          created_at: string | null
+          error_message: string | null
+          html_content: string | null
+          id: string
+          klaviyo_campaign_id: string | null
+          klaviyo_template_id: string | null
+          name: string
+          offer_type: string | null
+          offer_value: number | null
+          opened_count: number | null
+          organization_id: string | null
+          preview_text: string | null
+          revenue_attributed: number | null
+          scheduled_at: string | null
+          segment_type: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          campaign_type?: string
+          clicked_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          html_content?: string | null
+          id?: string
+          klaviyo_campaign_id?: string | null
+          klaviyo_template_id?: string | null
+          name: string
+          offer_type?: string | null
+          offer_value?: number | null
+          opened_count?: number | null
+          organization_id?: string | null
+          preview_text?: string | null
+          revenue_attributed?: number | null
+          scheduled_at?: string | null
+          segment_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          ai_generated?: boolean | null
+          campaign_type?: string
+          clicked_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          html_content?: string | null
+          id?: string
+          klaviyo_campaign_id?: string | null
+          klaviyo_template_id?: string | null
+          name?: string
+          offer_type?: string | null
+          offer_value?: number | null
+          opened_count?: number | null
+          organization_id?: string | null
+          preview_text?: string | null
+          revenue_attributed?: number | null
+          scheduled_at?: string | null
+          segment_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "klaviyo_campaigns_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -4706,6 +4851,56 @@ export type Database = {
           },
           {
             foreignKeyName: "video_edit_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      winback_sequences: {
+        Row: {
+          conversion_rate: number | null
+          created_at: string | null
+          emails_in_sequence: number | null
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          organization_id: string | null
+          sequence_name: string
+          total_revenue: number | null
+          trigger_days_inactive: number
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_rate?: number | null
+          created_at?: string | null
+          emails_in_sequence?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          organization_id?: string | null
+          sequence_name: string
+          total_revenue?: number | null
+          trigger_days_inactive?: number
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_rate?: number | null
+          created_at?: string | null
+          emails_in_sequence?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          organization_id?: string | null
+          sequence_name?: string
+          total_revenue?: number | null
+          trigger_days_inactive?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "winback_sequences_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

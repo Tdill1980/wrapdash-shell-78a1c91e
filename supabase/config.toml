@@ -209,3 +209,9 @@ verify_jwt = false
 
 [functions.sales-goal-autopilot]
 verify_jwt = false
+
+[functions.ai-generate-winback-email]
+verify_jwt = false
+
+[functions.create-klaviyo-campaign]
+verify_jwt = false
