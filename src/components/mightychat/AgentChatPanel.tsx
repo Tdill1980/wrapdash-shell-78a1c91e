@@ -159,18 +159,31 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
 
   // Check if Noah Bennett produced video content in the conversation
   const videoContent = useMemo(() => {
-    if (agentId !== "noah_bennett") return null;
+    console.log("[AgentChatPanel] Checking for video content, agentId:", agentId, "agent?.id:", agent?.id);
+    
+    // Check both agentId prop and actual agent from chat
+    const isNoah = agentId === "noah_bennett" || agent?.id === "noah_bennett";
+    if (!isNoah) {
+      console.log("[AgentChatPanel] Not Noah Bennett, skipping video content check");
+      return null;
+    }
+    
+    console.log("[AgentChatPanel] Noah Bennett detected, scanning", messages.length, "messages for VIDEO_CONTENT");
     
     // Look for VIDEO_CONTENT block in agent messages
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       if (msg.sender === "agent") {
         const parsed = parseVideoContent(msg.content);
-        if (parsed) return parsed;
+        if (parsed) {
+          console.log("[AgentChatPanel] Found VIDEO_CONTENT in message:", msg.id, parsed);
+          return parsed;
+        }
       }
     }
+    console.log("[AgentChatPanel] No VIDEO_CONTENT found in messages");
     return null;
-  }, [messages, agentId]);
+  }, [messages, agentId, agent]);
 
   // Find the most recent video attachment or URL from user messages
   const uploadedVideoUrl = useMemo(() => {
@@ -340,7 +353,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                 )}
                 
                 {/* Video Render Panel - shown when Noah Bennett produces video content */}
-                {videoContent && agentId === "noah_bennett" && (
+                {videoContent && (agentId === "noah_bennett" || agent?.id === "noah_bennett") && (
                   <div className="pt-4">
                     <ReelRenderPanel 
                       videoContent={videoContent}
