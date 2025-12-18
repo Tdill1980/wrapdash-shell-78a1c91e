@@ -47,17 +47,43 @@ const CHANNELS = [
   { id: 'ink-edge-content', name: 'Ink & Edge Content', color: 'bg-pink-500', borderColor: 'border-pink-500', bgLight: 'bg-pink-500/10' },
 ];
 
-// Content type definitions with icons
-const CONTENT_TYPES = [
-  { id: 'story', label: 'Story', icon: '📖', description: 'Instagram/Facebook Story' },
-  { id: 'reel', label: 'Organic Reel', icon: '🎬', description: 'Unpaid reel content' },
-  { id: 'reel-ad', label: 'Reel Ad', icon: '📢', description: 'Paid reel promotion' },
-  { id: 'static-ad', label: 'Static Ad', icon: '🖼️', description: 'Image-based ad' },
-  { id: 'email', label: 'Email', icon: '✉️', description: 'Klaviyo campaigns' },
-  { id: 'article', label: 'Article', icon: '📰', description: 'Magazine content' },
-  { id: 'short', label: 'Short', icon: '⚡', description: 'YouTube Shorts / TikTok' },
-  { id: 'ad', label: 'Ad', icon: '💰', description: 'Paid advertisement' },
-];
+// Content type configuration for badges - mirrors MightyTask system
+const CONTENT_TYPE_CONFIG: Record<string, { label: string; emoji: string; bgClass: string; textClass: string }> = {
+  email: { label: 'Email', emoji: '📧', bgClass: 'bg-purple-500/20', textClass: 'text-purple-400' },
+  ig_reel: { label: 'IG Reel', emoji: '📱', bgClass: 'bg-gradient-to-r from-pink-500/20 to-orange-500/20', textClass: 'text-pink-400' },
+  ig_story: { label: 'IG Story', emoji: '📖', bgClass: 'bg-pink-500/20', textClass: 'text-pink-400' },
+  fb_reel: { label: 'FB Reel', emoji: '📘', bgClass: 'bg-blue-500/20', textClass: 'text-blue-400' },
+  fb_story: { label: 'FB Story', emoji: '📗', bgClass: 'bg-blue-400/20', textClass: 'text-blue-300' },
+  meta_ad: { label: 'Meta Ad', emoji: '🎯', bgClass: 'bg-green-500/20', textClass: 'text-green-400' },
+  youtube_short: { label: 'YT Short', emoji: '▶️', bgClass: 'bg-red-500/20', textClass: 'text-red-400' },
+  youtube_video: { label: 'YouTube', emoji: '🎬', bgClass: 'bg-red-600/20', textClass: 'text-red-500' },
+  article: { label: 'Article', emoji: '📰', bgClass: 'bg-indigo-500/20', textClass: 'text-indigo-400' },
+  milestone: { label: 'Milestone', emoji: '🎯', bgClass: 'bg-yellow-500/20', textClass: 'text-yellow-400' },
+  story: { label: 'Story', emoji: '📖', bgClass: 'bg-pink-500/20', textClass: 'text-pink-400' },
+  reel: { label: 'Reel', emoji: '🎬', bgClass: 'bg-orange-500/20', textClass: 'text-orange-400' },
+  ad: { label: 'Ad', emoji: '💰', bgClass: 'bg-green-500/20', textClass: 'text-green-400' },
+  short: { label: 'Short', emoji: '⚡', bgClass: 'bg-red-500/20', textClass: 'text-red-400' },
+};
+
+// Maps content_type + platform to unified badge key
+const getContentTypeKey = (contentType: string, platform: string): string => {
+  const ct = contentType.toLowerCase();
+  const pl = platform.toLowerCase();
+  
+  if (ct === 'reel' && pl === 'instagram') return 'ig_reel';
+  if (ct === 'story' && pl === 'instagram') return 'ig_story';
+  if (ct === 'reel' && pl === 'facebook') return 'fb_reel';
+  if (ct === 'story' && pl === 'facebook') return 'fb_story';
+  if ((ct === 'ad' || ct === 'reel-ad' || ct === 'static-ad') && (pl === 'meta' || pl === 'facebook' || pl === 'instagram')) return 'meta_ad';
+  if ((ct === 'short' || ct === 'youtube_short') && pl === 'youtube') return 'youtube_short';
+  if ((ct === 'video' || ct === 'youtube_video') && pl === 'youtube') return 'youtube_video';
+  if (ct === 'email') return 'email';
+  if (ct === 'article') return 'article';
+  if (ct === 'milestone') return 'milestone';
+  
+  // Fallback to content type if no platform match
+  return ct;
+};
 
 export default function ContentCalendar30Day() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -159,18 +185,9 @@ export default function ContentCalendar30Day() {
     return { border: 'border-l-4 border-l-muted', bg: 'bg-muted/10' };
   };
 
-  const getContentTypeInfo = (type: string) => {
-    const typeLower = type.toLowerCase();
-    // Handle compound types like "reel-ad" or "static-ad"
-    if (typeLower.includes('reel') && typeLower.includes('ad')) {
-      return CONTENT_TYPES.find(t => t.id === 'reel-ad') || CONTENT_TYPES[0];
-    }
-    if (typeLower.includes('static') && typeLower.includes('ad')) {
-      return CONTENT_TYPES.find(t => t.id === 'static-ad') || CONTENT_TYPES[0];
-    }
-    return CONTENT_TYPES.find(t => t.id === typeLower) || 
-           CONTENT_TYPES.find(t => typeLower.includes(t.id)) ||
-           { id: type, label: type, icon: '📌', description: type };
+  const getContentTypeBadge = (contentType: string, platform: string) => {
+    const key = getContentTypeKey(contentType, platform);
+    return CONTENT_TYPE_CONFIG[key] || { label: contentType, emoji: '📌', bgClass: 'bg-muted', textClass: 'text-muted-foreground' };
   };
 
   const getChannelLabel = (brand: string) => {
@@ -326,7 +343,7 @@ export default function ContentCalendar30Day() {
                     <div className="space-y-1 overflow-y-auto max-h-[90px]">
                       {dayContent.slice(0, 3).map((item) => {
                         const channelStyle = getChannelStyle(item.brand);
-                        const typeInfo = getContentTypeInfo(item.content_type);
+                        const badgeConfig = getContentTypeBadge(item.content_type, item.platform);
                         
                         return (
                           <div
@@ -336,17 +353,20 @@ export default function ContentCalendar30Day() {
                               channelStyle.border,
                               channelStyle.bg
                             )}
-                            title={`${getChannelLabel(item.brand)} - ${typeInfo.label}: ${item.title || 'Untitled'}`}
+                            title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}`}
                           >
-                            <div className="flex items-center gap-1">
-                              <span>{typeInfo.icon}</span>
-                              <span className="font-medium truncate">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <span className="font-medium truncate text-[9px]">
                                 {getChannelLabel(item.brand)}
                               </span>
                             </div>
-                            <div className="truncate text-muted-foreground">
-                              {typeInfo.label}
-                            </div>
+                            <span className={cn(
+                              'inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[8px] font-medium',
+                              badgeConfig.bgClass,
+                              badgeConfig.textClass
+                            )}>
+                              {badgeConfig.emoji} {badgeConfig.label}
+                            </span>
                           </div>
                         );
                       })}
@@ -386,12 +406,18 @@ export default function ContentCalendar30Day() {
               {/* Content Types */}
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Content Types</p>
-                <div className="flex flex-wrap gap-3">
-                  {CONTENT_TYPES.map(type => (
-                    <div key={type.id} className="flex items-center gap-1 text-sm">
-                      <span>{type.icon}</span>
-                      {type.label}
-                    </div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(CONTENT_TYPE_CONFIG).slice(0, 8).map(([key, config]) => (
+                    <span 
+                      key={key}
+                      className={cn(
+                        'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+                        config.bgClass,
+                        config.textClass
+                      )}
+                    >
+                      {config.emoji} {config.label}
+                    </span>
                   ))}
                 </div>
               </div>
