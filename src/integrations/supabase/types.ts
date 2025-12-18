@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      accountability_overrides: {
+        Row: {
+          created_at: string
+          days_since_campaign: number | null
+          id: string
+          organization_id: string | null
+          overridden_by: string | null
+          overridden_by_name: string | null
+          override_reason: string
+          override_type: string
+          warning_level: string | null
+        }
+        Insert: {
+          created_at?: string
+          days_since_campaign?: number | null
+          id?: string
+          organization_id?: string | null
+          overridden_by?: string | null
+          overridden_by_name?: string | null
+          override_reason: string
+          override_type: string
+          warning_level?: string | null
+        }
+        Update: {
+          created_at?: string
+          days_since_campaign?: number | null
+          id?: string
+          organization_id?: string | null
+          overridden_by?: string | null
+          overridden_by_name?: string | null
+          override_reason?: string
+          override_type?: string
+          warning_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_performance: {
         Row: {
           ad_set_name: string | null
@@ -1070,6 +1114,74 @@ export type Database = {
           },
         ]
       }
+      auto_recovery_campaigns: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          campaign_type: string
+          created_at: string
+          email_html: string | null
+          expires_at: string | null
+          id: string
+          meta_ad_copy: string | null
+          organization_id: string | null
+          preview_text: string | null
+          rejected_reason: string | null
+          sent_at: string | null
+          sms_copy: string | null
+          status: string | null
+          subject_line: string
+          suggested_segments: Json | null
+          trigger_type: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_type?: string
+          created_at?: string
+          email_html?: string | null
+          expires_at?: string | null
+          id?: string
+          meta_ad_copy?: string | null
+          organization_id?: string | null
+          preview_text?: string | null
+          rejected_reason?: string | null
+          sent_at?: string | null
+          sms_copy?: string | null
+          status?: string | null
+          subject_line: string
+          suggested_segments?: Json | null
+          trigger_type: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_type?: string
+          created_at?: string
+          email_html?: string | null
+          expires_at?: string | null
+          id?: string
+          meta_ad_copy?: string | null
+          organization_id?: string | null
+          preview_text?: string | null
+          rejected_reason?: string | null
+          sent_at?: string | null
+          sms_copy?: string | null
+          status?: string | null
+          subject_line?: string
+          suggested_segments?: Json | null
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_recovery_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_profiles: {
         Row: {
           brand_ad_examples: Json | null
@@ -1102,6 +1214,56 @@ export type Database = {
           subdomain?: string
         }
         Relationships: []
+      }
+      campaign_heartbeat: {
+        Row: {
+          audience_size: number | null
+          campaign_name: string
+          campaign_source: string | null
+          campaign_type: string
+          clicked_count: number | null
+          created_at: string
+          id: string
+          opened_count: number | null
+          organization_id: string | null
+          revenue_attributed: number | null
+          sent_at: string
+        }
+        Insert: {
+          audience_size?: number | null
+          campaign_name: string
+          campaign_source?: string | null
+          campaign_type: string
+          clicked_count?: number | null
+          created_at?: string
+          id?: string
+          opened_count?: number | null
+          organization_id?: string | null
+          revenue_attributed?: number | null
+          sent_at?: string
+        }
+        Update: {
+          audience_size?: number | null
+          campaign_name?: string
+          campaign_source?: string | null
+          campaign_type?: string
+          clicked_count?: number | null
+          created_at?: string
+          id?: string
+          opened_count?: number | null
+          organization_id?: string | null
+          revenue_attributed?: number | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_heartbeat_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chatbot_scripts: {
         Row: {
@@ -4209,6 +4371,71 @@ export type Database = {
           },
         ]
       }
+      revenue_health_status: {
+        Row: {
+          campaign_status: string | null
+          created_at: string
+          days_since_email: number | null
+          days_since_sms: number | null
+          id: string
+          klaviyo_meta_sync_active: boolean | null
+          last_email_campaign_at: string | null
+          last_signal_sync_at: string | null
+          last_sms_campaign_at: string | null
+          organization_id: string | null
+          overall_status: string | null
+          requires_action: boolean | null
+          signal_freshness_score: number | null
+          signal_status: string | null
+          synced_segments: Json | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_status?: string | null
+          created_at?: string
+          days_since_email?: number | null
+          days_since_sms?: number | null
+          id?: string
+          klaviyo_meta_sync_active?: boolean | null
+          last_email_campaign_at?: string | null
+          last_signal_sync_at?: string | null
+          last_sms_campaign_at?: string | null
+          organization_id?: string | null
+          overall_status?: string | null
+          requires_action?: boolean | null
+          signal_freshness_score?: number | null
+          signal_status?: string | null
+          synced_segments?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_status?: string | null
+          created_at?: string
+          days_since_email?: number | null
+          days_since_sms?: number | null
+          id?: string
+          klaviyo_meta_sync_active?: boolean | null
+          last_email_campaign_at?: string | null
+          last_signal_sync_at?: string | null
+          last_sms_campaign_at?: string | null
+          organization_id?: string | null
+          overall_status?: string | null
+          requires_action?: boolean | null
+          signal_freshness_score?: number | null
+          signal_status?: string | null
+          synced_segments?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_health_status_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shopflow_logs: {
         Row: {
           created_at: string
@@ -4371,6 +4598,47 @@ export type Database = {
             columns: ["wpw_production_order_id"]
             isOneToOne: false
             referencedRelation: "shopflow_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signal_sync_log: {
+        Row: {
+          error_message: string | null
+          id: string
+          organization_id: string | null
+          profiles_synced: number | null
+          segments_synced: Json | null
+          sync_status: string
+          sync_type: string
+          synced_at: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          organization_id?: string | null
+          profiles_synced?: number | null
+          segments_synced?: Json | null
+          sync_status: string
+          sync_type?: string
+          synced_at?: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          organization_id?: string | null
+          profiles_synced?: number | null
+          segments_synced?: Json | null
+          sync_status?: string
+          sync_type?: string
+          synced_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signal_sync_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
