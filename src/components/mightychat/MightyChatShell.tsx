@@ -4,7 +4,8 @@ import { AgentMightyChatLayout } from "./AgentMightyChatLayout";
 import { OpsDeskScreen } from "./OpsDeskScreen";
 import { ReviewQueue } from "./ReviewQueue";
 import { AgentChatHistory } from "./AgentChatHistory";
-import { MessageSquare, ClipboardList, Brain, History } from "lucide-react";
+import { AskAgentButton } from "./AskAgentButton";
+import { MessageSquare, ClipboardList, Brain, History, Film, Sparkles, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type MightyMode = "chat" | "ops" | "review" | "history";
@@ -66,7 +67,19 @@ export function MightyChatShell() {
         </Button>
       </div>
 
-      {/* Content */}
+      {/* Agent Quick-Access Bar */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-muted/30 overflow-x-auto">
+        <span className="text-xs text-muted-foreground mr-1 whitespace-nowrap">New Chat:</span>
+        <AskAgentButton agentId="noah_bennett" variant="outline" size="sm" className="shrink-0">
+          <Film className="h-4 w-4 text-amber-500" /> Noah
+        </AskAgentButton>
+        <AskAgentButton agentId="emily_carter" variant="outline" size="sm" className="shrink-0">
+          <Sparkles className="h-4 w-4 text-purple-500" /> Emily
+        </AskAgentButton>
+        <AskAgentButton agentId="casey_ramirez" variant="outline" size="sm" className="shrink-0">
+          <Heart className="h-4 w-4 text-pink-500" /> Casey
+        </AskAgentButton>
+      </div>
       <div className="flex-1 overflow-hidden">
         {mode === "review" && (
           <ReviewQueue onSelectConversation={handleSelectConversation} />
