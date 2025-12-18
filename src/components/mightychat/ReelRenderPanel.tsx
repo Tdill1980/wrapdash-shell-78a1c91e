@@ -27,6 +27,7 @@ interface VideoContentPlan {
   overlays: Array<{ text: string; time: number; duration: number }>;
   caption: string;
   hashtags: string;
+  sourceVideo?: string;
 }
 
 interface ReelRenderPanelProps {
@@ -37,7 +38,9 @@ interface ReelRenderPanelProps {
 }
 
 export function ReelRenderPanel({ videoContent, onClose, organizationId, initialVideoUrl }: ReelRenderPanelProps) {
-  const [videoUrl, setVideoUrl] = useState(initialVideoUrl || "");
+  // Use sourceVideo from content if available, then initialVideoUrl prop
+  const effectiveInitialUrl = initialVideoUrl || videoContent?.sourceVideo || "";
+  const [videoUrl, setVideoUrl] = useState(effectiveInitialUrl);
   const [editedContent, setEditedContent] = useState<VideoContentPlan | null>(null);
   
   const {
@@ -57,12 +60,14 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
     }
   }, [videoContent]);
 
-  // Update video URL when initialVideoUrl prop changes
+  // Update video URL when initialVideoUrl or sourceVideo changes
   useEffect(() => {
-    if (initialVideoUrl && !videoUrl) {
-      setVideoUrl(initialVideoUrl);
+    const newUrl = initialVideoUrl || videoContent?.sourceVideo;
+    if (newUrl && !videoUrl) {
+      console.log("[ReelRenderPanel] Setting video URL from:", initialVideoUrl ? "initialVideoUrl" : "sourceVideo", newUrl.slice(0, 50));
+      setVideoUrl(newUrl);
     }
-  }, [initialVideoUrl]);
+  }, [initialVideoUrl, videoContent?.sourceVideo]);
 
   const handleStartRender = async () => {
     if (!videoUrl || !editedContent) return;
@@ -87,9 +92,13 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
     setVideoUrl(initialVideoUrl || "");
   };
 
+  // Don't render if no content plan exists
   if (!videoContent && !editedContent) {
     return null;
   }
+
+  // Show helpful message if no video URL detected
+  const showNoVideoWarning = !videoUrl && !initialVideoUrl;
 
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
@@ -118,6 +127,23 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
         {/* Video URL Input */}
         {status === "idle" && (
           <>
+            {/* No video warning */}
+            {showNoVideoWarning && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <Video className="h-4 w-4" />
+                  <span className="text-sm font-medium">No video detected</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  To render your reel, either:
+                </p>
+                <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
+                  <li>Paste a video URL below</li>
+                  <li>Or attach a video file in the chat and send another message</li>
+                </ul>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label className="text-xs font-medium flex items-center gap-1.5">
                 <Video className="h-3.5 w-3.5" />
@@ -133,7 +159,7 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
                 placeholder={initialVideoUrl ? "Video detected from chat" : "Paste video URL from media library..."}
-                className="text-sm"
+                className={cn("text-sm", showNoVideoWarning && "border-amber-500/50 focus:ring-amber-500/30")}
               />
             </div>
 
@@ -301,6 +327,7 @@ export function parseVideoContent(message: string): VideoContentPlan | null {
   const ctaMatch = content.match(/cta:\s*(.+?)(?:\n|$)/i);
   const captionMatch = content.match(/caption:\s*(.+?)(?:\n|$)/i);
   const hashtagsMatch = content.match(/hashtags:\s*(.+?)(?:\n|$)/i);
+  const sourceVideoMatch = content.match(/source_video:\s*(.+?)(?:\n|$)/i);
   
   // Parse overlays
   const overlays: Array<{ text: string; time: number; duration: number }> = [];
@@ -314,11 +341,20 @@ export function parseVideoContent(message: string): VideoContentPlan | null {
     });
   }
 
+  // Log parsed content for debugging
+  console.log("[parseVideoContent] Parsed:", {
+    hook: hookMatch?.[1]?.trim(),
+    cta: ctaMatch?.[1]?.trim(),
+    sourceVideo: sourceVideoMatch?.[1]?.trim(),
+    overlayCount: overlays.length,
+  });
+
   return {
     hook: hookMatch?.[1]?.trim() || "",
     cta: ctaMatch?.[1]?.trim() || "",
     overlays,
     caption: captionMatch?.[1]?.trim() || "",
     hashtags: hashtagsMatch?.[1]?.trim() || "",
+    sourceVideo: sourceVideoMatch?.[1]?.trim(),
   };
 }
