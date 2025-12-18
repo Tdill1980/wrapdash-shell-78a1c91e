@@ -4851,6 +4851,7 @@ export type Database = {
           channel: string | null
           completed_at: string | null
           contact_id: string | null
+          content_calendar_id: string | null
           content_type: string | null
           conversation_id: string | null
           created_at: string | null
@@ -4876,6 +4877,7 @@ export type Database = {
           channel?: string | null
           completed_at?: string | null
           contact_id?: string | null
+          content_calendar_id?: string | null
           content_type?: string | null
           conversation_id?: string | null
           created_at?: string | null
@@ -4901,6 +4903,7 @@ export type Database = {
           channel?: string | null
           completed_at?: string | null
           contact_id?: string | null
+          content_calendar_id?: string | null
           content_type?: string | null
           conversation_id?: string | null
           created_at?: string | null
@@ -4926,6 +4929,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_content_calendar_id_fkey"
+            columns: ["content_calendar_id"]
+            isOneToOne: false
+            referencedRelation: "content_calendar"
             referencedColumns: ["id"]
           },
           {
