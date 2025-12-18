@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,29 +6,157 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Eye, Loader2, CheckCircle } from "lucide-react";
+import { Send, Eye, Loader2, CheckCircle, Sparkles, Calendar } from "lucide-react";
+import { EmailCalendar } from "@/components/email/EmailCalendar";
+import { 
+  FRANCHISES, 
+  FRANCHISE_OPTIONS,
+  generateCampaignName,
+  generateSubject,
+  getRecommendedFranchise,
+  getCurrentWeekSlot,
+  type FranchiseId,
+  type EmailContent
+} from "@/lib/email-content/franchises";
 
-// Import the declaration email HTML
+// Import email content
 import declarationEmailHtml from "@/lib/email-templates/ink-edge-declaration.html?raw";
+import canonicalTemplateHtml from "@/lib/email-templates/canonical-template.html?raw";
+import { testLabColorSheen } from "@/lib/email-content/month-1/email-2-testlab-color-sheen";
+import { onTheRoadChelsea } from "@/lib/email-content/month-1/email-3-execution-chelsea";
+import { wotwFirst } from "@/lib/email-content/month-1/email-4-wotw-first";
 
-const SUBJECT_OPTIONS = [
-  "Why We Went Quiet (and What We Built Instead)",
-  "We've been quiet in your inbox. Here's why.",
-  "The reason we stopped emailing you",
-  "Something's different now.",
-  "We owe you an explanation.",
-];
+// Pre-built content map
+const PREBUILT_CONTENT: Record<string, EmailContent> = {
+  'test_lab_color_sheen': testLabColorSheen,
+  'on_the_road_chelsea': onTheRoadChelsea,
+  'wotw_first': wotwFirst,
+};
+
+const HEADER_LOGO_URL = 'https://wzwqhfbmymrengjqikjl.supabase.co/storage/v1/object/public/media-library/email-images/wpw-ink-edge-header.png';
+
+function renderTemplate(template: string, content: EmailContent): string {
+  return template
+    .replace(/\{\{header_logo_url\}\}/g, HEADER_LOGO_URL)
+    .replace(/\{\{hero_image_url\}\}/g, content.heroImageUrl)
+    .replace(/\{\{hero_image_alt\}\}/g, content.heroImageAlt)
+    .replace(/\{\{headline\}\}/g, content.headline)
+    .replace(/\{\{subheadline\}\}/g, content.subheadline)
+    .replace(/\{\{opening_copy\}\}/g, content.openingCopy)
+    .replace(/\{\{section_1_title\}\}/g, content.section1Title)
+    .replace(/\{\{section_1_copy\}\}/g, content.section1Copy)
+    .replace(/\{\{section_1_image_url\}\}/g, content.section1ImageUrl || '')
+    .replace(/\{\{section_1_image_alt\}\}/g, content.section1ImageAlt || '')
+    .replace(/\{\{section_2_title\}\}/g, content.section2Title)
+    .replace(/\{\{section_2_copy\}\}/g, content.section2Copy)
+    .replace(/\{\{cta_url\}\}/g, content.ctaUrl)
+    .replace(/\{\{cta_text\}\}/g, content.ctaText)
+    .replace(/\{\{unsubscribe_url\}\}/g, '{{ unsubscribe_url|default:\"#\" }}')
+    // Handle optional image section
+    .replace(/\{\{#section_1_image_url\}\}[\s\S]*?\{\{\/section_1_image_url\}\}/g, 
+      content.section1ImageUrl ? 
+        `<tr><td style="padding: 0 0 24px;"><img src="${content.section1ImageUrl}" width="600" style="width: 100%; display: block; max-width: 600px;" alt="${content.section1ImageAlt || ''}" /></td></tr>` 
+        : ''
+    );
+}
 
 const MightyMailCampaignSender = () => {
-  const [subject, setSubject] = useState(SUBJECT_OPTIONS[0]);
+  const recommendedFranchise = getRecommendedFranchise();
+  const currentWeek = getCurrentWeekSlot();
+
+  // State
+  const [selectedFranchise, setSelectedFranchise] = useState<FranchiseId>('declaration');
+  const [selectedContent, setSelectedContent] = useState<string>('declaration');
+  const [topic, setTopic] = useState('');
+  const [subject, setSubject] = useState("Why We Went Quiet (and What We Built Instead)");
   const [previewText, setPreviewText] = useState("We weren't gone — we were building something worth your time.");
-  const [campaignName, setCampaignName] = useState("Ink & Edge Declaration - ClubWPW");
+  const [campaignName, setCampaignName] = useState("Declaration-InkEdge-Dec24");
   const [segmentId, setSegmentId] = useState("");
   const [listId, setListId] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  // Get franchise details
+  const franchise = FRANCHISES[selectedFranchise];
+
+  // Content options based on franchise
+  const contentOptions = useMemo(() => {
+    if (selectedFranchise === 'declaration') {
+      return [{ id: 'declaration', label: 'Ink & Edge Declaration Email' }];
+    }
+    if (selectedFranchise === 'test_lab') {
+      return [{ id: 'test_lab_color_sheen', label: 'Color & Sheen Under Real Light' }];
+    }
+    if (selectedFranchise === 'on_the_road') {
+      return [{ id: 'on_the_road_chelsea', label: 'Mobile Wrapping in 28°F Weather' }];
+    }
+    if (selectedFranchise === 'wotw') {
+      return [{ id: 'wotw_first', label: 'Matte Military Green F-150' }];
+    }
+    return [{ id: 'custom', label: 'Custom Content' }];
+  }, [selectedFranchise]);
+
+  // Generate email HTML
+  const emailHtml = useMemo(() => {
+    if (selectedContent === 'declaration') {
+      return declarationEmailHtml;
+    }
+    const content = PREBUILT_CONTENT[selectedContent];
+    if (content) {
+      return renderTemplate(canonicalTemplateHtml, content);
+    }
+    return canonicalTemplateHtml;
+  }, [selectedContent]);
+
+  // Handle franchise change
+  const handleFranchiseChange = (franchiseId: FranchiseId) => {
+    setSelectedFranchise(franchiseId);
+    const newFranchise = FRANCHISES[franchiseId];
+    
+    // Auto-populate based on franchise
+    if (franchiseId === 'declaration') {
+      setSelectedContent('declaration');
+      setSubject("Why We Went Quiet (and What We Built Instead)");
+      setPreviewText("We weren't gone — we were building something worth your time.");
+      setCampaignName("Declaration-InkEdge-Dec24");
+    } else {
+      // Set first available content for this franchise
+      const options = franchiseId === 'test_lab' ? 'test_lab_color_sheen' :
+                      franchiseId === 'on_the_road' ? 'on_the_road_chelsea' :
+                      franchiseId === 'wotw' ? 'wotw_first' : 'custom';
+      setSelectedContent(options);
+      
+      const content = PREBUILT_CONTENT[options];
+      if (content) {
+        setSubject(content.subject);
+        setPreviewText(content.previewText);
+        setTopic(content.topic);
+        setCampaignName(generateCampaignName(newFranchise, content.topic, new Date()));
+      } else {
+        setSubject(generateSubject(newFranchise, 'Topic'));
+        setPreviewText('');
+        setTopic('');
+        setCampaignName(generateCampaignName(newFranchise, 'Topic', new Date()));
+      }
+    }
+    setSent(false);
+  };
+
+  // Handle content change
+  const handleContentChange = (contentId: string) => {
+    setSelectedContent(contentId);
+    const content = PREBUILT_CONTENT[contentId];
+    if (content) {
+      setSubject(content.subject);
+      setPreviewText(content.previewText);
+      setTopic(content.topic);
+      setCampaignName(generateCampaignName(franchise, content.topic, new Date()));
+    }
+    setSent(false);
+  };
 
   const handleSendCampaign = async () => {
     if (!subject || !campaignName) {
@@ -40,11 +168,11 @@ const MightyMailCampaignSender = () => {
     try {
       const { data, error } = await supabase.functions.invoke('create-klaviyo-campaign', {
         body: {
-          campaignType: 'newsletter',
+          campaignType: selectedFranchise === 'declaration' ? 'newsletter' : selectedFranchise,
           name: campaignName,
           subject: subject,
           previewText: previewText,
-          html: declarationEmailHtml,
+          html: emailHtml,
           segmentId: segmentId || undefined,
           listId: listId || undefined,
         }
@@ -70,12 +198,15 @@ const MightyMailCampaignSender = () => {
     <MainLayout>
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
+          {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                <span className="text-[#FF1493]">Ink & Edge</span> Declaration Campaign
+                <span className="text-[#FF1493]">MightyMail</span> Campaign Sender
               </h1>
-              <p className="text-muted-foreground mt-1">Preview and send via Klaviyo API</p>
+              <p className="text-muted-foreground mt-1">
+                Canonical email system • Week {currentWeek} recommended: {recommendedFranchise.name}
+              </p>
             </div>
             {sent && (
               <div className="flex items-center gap-2 text-green-500">
@@ -85,111 +216,176 @@ const MightyMailCampaignSender = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Settings Panel */}
-            <Card className="border-border/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Send className="h-5 w-5 text-[#FF1493]" />
-                  Campaign Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="campaignName">Campaign Name</Label>
-                  <Input
-                    id="campaignName"
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                    placeholder="Internal campaign name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject Line</Label>
-                  <Select value={subject} onValueChange={setSubject}>
+            <div className="xl:col-span-1 space-y-6">
+              {/* Franchise Selector */}
+              <Card className="border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="h-4 w-4 text-[#FFD700]" />
+                    Select Franchise
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Select value={selectedFranchise} onValueChange={(v) => handleFranchiseChange(v as FranchiseId)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select subject line" />
+                      <SelectValue placeholder="Choose franchise" />
                     </SelectTrigger>
                     <SelectContent>
-                      {SUBJECT_OPTIONS.map((option, idx) => (
-                        <SelectItem key={idx} value={option}>
-                          {option}
+                      {FRANCHISE_OPTIONS.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: option.color }} />
+                            <span>{option.name}</span>
+                            {option.host && (
+                              <span className="text-muted-foreground text-xs">— {option.host}</span>
+                            )}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="previewText">Preview Text</Label>
-                  <Textarea
-                    id="previewText"
-                    value={previewText}
-                    onChange={(e) => setPreviewText(e.target.value)}
-                    placeholder="Text shown in inbox preview"
-                    rows={2}
-                  />
-                </div>
+                  {/* Franchise badge */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: franchise.color }} />
+                    <span className="font-medium">{franchise.name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      Week {franchise.weekSlot}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{franchise.description}</p>
 
-                <div className="space-y-2">
-                  <Label htmlFor="segmentId">Klaviyo Segment ID (optional)</Label>
-                  <Input
-                    id="segmentId"
-                    value={segmentId}
-                    onChange={(e) => setSegmentId(e.target.value)}
-                    placeholder="e.g., YpP4RM"
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty to require manual audience assignment in Klaviyo
-                  </p>
-                </div>
+                  {/* Content selector */}
+                  {contentOptions.length > 0 && selectedFranchise !== 'declaration' && (
+                    <div className="space-y-2 pt-2 border-t border-border/50">
+                      <Label>Pre-built Content</Label>
+                      <Select value={selectedContent} onValueChange={handleContentChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select content" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contentOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="listId">Klaviyo List ID (fallback)</Label>
-                  <Input
-                    id="listId"
-                    value={listId}
-                    onChange={(e) => setListId(e.target.value)}
-                    placeholder="e.g., XyZ123"
-                    className="font-mono"
-                  />
-                </div>
+              {/* Campaign Settings */}
+              <Card className="border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Send className="h-4 w-4 text-[#FF1493]" />
+                    Campaign Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="campaignName">Campaign Name</Label>
+                    <Input
+                      id="campaignName"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
+                      placeholder="Internal campaign name"
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Format: Franchise-Topic-MonthYear
+                    </p>
+                  </div>
 
-                <div className="pt-4 border-t border-border/50">
-                  <Button
-                    onClick={handleSendCampaign}
-                    disabled={sending || sent}
-                    className="w-full bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#FF1493]/90 hover:to-[#FF69B4]/90"
-                  >
-                    {sending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending to Klaviyo...
-                      </>
-                    ) : sent ? (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Campaign Sent
-                      </>
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Send Campaign via Klaviyo
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject Line</Label>
+                    <Input
+                      id="subject"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="Email subject"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="previewText">Preview Text</Label>
+                    <Textarea
+                      id="previewText"
+                      value={previewText}
+                      onChange={(e) => setPreviewText(e.target.value)}
+                      placeholder="Text shown in inbox preview"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="segmentId">Klaviyo Segment ID</Label>
+                    <Input
+                      id="segmentId"
+                      value={segmentId}
+                      onChange={(e) => setSegmentId(e.target.value)}
+                      placeholder="e.g., YpP4RM"
+                      className="font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="listId">Klaviyo List ID (fallback)</Label>
+                    <Input
+                      id="listId"
+                      value={listId}
+                      onChange={(e) => setListId(e.target.value)}
+                      placeholder="e.g., XyZ123"
+                      className="font-mono"
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t border-border/50">
+                    <Button
+                      onClick={handleSendCampaign}
+                      disabled={sending || sent}
+                      className="w-full bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#FF1493]/90 hover:to-[#FF69B4]/90"
+                    >
+                      {sending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending to Klaviyo...
+                        </>
+                      ) : sent ? (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Campaign Sent
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send Campaign
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Calendar */}
+              <EmailCalendar 
+                onSelectFranchise={handleFranchiseChange}
+              />
+            </div>
 
             {/* Email Preview */}
-            <Card className="border-border/50">
+            <Card className="xl:col-span-2 border-border/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Eye className="h-5 w-5 text-[#FFD700]" />
                   Email Preview
+                  <Badge variant="outline" className="ml-auto" style={{ borderColor: franchise.color + '40', color: franchise.color }}>
+                    {franchise.name}
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -202,8 +398,8 @@ const MightyMailCampaignSender = () => {
                   </div>
                   {/* Email Body Preview */}
                   <iframe
-                    srcDoc={declarationEmailHtml}
-                    className="w-full h-[600px] bg-[#0A0A0A]"
+                    srcDoc={emailHtml}
+                    className="w-full h-[700px] bg-[#0A0A0A]"
                     title="Email Preview"
                   />
                 </div>

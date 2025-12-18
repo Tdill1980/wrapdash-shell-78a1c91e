@@ -1,0 +1,144 @@
+<!--
+  CANONICAL EMAIL TEMPLATE — ALEK STYLE
+  =====================================
+  
+  🔒 UI RULES (DO NOT BREAK):
+  - Always start with a vehicle or shop image (HERO)
+  - Never open with text
+  - Max 3 images per email
+  - One CTA only
+  - Pink (#FF1493) = headlines / CTA
+  - Yellow (#FFD700) = section anchors
+  - Dark background (#0A0A0A) always
+  
+  Structure NEVER changes. Swap content only.
+-->
+
+<!-- WRAPPER -->
+<table width="100%" cellpadding="0" cellspacing="0" bgcolor="#0A0A0A" style="background-color: #0A0A0A;">
+  <tr>
+    <td align="center" style="padding: 0;">
+
+      <!-- CONTAINER -->
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
+
+        <!-- HEADER -->
+        <tr>
+          <td align="center" style="padding: 24px 20px 16px;">
+            <img src="{{header_logo_url}}" width="180" alt="WePrintWraps × Ink & Edge" style="display: block; max-width: 180px; height: auto;" />
+          </td>
+        </tr>
+
+        <!-- HERO IMAGE (REQUIRED - ALWAYS FIRST) -->
+        <tr>
+          <td style="padding: 0;">
+            <img src="{{hero_image_url}}" width="600" style="width: 100%; display: block; max-width: 600px;" alt="{{hero_image_alt}}" />
+          </td>
+        </tr>
+
+        <!-- HEADLINE -->
+        <tr>
+          <td style="padding: 32px 24px 12px;">
+            <h1 style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 28px; line-height: 1.25; color: #FF1493; font-weight: bold;">
+              {{headline}}
+            </h1>
+            <p style="margin: 12px 0 0; color: #ffffff; font-size: 17px; line-height: 1.5; font-family: Arial, Helvetica, sans-serif;">
+              {{subheadline}}
+            </p>
+          </td>
+        </tr>
+
+        <!-- BODY COPY -->
+        <tr>
+          <td style="padding: 16px 24px 24px; color: #E5E5E5; font-size: 15px; line-height: 1.7; font-family: Arial, Helvetica, sans-serif;">
+            {{opening_copy}}
+          </td>
+        </tr>
+
+        <!-- SECTION DIVIDER -->
+        <tr>
+          <td style="padding: 0 24px;">
+            <hr style="border: none; border-top: 1px solid #333333; margin: 0;" />
+          </td>
+        </tr>
+
+        <!-- SECTION 1 TITLE -->
+        <tr>
+          <td style="padding: 24px 24px 12px;">
+            <h2 style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 20px; line-height: 1.3; color: #FFD700; font-weight: bold;">
+              {{section_1_title}}
+            </h2>
+          </td>
+        </tr>
+
+        <!-- SECTION 1 COPY -->
+        <tr>
+          <td style="padding: 0 24px 20px; color: #E5E5E5; font-size: 15px; line-height: 1.7; font-family: Arial, Helvetica, sans-serif;">
+            {{section_1_copy}}
+          </td>
+        </tr>
+
+        <!-- SECTION 1 IMAGE (OPTIONAL) -->
+        {{#section_1_image_url}}
+        <tr>
+          <td style="padding: 0 0 24px;">
+            <img src="{{section_1_image_url}}" width="600" style="width: 100%; display: block; max-width: 600px;" alt="{{section_1_image_alt}}" />
+          </td>
+        </tr>
+        {{/section_1_image_url}}
+
+        <!-- SECTION DIVIDER -->
+        <tr>
+          <td style="padding: 0 24px;">
+            <hr style="border: none; border-top: 1px solid #333333; margin: 0;" />
+          </td>
+        </tr>
+
+        <!-- SECTION 2 TITLE -->
+        <tr>
+          <td style="padding: 24px 24px 12px;">
+            <h2 style="margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 20px; line-height: 1.3; color: #FFD700; font-weight: bold;">
+              {{section_2_title}}
+            </h2>
+          </td>
+        </tr>
+
+        <!-- SECTION 2 COPY -->
+        <tr>
+          <td style="padding: 0 24px 24px; color: #E5E5E5; font-size: 15px; line-height: 1.7; font-family: Arial, Helvetica, sans-serif;">
+            {{section_2_copy}}
+          </td>
+        </tr>
+
+        <!-- CTA BUTTON -->
+        <tr>
+          <td align="center" style="padding: 32px 24px;">
+            <a href="{{cta_url}}" 
+               style="background-color: #FF1493; color: #ffffff; 
+               padding: 16px 32px; text-decoration: none;
+               font-weight: bold; font-size: 16px; display: inline-block;
+               font-family: Arial, Helvetica, sans-serif;
+               border-radius: 0;">
+               {{cta_text}}
+            </a>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td align="center" style="padding: 24px 20px 32px; border-top: 1px solid #333333;">
+            <p style="margin: 0 0 8px; color: #888888; font-size: 12px; font-family: Arial, Helvetica, sans-serif;">
+              © WePrintWraps · Ink & Edge · WrapTVWorld
+            </p>
+            <p style="margin: 0; color: #666666; font-size: 11px; font-family: Arial, Helvetica, sans-serif;">
+              <a href="{{unsubscribe_url}}" style="color: #666666; text-decoration: underline;">Unsubscribe</a>
+              &nbsp;·&nbsp;
+              <a href="https://weprintwraps.com" style="color: #666666; text-decoration: underline;">WePrintWraps.com</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
