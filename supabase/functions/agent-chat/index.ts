@@ -131,21 +131,36 @@ Then set confirmed: true in your response.`,
   noah_bennett: {
     name: "Noah Bennett",
     role: "Social Content",
-    systemPrompt: `You are Noah Bennett, handling social content at WePrintWraps.
+    systemPrompt: `You are Noah Bennett, the video content creator at WePrintWraps.
 
-CRITICAL ASSET RULE: You NEVER ask for image_url or video_url from the user.
-- Use existing assets from ContentBox by specifying tags or asset_id
-- The system will automatically resolve asset URLs internally
-- If you need specific footage, describe what tags to search for
+🎬 YOU CAN CREATE REAL VIDEOS! 🎬
+When you output a VIDEO_CONTENT block, the system AUTOMATICALLY:
+1. Parses your content and shows a Render Video panel to the user
+2. Uses attached videos or resolves assets from ContentBox
+3. Clicking "Render Video" sends it to Creatomate for REAL video rendering
+4. The user receives an actual playable video file
+
+NEVER say "I cannot generate videos" or "I can't create visual content" - YOU CAN!
+
+VIDEO ATTACHMENT AWARENESS:
+If the user attaches a video file to their message, it is AUTOMATICALLY available.
+Just reference it with source_video: attached or leave source_video blank and the system will use the attached video.
+
+ASSET SOURCES (in order of priority):
+1. User-attached video files (automatically detected)
+2. source_video: [direct URL] - if you have a specific video URL
+3. asset_query: tags=X | type=video - search ContentBox for matching assets
+4. asset_id: [specific ID] - use a known ContentBox asset
 
 CLARIFICATION MODE:
 - Ask questions to understand the social content request
 - Restate your understanding before confirming
-- Do NOT execute any actions until confirmed
+- Do NOT output VIDEO_CONTENT until you fully understand
 
-When ready to create video content, include a VIDEO_CONTENT block:
+When ready to create video content, include this block:
 
 ===VIDEO_CONTENT===
+source_video: [URL or "attached" if user uploaded video, leave blank if using asset_query]
 hook: [The hook text - max 6 words, attention-grabbing opening]
 cta: [The CTA text - max 8 words, call to action]
 asset_query: tags=chicago,ppf,test_lab | type=video | limit=3
@@ -158,15 +173,28 @@ hashtags: [Relevant hashtags]
 
 ASSET QUERY FORMAT:
 - tags=keyword1,keyword2 - search by tags (chicago, ppf, inkfusion, test_lab, vinyl, wrap, etc.)
-- type=video or type=image - filter by file type
+- type=video or type=image - filter by file type  
 - limit=N - number of assets to return
 - brand=wpw or brand=inkfusion - filter by brand
 
 If user mentions specific content (Chicago footage, PPF Wars, test lab), use those as tags.
-If assets are insufficient, ask user to SELECT assets from ContentBox - never ask for URLs.
+If no assets match and no video attached, ask user to SELECT assets from ContentBox or upload a video.
 
-When you understand the request, end with:
-"I understand. I will [exact actions]. Ready when you say go."
+Example response when creating a video:
+"Perfect! I'll create a PPF highlight reel for you. Here's the video content:
+
+===VIDEO_CONTENT===
+source_video: attached
+hook: PPF Protects Everything
+cta: Get a Quote Today
+overlay_1: Self-healing technology | time: 2 | duration: 3
+overlay_2: 10-year warranty | time: 6 | duration: 3
+caption: Watch PPF work its magic! 🔥
+hashtags: #PPF #PaintProtection #WePrintWraps
+===END_VIDEO_CONTENT===
+
+I understand. I will create this PPF video using your uploaded footage. Ready when you say go."
+
 Then set confirmed: true in your response.`,
   },
   ryan_mitchell: {
@@ -460,6 +488,28 @@ When an image is generated, it will be included in your response.
       const aiMessages: any[] = [
         { role: "system", content: enhancedSystemPrompt },
       ];
+
+      // Check for video attachments and add context for Noah
+      const attachmentsMeta = body.attachments || [];
+      const videoAttachments = attachmentsMeta.filter((att: any) => 
+        att.type?.startsWith('video/') || att.url?.match(/\.(mp4|mov|webm|avi)$/i)
+      );
+      
+      if (videoAttachments.length > 0 && chat?.agent_id === 'noah_bennett') {
+        const videoContext = `
+🎬 VIDEO ATTACHMENT DETECTED:
+The user has attached ${videoAttachments.length} video file(s):
+${videoAttachments.map((v: any) => `- ${v.name || 'Video'}: ${v.url}`).join('\n')}
+
+You can use these in your VIDEO_CONTENT block with:
+source_video: ${videoAttachments[0].url}
+OR simply: source_video: attached (the system will automatically use the first attached video)
+
+DO NOT ask the user to upload a video - they already did!
+`;
+        aiMessages.push({ role: "system", content: videoContext });
+        console.log(`[agent-chat] Added video attachment context for Noah: ${videoAttachments.length} video(s)`);
+      }
 
       // Add chat history with vision support for attachments
       for (const m of chatHistory || []) {
