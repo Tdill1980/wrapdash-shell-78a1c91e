@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,12 +22,7 @@ export function RecentAgentChats({
   agentId,
   onResumeChat,
   onNewChat,
-  onLoadChats,
 }: RecentAgentChatsProps) {
-  useEffect(() => {
-    onLoadChats(agentId);
-  }, [agentId, onLoadChats]);
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "delegated":

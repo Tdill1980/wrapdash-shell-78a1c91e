@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,6 +30,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showDelegateModal, setShowDelegateModal] = useState(false);
   const [showRecentChats, setShowRecentChats] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -50,24 +51,32 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     resumeChat,
   } = useAgentChat();
 
+  // Reset state when panel closes
+  useEffect(() => {
+    if (!open) {
+      setShowRecentChats(false);
+      setInitialLoadDone(false);
+    }
+  }, [open]);
+
   // Load recent chats when panel opens
   useEffect(() => {
-    if (open && agentId) {
+    if (open && agentId && !initialLoadDone) {
+      setInitialLoadDone(true);
       loadRecentChats(agentId);
     }
-  }, [open, agentId, loadRecentChats]);
+  }, [open, agentId, initialLoadDone, loadRecentChats]);
 
-  // Start a new chat when panel opens with an agent (only if no recent chats view)
+  // After initial load, decide whether to show recent chats or start new chat
   useEffect(() => {
-    if (open && agentId && !chatId && !showRecentChats && !loadingRecent) {
-      // If there are recent chats, show the recent chats view first
+    if (open && agentId && initialLoadDone && !loadingRecent && !chatId) {
       if (recentChats.length > 0) {
         setShowRecentChats(true);
       } else {
         startChat(agentId, context);
       }
     }
-  }, [open, agentId, chatId, startChat, context, showRecentChats, loadingRecent, recentChats.length]);
+  }, [open, agentId, initialLoadDone, loadingRecent, chatId, recentChats.length, startChat, context]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -76,55 +85,60 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
     }
   }, [messages]);
 
-  const handleEndChat = () => {
+  const handleEndChat = useCallback(() => {
     closeChat();
     setAttachments([]);
     setShowRecentChats(false);
+    setInitialLoadDone(false);
     onOpenChange(false);
-  };
+  }, [closeChat, onOpenChange]);
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if ((input.trim() || attachments.length > 0) && !sending) {
       const msg = input.trim() || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : "");
       sendMessage(msg, attachments.length > 0 ? attachments : undefined);
       setInput("");
       setAttachments([]);
     }
-  };
+  }, [input, attachments, sending, sendMessage]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-  };
+  }, [handleSend]);
 
-  const handleDelegate = async (description: string) => {
+  const handleDelegate = useCallback(async (description: string) => {
     const result = await delegateTask(description);
     if (result.success) {
       setShowDelegateModal(false);
     }
-  };
+  }, [delegateTask]);
 
-  const handleResumeChat = async (existingChatId: string) => {
+  const handleResumeChat = useCallback(async (existingChatId: string) => {
     setShowRecentChats(false);
     await resumeChat(existingChatId);
-  };
+  }, [resumeChat]);
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     setShowRecentChats(false);
     if (agentId) {
       startChat(agentId, context);
     }
-  };
+  }, [agentId, startChat, context]);
 
-  const handleShowHistory = () => {
+  const handleShowHistory = useCallback(() => {
     closeChat();
     setShowRecentChats(true);
     if (agentId) {
       loadRecentChats(agentId);
     }
-  };
+  }, [closeChat, agentId, loadRecentChats]);
+
+  const handleLoadChats = useCallback((filterAgentId?: string) => {
+    loadRecentChats(filterAgentId);
+  }, [loadRecentChats]);
 
   const agentConfig = AVAILABLE_AGENTS.find((a) => a.id === agentId);
 
@@ -184,6 +198,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
       <Sheet open={open} onOpenChange={(nextOpen) => {
         if (!nextOpen) {
           setShowRecentChats(false);
+          setInitialLoadDone(false);
           onOpenChange(false);
         }
       }}>
@@ -206,7 +221,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
             agentId={agentId || undefined}
             onResumeChat={handleResumeChat}
             onNewChat={handleNewChat}
-            onLoadChats={loadRecentChats}
+            onLoadChats={handleLoadChats}
           />
         </SheetContent>
       </Sheet>
@@ -216,7 +231,10 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
   return (
     <>
       <Sheet open={open} onOpenChange={(nextOpen) => {
-        if (!nextOpen) onOpenChange(false);
+        if (!nextOpen) {
+          setInitialLoadDone(false);
+          onOpenChange(false);
+        }
       }}>
         <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
           <SheetHeader className="p-4 border-b border-border/50">
@@ -401,7 +419,6 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
           conversationId: (context?.conversationId as string | undefined) || (context?.conversation_id as string | undefined),
         }}
         onOpenThread={(conversationId) => {
-          // Navigate to the thread and close the modal/panel
           window.location.href = `/mightychat?id=${conversationId}`;
         }}
         onDelegate={handleDelegate}
