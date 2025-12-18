@@ -352,11 +352,50 @@ Say: "For specialty films like chrome, color-shift, or textured materials, check
     // Log interaction
     console.log('[Luigi] Response sent:', assistantMessage.substring(0, 100));
 
-    // Create quote task if email + pricing intent
-    if (pricingIntent && chatState.customer_email) {
+    // Create quote and send email if we have email + vehicle + pricing intent
+    if (pricingIntent && chatState.customer_email && hasVehicle) {
+      try {
+        // Call create-quote-from-chat to generate and email the quote
+        const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/create-quote-from-chat`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            customer_email: chatState.customer_email,
+            customer_name: null,
+            vehicle_year: extractedVehicle.year,
+            vehicle_make: extractedVehicle.make,
+            vehicle_model: extractedVehicle.model,
+            product_type: 'avery',
+            send_email: true
+          })
+        });
+
+        if (quoteResponse.ok) {
+          const quoteData = await quoteResponse.json();
+          console.log('[Luigi] Quote created and emailed:', quoteData.quote_number);
+          chatState.quote_sent = true;
+          chatState.quote_number = quoteData.quote_number;
+          
+          // Update conversation with quote info
+          await supabase
+            .from('conversations')
+            .update({ chat_state: chatState })
+            .eq('id', conversationId);
+        } else {
+          console.error('[Luigi] Failed to create quote:', await quoteResponse.text());
+        }
+      } catch (quoteErr) {
+        console.error('[Luigi] Quote creation error:', quoteErr);
+      }
+    } else if (pricingIntent && chatState.customer_email && !hasVehicle) {
+      // No vehicle yet - create task for manual follow-up
       await supabase.from('tasks').insert({
-        title: `Quote Request: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || 'Vehicle TBD'}`.trim(),
-        description: `Website chat quote request via Luigi.\nCustomer: ${chatState.customer_email}\nMessage: ${message_text}`,
+        title: `Quote Request (Need Vehicle Info): ${chatState.customer_email}`,
+        description: `Website chat quote request via Luigi.\nCustomer: ${chatState.customer_email}\nMessage: ${message_text}\n\nNote: Vehicle info not captured yet - follow up to get details.`,
         assigned_to: 'Alex Morgan',
         status: 'todo',
         priority: 'high',
@@ -365,11 +404,10 @@ Say: "For specialty films like chrome, color-shift, or textured materials, check
           source: 'luigi_concierge',
           conversation_id: conversationId,
           customer_email: chatState.customer_email,
-          vehicle: extractedVehicle,
-          calculated_price: chatState.calculated_price
+          needs_vehicle_info: true
         }
       });
-      console.log('[Luigi] Created quote task for Alex Morgan');
+      console.log('[Luigi] Created quote task (needs vehicle info)');
     }
 
     // Escalation email if needed
