@@ -73,6 +73,7 @@ import MyProducts from "./pages/settings/MyProducts";
 import AdminOrganizations from "./pages/AdminOrganizations";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
 import OperationsSOP from "./pages/OperationsSOP";
+import RevenueHealth from "./pages/RevenueHealth";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -135,6 +136,7 @@ const App = () => (
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/tasks" element={<MightyTasks />} />
             <Route path="/operations-sop" element={<OperationsSOP />} />
+            <Route path="/revenue-health" element={<RevenueHealth />} />
             <Route path="/tradedna" element={<TradeDNA />} />
             <Route path="/admin/pricing" element={<ProductPricingAdmin />} />
             <Route path="/admin/products" element={<ProductAdmin />} />

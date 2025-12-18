@@ -215,3 +215,6 @@ verify_jwt = false
 
 [functions.create-klaviyo-campaign]
 verify_jwt = false
+
+[functions.revenue-health-monitor]
+verify_jwt = false
