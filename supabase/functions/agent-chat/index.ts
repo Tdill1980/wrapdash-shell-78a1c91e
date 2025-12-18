@@ -250,11 +250,24 @@ serve(async (req) => {
         throw new Error("Missing chat_id or message");
       }
 
-      // Save user message
+      // Check if this is an image generation request
+      const imageKeywords = [
+        "create image", "generate image", "make image", "create an image",
+        "generate an image", "make an image", "create a visual", "generate visual",
+        "design image", "create graphic", "make graphic", "render image",
+        "create photo", "generate photo", "create picture", "make picture",
+        "create artwork", "design artwork", "create illustration"
+      ];
+      const lowerMessage = message.toLowerCase();
+      const isImageRequest = imageKeywords.some(kw => lowerMessage.includes(kw));
+
+      // Save user message with attachments if any
+      const { attachments } = body;
       await supabase.from("agent_chat_messages").insert({
         agent_chat_id: chat_id,
         sender: "user",
         content: message,
+        metadata: attachments?.length ? { attachments } : null,
       });
 
       // Get chat history
@@ -323,32 +336,147 @@ Use this sales context when relevant:
 - If creating content/emails, consider incorporating urgency if we're behind on goals
 - If quoting, prioritize closing deals that help hit targets
 - Suggest proactive actions when appropriate based on goal status
+
+IMAGE GENERATION CAPABILITY:
+You can generate images when asked. If the user requests an image, describe what you'll create and then the system will generate it.
+When an image is generated, it will be included in your response.
 `;
 
-      // Build messages for AI
-      const aiMessages = [
+      // Handle IMAGE GENERATION
+      if (isImageRequest) {
+        console.log("Image generation request detected:", message);
+        
+        const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+        if (!lovableApiKey) {
+          throw new Error("LOVABLE_API_KEY not configured for image generation");
+        }
+
+        try {
+          // Generate image using Lovable AI Gateway
+          const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${lovableApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash-image-preview",
+              messages: [
+                { role: "user", content: message }
+              ],
+              modalities: ["image", "text"],
+            }),
+          });
+
+          if (!imageResponse.ok) {
+            const errorText = await imageResponse.text();
+            console.error("Image generation failed:", errorText);
+            throw new Error(`Image generation failed: ${imageResponse.status}`);
+          }
+
+          const imageData = await imageResponse.json();
+          console.log("Image generation response received");
+
+          const textContent = imageData.choices?.[0]?.message?.content || "I've generated the image for you.";
+          const images = imageData.choices?.[0]?.message?.images || [];
+          
+          // Extract the first image URL (base64)
+          const generatedImageUrl = images[0]?.image_url?.url || null;
+
+          // Save agent response with image
+          await supabase.from("agent_chat_messages").insert({
+            agent_chat_id: chat_id,
+            sender: "agent",
+            content: textContent,
+            metadata: { 
+              image_generated: true,
+              image_url: generatedImageUrl,
+              confirmed: false 
+            },
+          });
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: textContent,
+              image_url: generatedImageUrl,
+              confirmed: false,
+              suggested_task: null,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (imageError: unknown) {
+          console.error("Image generation error:", imageError);
+          // Fall back to text response explaining the error
+          const errMsg = imageError instanceof Error ? imageError.message : "Unknown error";
+          const errorMessage = `I encountered an issue generating the image: ${errMsg}. Let me know if you'd like me to try again or describe what you need differently.`;
+          
+          await supabase.from("agent_chat_messages").insert({
+            agent_chat_id: chat_id,
+            sender: "agent",
+            content: errorMessage,
+            metadata: { image_error: true },
+          });
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: errorMessage,
+              confirmed: false,
+              suggested_task: null,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      // Build messages for AI (regular text response)
+      const aiMessages: any[] = [
         { role: "system", content: enhancedSystemPrompt },
-        ...(chatHistory || []).map((m: any) => ({
-          role: m.sender === "user" ? "user" : "assistant",
-          content: m.content,
-        })),
       ];
 
-      // Call AI
-      const openaiKey = Deno.env.get("OPENAI_API_KEY");
-      const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      // Add chat history with vision support for attachments
+      for (const m of chatHistory || []) {
+        const meta = m.metadata as Record<string, any> | null;
+        if (m.sender === "user" && meta?.attachments?.length) {
+          // Build multimodal content for messages with attachments
+          const contentParts: any[] = [{ type: "text", text: m.content }];
+          for (const att of meta.attachments) {
+            if (att.url && (att.type?.startsWith("image/") || att.url.match(/\.(png|jpg|jpeg|webp|gif)$/i))) {
+              contentParts.push({
+                type: "image_url",
+                image_url: { url: att.url }
+              });
+            }
+          }
+          aiMessages.push({ role: "user", content: contentParts });
+        } else {
+          aiMessages.push({
+            role: m.sender === "user" ? "user" : "assistant",
+            content: m.content,
+          });
+        }
+      }
+
+      // Call AI using Lovable AI Gateway for vision support
+      const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${openaiKey}`,
+          Authorization: `Bearer ${lovableApiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "google/gemini-2.5-flash",
           messages: aiMessages,
-          temperature: 0.7,
-          max_tokens: 800,
         }),
       });
+
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error("AI response error:", errorText);
+        throw new Error(`AI request failed: ${aiResponse.status}`);
+      }
 
       const aiData = await aiResponse.json();
       const agentMessage = aiData.choices?.[0]?.message?.content || "I'm not sure how to respond.";
