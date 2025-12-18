@@ -3,17 +3,24 @@ import { Button } from "@/components/ui/button";
 import { AgentMightyChatLayout } from "./AgentMightyChatLayout";
 import { OpsDeskScreen } from "./OpsDeskScreen";
 import { ReviewQueue } from "./ReviewQueue";
-import { MessageSquare, ClipboardList, Brain } from "lucide-react";
+import { AgentChatHistory } from "./AgentChatHistory";
+import { MessageSquare, ClipboardList, Brain, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type MightyMode = "chat" | "ops" | "review";
+export type MightyMode = "chat" | "ops" | "review" | "history";
 
 export function MightyChatShell() {
   const [mode, setMode] = useState<MightyMode>("review");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedAgentChatId, setSelectedAgentChatId] = useState<string | null>(null);
 
   const handleSelectConversation = (conversationId: string) => {
     setSelectedConversationId(conversationId);
+    setMode("chat");
+  };
+
+  const handleResumeAgentChat = (chatId: string) => {
+    setSelectedAgentChatId(chatId);
     setMode("chat");
   };
 
@@ -40,6 +47,15 @@ export function MightyChatShell() {
           Inbox
         </Button>
         <Button
+          variant={mode === "history" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setMode("history")}
+          className={cn("gap-2", mode === "history" && "bg-primary")}
+        >
+          <History className="w-4 h-4" />
+          Agent History
+        </Button>
+        <Button
           variant={mode === "ops" ? "default" : "ghost"}
           size="sm"
           onClick={() => setMode("ops")}
@@ -59,7 +75,11 @@ export function MightyChatShell() {
           <AgentMightyChatLayout 
             onOpenOpsDesk={() => setMode("ops")} 
             initialConversationId={selectedConversationId}
+            initialAgentChatId={selectedAgentChatId}
           />
+        )}
+        {mode === "history" && (
+          <AgentChatHistory onResumeChat={handleResumeAgentChat} />
         )}
         {mode === "ops" && (
           <OpsDeskScreen onClose={() => setMode("chat")} />
