@@ -104,6 +104,12 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
 
   const handleSend = useCallback(() => {
     if ((input.trim() || attachments.length > 0) && !sending) {
+      // Debug logging for attachment tracking
+      console.log("[AgentChat] Sending message with attachments:", {
+        attachmentCount: attachments.length,
+        attachments: attachments.map(a => ({ name: a.name, type: a.type, urlPreview: a.url?.slice(0, 50) })),
+      });
+      
       const msg = input.trim() || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : "");
       sendMessage(msg, attachments.length > 0 ? attachments : undefined);
       setInput("");
@@ -349,42 +355,58 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
 
           {/* Input */}
           <div className="p-4 border-t border-border/50 space-y-3">
-            {/* Attachment previews */}
+            {/* Attachment previews - Enhanced visibility */}
             {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-2 bg-muted/30 rounded-lg">
-                {attachments.map((att, idx) => {
-                  const isImage = att.type?.startsWith("image/");
-                  const isVideo = att.type?.startsWith("video/");
-                  const Icon = isImage ? Image : isVideo ? Film : FileText;
+              <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg space-y-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {attachments.length} file{attachments.length > 1 ? 's' : ''} ready to send
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {attachments.map((att, idx) => {
+                    const isImage = att.type?.startsWith("image/");
+                    const isVideo = att.type?.startsWith("video/");
+                    const Icon = isImage ? Image : isVideo ? Film : FileText;
 
-                  return (
-                    <div
-                      key={idx}
-                      className="relative group rounded-lg border border-border/50 overflow-hidden bg-background"
-                    >
-                      {isImage ? (
-                        <img
-                          src={att.url}
-                          alt={att.name || "Attachment"}
-                          className="h-14 w-14 object-cover"
-                        />
-                      ) : (
-                        <div className="h-14 w-14 flex flex-col items-center justify-center p-1">
-                          <Icon className="w-5 h-5 text-muted-foreground" />
-                          <span className="text-[9px] text-muted-foreground truncate w-full text-center mt-0.5">
-                            {att.name?.slice(0, 8) || "File"}
-                          </span>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
-                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "relative group rounded-lg border overflow-hidden bg-background",
+                          isVideo ? "border-primary ring-2 ring-primary/30" : "border-border/50"
+                        )}
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  );
-                })}
+                        {isImage ? (
+                          <img
+                            src={att.url}
+                            alt={att.name || "Attachment"}
+                            className="h-14 w-14 object-cover"
+                          />
+                        ) : isVideo ? (
+                          <div className="h-14 w-20 flex flex-col items-center justify-center p-1 bg-primary/5">
+                            <Film className="w-5 h-5 text-primary" />
+                            <span className="text-[9px] text-primary font-medium truncate w-full text-center mt-0.5">
+                              {att.name?.slice(0, 12) || "Video"}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="h-14 w-14 flex flex-col items-center justify-center p-1">
+                            <Icon className="w-5 h-5 text-muted-foreground" />
+                            <span className="text-[9px] text-muted-foreground truncate w-full text-center mt-0.5">
+                              {att.name?.slice(0, 8) || "File"}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
