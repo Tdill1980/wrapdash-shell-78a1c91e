@@ -41,9 +41,16 @@ export default function MightyEdit() {
   const location = useLocation();
   const {
     isScanning,
+    isMatching,
+    isExecuting,
     editQueue,
+    musicRecommendations,
     fetchEditQueue,
     scanContentLibrary,
+    matchMusic,
+    executeEdits,
+    updateEditItem,
+    selectMusic,
   } = useMightyEdit();
 
   const [activeTab, setActiveTab] = useState("scanner");
@@ -426,16 +433,87 @@ export default function MightyEdit() {
                   </Card>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <Button className="flex-1" size="lg">
-                      <Play className="w-4 h-4 mr-2" />
-                      Render Full Video
+                  <div className="flex gap-3 flex-wrap">
+                    {/* Generate AI Suggestions - for videos that need scanning */}
+                    {(!selectedVideo.ai_edit_suggestions && selectedVideo.text_overlays?.length === 0) && (
+                      <Button 
+                        variant="secondary"
+                        size="lg"
+                        onClick={() => scanContentLibrary({ contentFileId: selectedVideo.content_file_id || selectedVideo.id })}
+                        disabled={isScanning}
+                      >
+                        {isScanning ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="w-4 h-4 mr-2" />
+                            Generate AI Suggestions
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    
+                    {/* Find Music */}
+                    <Button 
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => matchMusic(selectedVideo.id, selectedVideo.transcript || undefined, selectedVideo.duration_seconds || undefined)}
+                      disabled={isMatching}
+                    >
+                      {isMatching ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Finding Music...
+                        </>
+                      ) : (
+                        <>
+                          <Music className="w-4 h-4 mr-2" />
+                          Find Music
+                        </>
+                      )}
                     </Button>
-                    <Button variant="outline" size="lg">
+                    
+                    {/* Render Full Video */}
+                    <Button 
+                      className="flex-1" 
+                      size="lg"
+                      onClick={() => executeEdits(selectedVideo.id, "full")}
+                      disabled={isExecuting}
+                    >
+                      {isExecuting ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Rendering...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Render Full Video
+                        </>
+                      )}
+                    </Button>
+                    
+                    {/* Extract Shorts */}
+                    <Button 
+                      variant="outline" 
+                      size="lg"
+                      onClick={() => executeEdits(selectedVideo.id, "shorts")}
+                      disabled={isExecuting}
+                    >
                       <Scissors className="w-4 h-4 mr-2" />
                       Extract Shorts
                     </Button>
-                    <Button variant="outline" size="lg">
+                    
+                    {/* Export All */}
+                    <Button 
+                      variant="outline" 
+                      size="lg"
+                      onClick={() => executeEdits(selectedVideo.id, "all")}
+                      disabled={isExecuting}
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Export All
                     </Button>
