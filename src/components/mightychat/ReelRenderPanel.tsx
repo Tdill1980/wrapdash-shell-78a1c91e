@@ -16,10 +16,12 @@ import {
   Film,
   Type,
   Clock,
-  Sparkles
+  Sparkles,
+  Database
 } from "lucide-react";
 import { useVideoRender, InspoStyle } from "@/hooks/useVideoRender";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VideoContentPlan {
   hook: string;
@@ -28,6 +30,8 @@ interface VideoContentPlan {
   caption: string;
   hashtags: string;
   sourceVideo?: string;
+  assetQuery?: string;
+  assetId?: string;
 }
 
 interface ReelRenderPanelProps {
@@ -42,6 +46,8 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
   const effectiveInitialUrl = initialVideoUrl || videoContent?.sourceVideo || "";
   const [videoUrl, setVideoUrl] = useState(effectiveInitialUrl);
   const [editedContent, setEditedContent] = useState<VideoContentPlan | null>(null);
+  const [isResolvingAsset, setIsResolvingAsset] = useState(false);
+  const [assetResolutionStatus, setAssetResolutionStatus] = useState<string | null>(null);
   
   const {
     status,
@@ -59,6 +65,83 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
       setEditedContent(videoContent);
     }
   }, [videoContent]);
+
+  // Resolve asset from ContentBox when assetQuery or assetId is present
+  useEffect(() => {
+    async function resolveAsset() {
+      if (!editedContent || videoUrl) return;
+      
+      const { assetId, assetQuery } = editedContent;
+      if (!assetId && !assetQuery) return;
+      
+      setIsResolvingAsset(true);
+      setAssetResolutionStatus("Searching ContentBox...");
+      console.log("[ReelRenderPanel] Resolving asset:", { assetId, assetQuery });
+      
+      try {
+        let resolvedUrl: string | null = null;
+        
+        // Direct asset ID lookup
+        if (assetId) {
+          const { data, error } = await supabase
+            .from("content_files")
+            .select("file_url, original_filename")
+            .eq("id", assetId)
+            .single();
+          
+          if (error) throw error;
+          resolvedUrl = data?.file_url || null;
+          if (resolvedUrl) {
+            setAssetResolutionStatus(`Found: ${data?.original_filename || 'asset'}`);
+          }
+        }
+        
+        // Parse and execute asset query
+        if (!resolvedUrl && assetQuery) {
+          const params = parseAssetQuery(assetQuery);
+          console.log("[ReelRenderPanel] Parsed asset query:", params);
+          
+          let query = supabase
+            .from("content_files")
+            .select("id, file_url, original_filename, tags, file_type");
+          
+          if (params.tags?.length) {
+            query = query.contains("tags", params.tags);
+          }
+          if (params.type) {
+            query = query.eq("file_type", params.type);
+          }
+          if (params.brand) {
+            query = query.eq("brand", params.brand);
+          }
+          
+          const { data, error } = await query.limit(params.limit || 1);
+          
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            resolvedUrl = data[0].file_url;
+            setAssetResolutionStatus(`Found ${data.length} asset(s): ${data[0].original_filename || 'video'}`);
+            console.log("[ReelRenderPanel] Resolved asset from query:", resolvedUrl?.slice(0, 50));
+          } else {
+            setAssetResolutionStatus("No matching assets found in ContentBox");
+          }
+        }
+        
+        if (resolvedUrl) {
+          setVideoUrl(resolvedUrl);
+          console.log("[ReelRenderPanel] Asset resolved successfully:", resolvedUrl.slice(0, 50));
+        }
+      } catch (err) {
+        console.error("[ReelRenderPanel] Asset resolution failed:", err);
+        setAssetResolutionStatus("Failed to resolve asset");
+      } finally {
+        setIsResolvingAsset(false);
+      }
+    }
+    
+    resolveAsset();
+  }, [editedContent?.assetId, editedContent?.assetQuery, videoUrl]);
 
   // Update video URL when initialVideoUrl or sourceVideo changes
   useEffect(() => {
@@ -97,8 +180,8 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
     return null;
   }
 
-  // Show helpful message if no video URL detected
-  const showNoVideoWarning = !videoUrl && !initialVideoUrl;
+  // Show helpful message if no video URL detected and not resolving
+  const showNoVideoWarning = !videoUrl && !initialVideoUrl && !isResolvingAsset && !editedContent?.assetQuery && !editedContent?.assetId;
 
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
@@ -127,6 +210,30 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
         {/* Video URL Input */}
         {status === "idle" && (
           <>
+            {/* Asset Resolution Status */}
+            {isResolvingAsset && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 space-y-2">
+                <div className="flex items-center gap-2 text-primary">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm font-medium">Resolving asset from ContentBox...</span>
+                </div>
+                {assetResolutionStatus && (
+                  <p className="text-xs text-muted-foreground">{assetResolutionStatus}</p>
+                )}
+              </div>
+            )}
+            
+            {/* Asset Found Status */}
+            {!isResolvingAsset && assetResolutionStatus && videoUrl && (editedContent?.assetQuery || editedContent?.assetId) && (
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 space-y-1">
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                  <Database className="h-4 w-4" />
+                  <span className="text-sm font-medium">Asset from ContentBox</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{assetResolutionStatus}</p>
+              </div>
+            )}
+            
             {/* No video warning */}
             {showNoVideoWarning && (
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-2">
@@ -316,6 +423,39 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
   );
 }
 
+// Helper to parse asset query string: "tags=chicago,ppf | type=video | limit=3"
+function parseAssetQuery(query: string): {
+  tags?: string[];
+  type?: string;
+  brand?: string;
+  limit?: number;
+} {
+  const result: { tags?: string[]; type?: string; brand?: string; limit?: number } = {};
+  
+  const parts = query.split("|").map(p => p.trim());
+  for (const part of parts) {
+    const [key, value] = part.split("=").map(s => s.trim());
+    if (!key || !value) continue;
+    
+    switch (key.toLowerCase()) {
+      case "tags":
+        result.tags = value.split(",").map(t => t.trim());
+        break;
+      case "type":
+        result.type = value;
+        break;
+      case "brand":
+        result.brand = value;
+        break;
+      case "limit":
+        result.limit = parseInt(value, 10) || 1;
+        break;
+    }
+  }
+  
+  return result;
+}
+
 // Helper to parse VIDEO_CONTENT block from agent message
 export function parseVideoContent(message: string): VideoContentPlan | null {
   const videoMatch = message.match(/===VIDEO_CONTENT===([\s\S]*?)===END_VIDEO_CONTENT===/);
@@ -328,6 +468,10 @@ export function parseVideoContent(message: string): VideoContentPlan | null {
   const captionMatch = content.match(/caption:\s*(.+?)(?:\n|$)/i);
   const hashtagsMatch = content.match(/hashtags:\s*(.+?)(?:\n|$)/i);
   const sourceVideoMatch = content.match(/source_video:\s*(.+?)(?:\n|$)/i);
+  
+  // NEW: Parse asset_query and asset_id
+  const assetQueryMatch = content.match(/asset_query:\s*(.+?)(?:\n|$)/i);
+  const assetIdMatch = content.match(/asset_id:\s*([a-f0-9-]{36})(?:\n|$)/i);
   
   // Parse overlays
   const overlays: Array<{ text: string; time: number; duration: number }> = [];
@@ -346,6 +490,8 @@ export function parseVideoContent(message: string): VideoContentPlan | null {
     hook: hookMatch?.[1]?.trim(),
     cta: ctaMatch?.[1]?.trim(),
     sourceVideo: sourceVideoMatch?.[1]?.trim(),
+    assetQuery: assetQueryMatch?.[1]?.trim(),
+    assetId: assetIdMatch?.[1]?.trim(),
     overlayCount: overlays.length,
   });
 
@@ -356,5 +502,7 @@ export function parseVideoContent(message: string): VideoContentPlan | null {
     caption: captionMatch?.[1]?.trim() || "",
     hashtags: hashtagsMatch?.[1]?.trim() || "",
     sourceVideo: sourceVideoMatch?.[1]?.trim(),
+    assetQuery: assetQueryMatch?.[1]?.trim(),
+    assetId: assetIdMatch?.[1]?.trim(),
   };
 }
