@@ -154,7 +154,11 @@ serve(async (req) => {
           last_message_at: new Date().toISOString(),
           unread_count: (existingConvo.unread_count || 0) + 1,
           subject: subject,
-          assigned_to: assignedAgent,
+          // Store agent assignment in metadata instead of assigned_to (expects UUID)
+          metadata: {
+            ...(existingConvo.metadata || {}),
+            assigned_agent: assignedAgent,
+          },
         })
         .eq('id', existingConvo.id);
       console.log('💬 Updated existing conversation:', conversation.id);
@@ -168,7 +172,10 @@ serve(async (req) => {
           organization_id: WPW_ORG_ID,
           subject: subject,
           recipient_inbox: recipientInbox,
-          assigned_to: assignedAgent,
+          // Store agent assignment in metadata instead of assigned_to (expects UUID)
+          metadata: {
+            assigned_agent: assignedAgent,
+          },
           last_message_at: new Date().toISOString(),
           unread_count: 1,
         })
