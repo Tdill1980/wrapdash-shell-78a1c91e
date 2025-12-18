@@ -157,20 +157,12 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
 
   const agentConfig = AVAILABLE_AGENTS.find((a) => a.id === agentId);
 
-  // Check if Noah Bennett produced video content in the conversation
+  // Check if any agent produced video content - scan ALL messages
+  // VIDEO_CONTENT blocks are unique to Noah, so if found, show render panel
   const videoContent = useMemo(() => {
-    console.log("[AgentChatPanel] Checking for video content, agentId:", agentId, "agent?.id:", agent?.id);
+    console.log("[AgentChatPanel] Scanning", messages.length, "messages for VIDEO_CONTENT");
     
-    // Check both agentId prop and actual agent from chat
-    const isNoah = agentId === "noah_bennett" || agent?.id === "noah_bennett";
-    if (!isNoah) {
-      console.log("[AgentChatPanel] Not Noah Bennett, skipping video content check");
-      return null;
-    }
-    
-    console.log("[AgentChatPanel] Noah Bennett detected, scanning", messages.length, "messages for VIDEO_CONTENT");
-    
-    // Look for VIDEO_CONTENT block in agent messages
+    // Scan all agent messages for VIDEO_CONTENT - no agent ID check needed
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       if (msg.sender === "agent") {
@@ -183,7 +175,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
     }
     console.log("[AgentChatPanel] No VIDEO_CONTENT found in messages");
     return null;
-  }, [messages, agentId, agent]);
+  }, [messages]);
 
   // Find the most recent video attachment or URL from user messages
   const uploadedVideoUrl = useMemo(() => {
@@ -353,7 +345,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                 )}
                 
                 {/* Video Render Panel - shown when Noah Bennett produces video content */}
-                {videoContent && (agentId === "noah_bennett" || agent?.id === "noah_bennett") && (
+                {videoContent && (
                   <div className="pt-4">
                     <ReelRenderPanel 
                       videoContent={videoContent}
