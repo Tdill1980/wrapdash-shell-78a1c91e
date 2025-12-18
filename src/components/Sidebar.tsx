@@ -323,14 +323,20 @@ const navigationItems: NavigationItem[] = [
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
   const { role, isLoading } = useUserRole();
 
+  // During loading, show beta_shop items as default to prevent flash
+  // This ensures MightyChat is visible while role is being determined
+  const effectiveRole = isLoading ? "beta_shop" : role;
+  
+  console.log('[Sidebar] Role:', role, 'isLoading:', isLoading, 'effectiveRole:', effectiveRole);
+
   // Filter navigation items based on user role
   const filteredNavItems = navigationItems.filter((item) => {
     // If no roles specified, only admin can see it
     if (!item.roles) {
-      return role === "admin";
+      return effectiveRole === "admin";
     }
     // Check if user's role is in the allowed roles
-    return item.roles.includes(role);
+    return item.roles.includes(effectiveRole);
   });
 
   return (
