@@ -23,8 +23,11 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
+  Play,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay, isToday } from "date-fns";
+import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
+import { AVAILABLE_AGENTS } from "@/components/mightychat/AgentSelector";
 
 interface Task {
   id: string;
@@ -65,26 +68,87 @@ export function DailyFlywheel() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  
+  // Agent execution state
+  const [showAgentPanel, setShowAgentPanel] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [taskContext, setTaskContext] = useState<Record<string, unknown>>({});
 
-  // Fetch tasks for the week
+  const executeWithAgent = (task: Task) => {
+    // Determine agent based on task_type or default to noah_bennett for content tasks
+    let agentId = "noah_bennett"; // Default for content tasks
+    
+    // Map task types to agents
+    if (task.task_type === "email_campaign") {
+      agentId = "emily_carter";
+    } else if (task.task_type === "instagram_story" || task.task_type === "reel_video") {
+      agentId = "noah_bennett";
+    }
+    
+    // Check if agent exists in available agents
+    const validAgent = AVAILABLE_AGENTS.find(a => a.id === agentId);
+    if (!validAgent) {
+      agentId = "noah_bennett"; // Default fallback
+    }
+    
+    setSelectedAgentId(agentId);
+    setTaskContext({
+      task_id: task.id,
+      task_title: task.title,
+      task_description: task.description,
+      task_priority: task.priority,
+      task_due_date: task.due_date,
+      task_type: task.task_type,
+      source: "daily_flywheel",
+      initial_prompt: `Execute this content task: "${task.title}"${task.description ? `\n\nDetails: ${task.description}` : ""}`,
+    });
+    setShowAgentPanel(true);
+    toast.info(`Opening agent chat to execute: ${task.title}`);
+  };
+
+  // Fetch tasks for the week (including tasks with no due_date that are pending/pending_review)
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["flywheel-tasks", organizationId, format(weekStart, "yyyy-MM-dd")],
     queryFn: async () => {
       const weekEnd = addDays(weekStart, 7);
-      let query = supabase
+      
+      // Query 1: Tasks with due_date in range
+      let query1 = supabase
         .from("tasks")
         .select("*")
         .gte("due_date", weekStart.toISOString())
-        .lt("due_date", weekEnd.toISOString())
-        .order("priority", { ascending: false });
+        .lt("due_date", weekEnd.toISOString());
 
       if (organizationId) {
-        query = query.eq("organization_id", organizationId);
+        query1 = query1.eq("organization_id", organizationId);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Task[];
+      const { data: scheduledTasks, error: error1 } = await query1;
+      if (error1) throw error1;
+
+      // Query 2: Pending tasks without due_date (show in today's view)
+      let query2 = supabase
+        .from("tasks")
+        .select("*")
+        .is("due_date", null)
+        .in("status", ["pending", "pending_review", "in_progress"]);
+
+      if (organizationId) {
+        query2 = query2.eq("organization_id", organizationId);
+      }
+
+      const { data: unscheduledTasks, error: error2 } = await query2;
+      if (error2) throw error2;
+
+      // Combine and dedupe
+      const allTasks = [...(scheduledTasks || []), ...(unscheduledTasks || [])];
+      const uniqueTasks = Array.from(new Map(allTasks.map(t => [t.id, t])).values());
+      
+      // Sort by priority
+      return uniqueTasks.sort((a, b) => {
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, normal: 1, low: 0 };
+        return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      }) as Task[];
     },
     enabled: true,
   });
@@ -155,11 +219,17 @@ export function DailyFlywheel() {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const getTasksForDay = (date: Date) => {
+    // Include unscheduled tasks in today's view
+    if (isToday(date)) {
+      return tasks.filter((task) => 
+        (task.due_date && isSameDay(new Date(task.due_date), date)) || !task.due_date
+      );
+    }
     return tasks.filter((task) => task.due_date && isSameDay(new Date(task.due_date), date));
   };
 
   const todayTasks = getTasksForDay(new Date());
-  const pendingApprovalTasks = todayTasks.filter((t) => t.status === "pending_review");
+  const pendingApprovalTasks = tasks.filter((t) => t.status === "pending_review");
   const todayBehind = salesData ? salesData.todayRevenue < salesData.dailyTarget : false;
 
   return (
@@ -243,6 +313,15 @@ export function DailyFlywheel() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-primary border-primary/30 hover:bg-primary/10"
+                        onClick={() => executeWithAgent(task)}
+                      >
+                        <Play className="w-3 h-3 mr-1" />
+                        Execute
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -375,20 +454,33 @@ export function DailyFlywheel() {
                             </div>
                           )}
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            task.status === "completed"
-                              ? "bg-green-500/20 text-green-400"
-                              : task.status === "in_progress"
-                              ? "bg-blue-500/20 text-blue-400"
-                              : task.status === "pending_review"
-                              ? "bg-amber-500/20 text-amber-400"
-                              : ""
-                          }
-                        >
-                          {task.status === "pending_review" ? "Needs Approval" : task.status.replace("_", " ")}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {task.status !== "completed" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-primary border-primary/30 hover:bg-primary/10"
+                              onClick={() => executeWithAgent(task)}
+                            >
+                              <Play className="w-3 h-3 mr-1" />
+                              Execute
+                            </Button>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className={
+                              task.status === "completed"
+                                ? "bg-green-500/20 text-green-400"
+                                : task.status === "in_progress"
+                                ? "bg-blue-500/20 text-blue-400"
+                                : task.status === "pending_review"
+                                ? "bg-amber-500/20 text-amber-400"
+                                : ""
+                            }
+                          >
+                            {task.status === "pending_review" ? "Needs Approval" : task.status.replace("_", " ")}
+                          </Badge>
+                        </div>
                       </div>
                     );
                   })}
@@ -398,6 +490,14 @@ export function DailyFlywheel() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Agent Chat Panel for Task Execution */}
+      <AgentChatPanel
+        open={showAgentPanel}
+        onOpenChange={setShowAgentPanel}
+        agentId={selectedAgentId}
+        context={taskContext}
+      />
     </div>
   );
 }
