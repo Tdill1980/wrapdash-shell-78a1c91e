@@ -12,8 +12,8 @@ interface Message {
 
 const QUICK_ACTIONS = [
   { icon: Car, label: "Get a Quote", message: "I want a wrap quote for my vehicle" },
-  { icon: Palette, label: "See Colors", message: "Show me wrap color options" },
-  { icon: Package, label: "Examples", message: "Show me wrap examples" },
+  { icon: Palette, label: "Specialty Films", message: "Tell me about specialty films" },
+  { icon: Package, label: "How to Order", message: "How do I place an order?" },
   { icon: Search, label: "Track Order", message: "I want to track my order" },
 ];
 
@@ -33,7 +33,7 @@ export function WebsiteChatWidget() {
         {
           id: "welcome",
           role: "assistant",
-          content: "Hey! 👋 I'm your WPW AI Assistant. How can I help you today?",
+          content: "👋 Hi! I'm Luigi, your WPW Ordering Concierge. I can help you understand pricing, choose materials (including specialty films), and place your order step by step. What can I help you with today?",
         },
       ]);
     }
@@ -60,7 +60,7 @@ export function WebsiteChatWidget() {
     setShowQuickActions(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("website-chat", {
+      const { data, error } = await supabase.functions.invoke("luigi-ordering-concierge", {
         body: {
           org: "wpw",
           agent: "wpw_ai_team",
@@ -149,14 +149,14 @@ export function WebsiteChatWidget() {
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30">
-              <Sparkles className="w-5 h-5 text-white animate-pulse" />
+            <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30 text-xl">
+              🧑‍🍳
             </div>
             <div>
-              <span className="font-bold text-white block text-lg tracking-tight">WPW AI TEAM</span>
+              <span className="font-bold text-white block text-lg tracking-tight">Luigi</span>
               <span className="text-white/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                Online now
+                WPW Ordering Concierge
               </span>
             </div>
           </div>

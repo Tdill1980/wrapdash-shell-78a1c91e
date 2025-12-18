@@ -11,7 +11,7 @@ const WPW_ORG_ID = "51aa96db-c06d-41ae-b3cb-25b045c75caf";
 export default function ChatWidgetDemo() {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState([
-    { role: "agent", text: "Hey! 👋 I'm Jordan Lee from WePrintWraps. Ask me anything about vehicle wraps, get a quote, or tell me about your project!" }
+    { role: "agent", text: "👋 Hi! I'm Luigi, your WPW Ordering Concierge. I can help you understand pricing, choose materials (including specialty films), and place your order step by step. What can I help you with today?" }
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -38,7 +38,7 @@ export default function ChatWidgetDemo() {
     setIsTyping(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/website-chat`, {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/luigi-ordering-concierge`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,11 +124,11 @@ export default function ChatWidgetDemo() {
             {/* Header */}
             <div className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] px-5 py-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
-                🤖
+                🧑‍🍳
               </div>
               <div className="flex-1">
-                <h3 className="text-white font-semibold text-base">WPW AI TEAM</h3>
-                <p className="text-white/80 text-xs">Vehicle Wrap Experts • Online</p>
+                <h3 className="text-white font-semibold text-base">Luigi</h3>
+                <p className="text-white/80 text-xs">WPW Ordering Concierge • Online</p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
