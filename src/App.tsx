@@ -38,11 +38,7 @@ import ContentCreator from "./pages/ContentCreator";
 import MightyChat from "./pages/MightyChat";
 import Portfolio from "./pages/Portfolio";
 import MightyTasks from "./pages/MightyTasks";
-import InkEdgeMagazine from "./pages/mightytask/InkEdgeMagazine";
-import WPWCampaigns from "./pages/mightytask/WPWCampaigns";
-import InkEdgeDistribution from "./pages/mightytask/InkEdgeDistribution";
-import WrapTVWorld from "./pages/mightytask/WrapTVWorld";
-import LuigiMightyTask from "./pages/mightytask/LuigiMightyTask";
+import MightyTaskUnified from "./pages/MightyTaskUnified";
 import TradeDNA from "./pages/TradeDNA";
 import ProductPricingAdmin from "./pages/ProductPricingAdmin";
 import ProductAdmin from "./pages/ProductAdmin";
@@ -144,11 +140,8 @@ const App = () => (
             <Route path="/paid-ads-performance" element={<PaidAdsPerformance />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/tasks" element={<MightyTasks />} />
-            <Route path="/mightytask/ink-edge-magazine" element={<InkEdgeMagazine />} />
-            <Route path="/mightytask/wpw-campaigns" element={<WPWCampaigns />} />
-            <Route path="/mightytask/ink-edge-distribution" element={<InkEdgeDistribution />} />
-            <Route path="/mightytask/wraptvworld" element={<WrapTVWorld />} />
-            <Route path="/mightytask/luigi" element={<LuigiMightyTask />} />
+            <Route path="/mightytask" element={<MightyTaskUnified />} />
+            <Route path="/mightytask/*" element={<Navigate to="/mightytask" replace />} />
             <Route path="/operations-sop" element={<OperationsSOP />} />
             <Route path="/revenue-health" element={<RevenueHealth />} />
             <Route path="/tradedna" element={<TradeDNA />} />
