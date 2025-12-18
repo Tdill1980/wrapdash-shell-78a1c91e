@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,24 +60,67 @@ export default function MightyEdit() {
 
   // Helper: Ensure video exists in video_edit_queue before executing edits
   const ensureVideoInQueue = async (video: VideoEditItem): Promise<string | null> => {
-    // First check if it already exists in queue
-    const { data: existing } = await supabase
+    // First check if it already exists in queue by source_url (more reliable than ID)
+    const { data: existingByUrl } = await supabase
+      .from('video_edit_queue')
+      .select('id')
+      .eq('source_url', video.source_url)
+      .maybeSingle();
+    
+    if (existingByUrl) {
+      console.log('[MightyEdit] Video already in queue by URL:', existingByUrl.id);
+      return existingByUrl.id;
+    }
+
+    // Also check by ID in case it's a real DB record
+    const { data: existingById } = await supabase
       .from('video_edit_queue')
       .select('id')
       .eq('id', video.id)
       .maybeSingle();
     
-    if (existing) {
-      return existing.id;
+    if (existingById) {
+      console.log('[MightyEdit] Video already in queue by ID:', existingById.id);
+      return existingById.id;
     }
 
-    // Insert the video into the queue
+    console.log('[MightyEdit] Inserting new video into queue...');
+    
+    // First, create content_files record if we have a source_url from Agent Chat
+    let contentFileId: string | null = null;
+    
+    // Check if we need to create a content_files record (for Agent Chat uploads)
+    if (video.source_url && (!video.content_file_id || video.content_file_id.startsWith('preset-'))) {
+      const { data: contentFile, error: cfError } = await supabase
+        .from('content_files')
+        .insert({
+          file_url: video.source_url,
+          file_type: 'video',
+          source: 'agent_chat',
+          organization_id: video.organization_id,
+          original_filename: video.title || 'Agent Upload',
+        })
+        .select('id')
+        .single();
+      
+      if (cfError) {
+        console.warn('[MightyEdit] Could not create content_files record, proceeding without:', cfError);
+        // We can still proceed with content_file_id as null
+      } else {
+        contentFileId = contentFile.id;
+        console.log('[MightyEdit] Created content_files record:', contentFileId);
+      }
+    } else if (video.content_file_id && !video.content_file_id.startsWith('preset-')) {
+      // Use existing valid content_file_id
+      contentFileId = video.content_file_id;
+    }
+
+    // Insert the video into the queue with the real (or null) content_file_id
     const { data: inserted, error } = await supabase
       .from('video_edit_queue')
       .insert({
-        id: video.id,
         organization_id: video.organization_id,
-        content_file_id: video.content_file_id,
+        content_file_id: contentFileId, // Use real ID or null
         source_url: video.source_url,
         transcript: video.transcript,
         duration_seconds: video.duration_seconds,
@@ -92,10 +136,12 @@ export default function MightyEdit() {
 
     if (error) {
       console.error('[MightyEdit] Failed to insert video into queue:', error);
+      toast.error('Failed to prepare video for rendering');
       return null;
     }
 
     console.log('[MightyEdit] Inserted video into queue:', inserted.id);
+    toast.success('Video ready for rendering');
     return inserted.id;
   };
 
