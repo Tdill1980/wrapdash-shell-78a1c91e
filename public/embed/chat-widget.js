@@ -7,7 +7,7 @@
     org: scriptTag?.getAttribute('data-org') || 'wpw',
     agent: scriptTag?.getAttribute('data-agent') || 'wpw_ai_team',
     mode: scriptTag?.getAttribute('data-mode') || 'test',
-    apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/website-chat'
+    apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/luigi-ordering-concierge'
   };
 
   // Geo data (fetched on load)
@@ -248,16 +248,16 @@
   container.innerHTML = `
     <div class="wcai-chat-window" id="wcai-window">
       <div class="wcai-chat-header">
-        <div class="wcai-chat-header-avatar">🤖</div>
+        <div class="wcai-chat-header-avatar">🧑‍🍳</div>
         <div class="wcai-chat-header-info">
-          <h3>WPW AI TEAM</h3>
-          <p>Vehicle Wrap Experts • Online</p>
+          <h3>Luigi</h3>
+          <p>WPW Ordering Concierge • Online</p>
         </div>
         <button class="wcai-chat-close" id="wcai-close">&times;</button>
       </div>
       <div class="wcai-chat-messages" id="wcai-messages">
         <div class="wcai-message agent">
-          Hey! 👋 I'm your WePrintWraps AI assistant. Ask me anything about vehicle wraps, get a quote, or tell me about your project!
+          👋 Hi! I'm Luigi, your WPW Ordering Concierge. I can help you understand pricing, choose materials (including specialty films), and place your order step by step. What can I help you with today?
         </div>
       </div>
       <div class="wcai-chat-input-area">
