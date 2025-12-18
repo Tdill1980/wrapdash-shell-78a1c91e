@@ -177,10 +177,26 @@ export default function MightyEdit() {
       try {
         const preset: ContentFactoryPreset = JSON.parse(storedPreset);
         console.log('[MightyEdit] Loaded preset from sessionStorage:', preset);
+        console.log('[MightyEdit] Preset overlays:', preset.overlays);
         
         // If preset has attached assets, create a video item from them
         if (preset.attached_assets && preset.attached_assets.length > 0) {
           const firstAsset = preset.attached_assets[0];
+          
+          // Map overlays from preset format to MightyEdit format
+          const mappedOverlays = (preset.overlays || []).map((o) => {
+            const mapped = {
+              text: o.text,
+              timestamp: `${o.start}s`,
+              style: 'bold' as const,
+              duration: o.duration,
+            };
+            console.log('[MightyEdit] Mapped overlay:', mapped);
+            return mapped;
+          });
+          
+          console.log('[MightyEdit] Total mapped overlays:', mappedOverlays.length);
+          
           const videoFromPreset: VideoEditItem = {
             // This is a local-only placeholder; ensureVideoInQueue will create the DB row.
             id: preset.claimed_asset_id || `preset-${Date.now()}`,
@@ -193,12 +209,7 @@ export default function MightyEdit() {
             ai_edit_suggestions: null,
             selected_music_id: null,
             selected_music_url: null,
-            text_overlays: preset.overlays?.map((o) => ({
-              text: o.text,
-              timestamp: `${o.start}s`,
-              style: 'bold',
-              duration: o.duration,
-            })) || [],
+            text_overlays: mappedOverlays,
             speed_ramps: [],
             chapters: [],
             shorts_extracted: [],
@@ -209,7 +220,7 @@ export default function MightyEdit() {
             updated_at: new Date().toISOString(),
           };
           
-          console.log('[MightyEdit] Auto-selecting video from preset:', videoFromPreset);
+          console.log('[MightyEdit] Auto-selecting video from preset with overlays:', videoFromPreset.text_overlays?.length);
           setSelectedVideo(videoFromPreset);
           setActiveTab("editor");
           setPresetApplied(true);
