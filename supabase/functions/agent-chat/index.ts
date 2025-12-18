@@ -489,26 +489,50 @@ When an image is generated, it will be included in your response.
         { role: "system", content: enhancedSystemPrompt },
       ];
 
-      // Check for video attachments and add context for Noah
+      // Scan ALL chat history for video attachments (historical + current)
+      const historicalVideoAttachments: any[] = [];
+      for (const m of chatHistory || []) {
+        const meta = m.metadata as Record<string, any> | null;
+        if (m.sender === "user" && meta?.attachments?.length) {
+          for (const att of meta.attachments) {
+            if (att.type?.startsWith('video/') || att.url?.match(/\.(mp4|mov|webm|avi)$/i)) {
+              historicalVideoAttachments.push({
+                ...att,
+                uploadedAt: m.created_at,
+                messageContent: m.content?.substring(0, 50) // First 50 chars for context
+              });
+            }
+          }
+        }
+      }
+
+      // Check current message for video attachments
       const attachmentsMeta = body.attachments || [];
-      const videoAttachments = attachmentsMeta.filter((att: any) => 
+      const currentVideoAttachments = attachmentsMeta.filter((att: any) => 
         att.type?.startsWith('video/') || att.url?.match(/\.(mp4|mov|webm|avi)$/i)
       );
       
-      if (videoAttachments.length > 0 && chat?.agent_id === 'noah_bennett') {
+      // Combine all videos (current first, then historical)
+      const allVideoAttachments = [...currentVideoAttachments, ...historicalVideoAttachments];
+      
+      // Add video context for Noah if ANY videos exist in this conversation
+      if (allVideoAttachments.length > 0 && chat?.agent_id === 'noah_bennett') {
+        const mostRecentVideo = allVideoAttachments[0];
         const videoContext = `
-🎬 VIDEO ATTACHMENT DETECTED:
-The user has attached ${videoAttachments.length} video file(s):
-${videoAttachments.map((v: any) => `- ${v.name || 'Video'}: ${v.url}`).join('\n')}
+🎬 VIDEOS AVAILABLE IN THIS CONVERSATION:
+${allVideoAttachments.map((v: any, i: number) => `${i + 1}. ${v.name || 'Video'}: ${v.url}${v.uploadedAt ? ` (uploaded earlier)` : ' (just attached)'}`).join('\n')}
+
+MOST RECENT VIDEO URL: ${mostRecentVideo.url}
 
 You can use these in your VIDEO_CONTENT block with:
-source_video: ${videoAttachments[0].url}
-OR simply: source_video: attached (the system will automatically use the first attached video)
+source_video: ${mostRecentVideo.url}
+OR simply: source_video: attached (the system will automatically use the most recent video)
 
-DO NOT ask the user to upload a video - they already did!
+When user says "use the video I uploaded" or "use that video", use the most recent video URL.
+DO NOT ask the user to upload a video - they already have ${allVideoAttachments.length} video(s) available!
 `;
         aiMessages.push({ role: "system", content: videoContext });
-        console.log(`[agent-chat] Added video attachment context for Noah: ${videoAttachments.length} video(s)`);
+        console.log(`[agent-chat] Added video context for Noah: ${currentVideoAttachments.length} current + ${historicalVideoAttachments.length} historical = ${allVideoAttachments.length} total video(s)`);
       }
 
       // Add chat history with vision support for attachments
@@ -518,10 +542,18 @@ DO NOT ask the user to upload a video - they already did!
           // Build multimodal content for messages with attachments
           const contentParts: any[] = [{ type: "text", text: m.content }];
           for (const att of meta.attachments) {
+            // Handle images with vision
             if (att.url && (att.type?.startsWith("image/") || att.url.match(/\.(png|jpg|jpeg|webp|gif)$/i))) {
               contentParts.push({
                 type: "image_url",
                 image_url: { url: att.url }
+              });
+            }
+            // Handle videos with text description (AI can't watch videos, but we tell it the URL)
+            if (att.type?.startsWith('video/') || att.url?.match(/\.(mp4|mov|webm|avi)$/i)) {
+              contentParts.push({
+                type: "text",
+                text: `[VIDEO ATTACHED: ${att.name || 'video'} - URL: ${att.url}]`
               });
             }
           }
