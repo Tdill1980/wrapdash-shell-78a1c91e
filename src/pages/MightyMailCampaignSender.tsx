@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Send, Eye, Loader2, CheckCircle, Sparkles, Calendar } from "lucide-react";
+import { Send, Eye, Loader2, CheckCircle, Sparkles, Calendar, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmailCalendar } from "@/components/email/EmailCalendar";
 import { 
   FRANCHISES, 
@@ -36,11 +37,23 @@ const PREBUILT_CONTENT: Record<string, EmailContent> = {
   'wotw_first': wotwFirst,
 };
 
-const HEADER_LOGO_URL = 'https://wzwqhfbmymrengjqikjl.supabase.co/storage/v1/object/public/media-library/email-images/wpw-ink-edge-header.png';
+// Dual logo URLs
+const WPW_LOGO_URL = 'https://wzwqhfbmymrengjqikjl.supabase.co/storage/v1/object/public/media-library/email-images/wpw-logo.png';
+const INK_EDGE_LOGO_URL = 'https://wzwqhfbmymrengjqikjl.supabase.co/storage/v1/object/public/media-library/email-images/ink-edge-logo.png';
+
+// Pre-send checklist items
+const PRE_SEND_CHECKLIST = [
+  { id: 'wpw_logo', label: 'WPW logo visible at top', required: true },
+  { id: 'ink_edge_logo', label: 'Ink & Edge logo visible (editorial)', required: true },
+  { id: 'hero_image', label: 'Real shop/vehicle photo before text', required: true },
+  { id: 'content_proves', label: 'Content visually proves what copy says', required: true },
+  { id: 'footer_branded', label: 'Footer clearly branded WPW', required: true },
+];
 
 function renderTemplate(template: string, content: EmailContent): string {
   return template
-    .replace(/\{\{header_logo_url\}\}/g, HEADER_LOGO_URL)
+    .replace(/\{\{wpw_logo_url\}\}/g, WPW_LOGO_URL)
+    .replace(/\{\{ink_edge_logo_url\}\}/g, INK_EDGE_LOGO_URL)
     .replace(/\{\{hero_image_url\}\}/g, content.heroImageUrl)
     .replace(/\{\{hero_image_alt\}\}/g, content.heroImageAlt)
     .replace(/\{\{headline\}\}/g, content.headline)
@@ -78,6 +91,10 @@ const MightyMailCampaignSender = () => {
   const [listId, setListId] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+
+  // Check if all required checklist items are checked
+  const allChecklistPassed = PRE_SEND_CHECKLIST.every(item => checklist[item.id] === true);
 
   // Get franchise details
   const franchise = FRANCHISES[selectedFranchise];
@@ -143,6 +160,7 @@ const MightyMailCampaignSender = () => {
       }
     }
     setSent(false);
+    setChecklist({}); // Reset checklist on franchise change
   };
 
   // Handle content change
@@ -156,11 +174,17 @@ const MightyMailCampaignSender = () => {
       setCampaignName(generateCampaignName(franchise, content.topic, new Date()));
     }
     setSent(false);
+    setChecklist({}); // Reset checklist on content change
   };
 
   const handleSendCampaign = async () => {
     if (!subject || !campaignName) {
       toast.error("Please fill in campaign name and subject line");
+      return;
+    }
+    
+    if (!allChecklistPassed) {
+      toast.error("Please complete the pre-send checklist before sending");
       return;
     }
 
@@ -344,11 +368,45 @@ const MightyMailCampaignSender = () => {
                     />
                   </div>
 
+                  {/* Pre-Send Checklist */}
+                  <div className="pt-4 border-t border-border/50 space-y-3">
+                    <div className="flex items-center gap-2">
+                      {allChecklistPassed ? (
+                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-[#FFD700]" />
+                      )}
+                      <Label className="font-medium">Pre-Send Checklist</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      All items must be checked before sending. No logos + no real photos = no send.
+                    </p>
+                    <div className="space-y-2">
+                      {PRE_SEND_CHECKLIST.map((item) => (
+                        <div key={item.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={item.id}
+                            checked={checklist[item.id] || false}
+                            onCheckedChange={(checked) => 
+                              setChecklist(prev => ({ ...prev, [item.id]: checked === true }))
+                            }
+                          />
+                          <label
+                            htmlFor={item.id}
+                            className="text-sm text-muted-foreground cursor-pointer"
+                          >
+                            {item.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="pt-4 border-t border-border/50">
                     <Button
                       onClick={handleSendCampaign}
-                      disabled={sending || sent}
-                      className="w-full bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#FF1493]/90 hover:to-[#FF69B4]/90"
+                      disabled={sending || sent || !allChecklistPassed}
+                      className="w-full bg-gradient-to-r from-[#FF1493] to-[#FF69B4] hover:from-[#FF1493]/90 hover:to-[#FF69B4]/90 disabled:opacity-50"
                     >
                       {sending ? (
                         <>
@@ -359,6 +417,11 @@ const MightyMailCampaignSender = () => {
                         <>
                           <CheckCircle className="mr-2 h-4 w-4" />
                           Campaign Sent
+                        </>
+                      ) : !allChecklistPassed ? (
+                        <>
+                          <AlertTriangle className="mr-2 h-4 w-4" />
+                          Complete Checklist to Send
                         </>
                       ) : (
                         <>

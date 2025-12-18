@@ -11,6 +11,20 @@
   - Yellow (#FFD700) = section anchors
   - Dark background (#0A0A0A) always
   
+  🔒 LOGO RULES (NON-NEGOTIABLE):
+  - WPW logo + Ink & Edge logo in header ALWAYS
+  - Footer repeats WPW branding
+  - Never start email without logos
+  - Never bury branding in footer only
+  
+  🔒 PHOTO RULES (NO SEND WITHOUT):
+  - Minimum 1 real photo required
+  - Max 3 images total
+  - Hero image = vehicle/shop/installer/partner moment
+  - No abstract graphics
+  - No text-only emails
+  - Real = shops, vehicles, installers, tools, behind-scenes, Test Lab, WrapTVWorld
+  
   Structure NEVER changes. Swap content only.
 -->
 
@@ -22,10 +36,22 @@
       <!-- CONTAINER -->
       <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%;">
 
-        <!-- HEADER -->
+        <!-- HEADER: WPW × INK & EDGE DUAL LOGO -->
         <tr>
           <td align="center" style="padding: 24px 20px 16px;">
-            <img src="{{header_logo_url}}" width="180" alt="WePrintWraps × Ink & Edge" style="display: block; max-width: 180px; height: auto;" />
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="padding-right: 12px;">
+                  <img src="{{wpw_logo_url}}" width="120" alt="WePrintWraps" style="display: block; max-width: 120px; height: auto;" />
+                </td>
+                <td align="center" style="padding: 0 8px; color: #FF1493; font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold;">
+                  ×
+                </td>
+                <td align="center" style="padding-left: 12px;">
+                  <img src="{{ink_edge_logo_url}}" width="100" alt="Ink & Edge" style="display: block; max-width: 100px; height: auto;" />
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
 
