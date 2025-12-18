@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Package,
   Calendar,
+  CalendarDays,
   Send,
   Store,
   ShoppingCart,
@@ -199,6 +200,18 @@ const navigationItems: NavigationItem[] = [
         <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">ContentBox</span>
         <span className="text-white"> AI</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "Content Calendar", 
+    path: "/content-calendar", 
+    icon: CalendarDays,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Content </span>
+        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Calendar</span>
       </span>
     )
   },
