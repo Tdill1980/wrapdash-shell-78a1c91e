@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import {
   Loader2,
   MoreVertical,
   Trash,
+  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DailyFlywheel } from "@/components/mightytask/DailyFlywheel";
 
 // Standard job tasks that auto-generate
 export const STANDARD_JOB_TASKS = [
@@ -189,10 +192,29 @@ export default function MightyTasks() {
               <span className="text-muted-foreground text-lg align-super">™</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Your orchestrator task list — track job progress with auto-generated checklists
+              Your orchestrator task list — AI-powered daily flywheel to hit sales goals
             </p>
           </div>
         </div>
+
+        {/* Tabs for Flywheel vs All Tasks */}
+        <Tabs defaultValue="flywheel" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+            <TabsTrigger value="flywheel" className="flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              Daily Flywheel
+            </TabsTrigger>
+            <TabsTrigger value="all" className="flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              All Tasks
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="flywheel" className="mt-4">
+            <DailyFlywheel />
+          </TabsContent>
+
+          <TabsContent value="all" className="mt-4 space-y-4">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4">
@@ -383,6 +405,8 @@ export default function MightyTasks() {
             ))}
           </div>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
