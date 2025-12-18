@@ -4319,6 +4319,7 @@ export type Database = {
           quote_id: string | null
           revenue_impact: string | null
           status: string | null
+          task_type: string | null
           title: string
           updated_at: string | null
         }
@@ -4341,6 +4342,7 @@ export type Database = {
           quote_id?: string | null
           revenue_impact?: string | null
           status?: string | null
+          task_type?: string | null
           title: string
           updated_at?: string | null
         }
@@ -4363,6 +4365,7 @@ export type Database = {
           quote_id?: string | null
           revenue_impact?: string | null
           status?: string | null
+          task_type?: string | null
           title?: string
           updated_at?: string | null
         }
