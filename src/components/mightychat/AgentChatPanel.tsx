@@ -166,7 +166,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
     return null;
   }, [messages, agentId]);
 
-  // Find the most recent video attachment from user messages
+  // Find the most recent video attachment or URL from user messages
   const uploadedVideoUrl = useMemo(() => {
     // First check current attachments
     const videoAtt = attachments.find(att => att.type?.startsWith("video/"));
@@ -181,6 +181,28 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
         if (videoAttachment) return videoAttachment.url;
       }
     }
+    
+    // Finally, scan message text for video URLs (pasted links)
+    const videoUrlRegex = /(https?:\/\/[^\s]+\.(mp4|mov|webm|avi|mkv|m4v|MP4|MOV|WEBM|AVI|MKV|M4V)(\?[^\s]*)?)/gi;
+    const storageUrlRegex = /(https?:\/\/[^\s]*(?:storage|media|video|supabase)[^\s]*)/gi;
+    
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const content = messages[i].content;
+      // Check for explicit video file extensions
+      const videoMatch = content.match(videoUrlRegex);
+      if (videoMatch) return videoMatch[0];
+      
+      // Check for storage URLs that might be videos
+      const storageMatch = content.match(storageUrlRegex);
+      if (storageMatch) {
+        const url = storageMatch[0];
+        // Only return if it looks like a media file
+        if (url.match(/\.(mp4|mov|webm|avi|mkv|m4v)/i)) {
+          return url;
+        }
+      }
+    }
+    
     return null;
   }, [messages, attachments]);
 
