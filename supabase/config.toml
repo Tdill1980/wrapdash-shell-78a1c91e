@@ -221,3 +221,6 @@ verify_jwt = false
 
 [functions.create-quote-from-chat]
 verify_jwt = false
+
+[functions.luigi-ordering-concierge]
+verify_jwt = false
