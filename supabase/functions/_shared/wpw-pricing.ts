@@ -1,37 +1,37 @@
-// WPW Official Product Pricing - LUIGI'S PRICING BIBLE
-// Last Updated: December 2024
-// THESE ARE THE ONLY PRICES LUIGI SHOULD EVER USE
+// WPW Official Product Pricing
+// Last Updated: December 2024 - 3M PRICE DROP!
+// THESE ARE THE ONLY PRICES TO USE
 
 export const WPW_PRICING = {
   // Per Square Foot Products
   perSqft: {
     averyPrintedWrap: {
-      name: "Avery MPI 1105 EGRS with DOZ Lamination",
+      name: "Avery MPI 1105 EGRS with DOL 1460Z Lamination",
       pricePerSqft: 5.27,
       description: "Excellent quality, great value, 5-7 year durability",
       wooProductId: 79
     },
     threeMWrap: {
       name: "3M IJ180Cv3 with 8518 Lamination",
-      pricePerSqft: 6.32,
-      description: "Premium option, easiest install, 7-10 year durability",
+      pricePerSqft: 5.27, // PRICE DROP! Was $6.32, now matches Avery at $5.27
+      description: "Premium option, easiest install, 7-10 year durability - NOW SAME PRICE AS AVERY!",
       wooProductId: 72
     },
     averyContourCut: {
       name: "Avery Cut Contour Vinyl",
-      pricePerSqft: 5.92,
+      pricePerSqft: 6.32,
       description: "Weeded and masked, ready to install",
       wooProductId: 108
     },
     threeMContourCut: {
       name: "3M Cut Contour Vinyl",
-      pricePerSqft: 6.22,
+      pricePerSqft: 6.92,
       description: "Weeded and masked, ready to install",
       wooProductId: 19420
     },
     perforatedWindow: {
       name: "Window Perf 50/50 Unlaminated",
-      pricePerSqft: 5.32,
+      pricePerSqft: 5.95,
       description: "See-through window vinyl",
       wooProductId: 80
     }
@@ -72,17 +72,18 @@ export const WPW_PRICING = {
   }
 };
 
-// Build pricing string for AI context - LUIGI'S PRICING BIBLE
+// Build pricing string for AI context
 export function getPricingContext(): string {
-  return `WEPRINTWRAPS WHOLESALE PRICING - LUIGI'S REFERENCE
-THESE ARE THE ONLY PRICES LUIGI SHOULD EVER USE
+  return `WEPRINTWRAPS WHOLESALE PRICING (Updated December 2024)
+
+🔥 PRICE DROP: Both Avery AND 3M printed wraps are now $5.27/sqft!
 
 WRAP MATERIALS:
-• Avery MPI 1105 EGRS with DOZ Lamination: $5.27/sqft
-• 3M IJ180Cv3 with 8518 Lamination: $6.32/sqft
-• Avery Cut Contour Vinyl: $5.92/sqft
-• 3M Cut Contour Vinyl: $6.22/sqft
-• Window Perf 50/50 Unlaminated: $5.32/sqft
+• Avery MPI 1105 with DOL 1460Z Lamination: $5.27/sqft
+• 3M IJ180Cv3 with 8518 Lamination: $5.27/sqft ← PRICE DROP! (was $6.32)
+• Avery Cut Contour Vinyl: $6.32/sqft
+• 3M Cut Contour Vinyl: $6.92/sqft
+• Window Perf 50/50: $5.95/sqft
 
 SPECIALTY PRODUCTS:
 • Fade Wraps (Sides): Starting at $600
@@ -90,13 +91,16 @@ SPECIALTY PRODUCTS:
 • Design Setup/File Output: $50
 • Hourly Design Work: $150/hour
 
+PRICING CALCULATION:
+• Material Cost = Vehicle SQFT × $5.27 (for Avery or 3M printed wrap)
+• Example: A Toyota Prius (175 sqft) = 175 × $5.27 = $922 for material
+
 POLICIES:
 • FREE shipping on all orders over $750
 • Production time: 1-2 business days
 • Shipping time: 1-3 days anywhere in continental US
-• All wraps include lamination (customer chooses gloss, matte, or satin)
+• All wraps include lamination (gloss, matte, or satin)
 • All wraps come pre-paneled and ready to install
-• Cut vinyl comes weeded and masked
 
 IMPORTANT URLS:
 • Main catalog: https://weprintwraps.com/our-products/

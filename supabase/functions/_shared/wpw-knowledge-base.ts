@@ -21,18 +21,20 @@ export const WPW_PRICING: KnowledgeEntry = {
   keywords: ["price", "cost", "how much", "quote", "pricing"],
   priority: 100,
   content: `
-WPW OFFICIAL PRICING (USE THESE EXACT PRICES):
+WPW OFFICIAL PRICING (Updated December 2024):
+
+🔥 PRICE DROP: Both Avery AND 3M printed wraps are now $5.27/sqft!
 
 PRINTED WRAP FILMS:
-- Avery MPI 1105 EGRS with DOL 1460z Lamination: $5.27/sqft
-- 3M IJ180Cv3 with 8518 Lamination: $6.32/sqft
+- Avery MPI 1105 with DOL 1460Z Lamination: $5.27/sqft
+- 3M IJ180Cv3 with 8518 Lamination: $5.27/sqft ← PRICE DROP! (was $6.32)
 
 CUT CONTOUR VINYL:
-- Avery Cut Contour Vinyl: $5.92/sqft
-- 3M Cut Contour Vinyl: $6.22/sqft
+- Avery Cut Contour Vinyl: $6.32/sqft
+- 3M Cut Contour Vinyl: $6.92/sqft
 
 SPECIALTY:
-- Window Perf 50/50: $5.32/sqft
+- Window Perf 50/50: $5.95/sqft
 - Fade Wraps (Wrap By The Yard): $600 flat
 
 DESIGN SERVICES:
@@ -40,10 +42,14 @@ DESIGN SERVICES:
 - Design Setup Fee: $50
 - Hourly Design Rate: $150/hour
 
+PRICING CALCULATION:
+- Material Cost = Vehicle SQFT × $5.27/sqft
+- Example: Toyota Prius (~175 sqft) = $922 for material
+- Example: Ford F-150 (~250 sqft) = $1,318 for material
+
 SHIPPING:
 - FREE shipping on orders over $750
 - Standard shipping: 1-3 business days
-- Rush available upon request
 
 All prices include lamination. No hidden fees.
 `,
@@ -198,24 +204,31 @@ export const WPW_QUOTE_PROCESS: KnowledgeEntry = {
   content: `
 QUOTE PROCESS RULES:
 
-EMAIL REQUIRED:
-- All formal quotes require customer email
-- No pricing in DMs or comments
-- No pricing without email capture
+PRICING APPROACH (Updated Dec 2024):
+1. When customer provides vehicle info, calculate: SQFT × $5.27/sqft
+2. Give specific material cost estimate based on vehicle size
+3. ALWAYS mention: "Both Avery and 3M are now $5.27/sqft - 3M just had a price drop!"
 
-QUOTE DELIVERY:
-- All quotes sent from hello@weprintwraps.com
-- Alex Morgan handles all formal quotes
-- Jordan Lee gives ballpark only, then routes to Alex
+VEHICLE-BASED PRICING EXAMPLES:
+- Small car (Prius, Civic): ~175 sqft = ~$922
+- Midsize sedan (Camry, Accord): ~200 sqft = ~$1,054
+- Full-size truck (F-150, Silverado): ~250 sqft = ~$1,318
+- Large SUV (Tahoe, Expedition): ~275 sqft = ~$1,449
+- Sprinter/Transit Van: ~350 sqft = ~$1,845
+
+FORMAL QUOTE DELIVERY:
+- Collect email for formal written quotes
+- Quotes sent from hello@weprintwraps.com
+- Alex Morgan handles formal quote delivery
 
 ROUTING:
-- Website chat pricing request → collect email → route to Alex
-- DM pricing request → collect email → route to Jordan/Alex
+- Website chat → Jordan calculates estimate → collect email → route to Alex for formal quote
 - Email pricing request → Alex handles directly
 
-BALLPARK PRICING (Jordan only):
-- "Full wraps typically run $1,000-$2,000 depending on vehicle size"
-- Never give exact per-sqft pricing without email
+WHAT JORDAN SHOULD SAY:
+- "A [vehicle] is about [X] square feet. At $5.27/sqft, that's around $[total] for material."
+- "Both Avery and 3M printed wrap are now $5.27/sqft - 3M just dropped their price!"
+- "Want me to send you a formal quote? What's your email?"
 `,
 };
 

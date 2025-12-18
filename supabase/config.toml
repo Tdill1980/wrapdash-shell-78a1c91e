@@ -218,3 +218,6 @@ verify_jwt = false
 
 [functions.revenue-health-monitor]
 verify_jwt = false
+
+[functions.create-quote-from-chat]
+verify_jwt = false
