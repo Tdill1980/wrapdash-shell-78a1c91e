@@ -117,28 +117,46 @@ serve(async (req) => {
     }
 
     // Fetch last year same period for comparison
+    // NOTE: This is best-effort only. If Woo/WordPress returns a transient 500/HTML error page,
+    // we still return current-month revenue so the dashboard doesn't blank.
     const lastYearUrl = `${wooUrl}/wp-json/wc/v3/orders?after=${lastYearStart.toISOString()}&before=${lastYearEnd.toISOString()}&per_page=100&status=completed,processing&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
-    
+
     let allLastYearOrders: any[] = [];
+    let lastYearFetchOk = true;
+    let lastYearFetchError: { status?: number; message: string } | null = null;
+
     page = 1;
     hasMore = true;
 
-    while (hasMore) {
-      const response = await fetch(`${lastYearUrl}&page=${page}`);
-      if (!response.ok) {
-        const body = await response.text().catch(() => "");
-        console.error("WooCommerce API error (last year):", response.status, body);
-        throw new Error(`WooCommerce API error (last year): ${response.status}`);
-      }
+    try {
+      while (hasMore) {
+        const response = await fetch(`${lastYearUrl}&page=${page}`);
+        if (!response.ok) {
+          const body = await response.text().catch(() => "");
+          const looksLikeHtml = body.trim().startsWith("<!DOCTYPE") || body.includes("<html");
+          const msg = looksLikeHtml
+            ? "WooCommerce returned an HTML error page (likely a transient WordPress/edge error)."
+            : body.slice(0, 500);
 
-      const orders = await response.json();
-      if (orders.length === 0) {
-        hasMore = false;
-      } else {
-        allLastYearOrders = [...allLastYearOrders, ...orders];
-        page++;
-        if (orders.length < 100) hasMore = false;
+          console.error("WooCommerce API error (last year):", response.status, msg);
+          lastYearFetchOk = false;
+          lastYearFetchError = { status: response.status, message: msg || `HTTP ${response.status}` };
+          break;
+        }
+
+        const orders = await response.json();
+        if (orders.length === 0) {
+          hasMore = false;
+        } else {
+          allLastYearOrders = [...allLastYearOrders, ...orders];
+          page++;
+          if (orders.length < 100) hasMore = false;
+        }
       }
+    } catch (e) {
+      console.error("WooCommerce last-year fetch failed:", e);
+      lastYearFetchOk = false;
+      lastYearFetchError = { message: e instanceof Error ? e.message : "Unknown error" };
     }
 
     // Calculate current month totals
@@ -159,17 +177,18 @@ serve(async (req) => {
     }, 0);
 
 
-    // Last year same period totals
-    const lastYearRevenue = allLastYearOrders.reduce((sum, order) => {
-      return sum + parseFloat(order.total || 0);
-    }, 0);
-    const lastYearOrderCount = allLastYearOrders.length;
+    // Last year same period totals (best-effort)
+    const lastYearRevenue = lastYearFetchOk
+      ? allLastYearOrders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0)
+      : null;
+    const lastYearOrderCount = lastYearFetchOk ? allLastYearOrders.length : null;
 
-    // Calculate year-over-year comparison
-    const yoyDifference = currentRevenue - lastYearRevenue;
-    const yoyPercentChange = lastYearRevenue > 0 
-      ? ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100 
-      : 0;
+    // Calculate year-over-year comparison (nullable if last-year fetch failed)
+    const yoyDifference = lastYearRevenue != null ? currentRevenue - lastYearRevenue : null;
+    const yoyPercentChange =
+      lastYearRevenue != null && lastYearRevenue > 0
+        ? ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100
+        : null;
 
     // Calculate goal metrics
     const MONTHLY_TARGET = 400000;
@@ -207,7 +226,7 @@ serve(async (req) => {
         "Post Instagram stories about current promotions",
         "Reach out to past customers who haven't ordered in 90+ days"
       );
-      if (yoyDifference < 0) {
+      if (typeof yoyDifference === "number" && yoyDifference < 0) {
         suggestions.push(
           `You're $${Math.abs(Math.round(yoyDifference)).toLocaleString()} behind last year - consider a flash sale`,
           "Contact fleet accounts for bulk order opportunities"
