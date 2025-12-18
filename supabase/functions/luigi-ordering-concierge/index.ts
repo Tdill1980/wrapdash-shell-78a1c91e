@@ -440,6 +440,9 @@ Say: "For specialty films like chrome, color-shift, or textured materials, check
 
     return new Response(JSON.stringify({
       success: true,
+      // Back-compat for existing widgets
+      reply: assistantMessage,
+      // Canonical field
       message: assistantMessage,
       agent: 'luigi',
       conversation_id: conversationId,
@@ -457,6 +460,9 @@ Say: "For specialty films like chrome, color-shift, or textured materials, check
     console.error('[Luigi] Error:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error',
+      // Back-compat for existing widgets
+      reply: "I apologize, I'm having a technical issue. Please email hello@weprintwraps.com and we'll help you right away!",
+      // Canonical field
       message: "I apologize, I'm having a technical issue. Please email hello@weprintwraps.com and we'll help you right away!"
     }), {
       status: 500,

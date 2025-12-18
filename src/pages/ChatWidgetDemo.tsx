@@ -58,7 +58,8 @@ export default function ChatWidgetDemo() {
 
       const data = await response.json();
       setIsTyping(false);
-      setMessages((m) => [...m, { role: "agent", text: data.reply || "Sorry, I couldn't process that. Please try again." }]);
+      const replyText = data?.reply || data?.message;
+      setMessages((m) => [...m, { role: "agent", text: replyText || "Sorry, I couldn't process that. Please try again." }]);
     } catch (error) {
       console.error("Chat error:", error);
       setIsTyping(false);

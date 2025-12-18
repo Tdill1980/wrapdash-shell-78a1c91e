@@ -351,8 +351,8 @@
       const data = await response.json();
       hideTyping();
 
-      if (data.reply) {
-        addMessage(data.reply, false);
+      if (data.reply || data.message) {
+        addMessage(data.reply || data.message, false);
       } else if (data.error) {
         addMessage('Sorry, something went wrong. Please try again!', false);
       }
