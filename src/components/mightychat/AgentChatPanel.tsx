@@ -79,22 +79,35 @@ function parseCreateContent(message: string): ContentFactoryPreset | null {
       };
     }
     
-    // Parse overlays block
-    const overlaysMatch = content.match(/overlays:\s*\n((?:\s+-.*\n?)+)/i);
+    // Parse overlays block - handle multi-line YAML format
+    // AI outputs overlays like:
+    // overlays:
+    //   - text: 3M Price Drop!
+    //     start: 0
+    //     duration: 3
+    const overlaysMatch = content.match(/overlays:\s*\n([\s\S]*?)(?=\n[a-z_]+:|===|$)/i);
     let overlays: ContentFactoryPreset['overlays'] | undefined;
     if (overlaysMatch) {
-      const overlayLines = overlaysMatch[1].match(/-\s*text:\s*([^\n]+)\s*start:\s*(\d+)\s*duration:\s*(\d+)/gi);
-      if (overlayLines) {
-        overlays = overlayLines.map(line => {
-          const textMatch = line.match(/text:\s*(.+?)(?:\s+start:|$)/i);
-          const startMatch = line.match(/start:\s*(\d+)/i);
-          const durationMatch = line.match(/duration:\s*(\d+)/i);
+      const overlaysBlock = overlaysMatch[1];
+      // Split by "- text:" to get individual overlay blocks
+      const overlayParts = overlaysBlock.split(/\n\s*-\s*text:\s*/i).filter(Boolean);
+      
+      if (overlayParts.length > 0) {
+        overlays = overlayParts.map(block => {
+          // The text value is the first line (before any newline or field)
+          const lines = block.split('\n');
+          const textValue = lines[0].trim();
+          
+          // Look for start and duration in the entire block
+          const startMatch = block.match(/start:\s*(\d+)/i);
+          const durationMatch = block.match(/duration:\s*(\d+)/i);
+          
           return {
-            text: textMatch ? textMatch[1].trim() : '',
+            text: textValue,
             start: startMatch ? parseInt(startMatch[1], 10) : 0,
             duration: durationMatch ? parseInt(durationMatch[1], 10) : 3,
           };
-        });
+        }).filter(o => o.text); // Only keep overlays with actual text
       }
     }
     
