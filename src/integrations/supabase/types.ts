@@ -4848,6 +4848,7 @@ export type Database = {
         Row: {
           assigned_agent: string | null
           assigned_to: string | null
+          channel: string | null
           completed_at: string | null
           contact_id: string | null
           conversation_id: string | null
@@ -4871,6 +4872,7 @@ export type Database = {
         Insert: {
           assigned_agent?: string | null
           assigned_to?: string | null
+          channel?: string | null
           completed_at?: string | null
           contact_id?: string | null
           conversation_id?: string | null
@@ -4894,6 +4896,7 @@ export type Database = {
         Update: {
           assigned_agent?: string | null
           assigned_to?: string | null
+          channel?: string | null
           completed_at?: string | null
           contact_id?: string | null
           conversation_id?: string | null
