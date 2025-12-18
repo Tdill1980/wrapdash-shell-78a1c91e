@@ -38,6 +38,14 @@ interface ScheduledContent {
   caption: string | null;
 }
 
+interface Task {
+  id: string;
+  title: string;
+  status: string;
+  due_date: string | null;
+  content_calendar_id: string | null;
+}
+
 // Channel/Brand definitions - 4 unified buttons in order
 const CHANNELS = [
   { id: 'all', name: 'All Channels', color: 'bg-muted', borderColor: 'border-muted-foreground' },
@@ -103,6 +111,36 @@ export default function ContentCalendar30Day() {
       return data as ScheduledContent[];
     }
   });
+
+  // Fetch tasks linked to calendar items
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['calendar-tasks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, status, due_date, content_calendar_id')
+        .not('content_calendar_id', 'is', null);
+
+      if (error) throw error;
+      return data as Task[];
+    }
+  });
+
+  // Map tasks by content_calendar_id for quick lookup
+  const tasksByCalendarId = useMemo(() => {
+    return tasks.reduce((acc, task) => {
+      if (task.content_calendar_id) {
+        acc[task.content_calendar_id] = task;
+      }
+      return acc;
+    }, {} as Record<string, Task>);
+  }, [tasks]);
+
+  // Check if content is created (task completed)
+  const isContentCreated = (calendarItemId: string): boolean => {
+    const task = tasksByCalendarId[calendarItemId];
+    return task?.status === 'completed';
+  };
 
   // Generate calendar days for the month (including padding days)
   const calendarDays = useMemo(() => {
@@ -344,21 +382,34 @@ export default function ContentCalendar30Day() {
                       {dayContent.slice(0, 3).map((item) => {
                         const channelStyle = getChannelStyle(item.brand);
                         const badgeConfig = getContentTypeBadge(item.content_type, item.platform);
+                        const linkedTask = tasksByCalendarId[item.id];
+                        const contentCreated = isContentCreated(item.id);
+                        const hasLinkedTask = !!linkedTask;
                         
                         return (
                           <div
                             key={item.id}
                             className={cn(
-                              'text-[10px] p-1 rounded cursor-pointer hover:opacity-80 transition-opacity',
-                              channelStyle.border,
-                              channelStyle.bg
+                              'text-[10px] p-1 rounded cursor-pointer hover:opacity-80 transition-opacity relative',
+                              // Red styling if task exists but content not created
+                              hasLinkedTask && !contentCreated 
+                                ? 'border-l-4 border-l-red-500 bg-red-500/10' 
+                                : [channelStyle.border, channelStyle.bg]
                             )}
-                            title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}`}
+                            title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
                           >
                             <div className="flex items-center gap-1 mb-0.5">
                               <span className="font-medium truncate text-[9px]">
                                 {getChannelLabel(item.brand)}
                               </span>
+                              {/* Red dot indicator for uncreated content */}
+                              {hasLinkedTask && !contentCreated && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                              )}
+                              {/* Green check for created content */}
+                              {hasLinkedTask && contentCreated && (
+                                <span className="text-green-500 text-[8px]">✓</span>
+                              )}
                             </div>
                             <span className={cn(
                               'inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[8px] font-medium',
@@ -390,6 +441,22 @@ export default function ContentCalendar30Day() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-6">
+              {/* Creation Status */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Creation Status</p>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <span className="w-3 h-3 rounded bg-red-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    Not Created
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <span className="text-green-500">✓</span>
+                    Created
+                  </div>
+                </div>
+              </div>
+
               {/* Channels */}
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Channels</p>
