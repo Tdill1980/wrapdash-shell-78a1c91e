@@ -28,6 +28,7 @@ import MightyMailAdmin from "./pages/MightyMailAdmin";
 import MightyMailQuotes from "./pages/MightyMailQuotes";
 import MightyMailPerformance from "./pages/MightyMailPerformance";
 import MightyMailAI from "./pages/MightyMailAI";
+import MightyMailWinback from "./pages/MightyMailWinback";
 import AIPipeline from "./pages/AIPipeline";
 import ContentBox from "./pages/ContentBox";
 import ContentSchedule from "./pages/ContentSchedule";
@@ -115,6 +116,7 @@ const App = () => (
             <Route path="/admin/mightymail/quotes" element={<MightyMailQuotes />} />
             <Route path="/admin/mightymail/performance" element={<MightyMailPerformance />} />
             <Route path="/mightymail-ai" element={<MightyMailAI />} />
+            <Route path="/mightymail/winback" element={<MightyMailWinback />} />
             <Route path="/ai-pipeline" element={<AIPipeline />} />
             <Route path="/mightychat" element={<MightyChat />} />
             <Route path="/contentbox" element={<ContentBox />} />
