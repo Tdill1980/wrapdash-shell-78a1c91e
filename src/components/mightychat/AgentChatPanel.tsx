@@ -3,20 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Send, X, CheckCircle2, Clock, Loader2, Image, Film, FileText, History } from "lucide-react";
+import { Send, X, CheckCircle2, Clock, Loader2, Image, Film, FileText, History, Wand2, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAgentChat, type AgentChatMessage } from "@/hooks/useAgentChat";
 import { DelegateTaskModal } from "./DelegateTaskModal";
 import { AVAILABLE_AGENTS } from "./AgentSelector";
 import { AgentChatFileUpload, type Attachment } from "./AgentChatFileUpload";
-import { ReelRenderPanel, parseVideoContent } from "./ReelRenderPanel";
 import { RecentAgentChats } from "./RecentAgentChats";
+import { useNavigate } from "react-router-dom";
 
 interface AgentChatPanelProps {
   open: boolean;
@@ -24,6 +25,93 @@ interface AgentChatPanelProps {
   agentId: string | null;
   context?: Record<string, unknown>;
   initialChatId?: string | null;
+}
+
+// Content Factory preset structure from CREATE_CONTENT blocks
+interface ContentFactoryPreset {
+  action: string;
+  content_type: string;
+  platform: string;
+  asset_source: string;
+  asset_query?: {
+    tags?: string[];
+    type?: string;
+    limit?: number;
+  };
+  hook: string;
+  cta: string;
+  overlays?: Array<{ text: string; start: number; duration: number }>;
+  caption: string;
+  hashtags: string;
+}
+
+// Parse CREATE_CONTENT block from agent message
+function parseCreateContent(message: string): ContentFactoryPreset | null {
+  if (!message.includes("===CREATE_CONTENT===")) return null;
+  
+  try {
+    const blockMatch = message.match(/===CREATE_CONTENT===([\s\S]*?)===END_CREATE_CONTENT===/);
+    if (!blockMatch) return null;
+    
+    const content = blockMatch[1];
+    
+    // Parse key-value pairs from the block
+    const getField = (name: string): string => {
+      const match = content.match(new RegExp(`${name}:\\s*(.+?)(?:\\n|$)`, 'i'));
+      return match ? match[1].trim() : '';
+    };
+    
+    // Parse asset_query block
+    const assetQueryMatch = content.match(/asset_query:\s*\n((?:\s+\w+:.*\n?)+)/i);
+    let asset_query: ContentFactoryPreset['asset_query'] | undefined;
+    if (assetQueryMatch) {
+      const queryBlock = assetQueryMatch[1];
+      const tagsMatch = queryBlock.match(/tags:\s*\[([^\]]+)\]/i);
+      const typeMatch = queryBlock.match(/type:\s*(\w+)/i);
+      const limitMatch = queryBlock.match(/limit:\s*(\d+)/i);
+      
+      asset_query = {
+        tags: tagsMatch ? tagsMatch[1].split(',').map(t => t.trim()) : undefined,
+        type: typeMatch ? typeMatch[1] : undefined,
+        limit: limitMatch ? parseInt(limitMatch[1], 10) : undefined,
+      };
+    }
+    
+    // Parse overlays block
+    const overlaysMatch = content.match(/overlays:\s*\n((?:\s+-.*\n?)+)/i);
+    let overlays: ContentFactoryPreset['overlays'] | undefined;
+    if (overlaysMatch) {
+      const overlayLines = overlaysMatch[1].match(/-\s*text:\s*([^\n]+)\s*start:\s*(\d+)\s*duration:\s*(\d+)/gi);
+      if (overlayLines) {
+        overlays = overlayLines.map(line => {
+          const textMatch = line.match(/text:\s*(.+?)(?:\s+start:|$)/i);
+          const startMatch = line.match(/start:\s*(\d+)/i);
+          const durationMatch = line.match(/duration:\s*(\d+)/i);
+          return {
+            text: textMatch ? textMatch[1].trim() : '',
+            start: startMatch ? parseInt(startMatch[1], 10) : 0,
+            duration: durationMatch ? parseInt(durationMatch[1], 10) : 3,
+          };
+        });
+      }
+    }
+    
+    return {
+      action: getField('action') || 'create_content',
+      content_type: getField('content_type') || 'reel',
+      platform: getField('platform') || 'instagram',
+      asset_source: getField('asset_source') || 'contentbox',
+      asset_query,
+      hook: getField('hook'),
+      cta: getField('cta'),
+      overlays,
+      caption: getField('caption'),
+      hashtags: getField('hashtags'),
+    };
+  } catch (e) {
+    console.error('[parseCreateContent] Failed to parse:', e);
+    return null;
+  }
 }
 
 export function AgentChatPanel({ open, onOpenChange, agentId, context, initialChatId }: AgentChatPanelProps) {
@@ -157,65 +245,26 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
 
   const agentConfig = AVAILABLE_AGENTS.find((a) => a.id === agentId);
 
-  // Check if any agent produced video content - scan ALL messages
-  // VIDEO_CONTENT blocks are unique to Noah, so if found, show render panel
-  const videoContent = useMemo(() => {
-    console.log("[AgentChatPanel] Scanning", messages.length, "messages for VIDEO_CONTENT");
+  // Check if any agent produced CREATE_CONTENT block - for Content Factory / MightyEdit
+  const contentFactoryPreset = useMemo(() => {
+    console.log("[AgentChatPanel] Scanning", messages.length, "messages for CREATE_CONTENT");
     
-    // Scan all agent messages for VIDEO_CONTENT - no agent ID check needed
+    // Scan all agent messages for CREATE_CONTENT - new Content Factory format
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       if (msg.sender === "agent") {
-        const parsed = parseVideoContent(msg.content);
+        const parsed = parseCreateContent(msg.content);
         if (parsed) {
-          console.log("[AgentChatPanel] Found VIDEO_CONTENT in message:", msg.id, parsed);
+          console.log("[AgentChatPanel] Found CREATE_CONTENT in message:", msg.id, parsed);
           return parsed;
         }
       }
     }
-    console.log("[AgentChatPanel] No VIDEO_CONTENT found in messages");
+    console.log("[AgentChatPanel] No CREATE_CONTENT found in messages");
     return null;
   }, [messages]);
 
-  // Find the most recent video attachment or URL from user messages
-  const uploadedVideoUrl = useMemo(() => {
-    // First check current attachments
-    const videoAtt = attachments.find(att => att.type?.startsWith("video/"));
-    if (videoAtt) return videoAtt.url;
-    
-    // Then check message history for video attachments
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      if (msg.sender === "user" && msg.metadata?.attachments) {
-        const atts = msg.metadata.attachments as Attachment[];
-        const videoAttachment = atts.find(att => att.type?.startsWith("video/"));
-        if (videoAttachment) return videoAttachment.url;
-      }
-    }
-    
-    // Finally, scan message text for video URLs (pasted links)
-    const videoUrlRegex = /(https?:\/\/[^\s]+\.(mp4|mov|webm|avi|mkv|m4v|MP4|MOV|WEBM|AVI|MKV|M4V)(\?[^\s]*)?)/gi;
-    const storageUrlRegex = /(https?:\/\/[^\s]*(?:storage|media|video|supabase)[^\s]*)/gi;
-    
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const content = messages[i].content;
-      // Check for explicit video file extensions
-      const videoMatch = content.match(videoUrlRegex);
-      if (videoMatch) return videoMatch[0];
-      
-      // Check for storage URLs that might be videos
-      const storageMatch = content.match(storageUrlRegex);
-      if (storageMatch) {
-        const url = storageMatch[0];
-        // Only return if it looks like a media file
-        if (url.match(/\.(mp4|mov|webm|avi|mkv|m4v)/i)) {
-          return url;
-        }
-      }
-    }
-    
-    return null;
-  }, [messages, attachments]);
+  const navigate = useNavigate();
 
   const getStatusBadge = () => {
     if (confirmed) {
@@ -344,15 +393,50 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                   </div>
                 )}
                 
-                {/* Video Render Panel - shown when Noah Bennett produces video content */}
-                {videoContent && (
-                  <div className="pt-4">
-                    <ReelRenderPanel 
-                      videoContent={videoContent}
-                      organizationId={context?.organization_id as string}
-                      initialVideoUrl={uploadedVideoUrl || undefined}
-                    />
-                  </div>
+                {/* Content Factory Panel - shown when agent produces CREATE_CONTENT */}
+                {contentFactoryPreset && (
+                  <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Wand2 className="h-5 w-5 text-primary" />
+                          <span className="font-semibold text-sm">Content Factory</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {contentFactoryPreset.content_type} • {contentFactoryPreset.platform}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-muted-foreground text-xs uppercase w-12 shrink-0">Hook</span>
+                          <span className="font-medium">{contentFactoryPreset.hook}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-muted-foreground text-xs uppercase w-12 shrink-0">CTA</span>
+                          <span>{contentFactoryPreset.cta}</span>
+                        </div>
+                        {contentFactoryPreset.overlays && contentFactoryPreset.overlays.length > 0 && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-muted-foreground text-xs uppercase w-12 shrink-0">Overlays</span>
+                            <span className="text-xs">{contentFactoryPreset.overlays.length} text overlays</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <Button 
+                        className="w-full"
+                        onClick={() => {
+                          // Store preset in sessionStorage for MightyEdit to pick up
+                          sessionStorage.setItem('mightyedit_preset', JSON.stringify(contentFactoryPreset));
+                          navigate('/mighty-edit');
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Open in MightyEdit
+                      </Button>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             )}
