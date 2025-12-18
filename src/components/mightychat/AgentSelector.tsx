@@ -101,6 +101,14 @@ export const AVAILABLE_AGENTS: AgentOption[] = [
     icon: BookOpen,
     color: "text-indigo-500 bg-indigo-500/10 hover:bg-indigo-500/20",
   },
+  {
+    id: "wraptvworld_producer",
+    name: "WrapTVWorld Producer",
+    role: "Video Production",
+    inbox: "WrapTVWorld • YouTube Episodes",
+    icon: Camera,
+    color: "text-teal-500 bg-teal-500/10 hover:bg-teal-500/20",
+  },
 ];
 
 interface AgentSelectorProps {

@@ -3435,6 +3435,138 @@ export type Database = {
           },
         ]
       }
+      mighty_calendar_items: {
+        Row: {
+          assigned_agent: string | null
+          calendar_id: string | null
+          checklist: Json | null
+          created_at: string | null
+          description: string | null
+          franchise_slug: string | null
+          id: string
+          is_legacy_import: boolean | null
+          legacy_content_id: string | null
+          organization_id: string | null
+          requires_source: boolean | null
+          scheduled_date: string
+          source_item_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_agent?: string | null
+          calendar_id?: string | null
+          checklist?: Json | null
+          created_at?: string | null
+          description?: string | null
+          franchise_slug?: string | null
+          id?: string
+          is_legacy_import?: boolean | null
+          legacy_content_id?: string | null
+          organization_id?: string | null
+          requires_source?: boolean | null
+          scheduled_date: string
+          source_item_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_agent?: string | null
+          calendar_id?: string | null
+          checklist?: Json | null
+          created_at?: string | null
+          description?: string | null
+          franchise_slug?: string | null
+          id?: string
+          is_legacy_import?: boolean | null
+          legacy_content_id?: string | null
+          organization_id?: string | null
+          requires_source?: boolean | null
+          scheduled_date?: string
+          source_item_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mighty_calendar_items_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "mighty_calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mighty_calendar_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mighty_calendar_items_source_item_id_fkey"
+            columns: ["source_item_id"]
+            isOneToOne: false
+            referencedRelation: "mighty_calendar_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mighty_calendars: {
+        Row: {
+          allowed_agents: string[]
+          created_at: string | null
+          description: string | null
+          gradient_from: string | null
+          gradient_to: string | null
+          id: string
+          is_source: boolean | null
+          name: string
+          organization_id: string | null
+          owner_role: string
+          role: string
+          slug: string
+        }
+        Insert: {
+          allowed_agents?: string[]
+          created_at?: string | null
+          description?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          id?: string
+          is_source?: boolean | null
+          name: string
+          organization_id?: string | null
+          owner_role: string
+          role: string
+          slug: string
+        }
+        Update: {
+          allowed_agents?: string[]
+          created_at?: string | null
+          description?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          id?: string
+          is_source?: boolean | null
+          name?: string
+          organization_id?: string | null
+          owner_role?: string
+          role?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mighty_calendars_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       music_library: {
         Row: {
           bpm: number | null
