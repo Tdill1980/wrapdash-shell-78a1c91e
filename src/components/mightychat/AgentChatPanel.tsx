@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +15,7 @@ import { useAgentChat, type AgentChatMessage } from "@/hooks/useAgentChat";
 import { DelegateTaskModal } from "./DelegateTaskModal";
 import { AVAILABLE_AGENTS } from "./AgentSelector";
 import { AgentChatFileUpload, type Attachment } from "./AgentChatFileUpload";
+import { ReelRenderPanel, parseVideoContent } from "./ReelRenderPanel";
 
 interface AgentChatPanelProps {
   open: boolean;
@@ -89,6 +90,21 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
 
   const agentConfig = AVAILABLE_AGENTS.find((a) => a.id === agentId);
 
+  // Check if Noah Bennett produced video content in the conversation
+  const videoContent = useMemo(() => {
+    if (agentId !== "noah_bennett") return null;
+    
+    // Look for VIDEO_CONTENT block in agent messages
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.sender === "agent") {
+        const parsed = parseVideoContent(msg.content);
+        if (parsed) return parsed;
+      }
+    }
+    return null;
+  }, [messages, agentId]);
+
   const getStatusBadge = () => {
     if (confirmed) {
       return (
@@ -162,6 +178,16 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context }: AgentCh
                     <div className="bg-muted rounded-lg px-4 py-2 max-w-[80%]">
                       <Loader2 className="w-4 h-4 animate-spin" />
                     </div>
+                  </div>
+                )}
+                
+                {/* Video Render Panel - shown when Noah Bennett produces video content */}
+                {videoContent && agentId === "noah_bennett" && (
+                  <div className="pt-4">
+                    <ReelRenderPanel 
+                      videoContent={videoContent}
+                      organizationId={context?.organization_id as string}
+                    />
                   </div>
                 )}
               </div>
