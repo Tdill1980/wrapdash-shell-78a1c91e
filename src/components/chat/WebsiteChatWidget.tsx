@@ -73,13 +73,13 @@ export function WebsiteChatWidget() {
 
       if (error) throw error;
 
-      if (data?.reply) {
+      if (data?.reply || data?.message) {
         setMessages((prev) => [
           ...prev,
           {
             id: crypto.randomUUID(),
             role: "assistant",
-            content: data.reply,
+            content: data.reply || data.message,
           },
         ]);
       }
