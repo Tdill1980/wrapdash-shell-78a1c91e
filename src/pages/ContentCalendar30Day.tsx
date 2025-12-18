@@ -180,6 +180,17 @@ export default function ContentCalendar30Day() {
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
+        {/* Read-Only Banner */}
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-muted border border-border">
+          <Calendar className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="font-medium">📅 Read-only Reference View</p>
+            <p className="text-sm text-muted-foreground">
+              Execute tasks from MightyTask channels: Ink & Edge Magazine, WPW Campaigns, Distribution, or WrapTVWorld.
+            </p>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
@@ -187,15 +198,11 @@ export default function ContentCalendar30Day() {
               <Calendar className="h-8 w-8 text-primary" />
               Content Calendar
             </h1>
-            <p className="text-muted-foreground">30-day view across all channels</p>
+            <p className="text-muted-foreground">30-day view across all channels (read-only)</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={goToToday}>
               Today
-            </Button>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Content
             </Button>
           </div>
         </div>

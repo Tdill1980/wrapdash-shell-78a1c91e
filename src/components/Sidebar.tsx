@@ -175,6 +175,11 @@ const navigationItems: NavigationItem[] = [
       </span>
     )
   },
+  { name: "📕 Ink & Edge Magazine", path: "/mightytask/ink-edge-magazine", icon: CheckCircle, roles: ["admin"] },
+  { name: "💰 WPW Campaigns", path: "/mightytask/wpw-campaigns", icon: CheckCircle, roles: ["admin"] },
+  { name: "📰 Ink & Edge Dist", path: "/mightytask/ink-edge-distribution", icon: CheckCircle, roles: ["admin"] },
+  { name: "🎥 WrapTVWorld", path: "/mightytask/wraptvworld", icon: CheckCircle, roles: ["admin"] },
+  { name: "🟢 Luigi Chat", path: "/mightytask/luigi", icon: MessageSquare, roles: ["admin"] },
   { 
     name: "MightyPortfolio", 
     path: "/portfolio", 
