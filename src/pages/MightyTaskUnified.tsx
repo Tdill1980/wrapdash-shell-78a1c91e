@@ -99,6 +99,18 @@ const CHANNEL_AGENT_MAP: Record<string, string> = {
   ink_edge_content: 'noah_bennett',
 };
 
+// Content type configuration for badges
+const CONTENT_TYPE_CONFIG: Record<string, { label: string; emoji: string; bgClass: string; textClass: string }> = {
+  email: { label: 'Email', emoji: '📧', bgClass: 'bg-purple-500/20', textClass: 'text-purple-400' },
+  ig_reel: { label: 'IG Reel', emoji: '📱', bgClass: 'bg-gradient-to-r from-pink-500/20 to-orange-500/20', textClass: 'text-pink-400' },
+  ig_story: { label: 'IG Story', emoji: '📖', bgClass: 'bg-pink-500/20', textClass: 'text-pink-400' },
+  fb_reel: { label: 'FB Reel', emoji: '📘', bgClass: 'bg-blue-500/20', textClass: 'text-blue-400' },
+  fb_story: { label: 'FB Story', emoji: '📗', bgClass: 'bg-blue-400/20', textClass: 'text-blue-300' },
+  meta_ad: { label: 'Meta Ad', emoji: '🎯', bgClass: 'bg-green-500/20', textClass: 'text-green-400' },
+  youtube_short: { label: 'YT Short', emoji: '▶️', bgClass: 'bg-red-500/20', textClass: 'text-red-400' },
+  youtube_video: { label: 'YouTube', emoji: '🎬', bgClass: 'bg-red-600/20', textClass: 'text-red-500' },
+};
+
 interface Task {
   id: string;
   title: string;
@@ -110,6 +122,7 @@ interface Task {
   created_at: string;
   assigned_agent?: string | null;
   channel?: string | null;
+  content_type?: string | null;
 }
 
 type ViewMode = "todo" | "inprogress" | "done" | "all";
@@ -534,6 +547,18 @@ export default function MightyTaskUnified() {
                             <Badge variant="outline" className={getPriorityColor(task.priority)}>
                               {task.priority}
                             </Badge>
+                            {/* Content Type Badge */}
+                            {task.content_type && CONTENT_TYPE_CONFIG[task.content_type] && (
+                              <Badge 
+                                className={cn(
+                                  "text-xs font-medium border-0",
+                                  CONTENT_TYPE_CONFIG[task.content_type].bgClass,
+                                  CONTENT_TYPE_CONFIG[task.content_type].textClass
+                                )}
+                              >
+                                {CONTENT_TYPE_CONFIG[task.content_type].emoji} {CONTENT_TYPE_CONFIG[task.content_type].label}
+                              </Badge>
+                            )}
                             {task.channel && (
                               <Badge variant="secondary" className="text-xs">
                                 {CHANNEL_CONFIGS.find(c => c.key === task.channel)?.emoji} {task.channel}
