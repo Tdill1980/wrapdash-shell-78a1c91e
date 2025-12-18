@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,14 +6,17 @@ import { ArrowLeft, Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
+const WPW_ORG_ID = "51aa96db-c06d-41ae-b3cb-25b045c75caf";
+
 export default function ChatWidgetDemo() {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState([
-    { role: "agent", text: "Hey! 👋 I'm your WePrintWraps AI assistant. Ask me anything about vehicle wraps, get a quote, or tell me about your project!" }
+    { role: "agent", text: "Hey! 👋 I'm Jordan Lee from WePrintWraps. Ask me anything about vehicle wraps, get a quote, or tell me about your project!" }
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [copied, setCopied] = useState(false);
+  const sessionIdRef = useRef(`demo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`);
 
   const embedCode = `<script defer src="https://wrapcommandai.com/embed/chat-widget.js"
   data-org="wpw"
@@ -34,19 +37,34 @@ export default function ChatWidgetDemo() {
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI delay, then show example response
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/website-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          org: "wpw",
+          organization_id: WPW_ORG_ID,
+          session_id: sessionIdRef.current,
+          message_text: userMsg,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
       setIsTyping(false);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "agent",
-          text: userMsg.toLowerCase().includes("quote")
-            ? "Alright! For a 2020 Ford Transit full wrap, the price is $8,399. I just sent the full breakdown to your email! 💪"
-            : "Great question! We specialize in premium wrap films from Avery and 3M. What vehicle are you looking to wrap?"
-        }
-      ]);
-    }, 1500);
+      setMessages((m) => [...m, { role: "agent", text: data.reply || "Sorry, I couldn't process that. Please try again." }]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      setIsTyping(false);
+      setMessages((m) => [...m, { role: "agent", text: "Oops! Something went wrong. Please try again in a moment." }]);
+      toast.error("Failed to get response from AI");
+    }
   };
 
   return (
