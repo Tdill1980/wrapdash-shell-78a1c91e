@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Package,
   Calendar,
+  Send,
   Store,
   ShoppingCart,
   Users,
@@ -280,6 +281,18 @@ const navigationItems: NavigationItem[] = [
         <span className="text-white">Mighty</span>
         <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Mail</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "Campaign Sender", 
+    path: "/mightymail/campaign-sender", 
+    icon: Send,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Campaign </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Sender</span>
       </span>
     )
   },
