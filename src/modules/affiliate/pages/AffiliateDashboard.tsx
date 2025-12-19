@@ -19,7 +19,8 @@ import { ProductCommissionCards } from '../components/ProductCommissionCards';
 import { AffiliateHeader } from '../components/AffiliateHeader';
 import { ContentLibraryTab } from '../components/ContentLibraryTab';
 import { PayoutStatusCard } from '../components/PayoutStatusCard';
-import { LogOut, Upload, Image, Film, CheckCircle, Clock, Sparkles, LayoutDashboard, Wallet, FolderOpen, Settings } from 'lucide-react';
+import { LogOut, Upload, Image, Film, CheckCircle, Clock, Sparkles, LayoutDashboard, Wallet, FolderOpen, Settings, MessageCircle } from 'lucide-react';
+import { AffiliateSupportChat } from '../components/AffiliateSupportChat';
 
 export const AffiliateDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -131,6 +132,10 @@ export const AffiliateDashboard = () => {
             <TabsTrigger value="payouts" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-500">
               <Wallet className="w-4 h-4 mr-2" />
               Payouts
+            </TabsTrigger>
+            <TabsTrigger value="support" className="data-[state=active]:bg-red-500/20 data-[state=active]:text-red-500">
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Support
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-[#ffffff20] data-[state=active]:text-white">
               <Settings className="w-4 h-4 mr-2" />
@@ -304,6 +309,52 @@ export const AffiliateDashboard = () => {
             </div>
 
             <CommissionTable commissions={commissions} />
+          </TabsContent>
+
+          {/* Support Tab - Evan Porter AI Chat */}
+          <TabsContent value="support" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <AffiliateSupportChat founderId={founder.id} founderName={founder.fullName} />
+              </div>
+              <div className="space-y-4">
+                <Card className="p-6 bg-gradient-to-br from-red-500/10 to-pink-500/10 border-[#ffffff0f]">
+                  <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-red-400" />
+                    Meet Evan Porter
+                  </h3>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    Your AI Affiliate Operations Manager. Evan can help you with:
+                  </p>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Commission questions & payout info
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Content upload guidelines
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Tips to maximize earnings
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Product information
+                    </li>
+                  </ul>
+                </Card>
+                <Card className="p-4 bg-[#1a1a2e] border-[#ffffff0f]">
+                  <p className="text-xs text-muted-foreground">
+                    Need human support? Email{' '}
+                    <a href="mailto:support@weprintwraps.com" className="text-[#00AFFF] hover:underline">
+                      support@weprintwraps.com
+                    </a>
+                  </p>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
 
           {/* Settings Tab */}
