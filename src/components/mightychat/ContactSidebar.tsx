@@ -137,7 +137,7 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
     .slice(0, 2) || "??";
 
   return (
-    <Card className="max-h-[480px] overflow-hidden">
+    <Card className="max-h-[400px] overflow-hidden">
       <CardHeader className="pb-2 pt-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Contact Details
