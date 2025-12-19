@@ -117,6 +117,7 @@ serve(async (req) => {
     const quoteNumber = `WPW-${timestamp}-${random}`;
 
     // Create quote in database - WPW wholesale pricing (no labor, no margin)
+    // ALWAYS create as pending_approval - requires human approval before email
     const quoteData = {
       quote_number: quoteNumber,
       customer_name: customerName || 'Website Visitor',
@@ -131,7 +132,7 @@ serve(async (req) => {
       labor_cost: 0, // WPW does NOT install
       margin: 0, // WPW wholesale = no retail margin
       total_price: totalPrice,
-      status: 'pending',
+      status: 'pending_approval', // CHANGED: Always require approval
       ai_generated: true,
       ai_sqft_estimate: sqft,
       ai_labor_hours: 0, // WPW does NOT install
@@ -153,39 +154,16 @@ serve(async (req) => {
       );
     }
 
-    console.log('Quote created:', createdQuote);
+    console.log('Quote created (pending approval):', createdQuote);
 
-    // If autoEmail is true and we have customer email, send quote email
-    let emailSent = false;
-    if (autoEmail && customerEmail) {
-      try {
-        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-mightymail-quote`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseKey}`
-          },
-          body: JSON.stringify({
-            quoteId: createdQuote.id,
-            recipientEmail: customerEmail,
-            recipientName: customerName || 'Valued Customer'
-          })
-        });
+    // REMOVED: Auto-email functionality - emails are ONLY sent after approval
+    // The quote will appear in AI Approvals for human review
+    const emailSent = false; // Never auto-send
 
-        if (emailResponse.ok) {
-          emailSent = true;
-          console.log('Quote email sent to:', customerEmail);
-        } else {
-          console.error('Failed to send quote email:', await emailResponse.text());
-        }
-      } catch (emailError) {
-        console.error('Email error:', emailError);
-      }
-    }
-
-    // Create AI action for tracking
+    // Create AI action for tracking - ALWAYS requires approval
     await supabase.from('ai_actions').insert({
       action_type: 'auto_quote_generated',
+      resolved: false, // ALWAYS require approval
       action_payload: {
         quote_id: createdQuote.id,
         quote_number: quoteNumber,
@@ -194,9 +172,11 @@ serve(async (req) => {
         price_per_sqft: pricePerSqft,
         product_name: productName,
         total_price: totalPrice,
-        email_sent: emailSent,
+        customer_name: customerName || 'Website Visitor',
+        customer_email: customerEmail || '',
         conversation_id: conversationId,
-        pricing_model: 'WPW_WHOLESALE' // Track that this is wholesale pricing
+        pricing_model: 'WPW_WHOLESALE',
+        pending_email: !!customerEmail // Flag that email can be sent on approval
       },
       priority: 'high',
       organization_id: organizationId
@@ -206,6 +186,7 @@ serve(async (req) => {
     const formattedPrice = totalPrice.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 
     // Return success response with quote details
+    // NOTE: Email will be sent after human approval in AI Approvals card
     return new Response(
       JSON.stringify({
         success: true,
@@ -219,10 +200,12 @@ serve(async (req) => {
           materialCost: materialCost,
           laborCost: 0, // WPW does not install
           totalPrice: totalPrice,
-          formattedPrice: formattedPrice
+          formattedPrice: formattedPrice,
+          status: 'pending_approval'
         },
-        emailSent: emailSent,
-        message: `Your ${productName} quote for the ${year} ${vehicleMake} ${vehicleModel} (${sqft} sqft): ${formattedPrice}. ${emailSent ? 'Check your email for details!' : 'Drop your email and I\'ll send the full quote!'}`
+        emailSent: false, // NEVER auto-send
+        pendingApproval: true, // Flag that approval is required
+        message: `Quote generated for ${year} ${vehicleMake} ${vehicleModel}: ${formattedPrice}. Awaiting approval before sending to customer.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

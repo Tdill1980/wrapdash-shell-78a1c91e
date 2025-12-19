@@ -227,3 +227,6 @@ verify_jwt = false
 
 [functions.affiliate-support-chat]
 verify_jwt = false
+
+[functions.send-approved-quote]
+verify_jwt = false

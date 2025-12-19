@@ -275,7 +275,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
               customerEmail: parsed.customer_email || null,
               productType: wpwProductType,
               conversationId: conversation?.id,
-              autoEmail: !!parsed.customer_email
+              autoEmail: false // NEVER auto-send - requires approval
             })
           });
           
@@ -334,16 +334,17 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
         }
       }
       
-      // Log to ai_actions for MCP visibility
+      // Log to ai_actions for MCP visibility - ALWAYS require approval
       const { error: actionError } = await supabase.from("ai_actions").insert({
         action_type: "create_quote",
         priority: parsed.urgency,
-        resolved: !!autoQuoteResult?.success && !autoQuoteResult?.partial,
-        resolved_at: autoQuoteResult?.success && !autoQuoteResult?.partial ? new Date().toISOString() : null,
+        resolved: false, // ALWAYS require approval before sending
+        resolved_at: null,
         action_payload: {
           source: body.platform,
           sender_id: body.sender_id,
           sender_username: body.sender_username,
+          customer_email: parsed.customer_email,
           vehicle: parsed.vehicle,
           message: body.message_text,
           is_partial_lead: autoQuoteResult?.partial || false,
@@ -354,13 +355,15 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
             total_price: autoQuoteResult.quote?.totalPrice,
             price_per_sqft: autoQuoteResult.quote?.pricePerSqft,
             product_name: autoQuoteResult.quote?.productName,
-            email_sent: autoQuoteResult.emailSent
+            customer_name: body.sender_username || body.sender_id,
+            customer_email: parsed.customer_email
           } : null,
-          needs_follow_up: !hasCompleteVehicle
+          needs_follow_up: !hasCompleteVehicle,
+          pending_email: true // Mark that email needs to be sent on approval
         },
       });
       if (actionError) console.error("AI action error:", actionError);
-      console.log("📝 Quote logged to ai_actions:", autoQuoteResult?.partial ? "LEAD (needs follow-up)" : "COMPLETE");
+      console.log("📝 Quote logged to ai_actions - PENDING APPROVAL");
     }
 
     // 5b. Handle file received - escalate to design team
