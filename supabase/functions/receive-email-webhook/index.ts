@@ -1,5 +1,6 @@
 // supabase/functions/receive-email-webhook/index.ts
 // Email webhook with MCP agent routing: Alex (hello@), Grant (design@), Jackson (ops_desk)
+// Now auto-generates quotes for pricing inquiries (pending approval)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -218,6 +219,40 @@ serve(async (req) => {
 
     console.log('✅ Message saved:', message.id);
 
+    // AUTO-GENERATE QUOTE for pricing inquiries
+    let quoteGenerated = false;
+    if (pricingIntent && fromEmail) {
+      console.log('💰 Pricing intent detected - generating quote for approval...');
+      
+      // Extract vehicle info from email content
+      const vehicleInfo = extractVehicleInfo(emailContent);
+      
+      try {
+        const { data: quoteResult, error: quoteError } = await supabase.functions.invoke('ai-auto-quote', {
+          body: {
+            vehicleMake: vehicleInfo.make || 'Unknown',
+            vehicleModel: vehicleInfo.model || 'Vehicle',
+            vehicleYear: vehicleInfo.year || new Date().getFullYear(),
+            vehicleType: vehicleInfo.type || 'sedan',
+            wrapType: vehicleInfo.wrapType || 'full',
+            customerEmail: fromEmail.toLowerCase(),
+            customerName: fromName,
+            source: 'email',
+            notes: `Auto-generated from email. Subject: ${subject}`,
+          },
+        });
+
+        if (quoteError) {
+          console.error('⚠️ Quote generation failed:', quoteError);
+        } else {
+          console.log('✅ Quote generated (pending approval):', quoteResult);
+          quoteGenerated = true;
+        }
+      } catch (quoteErr) {
+        console.error('⚠️ Quote generation error (non-blocking):', quoteErr);
+      }
+    }
+
     // Route to Ops Desk for task creation based on inbox
     let taskDescription = '';
     let taskTarget = assignedAgent;
@@ -225,7 +260,9 @@ serve(async (req) => {
     if (recipientInbox === 'hello' || recipientInbox === 'support' || recipientInbox === 'general') {
       // Alex handles quoting and general inquiries
       if (pricingIntent) {
-        taskDescription = `Quote request via email: ${subject}`;
+        taskDescription = quoteGenerated 
+          ? `Quote auto-generated (pending approval) for: ${subject}`
+          : `Quote request via email: ${subject}`;
       } else {
         taskDescription = `Email inquiry: ${subject}`;
       }
@@ -258,7 +295,7 @@ serve(async (req) => {
           description: taskDescription,
           customer: fromName,
           revenue_impact: revenueImpact,
-          notes: `From: ${fromEmail}\nSubject: ${subject}\nInbox: ${recipientInbox}\nConversation: ${conversation.id}`,
+          notes: `From: ${fromEmail}\nSubject: ${subject}\nInbox: ${recipientInbox}\nConversation: ${conversation.id}${quoteGenerated ? '\n✅ Quote auto-generated (pending approval)' : ''}`,
         },
       });
       console.log(`📋 Task created for ${taskTarget}: ${taskDescription}`);
@@ -278,6 +315,7 @@ serve(async (req) => {
       assigned_agent: assignedAgent,
       agent_name: agentConfig?.displayName,
       revenue_impact: revenueImpact,
+      quote_generated: quoteGenerated,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -291,3 +329,77 @@ serve(async (req) => {
     });
   }
 });
+
+// Helper function to extract vehicle info from email content
+function extractVehicleInfo(content: string): {
+  make?: string;
+  model?: string;
+  year?: number;
+  type?: string;
+  wrapType?: string;
+} {
+  const result: {
+    make?: string;
+    model?: string;
+    year?: number;
+    type?: string;
+    wrapType?: string;
+  } = {};
+
+  // Common vehicle makes
+  const makes = ['toyota', 'honda', 'ford', 'chevrolet', 'chevy', 'bmw', 'mercedes', 'audi', 'lexus', 'porsche', 'tesla', 'nissan', 'dodge', 'jeep', 'mustang', 'corvette', 'camaro', 'yamaha', 'kawasaki', 'harley', 'ducati', 'suzuki'];
+  
+  for (const make of makes) {
+    if (content.includes(make)) {
+      result.make = make.charAt(0).toUpperCase() + make.slice(1);
+      if (make === 'chevy') result.make = 'Chevrolet';
+      break;
+    }
+  }
+
+  // Extract year (4 digit number between 1990-2025)
+  const yearMatch = content.match(/\b(199\d|20[0-2]\d)\b/);
+  if (yearMatch) {
+    result.year = parseInt(yearMatch[1]);
+  }
+
+  // Common models
+  const models = ['r1', 'r6', 'mustang', 'camaro', 'corvette', 'civic', 'accord', 'camry', 'model 3', 'model s', 'model x', 'model y', 'f150', 'f-150', 'silverado', 'ram', 'tacoma', 'tundra', 'wrangler', 'lx570', 'rx350', 'gx460'];
+  
+  for (const model of models) {
+    if (content.includes(model)) {
+      result.model = model.toUpperCase();
+      break;
+    }
+  }
+
+  // Determine vehicle type
+  const motorcycleKeywords = ['motorcycle', 'bike', 'r1', 'r6', 'yamaha', 'kawasaki', 'harley', 'ducati', 'suzuki'];
+  const truckKeywords = ['truck', 'f150', 'f-150', 'silverado', 'ram', 'tacoma', 'tundra'];
+  const suvKeywords = ['suv', 'wrangler', 'lx570', 'rx350', 'gx460', 'explorer', 'tahoe'];
+
+  if (motorcycleKeywords.some(k => content.includes(k))) {
+    result.type = 'motorcycle';
+  } else if (truckKeywords.some(k => content.includes(k))) {
+    result.type = 'truck';
+  } else if (suvKeywords.some(k => content.includes(k))) {
+    result.type = 'suv';
+  } else {
+    result.type = 'sedan';
+  }
+
+  // Determine wrap type
+  if (content.includes('full wrap') || content.includes('full body')) {
+    result.wrapType = 'full';
+  } else if (content.includes('partial') || content.includes('door') || content.includes('panel') || content.includes('stripe')) {
+    result.wrapType = 'partial';
+  } else if (content.includes('ppf') || content.includes('protection')) {
+    result.wrapType = 'ppf';
+  } else if (content.includes('tint')) {
+    result.wrapType = 'tint';
+  } else {
+    result.wrapType = 'full';
+  }
+
+  return result;
+}
