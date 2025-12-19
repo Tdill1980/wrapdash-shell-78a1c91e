@@ -152,8 +152,10 @@ serve(async (req) => {
     };
     const extractedEmail = message_text.match(EMAIL_PATTERN)?.[0] || null;
     const hasCompleteVehicle = extractedVehicle.year && extractedVehicle.make && extractedVehicle.model;
+    // Partial vehicle info (like just "sprinter" or "ford f150") - need to ask for more details
+    const hasPartialVehicle = (extractedVehicle.make || extractedVehicle.model) && !hasCompleteVehicle;
     
-    console.log('[JordanLee] Extracted:', { vehicle: extractedVehicle, email: extractedEmail, complete: hasCompleteVehicle });
+    console.log('[JordanLee] Extracted:', { vehicle: extractedVehicle, email: extractedEmail, complete: hasCompleteVehicle, partial: hasPartialVehicle });
 
     // Detect intent signals
     const pricingIntent = lowerMessage.includes('price') || 
@@ -245,8 +247,21 @@ serve(async (req) => {
       }
     }
 
+    // Persist vehicle info - merge with existing state so we don't lose previous info
     if (hasCompleteVehicle) {
       chatState.vehicle = extractedVehicle;
+      chatState.vehicle_complete = true;
+    } else if (hasPartialVehicle) {
+      // Merge partial info with existing vehicle state
+      const existingVehicle = (chatState.vehicle as Record<string, string | null>) || {};
+      chatState.vehicle = {
+        year: extractedVehicle.year || existingVehicle.year || null,
+        make: extractedVehicle.make || existingVehicle.make || null,
+        model: extractedVehicle.model || existingVehicle.model || null,
+      };
+      // Check if now complete after merge
+      const merged = chatState.vehicle as Record<string, string | null>;
+      chatState.vehicle_complete = !!(merged.year && merged.make && merged.model);
     }
 
     // Insert inbound message
@@ -375,49 +390,133 @@ serve(async (req) => {
     let contextNotes = '';
     let vehicleSqft = 0;
     let estimatedCost = 0;
+    let vehicleFromDb = false;
+    let closestMatch: { make: string; model: string; year: string; sqft: number } | null = null;
     
-    // If we have vehicle info, calculate pricing
-    if (extractedVehicle.make || extractedVehicle.model) {
-      const vehicleKey = `${extractedVehicle.make || ''} ${extractedVehicle.model || ''}`.toLowerCase().trim();
-      // Estimate SQFT based on vehicle type
-      if (/prius|civic|corolla|sentra|versa|yaris|fit|accent|rio|mirage/i.test(vehicleKey)) {
-        vehicleSqft = 175;
-      } else if (/camry|accord|altima|sonata|mazda6|legacy|jetta|passat/i.test(vehicleKey)) {
-        vehicleSqft = 200;
-      } else if (/avalon|maxima|300|charger|impala|taurus/i.test(vehicleKey)) {
-        vehicleSqft = 210;
-      } else if (/rav4|cr-?v|tucson|rogue|forester|crosstrek|cx-?5|tiguan/i.test(vehicleKey)) {
-        vehicleSqft = 200;
-      } else if (/highlander|pilot|explorer|pathfinder|4runner|cx-?9|atlas/i.test(vehicleKey)) {
-        vehicleSqft = 225;
-      } else if (/f-?150|silverado|sierra|ram|tundra|titan/i.test(vehicleKey)) {
-        vehicleSqft = 250;
-      } else if (/tahoe|expedition|suburban|yukon|sequoia|armada/i.test(vehicleKey)) {
-        vehicleSqft = 275;
-      } else if (/transit|sprinter|promaster/i.test(vehicleKey)) {
-        vehicleSqft = 350;
-      } else if (/mustang|camaro|challenger|corvette|supra|370z|86|brz|miata/i.test(vehicleKey)) {
-        vehicleSqft = 180;
-      } else if (/wrangler|bronco/i.test(vehicleKey)) {
-        vehicleSqft = 200;
-      } else {
-        vehicleSqft = 200; // Default mid-size estimate
+    // Get the current vehicle state (merged from conversation history)
+    const currentVehicle = chatState.vehicle as Record<string, string | null> | undefined;
+    const vehicleIsComplete = chatState.vehicle_complete === true || 
+      (currentVehicle?.year && currentVehicle?.make && currentVehicle?.model);
+    
+    // CRITICAL: Only calculate pricing if we have COMPLETE vehicle info (year + make + model)
+    if (vehicleIsComplete && currentVehicle) {
+      const searchMake = (currentVehicle.make || '').toLowerCase().trim();
+      const searchModel = (currentVehicle.model || '').toLowerCase().trim();
+      const searchYear = parseInt(currentVehicle.year || '0', 10);
+      
+      console.log('[JordanLee] Looking up vehicle in DB:', { make: searchMake, model: searchModel, year: searchYear });
+      
+      // First try exact match in vehicle_dimensions table
+      const { data: exactMatch } = await supabase
+        .from('vehicle_dimensions')
+        .select('make, model, years, corrected_sqft, total_sqft')
+        .ilike('make', `%${searchMake}%`)
+        .ilike('model', `%${searchModel}%`)
+        .limit(5);
+      
+      if (exactMatch && exactMatch.length > 0) {
+        // Find best match considering year range
+        for (const vehicle of exactMatch) {
+          const yearsStr = vehicle.years || '';
+          // Parse year ranges like "2016-2024" or single years like "2020"
+          const yearParts = yearsStr.split('-').map((y: string) => parseInt(y.trim(), 10));
+          const yearStart = yearParts[0] || 0;
+          const yearEnd = yearParts[1] || yearStart;
+          
+          if (searchYear >= yearStart && searchYear <= yearEnd) {
+            // Exact year match found!
+            vehicleSqft = vehicle.corrected_sqft || vehicle.total_sqft || 0;
+            vehicleFromDb = true;
+            console.log('[JordanLee] Exact DB match:', { vehicle: `${vehicle.make} ${vehicle.model}`, sqft: vehicleSqft });
+            break;
+          } else if (!closestMatch) {
+            // Save as potential close match
+            closestMatch = {
+              make: vehicle.make,
+              model: vehicle.model,
+              year: yearsStr,
+              sqft: vehicle.corrected_sqft || vehicle.total_sqft || 0
+            };
+          }
+        }
+        
+        // If no exact year match, use closest match
+        if (!vehicleFromDb && closestMatch) {
+          vehicleSqft = closestMatch.sqft;
+          console.log('[JordanLee] Using closest DB match:', closestMatch);
+        }
       }
+      
+      // Fallback to hardcoded estimates if not in DB
+      if (vehicleSqft === 0) {
+        const vehicleKey = `${searchMake} ${searchModel}`.toLowerCase().trim();
+        if (/prius|civic|corolla|sentra|versa|yaris|fit|accent|rio|mirage/i.test(vehicleKey)) {
+          vehicleSqft = 175;
+        } else if (/camry|accord|altima|sonata|mazda6|legacy|jetta|passat/i.test(vehicleKey)) {
+          vehicleSqft = 200;
+        } else if (/avalon|maxima|300|charger|impala|taurus/i.test(vehicleKey)) {
+          vehicleSqft = 210;
+        } else if (/rav4|cr-?v|tucson|rogue|forester|crosstrek|cx-?5|tiguan/i.test(vehicleKey)) {
+          vehicleSqft = 200;
+        } else if (/highlander|pilot|explorer|pathfinder|4runner|cx-?9|atlas/i.test(vehicleKey)) {
+          vehicleSqft = 225;
+        } else if (/f-?150|silverado|sierra|ram|tundra|titan/i.test(vehicleKey)) {
+          vehicleSqft = 250;
+        } else if (/tahoe|expedition|suburban|yukon|sequoia|armada/i.test(vehicleKey)) {
+          vehicleSqft = 275;
+        } else if (/transit|sprinter|promaster/i.test(vehicleKey)) {
+          vehicleSqft = 350;
+        } else if (/mustang|camaro|challenger|corvette|supra|370z|86|brz|miata/i.test(vehicleKey)) {
+          vehicleSqft = 180;
+        } else if (/wrangler|bronco/i.test(vehicleKey)) {
+          vehicleSqft = 200;
+        } else {
+          vehicleSqft = 200; // Default mid-size estimate
+        }
+      }
+      
       estimatedCost = Math.round(vehicleSqft * 5.27);
     }
     
+    // Build context notes based on state
     if (escalationType && escalationSent) {
       contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
-    } else if (pricingIntent && vehicleSqft > 0) {
-      contextNotes = `VEHICLE DETECTED: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''} is approximately ${vehicleSqft} sqft. At $5.27/sqft, that's ~$${estimatedCost} for printed wrap material. GIVE THIS SPECIFIC PRICE! Also mention both Avery and 3M are now $5.27/sqft.${!chatState.customer_email ? ' Ask for email to send formal quote.' : ''}`;
-    } else if (pricingIntent && !chatState.customer_email) {
-      contextNotes = `STAGE: Customer asked about pricing. Ask what vehicle they have so you can calculate the specific price!`;
-    } else if (pricingIntent && chatState.customer_email) {
-      contextNotes = `QUOTE ROUTED: You've sent this to our quoting team. Confirm the customer will receive an email with full pricing.`;
+    } else if (pricingIntent && !vehicleIsComplete) {
+      // CRITICAL: Don't give any price without complete vehicle info
+      const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
+      const missingParts: string[] = [];
+      if (!existingVehicle?.year) missingParts.push('year');
+      if (!existingVehicle?.make) missingParts.push('make');
+      if (!existingVehicle?.model) missingParts.push('model');
+      
+      if (existingVehicle && (existingVehicle.make || existingVehicle.model)) {
+        contextNotes = `NEED MORE VEHICLE INFO: Customer mentioned ${existingVehicle.make || ''} ${existingVehicle.model || ''} but we need the FULL year, make, and model to calculate an accurate price. Ask for the missing: ${missingParts.join(', ')}. DO NOT give any price estimate yet!`;
+      } else {
+        contextNotes = `NEED VEHICLE INFO: Customer wants pricing but hasn't provided a vehicle yet. Ask them for their vehicle's YEAR, MAKE, and MODEL so you can calculate a specific price. DO NOT give generic ranges - we calculate exact prices based on vehicle SQFT.`;
+      }
+    } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0) {
+      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
+      if (closestMatch && !vehicleFromDb) {
+        // We used a close match, not exact
+        contextNotes = `CLOSE MATCH FOUND: We don't have exact data for a ${vehicleStr}, but the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} is a close match at ${vehicleSqft} sqft. At $5.27/sqft, that's approximately $${estimatedCost} for the printed wrap material. Explain this is a ballpark based on a similar vehicle. Ask for email to send formal quote.`;
+      } else {
+        contextNotes = `VEHICLE FOUND: ${vehicleStr} is approximately ${vehicleSqft} sqft. At $5.27/sqft, that's ~$${estimatedCost} for printed wrap material. GIVE THIS SPECIFIC PRICE! Also mention both Avery and 3M are now $5.27/sqft.${!chatState.customer_email ? ' Ask for email to send formal quote.' : ''}`;
+      }
+    } else if (pricingIntent && chatState.customer_email && vehicleIsComplete) {
+      contextNotes = `QUOTE ROUTED: You've sent this to our quoting team. Confirm the customer will receive an email with full pricing at ${chatState.customer_email}.`;
     } else if (partnershipSignal) {
       contextNotes = `PARTNERSHIP ROUTED: You've looped in the partnerships team. Tell the customer someone will follow up shortly.`;
-    } else if (hasCompleteVehicle && !chatState.customer_email) {
-      contextNotes = `STAGE: Customer gave vehicle info (${vehicleSqft} sqft = ~$${estimatedCost}). Give them the price estimate and ask for email to send formal quote!`;
+    } else if (vehicleIsComplete && vehicleSqft > 0 && !chatState.customer_email) {
+      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
+      if (closestMatch && !vehicleFromDb) {
+        contextNotes = `CLOSE MATCH - READY FOR QUOTE: Based on the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} (close match for ${vehicleStr}), that's ~${vehicleSqft} sqft = ~$${estimatedCost}. Give the ballpark estimate and ask for email to send formal quote!`;
+      } else {
+        contextNotes = `READY FOR QUOTE: Customer gave complete vehicle info - ${vehicleStr} (${vehicleSqft} sqft = ~$${estimatedCost}). Give them the price estimate and ask for email to send formal quote!`;
+      }
+    } else if (hasPartialVehicle && !vehicleIsComplete) {
+      // Customer gave partial vehicle info but not complete
+      const partialInfo = extractedVehicle.make || extractedVehicle.model || '';
+      contextNotes = `PARTIAL VEHICLE: Customer mentioned "${partialInfo}" but we need the COMPLETE vehicle info (year, make, and model) to calculate an accurate price. Ask specifically what year and full model they have.`;
     }
 
     // Generate AI response using Jordan's persona
