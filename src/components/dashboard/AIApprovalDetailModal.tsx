@@ -58,6 +58,12 @@ interface ActionPayload {
     product_name?: string;
     customer_name?: string;
     customer_email?: string;
+    vehicle_year?: string | number;
+    vehicle_make?: string;
+    vehicle_model?: string;
+    vehicle_type?: string;
+    wrap_type?: string;
+    base_price?: number;
   };
   [key: string]: unknown;
 }
@@ -102,24 +108,67 @@ export function AIApprovalDetailModal({
   }, [open, action]);
 
   const fetchConversation = async () => {
-    if (!action?.action_payload) return;
-    
-    const conversationId = action.action_payload.conversation_id;
-    if (!conversationId) {
-      setMessages([]);
-      return;
-    }
-
     setLoadingMessages(true);
+    
     try {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("id, content, direction, sender_name, created_at")
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
+      // First try direct conversation_id from action payload
+      const conversationId = action?.action_payload?.conversation_id;
+      
+      if (conversationId) {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("id, content, direction, sender_name, created_at")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: true });
 
-      if (error) throw error;
-      setMessages((data || []) as Message[]);
+        if (!error && data && data.length > 0) {
+          setMessages(data as Message[]);
+          setLoadingMessages(false);
+          return;
+        }
+      }
+
+      // FALLBACK: Try to find conversation by customer email
+      const customerEmail = action?.action_payload?.customer_email || 
+                           action?.action_payload?.auto_quote?.customer_email;
+      
+      if (customerEmail) {
+        // Find contact by email
+        const { data: contact } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("email", customerEmail.toLowerCase())
+          .maybeSingle();
+        
+        if (contact) {
+          // Find most recent conversation for this contact
+          const { data: convo } = await supabase
+            .from("conversations")
+            .select("id")
+            .eq("contact_id", contact.id)
+            .order("last_message_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (convo) {
+            // Fetch messages from this conversation
+            const { data } = await supabase
+              .from("messages")
+              .select("id, content, direction, sender_name, created_at")
+              .eq("conversation_id", convo.id)
+              .order("created_at", { ascending: true });
+            
+            if (data && data.length > 0) {
+              setMessages(data as Message[]);
+              setLoadingMessages(false);
+              return;
+            }
+          }
+        }
+      }
+
+      // No messages found
+      setMessages([]);
     } catch (err) {
       console.error("Error fetching conversation:", err);
       setMessages([]);
@@ -129,44 +178,38 @@ export function AIApprovalDetailModal({
   };
 
   const fetchQuoteData = async () => {
-    if (!action?.action_payload?.auto_quote?.quote_id) {
-      // Use data from action payload
-      const payload = action?.action_payload;
-      if (payload) {
-        setQuoteData({
-          vehicle_year: payload.vehicle?.year,
-          vehicle_make: payload.vehicle?.make,
-          vehicle_model: payload.vehicle?.model,
-          product_name: payload.auto_quote?.product_name,
-          quote_total: payload.auto_quote?.total_price || payload.quote_total || 0,
-        });
-      }
-      return;
-    }
+    if (!action?.action_payload) return;
 
-    try {
-      const { data, error } = await supabase
-        .from("quotes")
-        .select("*")
-        .eq("id", action.action_payload.auto_quote.quote_id)
-        .single();
-
-      if (error) throw error;
-      setQuoteData(data);
-    } catch (err) {
-      console.error("Error fetching quote:", err);
-      // Fall back to action payload data
-      const payload = action?.action_payload;
-      if (payload) {
-        setQuoteData({
-          vehicle_year: payload.vehicle?.year,
-          vehicle_make: payload.vehicle?.make,
-          vehicle_model: payload.vehicle?.model,
-          product_name: payload.auto_quote?.product_name,
-          quote_total: payload.auto_quote?.total_price || payload.quote_total || 0,
-        });
+    const payload = action.action_payload;
+    
+    // Try to get quote data from the action payload directly
+    if (payload.auto_quote?.quote_id) {
+      try {
+        const { data } = await supabase
+          .from("quotes")
+          .select("*")
+          .eq("id", payload.auto_quote.quote_id)
+          .maybeSingle();
+        
+        if (data) {
+          setQuoteData(data);
+          return;
+        }
+      } catch (err) {
+        console.error("Error fetching quote:", err);
       }
     }
+
+    // Use data from the action payload
+    setQuoteData({
+      vehicle_year: payload.vehicle?.year || payload.auto_quote?.vehicle_year,
+      vehicle_make: payload.vehicle?.make || payload.auto_quote?.vehicle_make,
+      vehicle_model: payload.vehicle?.model || payload.auto_quote?.vehicle_model,
+      product_name: payload.auto_quote?.product_name,
+      quote_total: payload.auto_quote?.total_price || payload.quote_total || 0,
+      customer_name: payload.auto_quote?.customer_name || payload.customer_name,
+      customer_email: payload.auto_quote?.customer_email || payload.customer_email,
+    });
   };
 
   if (!action) return null;
