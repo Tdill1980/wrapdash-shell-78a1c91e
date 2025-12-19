@@ -224,3 +224,6 @@ verify_jwt = false
 
 [functions.luigi-ordering-concierge]
 verify_jwt = false
+
+[functions.affiliate-support-chat]
+verify_jwt = false
