@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,18 +9,20 @@ import {
   Mail, 
   MessageCircle, 
   Instagram, 
-  CheckSquare,
   Clock,
   Brain,
   RefreshCw,
   FileText,
-  AlertCircle
+  Unplug,
+  DollarSign,
+  Image as ImageIcon,
+  Facebook
 } from "lucide-react";
 import { AgentSelector } from "./AgentSelector";
 import { AgentChatPanel } from "./AgentChatPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatRelativeAZ } from "@/lib/timezone";
+import { format } from "date-fns";
 
 interface ReviewQueueProps {
   onSelectConversation?: (conversationId: string) => void;
@@ -31,9 +33,11 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const [showAgentChat, setShowAgentChat] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [taskContext, setTaskContext] = useState<Record<string, unknown> | undefined>();
+  const [activeTab, setActiveTab] = useState("all");
+  const [emailSubTab, setEmailSubTab] = useState<string | null>(null);
 
   // Fetch recent conversations from last 48 hours
-  const { data: conversationsData, isLoading: loadingConversations, refetch: refetchConversations, dataUpdatedAt } = useQuery({
+  const { data: conversationsData, isLoading: loadingConversations, refetch: refetchConversations } = useQuery({
     queryKey: ["review-queue-conversations"],
     queryFn: async () => {
       const fortyEightHoursAgo = new Date();
@@ -58,7 +62,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
     refetchInterval: 30000,
   });
 
-  // Fetch unresolved ai_actions (from Ops Desk)
+  // Fetch unresolved ai_actions
   const { data: aiActionsData, isLoading: loadingActions, refetch: refetchActions } = useQuery({
     queryKey: ["review-queue-ai-actions"],
     queryFn: async () => {
@@ -119,15 +123,14 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
     refetchActions();
   };
 
-  // Helper to get channel from unified item (conversation or ai_action)
-  const getItemChannel = (item: any): string => {
+  // Helper to get source/channel from unified item
+  const getItemSource = (item: any): string => {
     if (item._isAiAction) {
-      // For ai_actions, derive channel from payload.source first, then enriched conversation
       const payload = item.action_payload as any;
       return payload?.source || 
              item._enrichedConversation?.channel || 
              payload?.channel || 
-             "task";
+             "unknown";
     }
     return item.channel || "unknown";
   };
@@ -152,11 +155,11 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   };
 
   const handleAskAboutConversation = (conversation: any) => {
-    const channel = getItemChannel(conversation);
+    const source = getItemSource(conversation);
     setTaskContext({
       type: "conversation_review",
       conversationId: conversation.id,
-      channel: channel,
+      channel: source,
       customerName: conversation.contacts?.name || conversation._contact?.name || "Unknown",
       customerEmail: conversation.contacts?.email || conversation._contact?.email,
       subject: conversation.subject || (conversation.action_payload as any)?.subject,
@@ -165,57 +168,55 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
     setShowAgentSelector(true);
   };
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel) {
-      case "email": return <Mail className="w-4 h-4" />;
-      case "instagram": return <Instagram className="w-4 h-4" />;
-      case "website_chat": 
-      case "website": return <MessageCircle className="w-4 h-4" />;
-      case "task": return <FileText className="w-4 h-4" />;
-      default: return <AlertCircle className="w-4 h-4" />;
-    }
+  // Filter helpers
+  const filterBySource = (source: string) => {
+    return recentConversations?.filter(c => {
+      const itemSource = getItemSource(c);
+      if (source === "instagram") return itemSource === "instagram";
+      if (source === "email") return itemSource === "email";
+      if (source === "website") return itemSource === "website_chat" || itemSource === "website";
+      return false;
+    }) || [];
   };
 
-  const getChannelColor = (channel: string) => {
-    switch (channel) {
-      case "email": return "bg-green-500/20 text-green-400";
-      case "instagram": return "bg-pink-500/20 text-pink-400";
-      case "website_chat": 
-      case "website": return "bg-blue-500/20 text-blue-400";
-      case "task": return "bg-amber-500/20 text-amber-400";
-      default: return "bg-muted text-muted-foreground";
-    }
-  };
-
-  // Filter helpers using our channel helpers
   const filterByInbox = (inbox: string) => {
     return recentConversations?.filter(c => {
-      const channel = getItemChannel(c);
-      if (channel !== "email") return false;
+      const source = getItemSource(c);
+      if (source !== "email") return false;
       const recipientInbox = getItemInbox(c).toLowerCase();
       return recipientInbox.includes(inbox);
     }) || [];
   };
 
+  const instagramItems = filterBySource("instagram");
+  const emailItems = filterBySource("email");
+  const websiteItems = filterBySource("website");
   const helloEmails = filterByInbox("hello");
   const designEmails = filterByInbox("design");
   const jacksonEmails = filterByInbox("jackson");
-  const allEmails = recentConversations?.filter(c => getItemChannel(c) === "email") || [];
-  const socialConvos = recentConversations?.filter(c => getItemChannel(c) === "instagram") || [];
-  const websiteConvos = recentConversations?.filter(c => {
-    const ch = getItemChannel(c);
-    return ch === "website_chat" || ch === "website";
-  }) || [];
+
+  // Get current filtered items based on active tab and sub-tab
+  const getCurrentItems = () => {
+    if (activeTab === "all") return recentConversations;
+    if (activeTab === "instagram") return instagramItems;
+    if (activeTab === "facebook") return []; // Placeholder
+    if (activeTab === "email") {
+      if (emailSubTab === "hello") return helloEmails;
+      if (emailSubTab === "design") return designEmails;
+      if (emailSubTab === "jackson") return jacksonEmails;
+      return emailItems;
+    }
+    if (activeTab === "website") return websiteItems;
+    return recentConversations;
+  };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header with New Task button */}
+    <div className="h-full flex flex-col bg-background">
+      {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Review Queue</h2>
-          <p className="text-sm text-muted-foreground">
-            Last 48 hours • Updated {dataUpdatedAt ? formatRelativeAZ(new Date(dataUpdatedAt).toISOString()) : "just now"}
-          </p>
+          <p className="text-sm text-muted-foreground">Last 48 hours</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1">
@@ -229,174 +230,117 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
         </div>
       </div>
 
-      {/* Quick Task Shortcuts */}
-      <div className="p-4 border-b border-border">
-        <p className="text-xs text-muted-foreground mb-2">Quick Start</p>
-        <div className="flex flex-wrap gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              setTaskContext({ type: "email_campaign", description: "Create email campaign" });
-              setSelectedAgentId("jordan_lee");
-              setShowAgentChat(true);
-            }}
+      {/* Main Tabs */}
+      <div className="border-b border-border">
+        <div className="flex gap-1 p-2 overflow-x-auto">
+          <TabButton 
+            active={activeTab === "all"} 
+            onClick={() => { setActiveTab("all"); setEmailSubTab(null); }}
+            count={recentConversations.length}
           >
-            <Mail className="w-3 h-3 mr-1" />
-            Email Campaign
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              setTaskContext({ type: "social_content", description: "Create social content" });
-              setSelectedAgentId("casey_ramirez");
-              setShowAgentChat(true);
-            }}
+            All
+          </TabButton>
+          <TabButton 
+            active={activeTab === "instagram"} 
+            onClick={() => { setActiveTab("instagram"); setEmailSubTab(null); }}
+            count={instagramItems.length}
+            icon={<Instagram className="w-3.5 h-3.5" />}
+            color="pink"
           >
-            <Instagram className="w-3 h-3 mr-1" />
-            Social Content
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              setTaskContext({ type: "content_creation", description: "Create content in ContentBox" });
-              setSelectedAgentId("emily_carter");
-              setShowAgentChat(true);
-            }}
+            Instagram
+          </TabButton>
+          <TabButton 
+            active={activeTab === "facebook"} 
+            onClick={() => { setActiveTab("facebook"); setEmailSubTab(null); }}
+            count={0}
+            icon={<Facebook className="w-3.5 h-3.5" />}
+            color="blue"
           >
-            <Brain className="w-3 h-3 mr-1" />
-            ContentBox Task
-          </Button>
+            Facebook
+          </TabButton>
+          <TabButton 
+            active={activeTab === "email"} 
+            onClick={() => { setActiveTab("email"); setEmailSubTab(null); }}
+            count={emailItems.length}
+            icon={<Mail className="w-3.5 h-3.5" />}
+            color="green"
+          >
+            Email
+          </TabButton>
+          <TabButton 
+            active={activeTab === "website"} 
+            onClick={() => { setActiveTab("website"); setEmailSubTab(null); }}
+            count={websiteItems.length}
+            icon={<MessageCircle className="w-3.5 h-3.5" />}
+            color="cyan"
+          >
+            Website Chat
+          </TabButton>
         </div>
+
+        {/* Email Sub-tabs */}
+        {activeTab === "email" && (
+          <div className="flex gap-1 px-2 pb-2">
+            <EmailSubTab 
+              active={emailSubTab === null} 
+              onClick={() => setEmailSubTab(null)}
+              count={emailItems.length}
+              color="gray"
+            >
+              All Email
+            </EmailSubTab>
+            <EmailSubTab 
+              active={emailSubTab === "hello"} 
+              onClick={() => setEmailSubTab("hello")}
+              count={helloEmails.length}
+              color="green"
+            >
+              hello@
+            </EmailSubTab>
+            <EmailSubTab 
+              active={emailSubTab === "design"} 
+              onClick={() => setEmailSubTab("design")}
+              count={designEmails.length}
+              color="purple"
+            >
+              design@
+            </EmailSubTab>
+            <EmailSubTab 
+              active={emailSubTab === "jackson"} 
+              onClick={() => setEmailSubTab("jackson")}
+              count={jacksonEmails.length}
+              color="orange"
+            >
+              jackson@
+            </EmailSubTab>
+          </div>
+        )}
       </div>
 
-      {/* Tabs for different views */}
-      <Tabs defaultValue="all" className="flex-1 flex flex-col">
-        <TabsList className="mx-4 mt-2 flex-wrap h-auto gap-1">
-          <TabsTrigger value="all">All ({recentConversations?.length || 0})</TabsTrigger>
-          <TabsTrigger value="hello" className="text-green-400">hello@ ({helloEmails.length})</TabsTrigger>
-          <TabsTrigger value="design" className="text-purple-400">design@ ({designEmails.length})</TabsTrigger>
-          <TabsTrigger value="jackson" className="text-orange-400">jackson@ ({jacksonEmails.length})</TabsTrigger>
-          <TabsTrigger value="social" className="text-pink-400">Instagram ({socialConvos.length})</TabsTrigger>
-          <TabsTrigger value="chat" className="text-blue-400">Website ({websiteConvos.length})</TabsTrigger>
-        </TabsList>
-
-        <ScrollArea className="flex-1 h-[calc(100vh-320px)]">
-          <div className="p-4">
-          <TabsContent value="all" className="mt-0 space-y-2">
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
-            ) : recentConversations?.length === 0 ? (
-              <div className="text-center py-8">
-                <Clock className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No conversations in last 48 hours</p>
-                <Button variant="outline" className="mt-4" onClick={handleNewTask}>
-                  Start a new task
-                </Button>
-              </div>
-            ) : (
-              recentConversations?.map((conv) => (
-                <ConversationCard
-                  key={conv.id}
-                  conversation={conv}
-                  onAskAgent={() => handleAskAboutConversation(conv)}
-                  onSelect={() => onSelectConversation?.(conv.id)}
-                  getChannelIcon={getChannelIcon}
-                  getChannelColor={getChannelColor}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="hello" className="mt-0 space-y-2">
-            {helloEmails.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No hello@ emails</div>
-            ) : (
-              helloEmails.map((conv) => (
-                <ConversationCard
-                  key={conv.id}
-                  conversation={conv}
-                  onAskAgent={() => handleAskAboutConversation(conv)}
-                  onSelect={() => onSelectConversation?.(conv.id)}
-                  getChannelIcon={getChannelIcon}
-                  getChannelColor={getChannelColor}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="design" className="mt-0 space-y-2">
-            {designEmails.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No design@ emails</div>
-            ) : (
-              designEmails.map((conv) => (
-                <ConversationCard
-                  key={conv.id}
-                  conversation={conv}
-                  onAskAgent={() => handleAskAboutConversation(conv)}
-                  onSelect={() => onSelectConversation?.(conv.id)}
-                  getChannelIcon={getChannelIcon}
-                  getChannelColor={getChannelColor}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="jackson" className="mt-0 space-y-2">
-            {jacksonEmails.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No jackson@ emails</div>
-            ) : (
-              jacksonEmails.map((conv) => (
-                <ConversationCard
-                  key={conv.id}
-                  conversation={conv}
-                  onAskAgent={() => handleAskAboutConversation(conv)}
-                  onSelect={() => onSelectConversation?.(conv.id)}
-                  getChannelIcon={getChannelIcon}
-                  getChannelColor={getChannelColor}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="social" className="mt-0 space-y-2">
-            {socialConvos.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No Instagram DMs</div>
-            ) : (
-              socialConvos.map((conv) => (
-                <ConversationCard
-                  key={conv.id}
-                  conversation={conv}
-                  onAskAgent={() => handleAskAboutConversation(conv)}
-                  onSelect={() => onSelectConversation?.(conv.id)}
-                  getChannelIcon={getChannelIcon}
-                  getChannelColor={getChannelColor}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="chat" className="mt-0 space-y-2">
-            {websiteConvos.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No website chats</div>
-            ) : (
-              websiteConvos.map((conv) => (
-                <ConversationCard
-                  key={conv.id}
-                  conversation={conv}
-                  onAskAgent={() => handleAskAboutConversation(conv)}
-                  onSelect={() => onSelectConversation?.(conv.id)}
-                  getChannelIcon={getChannelIcon}
-                  getChannelColor={getChannelColor}
-                />
-              ))
-            )}
-          </TabsContent>
-          </div>
-        </ScrollArea>
-      </Tabs>
+      {/* Content Area */}
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-2">
+          {activeTab === "facebook" ? (
+            <FacebookPlaceholder />
+          ) : isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+          ) : getCurrentItems().length === 0 ? (
+            <div className="text-center py-8">
+              <Clock className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">No items in this queue</p>
+            </div>
+          ) : (
+            getCurrentItems().map((item) => (
+              <TaskCard
+                key={item.id}
+                item={item}
+                onAction={() => handleAskAboutConversation(item)}
+                onSelect={() => onSelectConversation?.(item.id)}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
 
       {/* Agent Selector Modal */}
       <AgentSelector
@@ -416,119 +360,244 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   );
 }
 
-function ConversationCard({ 
-  conversation, 
-  onAskAgent, 
-  onSelect,
-  getChannelIcon,
-  getChannelColor
+// Tab Button Component
+function TabButton({ 
+  children, 
+  active, 
+  onClick, 
+  count, 
+  icon,
+  color = "default"
 }: { 
-  conversation: any;
-  onAskAgent: () => void;
-  onSelect: () => void;
-  getChannelIcon: (channel: string) => React.ReactNode;
-  getChannelColor: (channel: string) => string;
+  children: React.ReactNode; 
+  active: boolean; 
+  onClick: () => void; 
+  count: number;
+  icon?: React.ReactNode;
+  color?: "default" | "pink" | "blue" | "green" | "cyan";
 }) {
-  const isAiAction = conversation._isAiAction;
-  const payload = conversation.action_payload as Record<string, unknown> | null;
-  
-  // For ai_actions, use enriched conversation data
-  const enrichedConvo = conversation._enrichedConversation;
-  const contact = conversation.contacts || conversation._contact;
-  const lastMessage = conversation.messages?.[0];
-
-  // Derive channel from payload source field, enriched conversation, or conversation
-  const payloadSource = (payload?.source as string) || "";
-  const channel = payloadSource || enrichedConvo?.channel || conversation.channel || "task";
-
-  const getOwnerAndInbox = () => {
-    const recipientInbox = (enrichedConvo?.recipient_inbox || conversation.recipient_inbox || "").toLowerCase();
-
-    if (channel === "instagram") return { owner: "Social Team", inbox: "Instagram DMs" };
-    if (channel === "website" || channel === "website_chat") return { owner: "Jordan Lee", inbox: "Website Chat" };
-    if (channel === "email") {
-      if (recipientInbox.includes("design")) return { owner: "Grant Miller", inbox: "design@weprintwraps.com" };
-      if (recipientInbox.includes("jackson")) return { owner: "Manny Chen", inbox: "jackson@weprintwraps.com" };
-      return { owner: "Alex Morgan", inbox: "hello@weprintwraps.com" };
-    }
-    if (isAiAction) {
-      // Format action type nicely for display
-      const actionLabel = conversation.action_type?.replace(/_/g, " ") || "pending task";
-      return { owner: "AI Task", inbox: actionLabel };
-    }
-    return { owner: "Alex Morgan", inbox: String(channel || "unknown") };
+  const colorClasses = {
+    default: active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-muted/80",
+    pink: active ? "bg-pink-500 text-white" : "bg-pink-500/20 text-pink-400 hover:bg-pink-500/30",
+    blue: active ? "bg-blue-500 text-white" : "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30",
+    green: active ? "bg-green-500 text-white" : "bg-green-500/20 text-green-400 hover:bg-green-500/30",
+    cyan: active ? "bg-cyan-500 text-white" : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30",
   };
 
-  const ownerInfo = getOwnerAndInbox();
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${colorClasses[color]}`}
+    >
+      {icon}
+      {children}
+      <span className={`ml-1 text-xs ${active ? "opacity-90" : "opacity-70"}`}>({count})</span>
+    </button>
+  );
+}
 
-  // Get customer name from various sources - including sender_username for Instagram
-  const customerName = contact?.name || 
-    contact?.email || 
-    (payload?.customer_name as string) || 
-    (payload?.customer_email as string) ||
-    (payload?.sender_username as string) ||
-    "Unknown";
-
-  // Get subject/title from various sources
-  const subject = conversation.subject || 
-    (payload?.subject as string) || 
-    (payload?.quote_number as string) ||
-    (isAiAction ? `${conversation.action_type?.replace(/_/g, " ")} task` : null);
-
-  // Get preview text
-  const previewText = lastMessage?.content || 
-    (payload?.message as string) ||
-    (payload?.preview as string) || 
-    (payload?.content as string) ||
-    (isAiAction && payload?.file_urls ? "Contains file attachment(s)" : null);
+// Email Sub-tab Component
+function EmailSubTab({ 
+  children, 
+  active, 
+  onClick, 
+  count,
+  color
+}: { 
+  children: React.ReactNode; 
+  active: boolean; 
+  onClick: () => void; 
+  count: number;
+  color: "gray" | "green" | "purple" | "orange";
+}) {
+  const colorClasses = {
+    gray: active ? "border-foreground text-foreground" : "border-muted-foreground/30 text-muted-foreground",
+    green: active ? "border-green-500 text-green-400 bg-green-500/10" : "border-green-500/30 text-green-400/70",
+    purple: active ? "border-purple-500 text-purple-400 bg-purple-500/10" : "border-purple-500/30 text-purple-400/70",
+    orange: active ? "border-orange-500 text-orange-400 bg-orange-500/10" : "border-orange-500/30 text-orange-400/70",
+  };
 
   return (
-    <Card className="hover:bg-accent/50 transition-colors">
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${colorClasses[color]}`}
+    >
+      {children}
+      <span className="opacity-70">({count})</span>
+    </button>
+  );
+}
+
+// Facebook Placeholder Component
+function FacebookPlaceholder() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
+        <Unplug className="w-8 h-8 text-blue-400" />
+      </div>
+      <p className="text-blue-400 font-medium">Waiting for integration</p>
+      <p className="text-sm text-muted-foreground mt-1">Facebook Messenger will appear here once connected</p>
+    </div>
+  );
+}
+
+// Task Card Component - Matches the reference design
+function TaskCard({ 
+  item, 
+  onAction,
+  onSelect
+}: { 
+  item: any;
+  onAction: () => void;
+  onSelect: () => void;
+}) {
+  const isAiAction = item._isAiAction;
+  const payload = item.action_payload as Record<string, unknown> | null;
+  
+  // Get source/channel
+  const getSource = () => {
+    if (isAiAction) {
+      return (payload?.source as string) || 
+             item._enrichedConversation?.channel || 
+             "unknown";
+    }
+    return item.channel || "unknown";
+  };
+  const source = getSource();
+
+  // Get username/identifier
+  const username = (payload?.sender_username as string) || 
+                   (payload?.customer_name as string) || 
+                   item.contacts?.name || 
+                   item._contact?.name ||
+                   item.contacts?.email ||
+                   "Unknown";
+
+  // Get action type for AI actions
+  const actionType = isAiAction ? item.action_type : null;
+  const formattedActionType = actionType?.replace(/_/g, " ").toUpperCase() || "";
+
+  // Get file URLs for file_review actions
+  const fileUrls = (payload?.file_urls as string[]) || [];
+
+  // Get message/preview
+  const message = (payload?.message as string) || 
+                  item.messages?.[0]?.content ||
+                  (payload?.preview as string) ||
+                  "";
+
+  // Format timestamp
+  const timestamp = format(new Date(item.created_at), "h:mm a");
+
+  // Source icon and color
+  const getSourceIcon = () => {
+    switch (source) {
+      case "instagram": return <Instagram className="w-4 h-4" />;
+      case "email": return <Mail className="w-4 h-4" />;
+      case "website_chat":
+      case "website": return <MessageCircle className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  const getSourceColor = () => {
+    switch (source) {
+      case "instagram": return "text-pink-400 bg-pink-500/20";
+      case "email": return "text-green-400 bg-green-500/20";
+      case "website_chat":
+      case "website": return "text-cyan-400 bg-cyan-500/20";
+      default: return "text-muted-foreground bg-muted";
+    }
+  };
+
+  // Action type badge color
+  const getActionBadgeColor = () => {
+    if (!actionType) return "";
+    switch (actionType) {
+      case "file_review": return "bg-amber-500/20 text-amber-400";
+      case "create_quote": return "bg-emerald-500/20 text-emerald-400";
+      default: return "bg-blue-500/20 text-blue-400";
+    }
+  };
+
+  const getActionIcon = () => {
+    switch (actionType) {
+      case "file_review": return <ImageIcon className="w-3 h-3" />;
+      case "create_quote": return <DollarSign className="w-3 h-3" />;
+      default: return null;
+    }
+  };
+
+  return (
+    <Card className="hover:bg-accent/50 transition-colors cursor-pointer" onClick={onSelect}>
       <CardContent className="p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="secondary" className={getChannelColor(channel)}>
-                {getChannelIcon(channel)}
-                <span className="ml-1 capitalize">{channel?.replace("_", " ")}</span>
+        {/* Row 1: Source icon + Action type badge + Action button */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center ${getSourceColor()}`}>
+              {getSourceIcon()}
+            </div>
+            {isAiAction && actionType && (
+              <Badge variant="secondary" className={`text-[10px] uppercase font-semibold ${getActionBadgeColor()}`}>
+                {getActionIcon()}
+                <span className="ml-1">{formattedActionType}</span>
               </Badge>
-              {isAiAction && (
-                <Badge variant="outline" className="bg-amber-500/20 text-amber-400 text-[10px]">
-                  {conversation.action_type?.replace("_", " ")}
-                </Badge>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {formatRelativeAZ(conversation.created_at)}
-              </span>
-            </div>
-
-            {/* Owner / inbox */}
-            <div className="text-[11px] text-muted-foreground mb-1">
-              <span className="font-medium text-foreground/80">{ownerInfo.owner}</span>
-              <span className="mx-1">•</span>
-              <span className="truncate">{ownerInfo.inbox}</span>
-            </div>
-
-            <p className="font-medium truncate">{customerName}</p>
-            {subject && (
-              <p className="text-sm text-muted-foreground truncate">{subject}</p>
             )}
-            {previewText && (
-              <p className="text-xs text-muted-foreground truncate mt-1">
-                {previewText.substring(0, 80)}...
-              </p>
+            {!isAiAction && (
+              <Badge variant="secondary" className={`text-[10px] uppercase ${getSourceColor()}`}>
+                {source.replace("_", " ")}
+              </Badge>
             )}
           </div>
-          <div className="flex flex-col gap-1">
-            <Button size="sm" variant="outline" onClick={onSelect}>
-              View
-            </Button>
-            <Button size="sm" variant="secondary" onClick={onAskAgent}>
-              <Brain className="w-3 h-3 mr-1" />
-              Ask Agent
-            </Button>
-          </div>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            className="h-7 w-7 p-0 rounded-full"
+            onClick={(e) => { e.stopPropagation(); onAction(); }}
+          >
+            <Brain className="w-4 h-4" />
+          </Button>
         </div>
+
+        {/* Row 2: Username */}
+        <p className="text-sm font-medium text-foreground mb-1">{username}</p>
+
+        {/* Row 3: File count or message preview */}
+        {fileUrls.length > 0 ? (
+          <>
+            <p className="text-xs text-muted-foreground mb-2">
+              📎 {fileUrls.length} file(s) attached
+            </p>
+            {/* Row 4: Thumbnails */}
+            <div className="flex gap-1 mb-2">
+              {fileUrls.slice(0, 4).map((url, idx) => (
+                <div 
+                  key={idx} 
+                  className="w-12 h-12 rounded bg-muted overflow-hidden"
+                >
+                  <img 
+                    src={url} 
+                    alt="" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              ))}
+              {fileUrls.length > 4 && (
+                <div className="w-12 h-12 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                  +{fileUrls.length - 4}
+                </div>
+              )}
+            </div>
+          </>
+        ) : message ? (
+          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{message}</p>
+        ) : null}
+
+        {/* Row 5: Timestamp */}
+        <p className="text-[10px] text-muted-foreground">{timestamp}</p>
       </CardContent>
     </Card>
   );
