@@ -21,8 +21,10 @@ export function MightyChatShell() {
   const handleSelectConversation = (conversationId: string, channel?: string) => {
     setSelectedConversationId(conversationId);
     setSelectedConversationChannel(channel || null);
+    setSelectedAgentChatId(null); // Clear any previous agent chat
     setMode("chat");
   };
+
 
   const handleResumeAgentChat = (chatId: string) => {
     setSelectedAgentChatId(chatId);
