@@ -23,6 +23,7 @@ import {
   BarChart3,
   Sparkles as SparklesIcon,
   MessageSquare,
+  ClipboardCheck,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -37,6 +38,18 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["beta_shop", "affiliate", "admin"] },
+  { 
+    name: "AI Approvals", 
+    path: "/ai-approvals", 
+    icon: ClipboardCheck,
+    roles: ["admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">AI </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Approvals</span>
+      </span>
+    )
+  },
   { 
     name: "InkFusion™", 
     path: "/inkfusion", 
