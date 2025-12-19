@@ -32,7 +32,7 @@ export function MightyChatShell() {
   };
 
   return (
-    <div className="w-full flex flex-col">
+    <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
       {/* AI Status Controller */}
       <AIStatusController />
       
@@ -98,7 +98,7 @@ export function MightyChatShell() {
           <Heart className="h-4 w-4 text-pink-500" /> Casey
         </AskAgentButton>
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {mode === "review" && (
           <ReviewQueue onSelectConversation={handleSelectConversation} />
         )}

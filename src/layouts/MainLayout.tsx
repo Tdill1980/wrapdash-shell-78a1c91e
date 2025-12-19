@@ -31,7 +31,7 @@ export const MainLayout = ({ children, userName = "User" }: MainLayoutProps) => 
       </aside>
 
       {/* PAGE CONTENT */}
-      <main className="flex-1 min-h-screen flex flex-col w-full lg:ml-64">
+      <main className="flex-1 min-h-0 flex flex-col w-full lg:ml-64">
         <GlobalHeader 
           userName={userName} 
           onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
