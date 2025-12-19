@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, 
   Mail, 
@@ -23,6 +22,7 @@ import { AgentChatPanel } from "./AgentChatPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface ReviewQueueProps {
   onSelectConversation?: (conversationId: string) => void;
@@ -35,8 +35,16 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const [taskContext, setTaskContext] = useState<Record<string, unknown> | undefined>();
   const [activeTab, setActiveTab] = useState("all");
   const [emailSubTab, setEmailSubTab] = useState<string | null>(null);
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const hasAutoBackfilledInstagram = useRef(false);
 
-  // Fetch recent conversations from last 48 hours
+  useEffect(() => {
+    if (activeTab !== "instagram") return;
+    if (hasAutoBackfilledInstagram.current) return;
+    hasAutoBackfilledInstagram.current = true;
+    handleBackfillInstagramProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
   const { data: conversationsData, isLoading: loadingConversations, refetch: refetchConversations } = useQuery({
     queryKey: ["review-queue-conversations"],
     queryFn: async () => {
@@ -79,18 +87,31 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
         (actions || []).map(async (action) => {
           const payload = action.action_payload as Record<string, unknown> | null;
           const conversationId = payload?.conversation_id as string | undefined;
-          
-          let contact = null;
-          let conversationData = null;
-          
+
+          let contact: any = null;
+          let conversationData: any = null;
+
           if (conversationId) {
             const { data: conv } = await supabase
               .from("conversations")
-              .select(`*, contacts (name, email, phone)`)
+              .select(`*, contacts (name, email, phone)`) 
               .eq("id", conversationId)
-              .single();
+              .maybeSingle();
             conversationData = conv;
             contact = conv?.contacts;
+          }
+
+          // If this is an Instagram-sourced action without a conversation_id,
+          // try to map sender_id -> contact so we can show the real @username after backfill.
+          if (!contact && (payload as any)?.source === "instagram" && (payload as any)?.sender_id) {
+            const senderId = String((payload as any).sender_id);
+            const { data: foundContact } = await supabase
+              .from("contacts")
+              .select("name, email, phone")
+              .eq("source", "instagram")
+              .contains("metadata", { instagram_sender_id: senderId })
+              .maybeSingle();
+            contact = foundContact;
           }
 
           return {
@@ -121,6 +142,23 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const refetch = () => {
     refetchConversations();
     refetchActions();
+  };
+
+  const handleBackfillInstagramProfiles = async () => {
+    setBackfillLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-instagram-profiles", {
+        body: {},
+      });
+      if (error) throw error;
+      toast.success(`Updated ${data?.updated ?? 0} of ${data?.total ?? 0} Instagram contacts`);
+      refetch();
+    } catch (err) {
+      console.error("Backfill instagram profiles error:", err);
+      toast.error("Failed to sync Instagram usernames");
+    } finally {
+      setBackfillLoading(false);
+    }
   };
 
   // Helper to get source/channel from unified item
@@ -219,6 +257,18 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
           <p className="text-sm text-muted-foreground">Last 48 hours</p>
         </div>
         <div className="flex items-center gap-2">
+          {activeTab === "instagram" && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={backfillLoading}
+              onClick={handleBackfillInstagramProfiles}
+              className="gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${backfillLoading ? "animate-spin" : ""}`} />
+              Sync IG usernames
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1">
             <RefreshCw className="w-3 h-3" />
             Refresh

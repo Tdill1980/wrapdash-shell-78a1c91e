@@ -34,19 +34,21 @@ async function loadAccessToken(supabase: any) {
 }
 
 async function getInstagramUserProfile(igUserId: string) {
+  // Instagram Messaging "user profile" lookup expects a versioned Graph endpoint.
+  // We try the most correct endpoint first, then fall back.
   const endpoints = [
     {
-      url: `https://graph.instagram.com/${igUserId}?fields=username,name&access_token=${ACCESS_TOKEN}`,
-      name: "graph.instagram.com"
+      name: "Instagram Graph API v24.0",
+      url: `https://graph.instagram.com/v24.0/${igUserId}?fields=name,username,profile_pic&access_token=${ACCESS_TOKEN}`,
     },
     {
-      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=username,name,profile_picture_url&access_token=${ACCESS_TOKEN}`,
-      name: "graph.facebook.com/v24.0"
+      name: "Instagram Graph API (unversioned fallback)",
+      url: `https://graph.instagram.com/${igUserId}?fields=name,username,profile_pic&access_token=${ACCESS_TOKEN}`,
     },
     {
-      url: `https://graph.facebook.com/${igUserId}?fields=username,name,profile_picture_url&access_token=${ACCESS_TOKEN}`,
-      name: "graph.facebook.com"
-    }
+      name: "Facebook Graph API v24.0 (fallback)",
+      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=name,username,profile_pic,profile_picture_url&access_token=${ACCESS_TOKEN}`,
+    },
   ];
 
   let lastError = null;
@@ -55,17 +57,21 @@ async function getInstagramUserProfile(igUserId: string) {
     try {
       console.log(`[Backfill] Trying ${endpoint.name} for user ${igUserId}`);
       const res = await fetch(endpoint.url);
-      
+
       if (res.ok) {
         const data = await res.json();
         console.log(`[Backfill] SUCCESS from ${endpoint.name}:`, JSON.stringify(data));
-        
-        if (data.username || data.name) {
+
+        const username = data.username || null;
+        const name = data.name || null;
+        const profilePic = data.profile_picture_url || data.profile_pic || null;
+
+        if (username || name) {
           return {
-            username: data.username || null,
-            name: data.name || null,
-            profile_picture_url: data.profile_picture_url || null,
-            source: endpoint.name
+            username,
+            name,
+            profile_picture_url: profilePic,
+            source: endpoint.name,
           };
         }
       } else {
@@ -159,7 +165,8 @@ serve(async (req) => {
         continue;
       }
 
-      const displayName = profile.name || profile.username || contact.name;
+      const handle = profile.username ? `@${String(profile.username).replace(/^@/, "")}` : null;
+      const displayName = handle || profile.name || contact.name;
       const updatedMetadata = {
         ...metadata,
         username: profile.username,
