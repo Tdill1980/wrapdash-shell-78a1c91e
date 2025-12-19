@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,27 +8,18 @@ import {
   CheckCircle, 
   XCircle, 
   RotateCcw, 
-  Edit, 
   AlertTriangle,
   Clock,
   DollarSign,
-  User,
-  Cog
+  Cog,
+  Instagram,
+  Mail,
+  Image as ImageIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimeAZ } from "@/lib/timezone";
 import { toast } from "sonner";
-
-interface OpsTask {
-  id: string;
-  action_type: string;
-  action_payload: Record<string, unknown> | null;
-  priority: string | null;
-  resolved: boolean;
-  resolved_at: string | null;
-  resolved_by: string | null;
-  created_at: string | null;
-}
+import { useOpsTaskEnrichment, EnrichedOpsTask } from "@/hooks/useOpsTaskEnrichment";
 
 interface OpsDeskPanelProps {
   onTaskSelect?: (taskId: string) => void;
@@ -46,43 +37,17 @@ const PRIORITY_ICONS: Record<string, React.ReactNode> = {
   normal: <Clock className="w-4 h-4 text-muted-foreground" />
 };
 
+const INBOX_BADGES: Record<string, string> = {
+  design: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40',
+  hello: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40',
+  jackson: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40'
+};
+
 export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
-  const [tasks, setTasks] = useState<OpsTask[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedTask, setSelectedTask] = useState<OpsTask | null>(null);
+  const { tasks, loading, refresh } = useOpsTaskEnrichment();
+  const [selectedTask, setSelectedTask] = useState<EnrichedOpsTask | null>(null);
 
-  useEffect(() => {
-    loadTasks();
-    
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel('ops-desk-tasks')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'ai_actions' },
-        () => loadTasks()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const loadTasks = async () => {
-    const { data, error } = await supabase
-      .from('ai_actions')
-      .select('*')
-      .eq('resolved', false)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setTasks(data as OpsTask[]);
-    }
-    setLoading(false);
-  };
-
-  const handleApprove = async (task: OpsTask) => {
+  const handleApprove = async (task: EnrichedOpsTask) => {
     const { error } = await supabase
       .from('ai_actions')
       .update({ 
@@ -96,11 +61,11 @@ export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
       toast.error('Failed to approve task');
     } else {
       toast.success('Task approved and deployed');
-      loadTasks();
+      refresh();
     }
   };
 
-  const handleReject = async (task: OpsTask) => {
+  const handleReject = async (task: EnrichedOpsTask) => {
     const { error } = await supabase
       .from('ai_actions')
       .update({ 
@@ -115,11 +80,11 @@ export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
       toast.error('Failed to reject task');
     } else {
       toast.success('Task rejected');
-      loadTasks();
+      refresh();
     }
   };
 
-  const handleReroute = async (task: OpsTask) => {
+  const handleReroute = async () => {
     toast.info('Re-route functionality coming soon');
   };
 
@@ -127,22 +92,7 @@ export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
     return (payload?.revenue_impact as string) || 'low';
   };
 
-  const getRequestedBy = (payload: Record<string, unknown> | null): string => {
-    return (payload?.requested_by as string) || 'System';
-  };
-
-  const getAssignedTo = (payload: Record<string, unknown> | null): string => {
-    return (payload?.assigned_to as string) || 'Unassigned';
-  };
-
-  const getCustomer = (payload: Record<string, unknown> | null): string => {
-    return (payload?.customer_name as string) || 'Unknown';
-  };
-
-  const formatTime = (dateStr: string | null) => formatTimeAZ(dateStr);
-
-  // Stats
-  const pendingCount = tasks.filter(t => !t.resolved).length;
+  const pendingCount = tasks.length;
   const cxRiskCount = tasks.filter(t => t.priority === 'urgent').length;
   const highRevenueCount = tasks.filter(t => getRevenueImpact(t.action_payload) === 'high').length;
 
@@ -191,6 +141,7 @@ export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
               {tasks.map((task) => {
                 const revenueImpact = getRevenueImpact(task.action_payload);
                 const isSelected = selectedTask?.id === task.id;
+                const ChannelIcon = task.channel === 'instagram' ? Instagram : Mail;
 
                 return (
                   <div
@@ -205,29 +156,64 @@ export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
                       onTaskSelect?.(task.id);
                     }}
                   >
-                    {/* Task Header */}
+                    {/* Task Header with Channel */}
                     <div className="flex items-center gap-2 mb-2">
+                      <div className={cn(
+                        "p-1 rounded-full",
+                        task.channel === 'instagram' 
+                          ? "bg-pink-100 text-pink-600 dark:bg-pink-900/40" 
+                          : "bg-blue-100 text-blue-600 dark:bg-blue-900/40"
+                      )}>
+                        <ChannelIcon className="w-3 h-3" />
+                      </div>
                       {PRIORITY_ICONS[task.priority || 'normal']}
                       <span className="font-medium text-sm flex-1 truncate">
                         {task.action_type.replace(/_/g, ' ').toUpperCase()}
                       </span>
                       <Badge className={cn("text-[10px]", REVENUE_IMPACT_COLORS[revenueImpact])}>
-                        {revenueImpact === 'high' ? '🔥' : revenueImpact === 'medium' ? '◼' : '▫'} {revenueImpact}
+                        {revenueImpact === 'high' ? '🔥' : '▫'}
                       </Badge>
                     </div>
 
-                    {/* Task Details */}
-                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground mb-2">
-                      <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span>From: {getRequestedBy(task.action_payload)}</span>
+                    {/* Customer Info */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium truncate">{task.customer_name}</span>
+                      {task.channel === 'email' && task.recipient_inbox && (
+                        <Badge className={cn("text-[9px]", INBOX_BADGES[task.recipient_inbox] || 'bg-muted')}>
+                          {task.recipient_inbox}@
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Message Preview */}
+                    <div className="text-xs text-muted-foreground mb-1 line-clamp-1">
+                      {task.original_message || (task.file_urls.length > 0 ? (
+                        <span className="flex items-center gap-1">
+                          <ImageIcon className="w-3 h-3" />
+                          {task.file_urls.length} file(s)
+                        </span>
+                      ) : 'No message')}
+                    </div>
+
+                    {/* Thumbnail */}
+                    {task.file_urls.length > 0 && (
+                      <div className="flex gap-1 mb-1">
+                        {task.file_urls.slice(0, 2).map((url, i) => (
+                          <img 
+                            key={i}
+                            src={url} 
+                            alt="" 
+                            className="w-10 h-10 object-cover rounded border"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ))}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span>To: {getAssignedTo(task.action_payload)}</span>
-                      </div>
-                      <div>Customer: {getCustomer(task.action_payload)}</div>
-                      <div>{formatTime(task.created_at)}</div>
+                    )}
+
+                    <div className="text-[10px] text-muted-foreground">
+                      {formatTimeAZ(task.created_at)}
                     </div>
 
                     {/* Action Buttons */}
@@ -249,11 +235,10 @@ export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleReroute(task);
+                            handleReroute();
                           }}
                         >
                           <RotateCcw className="w-3 h-3 mr-1" />
-                          Re-route
                         </Button>
                         <Button
                           size="sm"
@@ -264,7 +249,6 @@ export function OpsDeskPanel({ onTaskSelect }: OpsDeskPanelProps) {
                           }}
                         >
                           <XCircle className="w-3 h-3 mr-1" />
-                          Reject
                         </Button>
                       </div>
                     )}
