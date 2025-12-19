@@ -519,7 +519,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   const showMobileList = !selectedConversation;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col p-2 md:p-4">
       {/* Header */}
       <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -575,7 +575,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       </div>
 
       {/* Main layout - responsive */}
-      <div className="flex flex-1 gap-2 md:gap-4 min-h-0">
+      <div className="flex gap-2 md:gap-4">
         {/* LEFT: Work Streams Sidebar - hidden on mobile */}
         <div className="hidden lg:block">
           <WorkStreamsSidebar
@@ -605,7 +605,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 flex-1 min-h-0">
+            <CardContent className="p-0 flex-1 min-h-0 max-h-[420px]">
               <ScrollArea className="h-full">
                 {loading ? (
                   <div className="p-4 text-muted-foreground">Loading...</div>
@@ -736,11 +736,11 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
           {/* Message Thread - full width on mobile when selected */}
           <Card className={cn(
-            "flex flex-col min-h-0",
-            // Desktop: always show, flexible width
-            "lg:flex lg:flex-1",
+            "flex flex-col",
+            // Desktop: always show, auto height
+            "lg:flex lg:flex-1 lg:max-h-[600px]",
             // Mobile: full width when selected, hidden when not
-            selectedConversation ? "flex flex-1" : "hidden md:flex md:flex-1"
+            selectedConversation ? "flex flex-1 max-h-[600px]" : "hidden md:flex md:flex-1"
           )}>
             {selectedConversation ? (
               <>
@@ -772,9 +772,9 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                   </div>
                 </CardHeader>
 
-                <CardContent className="p-0 flex flex-col flex-1 min-h-0">
-                  <ScrollArea className="flex-1 p-2 md:p-4">
-                    <div className="flex flex-col justify-end min-h-full">
+                <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
+                  <ScrollArea className="flex-1 max-h-[350px] p-2 md:p-4">
+                    <div className="flex flex-col justify-end">
                       {messages.map((msg) => (
                         <div
                           key={msg.id}
@@ -825,45 +825,45 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                       <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
-                  
-                  <ConversationActionsBar
-                    conversationId={selectedConversation.id}
-                    contactId={selectedConversation.contact_id}
-                    channel={selectedConversation.channel}
-                    customerName={selectedConversation.subject || undefined}
-                  />
-
-                  {canReply ? (
-                    <div className="p-2 md:p-4 border-t">
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Type a message..."
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          disabled={sendingMessage}
-                          className="text-sm"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
-                              handleSendMessage();
-                            }
-                          }}
-                        />
-                        <Button 
-                          size="icon" 
-                          onClick={handleSendMessage}
-                          disabled={sendingMessage || !newMessage.trim()}
-                        >
-                          <Send className={`w-4 h-4 ${sendingMessage ? "animate-pulse" : ""}`} />
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <DisabledReplyBox
-                      reason="You cannot reply to external threads in this inbox."
-                      handler={getExternalHandler(activeInbox)}
-                    />
-                  )}
                 </CardContent>
+                  
+                <ConversationActionsBar
+                  conversationId={selectedConversation.id}
+                  contactId={selectedConversation.contact_id}
+                  channel={selectedConversation.channel}
+                  customerName={selectedConversation.subject || undefined}
+                />
+
+                {canReply ? (
+                  <div className="p-2 md:p-4 border-t">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Type a message..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        disabled={sendingMessage}
+                        className="text-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
+                            handleSendMessage();
+                          }
+                        }}
+                      />
+                      <Button 
+                        size="icon" 
+                        onClick={handleSendMessage}
+                        disabled={sendingMessage || !newMessage.trim()}
+                      >
+                        <Send className={`w-4 h-4 ${sendingMessage ? "animate-pulse" : ""}`} />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <DisabledReplyBox
+                    reason="You cannot reply to external threads in this inbox."
+                    handler={getExternalHandler(activeInbox)}
+                  />
+                )}
               </>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
