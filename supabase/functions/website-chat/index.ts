@@ -399,9 +399,13 @@ serve(async (req) => {
     // Build context for AI response
     let contextNotes = '';
     let vehicleSqft = 0;
+    let vehicleSqftWithRoof = 0;
+    let vehicleSqftWithoutRoof = 0;
     let estimatedCost = 0;
+    let estimatedCostWithRoof = 0;
+    let estimatedCostWithoutRoof = 0;
     let vehicleFromDb = false;
-    let closestMatch: { make: string; model: string; year: string; sqft: number } | null = null;
+    let closestMatch: { make: string; model: string; year: string; sqft: number; sqftWithRoof?: number; sqftWithoutRoof?: number } | null = null;
     
     // Get the current vehicle state (merged from conversation history)
     const currentVehicle = chatState.vehicle as Record<string, string | null> | undefined;
@@ -416,52 +420,133 @@ serve(async (req) => {
       
       console.log('[JordanLee] Looking up vehicle in DB:', { make: searchMake, model: searchModel, year: searchYear });
       
-      // First try exact match in vehicle_dimensions table
-      // Table uses year_start and year_end columns, not a single "years" column
-      const { data: exactMatch } = await supabase
-        .from('vehicle_dimensions')
-        .select('make, model, year_start, year_end, corrected_sqft, total_sqft')
-        .ilike('make', `%${searchMake}%`)
-        .ilike('model', `%${searchModel}%`)
-        .limit(10);
+      // Normalize make for database search (handle Mercedes/Mercedes-Benz, Chevy/Chevrolet, etc.)
+      const normalizedMake = searchMake
+        .replace(/mercedes[-\s]?benz/i, 'mercedes')
+        .replace(/chevy/i, 'chevrolet')
+        .replace(/vw/i, 'volkswagen');
       
-      console.log('[JordanLee] DB query results:', exactMatch?.length || 0, 'matches for', searchMake, searchModel);
+      // Normalize model for database search (handle variations like "170WB Extended" vs "170 Extended")
+      const normalizedModel = searchModel
+        .replace(/[-\s]+/g, '%')  // Replace spaces/dashes with wildcards for flexible matching
+        .replace(/wb/i, 'wb')     // Ensure "WB" stays together
+        .replace(/ext\b/i, 'extended'); // Expand "ext" to "extended"
       
-      if (exactMatch && exactMatch.length > 0) {
-        // Find best match considering year range
-        for (const vehicle of exactMatch) {
+      // Build search patterns for the model - try different variations
+      const modelSearchPatterns = [
+        `%${normalizedModel}%`,
+        `%${searchModel.replace(/\s+/g, '%')}%`,
+        // For Sprinters: if user says "Sprinter 2500" try matching "Sprinter 2500 - *"
+        searchModel.includes('sprinter') ? `%sprinter%${searchModel.replace(/sprinter/i, '').trim()}%` : null,
+      ].filter(Boolean);
+      
+      // First try exact match in vehicle_dimensions table with the normalized model
+      let allMatches: Array<{
+        make: string;
+        model: string;
+        year_start: number;
+        year_end: number;
+        corrected_sqft: number | null;
+        total_sqft: number | null;
+        side_sqft: number | null;
+        back_sqft: number | null;
+        hood_sqft: number | null;
+        roof_sqft: number | null;
+      }> = [];
+      
+      for (const pattern of modelSearchPatterns) {
+        if (!pattern) continue;
+        const { data: matches } = await supabase
+          .from('vehicle_dimensions')
+          .select('make, model, year_start, year_end, corrected_sqft, total_sqft, side_sqft, back_sqft, hood_sqft, roof_sqft')
+          .or(`make.ilike.%${normalizedMake}%,make.ilike.%${searchMake}%`)
+          .ilike('model', pattern)
+          .limit(20);
+        
+        if (matches && matches.length > 0) {
+          allMatches = [...allMatches, ...matches];
+        }
+      }
+      
+      // Deduplicate matches
+      const uniqueMatches = Array.from(new Map(allMatches.map(m => [`${m.make}-${m.model}-${m.year_start}`, m])).values());
+      
+      console.log('[JordanLee] DB query results:', uniqueMatches.length, 'matches for', searchMake, searchModel);
+      
+      if (uniqueMatches.length > 0) {
+        // Find best match considering year range and model specificity
+        let bestMatch: typeof uniqueMatches[0] | null = null;
+        let bestMatchScore = 0;
+        
+        for (const vehicle of uniqueMatches) {
           const yearStart = vehicle.year_start || 0;
           const yearEnd = vehicle.year_end || yearStart;
+          const vehicleModel = vehicle.model.toLowerCase();
           
-          console.log('[JordanLee] Checking vehicle:', { 
-            make: vehicle.make, 
+          // Calculate match score based on how specific the model match is
+          let score = 0;
+          
+          // Year within range is essential
+          if (searchYear >= yearStart && searchYear <= yearEnd) {
+            score += 100; // Big bonus for year match
+          }
+          
+          // Model specificity scoring
+          if (vehicleModel === searchModel) {
+            score += 50; // Exact model match
+          } else if (vehicleModel.includes(searchModel) || searchModel.includes(vehicleModel)) {
+            score += 25; // Partial model match
+          }
+          
+          // Bonus for more specific variants (longer model names usually mean more specific)
+          score += Math.min(vehicleModel.length / 10, 5);
+          
+          console.log('[JordanLee] Scoring vehicle:', { 
             model: vehicle.model, 
             yearRange: `${yearStart}-${yearEnd}`,
-            searchYear,
-            corrected_sqft: vehicle.corrected_sqft,
-            total_sqft: vehicle.total_sqft
+            score,
+            inYearRange: searchYear >= yearStart && searchYear <= yearEnd
           });
           
-          if (searchYear >= yearStart && searchYear <= yearEnd) {
-            // Exact year match found!
-            vehicleSqft = vehicle.corrected_sqft || vehicle.total_sqft || 0;
-            vehicleFromDb = true;
-            console.log('[JordanLee] EXACT DB match:', { vehicle: `${vehicle.make} ${vehicle.model}`, yearRange: `${yearStart}-${yearEnd}`, sqft: vehicleSqft });
-            break;
-          } else if (!closestMatch) {
-            // Save as potential close match
-            closestMatch = {
-              make: vehicle.make,
-              model: vehicle.model,
-              year: `${yearStart}-${yearEnd}`,
-              sqft: vehicle.corrected_sqft || vehicle.total_sqft || 0
-            };
+          if (score > bestMatchScore) {
+            bestMatchScore = score;
+            bestMatch = vehicle;
           }
         }
         
-        // If no exact year match, use closest match
-        if (!vehicleFromDb && closestMatch) {
+        if (bestMatch && bestMatchScore >= 100) {
+          // We have a good match with year in range
+          vehicleSqft = bestMatch.corrected_sqft || bestMatch.total_sqft || 0;
+          vehicleFromDb = true;
+          
+          // Calculate with/without roof SQFT using panel breakdowns
+          const sideSqft = bestMatch.side_sqft || 0;
+          const backSqft = bestMatch.back_sqft || 0;
+          const hoodSqft = bestMatch.hood_sqft || 0;
+          const roofSqft = bestMatch.roof_sqft || 0;
+          
+          vehicleSqftWithoutRoof = Math.round((sideSqft + backSqft + hoodSqft) * 10) / 10;
+          vehicleSqftWithRoof = Math.round((sideSqft + backSqft + hoodSqft + roofSqft) * 10) / 10;
+          
+          console.log('[JordanLee] EXACT DB match:', { 
+            vehicle: `${bestMatch.make} ${bestMatch.model}`, 
+            sqft: vehicleSqft,
+            withRoof: vehicleSqftWithRoof,
+            withoutRoof: vehicleSqftWithoutRoof
+          });
+        } else if (bestMatch) {
+          // Save as potential close match (year not in range but model matches)
+          closestMatch = {
+            make: bestMatch.make,
+            model: bestMatch.model,
+            year: `${bestMatch.year_start}-${bestMatch.year_end}`,
+            sqft: bestMatch.corrected_sqft || bestMatch.total_sqft || 0,
+            sqftWithRoof: (bestMatch.side_sqft || 0) + (bestMatch.back_sqft || 0) + (bestMatch.hood_sqft || 0) + (bestMatch.roof_sqft || 0),
+            sqftWithoutRoof: (bestMatch.side_sqft || 0) + (bestMatch.back_sqft || 0) + (bestMatch.hood_sqft || 0)
+          };
           vehicleSqft = closestMatch.sqft;
+          vehicleSqftWithRoof = closestMatch.sqftWithRoof || 0;
+          vehicleSqftWithoutRoof = closestMatch.sqftWithoutRoof || 0;
           console.log('[JordanLee] Using CLOSEST DB match:', closestMatch);
         }
       }
@@ -484,7 +569,7 @@ serve(async (req) => {
         } else if (/tahoe|expedition|suburban|yukon|sequoia|armada/i.test(vehicleKey)) {
           vehicleSqft = 275;
         } else if (/transit|sprinter|promaster/i.test(vehicleKey)) {
-          vehicleSqft = 350;
+          vehicleSqft = 450; // Updated to a more realistic cargo van estimate
         } else if (/mustang|camaro|challenger|corvette|supra|370z|86|brz|miata/i.test(vehicleKey)) {
           vehicleSqft = 180;
         } else if (/wrangler|bronco/i.test(vehicleKey)) {
@@ -494,7 +579,10 @@ serve(async (req) => {
         }
       }
       
+      // Calculate costs
       estimatedCost = Math.round(vehicleSqft * 5.27);
+      estimatedCostWithRoof = vehicleSqftWithRoof > 0 ? Math.round(vehicleSqftWithRoof * 5.27) : 0;
+      estimatedCostWithoutRoof = vehicleSqftWithoutRoof > 0 ? Math.round(vehicleSqftWithoutRoof * 5.27) : 0;
     }
     
     // Build context notes based on state
@@ -515,11 +603,27 @@ serve(async (req) => {
       }
     } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0) {
       const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
+      
+      // Build pricing info with with/without roof if available
+      let pricingInfo = '';
+      if (vehicleSqftWithRoof > 0 && vehicleSqftWithoutRoof > 0) {
+        pricingInfo = `
+WITHOUT ROOF: ${vehicleSqftWithoutRoof} sqft = ~$${estimatedCostWithoutRoof}
+WITH ROOF: ${vehicleSqftWithRoof} sqft = ~$${estimatedCostWithRoof}
+(Roof adds ~${Math.round(vehicleSqftWithRoof - vehicleSqftWithoutRoof)} sqft)`;
+      } else {
+        pricingInfo = `${vehicleSqft} sqft = ~$${estimatedCost}`;
+      }
+      
       if (closestMatch && !vehicleFromDb) {
         // We used a close match, not exact
-        contextNotes = `CLOSE MATCH FOUND: We don't have exact data for a ${vehicleStr}, but the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} is a close match at ${vehicleSqft} sqft. At $5.27/sqft, that's approximately $${estimatedCost} for the printed wrap material. Explain this is a ballpark based on a similar vehicle. Ask for email to send formal quote.`;
+        contextNotes = `CLOSE MATCH FOUND: We don't have exact data for a ${vehicleStr}, but the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} is a close match.
+PRICING (ballpark based on similar vehicle):${pricingInfo}
+At $5.27/sqft, explain this is a ballpark based on a similar vehicle. Ask for email to send formal quote.`;
       } else {
-        contextNotes = `VEHICLE FOUND: ${vehicleStr} is approximately ${vehicleSqft} sqft. At $5.27/sqft, that's ~$${estimatedCost} for printed wrap material. GIVE THIS SPECIFIC PRICE! Also mention both Avery and 3M are now $5.27/sqft.${!chatState.customer_email ? ' Ask for email to send formal quote.' : ''}`;
+        contextNotes = `VEHICLE FOUND IN DATABASE: ${vehicleStr}
+PRICING FROM DATABASE:${pricingInfo}
+GIVE THESE SPECIFIC PRICES! Explain the difference between with/without roof. Also mention both Avery and 3M are now $5.27/sqft.${!chatState.customer_email ? ' Ask for email to send formal quote.' : ''}`;
       }
     } else if (pricingIntent && chatState.customer_email && vehicleIsComplete) {
       contextNotes = `QUOTE ROUTED: You've sent this to our quoting team. Confirm the customer will receive an email with full pricing at ${chatState.customer_email}.`;
@@ -527,10 +631,18 @@ serve(async (req) => {
       contextNotes = `PARTNERSHIP ROUTED: You've looped in the partnerships team. Tell the customer someone will follow up shortly.`;
     } else if (vehicleIsComplete && vehicleSqft > 0 && !chatState.customer_email) {
       const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
-      if (closestMatch && !vehicleFromDb) {
-        contextNotes = `CLOSE MATCH - READY FOR QUOTE: Based on the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} (close match for ${vehicleStr}), that's ~${vehicleSqft} sqft = ~$${estimatedCost}. Give the ballpark estimate and ask for email to send formal quote!`;
+      
+      let pricingInfo = '';
+      if (vehicleSqftWithRoof > 0 && vehicleSqftWithoutRoof > 0) {
+        pricingInfo = `WITHOUT ROOF: ${vehicleSqftWithoutRoof} sqft = ~$${estimatedCostWithoutRoof}, WITH ROOF: ${vehicleSqftWithRoof} sqft = ~$${estimatedCostWithRoof}`;
       } else {
-        contextNotes = `READY FOR QUOTE: Customer gave complete vehicle info - ${vehicleStr} (${vehicleSqft} sqft = ~$${estimatedCost}). Give them the price estimate and ask for email to send formal quote!`;
+        pricingInfo = `${vehicleSqft} sqft = ~$${estimatedCost}`;
+      }
+      
+      if (closestMatch && !vehicleFromDb) {
+        contextNotes = `CLOSE MATCH - READY FOR QUOTE: Based on the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} (close match for ${vehicleStr}). ${pricingInfo}. Give the ballpark estimate and ask for email to send formal quote!`;
+      } else {
+        contextNotes = `READY FOR QUOTE: Customer gave complete vehicle info - ${vehicleStr}. ${pricingInfo}. Give them the price estimate and ask for email to send formal quote!`;
       }
     } else if (hasPartialVehicle && !vehicleIsComplete) {
       // Customer gave partial vehicle info but not complete
