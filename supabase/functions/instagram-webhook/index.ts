@@ -73,21 +73,21 @@ async function getInstagramUserProfile(igUserId: string): Promise<{
   // Instagram-Scoped User IDs (IGSID) require specific API endpoints
   // Try multiple endpoints to maximize success rate
   const endpoints = [
-    // Instagram Graph API - preferred for IGSID
+    // Instagram Graph API (versioned) - preferred for IGSID
     {
-      name: 'Instagram Graph API',
-      url: `https://graph.instagram.com/${igUserId}?fields=name,username,profile_picture_url&access_token=${accessToken}`
+      name: 'Instagram Graph API v24.0',
+      url: `https://graph.instagram.com/v24.0/${igUserId}?fields=name,username,profile_pic&access_token=${accessToken}`
     },
-    // Facebook Graph API v24 (current)
+    // Instagram Graph API (unversioned fallback)
     {
-      name: 'Facebook Graph API v24',
-      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=name,username,profile_picture_url&access_token=${accessToken}`
+      name: 'Instagram Graph API (unversioned fallback)',
+      url: `https://graph.instagram.com/${igUserId}?fields=name,username,profile_pic&access_token=${accessToken}`
     },
-    // Facebook Graph API with different field set
+    // Facebook Graph API v24 (fallback)
     {
-      name: 'Facebook Graph API (alt fields)',
-      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=name,profile_pic&access_token=${accessToken}`
-    }
+      name: 'Facebook Graph API v24 (fallback)',
+      url: `https://graph.facebook.com/v24.0/${igUserId}?fields=name,username,profile_pic,profile_picture_url&access_token=${accessToken}`
+    },
   ];
 
   const errors: string[] = [];
@@ -216,8 +216,9 @@ serve(async (req) => {
       // ---------------------------------------------------------------------
       const profile = await getInstagramUserProfile(senderId);
       
-      const displayName = profile.name || profile.username || `IG User ${senderId.slice(-6)}`;
-      const usernameDisplay = profile.username ? `@${profile.username}` : `ig_${senderId.slice(-6)}`;
+      const handle = profile.username ? `@${String(profile.username).replace(/^@/, "")}` : null;
+      const displayName = handle || profile.name || `IG User ${senderId.slice(-6)}`;
+      const usernameDisplay = handle || `ig_${senderId.slice(-6)}`;
       const profileFetchFailed = !profile.username && !profile.name;
 
       console.log(`👤 User profile: ${displayName} (${usernameDisplay}) ${profileFetchFailed ? '⚠️ PROFILE FETCH FAILED' : '✅'}`);
