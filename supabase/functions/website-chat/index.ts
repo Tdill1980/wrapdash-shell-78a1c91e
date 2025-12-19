@@ -225,6 +225,16 @@ serve(async (req) => {
       console.log('[JordanLee] Created conversation:', conversationId);
     }
 
+    // CRITICAL: Load full conversation history for context
+    const { data: messageHistory } = await supabase
+      .from('messages')
+      .select('direction, content, sender_name, created_at')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+      .limit(50); // Last 50 messages for context
+    
+    console.log('[JordanLee] Loaded message history:', messageHistory?.length || 0, 'messages');
+
     // Update chat state with extracted info
     if (extractedEmail && !chatState.customer_email) {
       chatState.customer_email = extractedEmail;
@@ -407,34 +417,43 @@ serve(async (req) => {
       console.log('[JordanLee] Looking up vehicle in DB:', { make: searchMake, model: searchModel, year: searchYear });
       
       // First try exact match in vehicle_dimensions table
+      // Table uses year_start and year_end columns, not a single "years" column
       const { data: exactMatch } = await supabase
         .from('vehicle_dimensions')
-        .select('make, model, years, corrected_sqft, total_sqft')
+        .select('make, model, year_start, year_end, corrected_sqft, total_sqft')
         .ilike('make', `%${searchMake}%`)
         .ilike('model', `%${searchModel}%`)
-        .limit(5);
+        .limit(10);
+      
+      console.log('[JordanLee] DB query results:', exactMatch?.length || 0, 'matches for', searchMake, searchModel);
       
       if (exactMatch && exactMatch.length > 0) {
         // Find best match considering year range
         for (const vehicle of exactMatch) {
-          const yearsStr = vehicle.years || '';
-          // Parse year ranges like "2016-2024" or single years like "2020"
-          const yearParts = yearsStr.split('-').map((y: string) => parseInt(y.trim(), 10));
-          const yearStart = yearParts[0] || 0;
-          const yearEnd = yearParts[1] || yearStart;
+          const yearStart = vehicle.year_start || 0;
+          const yearEnd = vehicle.year_end || yearStart;
+          
+          console.log('[JordanLee] Checking vehicle:', { 
+            make: vehicle.make, 
+            model: vehicle.model, 
+            yearRange: `${yearStart}-${yearEnd}`,
+            searchYear,
+            corrected_sqft: vehicle.corrected_sqft,
+            total_sqft: vehicle.total_sqft
+          });
           
           if (searchYear >= yearStart && searchYear <= yearEnd) {
             // Exact year match found!
             vehicleSqft = vehicle.corrected_sqft || vehicle.total_sqft || 0;
             vehicleFromDb = true;
-            console.log('[JordanLee] Exact DB match:', { vehicle: `${vehicle.make} ${vehicle.model}`, sqft: vehicleSqft });
+            console.log('[JordanLee] EXACT DB match:', { vehicle: `${vehicle.make} ${vehicle.model}`, yearRange: `${yearStart}-${yearEnd}`, sqft: vehicleSqft });
             break;
           } else if (!closestMatch) {
             // Save as potential close match
             closestMatch = {
               make: vehicle.make,
               model: vehicle.model,
-              year: yearsStr,
+              year: `${yearStart}-${yearEnd}`,
               sqft: vehicle.corrected_sqft || vehicle.total_sqft || 0
             };
           }
@@ -443,7 +462,7 @@ serve(async (req) => {
         // If no exact year match, use closest match
         if (!vehicleFromDb && closestMatch) {
           vehicleSqft = closestMatch.sqft;
-          console.log('[JordanLee] Using closest DB match:', closestMatch);
+          console.log('[JordanLee] Using CLOSEST DB match:', closestMatch);
         }
       }
       
@@ -525,6 +544,53 @@ serve(async (req) => {
 
     if (lovableApiKey) {
       try {
+        // Build conversation history for AI context
+        const conversationMessages: Array<{ role: string; content: string }> = [];
+        
+        // Add system prompt first
+        conversationMessages.push({
+          role: 'system',
+          content: `${buildJordanPersona(voiceProfile)}
+
+CURRENT CONTEXT:
+${contextNotes}
+
+CONVERSATION STATE:
+- Stage: ${chatState.stage || 'initial'}
+- Customer Email: ${chatState.customer_email || 'NOT CAPTURED YET'}
+- Vehicle: ${chatState.vehicle ? `${(chatState.vehicle as Record<string, string>).year || 'unknown'} ${(chatState.vehicle as Record<string, string>).make || 'unknown'} ${(chatState.vehicle as Record<string, string>).model || 'unknown'}` : 'Not provided'}
+- Vehicle Complete: ${chatState.vehicle_complete ? 'YES' : 'NO - need more info'}
+- Escalations Sent: ${(chatState.escalations_sent as string[])?.join(', ') || 'None'}
+
+KNOWLEDGE BASE:
+${knowledgeContext}
+
+CRITICAL INSTRUCTIONS:
+1. You have FULL access to the conversation history below. Do NOT ask for info the customer already provided!
+2. If vehicle info is incomplete, ask for the SPECIFIC missing parts only.
+3. If you already know the year, make, and model from previous messages, use that info directly.
+4. Pay close attention to what was said earlier - the customer may have provided details you need.
+
+${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
+        });
+        
+        // Add conversation history (excluding the current message which we'll add at the end)
+        if (messageHistory && messageHistory.length > 0) {
+          for (const msg of messageHistory) {
+            conversationMessages.push({
+              role: msg.direction === 'inbound' ? 'user' : 'assistant',
+              content: msg.content
+            });
+          }
+          console.log('[JordanLee] Added', messageHistory.length, 'messages to AI context');
+        }
+        
+        // Add current message
+        conversationMessages.push({
+          role: 'user',
+          content: message_text
+        });
+
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -533,30 +599,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             model: 'google/gemini-2.5-flash',
-            messages: [
-              {
-                role: 'system',
-                content: `${buildJordanPersona(voiceProfile)}
-
-CURRENT CONTEXT:
-${contextNotes}
-
-CONVERSATION STATE:
-- Stage: ${chatState.stage || 'initial'}
-- Customer Email: ${chatState.customer_email || 'NOT CAPTURED YET'}
-- Vehicle: ${chatState.vehicle ? `${(chatState.vehicle as Record<string, string>).year} ${(chatState.vehicle as Record<string, string>).make} ${(chatState.vehicle as Record<string, string>).model}` : 'Not provided'}
-- Escalations Sent: ${(chatState.escalations_sent as string[])?.join(', ') || 'None'}
-
-KNOWLEDGE BASE:
-${knowledgeContext}
-
-${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
-              },
-              {
-                role: 'user',
-                content: message_text
-              }
-            ],
+            messages: conversationMessages,
             max_tokens: 500
           })
         });
