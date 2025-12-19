@@ -137,13 +137,13 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
     .slice(0, 2) || "??";
 
   return (
-    <Card className="h-full overflow-hidden">
-      <CardHeader className="pb-3">
+    <Card className="max-h-[480px] overflow-hidden">
+      <CardHeader className="pb-2 pt-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Contact Details
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 overflow-y-auto">
         {/* Avatar & Name */}
         <div className="flex flex-col items-center text-center">
           <Avatar className="w-20 h-20 mb-3">
@@ -253,19 +253,6 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
           </Button>
         </div>
 
-        {/* Talk to Agent Actions */}
-        {conversationId && (
-          <>
-            <Separator />
-            <TalkToAgentActions
-              conversationId={conversationId}
-              contactId={contactId}
-              channel={channel}
-              customerName={contact.name}
-              subject={subject}
-            />
-          </>
-        )}
       </CardContent>
     </Card>
   );
