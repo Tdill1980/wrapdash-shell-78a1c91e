@@ -4,20 +4,23 @@ import { AgentMightyChatLayout } from "./AgentMightyChatLayout";
 import { OpsDeskScreen } from "./OpsDeskScreen";
 import { ReviewQueue } from "./ReviewQueue";
 import { AgentChatHistory } from "./AgentChatHistory";
+import { AgentsManagement } from "./AgentsManagement";
 import { AskAgentButton } from "./AskAgentButton";
 import { AIStatusController } from "./AIStatusController";
-import { MessageSquare, ClipboardList, Brain, History, Film, Sparkles, Heart } from "lucide-react";
+import { MessageSquare, ClipboardList, Brain, History, Bot, Film, Sparkles, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type MightyMode = "chat" | "ops" | "review" | "history";
+export type MightyMode = "chat" | "ops" | "review" | "history" | "agents";
 
 export function MightyChatShell() {
   const [mode, setMode] = useState<MightyMode>("review");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedConversationChannel, setSelectedConversationChannel] = useState<string | null>(null);
   const [selectedAgentChatId, setSelectedAgentChatId] = useState<string | null>(null);
 
-  const handleSelectConversation = (conversationId: string) => {
+  const handleSelectConversation = (conversationId: string, channel?: string) => {
     setSelectedConversationId(conversationId);
+    setSelectedConversationChannel(channel || null);
     setMode("chat");
   };
 
@@ -50,6 +53,15 @@ export function MightyChatShell() {
         >
           <MessageSquare className="w-4 h-4" />
           Inbox
+        </Button>
+        <Button
+          variant={mode === "agents" ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setMode("agents")}
+          className={cn("gap-2", mode === "agents" && "bg-primary")}
+        >
+          <Bot className="w-4 h-4" />
+          Agents
         </Button>
         <Button
           variant={mode === "history" ? "default" : "ghost"}
@@ -92,8 +104,12 @@ export function MightyChatShell() {
           <AgentMightyChatLayout 
             onOpenOpsDesk={() => setMode("ops")} 
             initialConversationId={selectedConversationId}
+            initialConversationChannel={selectedConversationChannel}
             initialAgentChatId={selectedAgentChatId}
           />
+        )}
+        {mode === "agents" && (
+          <AgentsManagement />
         )}
         {mode === "history" && (
           <AgentChatHistory onResumeChat={handleResumeAgentChat} />
