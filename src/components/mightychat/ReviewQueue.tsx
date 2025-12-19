@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Plus, 
-  Mail, 
-  MessageCircle, 
-  Instagram, 
+import {
+  Plus,
+  Mail,
+  MessageCircle,
+  Instagram,
   Clock,
   Brain,
   RefreshCw,
@@ -15,7 +15,7 @@ import {
   Unplug,
   DollarSign,
   Image as ImageIcon,
-  Facebook
+  Facebook,
 } from "lucide-react";
 import { AgentSelector } from "./AgentSelector";
 import { AgentChatPanel } from "./AgentChatPanel";
@@ -36,15 +36,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const [activeTab, setActiveTab] = useState("all");
   const [emailSubTab, setEmailSubTab] = useState<string | null>(null);
   const [backfillLoading, setBackfillLoading] = useState(false);
-  const hasAutoBackfilledInstagram = useRef(false);
 
-  useEffect(() => {
-    if (activeTab !== "instagram") return;
-    if (hasAutoBackfilledInstagram.current) return;
-    hasAutoBackfilledInstagram.current = true;
-    handleBackfillInstagramProfiles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
   const { data: conversationsData, isLoading: loadingConversations, refetch: refetchConversations } = useQuery({
     queryKey: ["review-queue-conversations"],
     queryFn: async () => {

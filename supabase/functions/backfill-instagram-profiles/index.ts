@@ -103,6 +103,51 @@ serve(async (req) => {
     // Load access token from database or env
     await loadAccessToken(supabase);
 
+    // If no token is configured, fail fast to avoid long loops / timeouts.
+    if (!ACCESS_TOKEN) {
+      console.log("[Backfill] No Instagram access token configured; skipping backfill.");
+      return new Response(
+        JSON.stringify({
+          error: "missing_instagram_token",
+          message:
+            "Instagram access token is not configured. Connect Instagram in your settings to enable username backfill.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Quick token sanity check so we don't iterate through every contact when the token is invalid/expired.
+    try {
+      const testRes = await fetch(
+        `https://graph.facebook.com/v24.0/me?access_token=${ACCESS_TOKEN}`
+      );
+      if (!testRes.ok) {
+        const testText = await testRes.text();
+        console.log(`[Backfill] Token validation failed: ${testRes.status} ${testText}`);
+        if (
+          testText.includes("Cannot parse access token") ||
+          testText.includes('"code":190')
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: "invalid_instagram_token",
+              message:
+                "Instagram access token is invalid or expired. Reconnect Instagram to refresh it.",
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
+      }
+    } catch (e) {
+      console.log("[Backfill] Token validation request failed; continuing:", String(e));
+    }
+
     // Get all Instagram contacts
     const { data: contacts, error: contactsError } = await supabase
       .from("contacts")
@@ -115,13 +160,27 @@ serve(async (req) => {
 
     console.log(`[Backfill] Found ${contacts?.length || 0} Instagram contacts to process`);
 
+    type DetailEntry = {
+      id: string;
+      name: string;
+      status: string;
+      newName?: string;
+      error?: any;
+    };
+
+    const MAX_DETAILS = 50;
+
     const results = {
       total: contacts?.length || 0,
       updated: 0,
       skipped: 0,
       errors: 0,
       api_errors: 0,
-      details: [] as Array<{ id: string; name: string; status: string; newName?: string; error?: any }>
+      details: [] as DetailEntry[],
+    };
+
+    const pushDetail = (entry: DetailEntry) => {
+      if (results.details.length < MAX_DETAILS) results.details.push(entry);
     };
 
     for (const contact of contacts || []) {
@@ -130,7 +189,7 @@ serve(async (req) => {
 
       if (!senderId) {
         results.skipped++;
-        results.details.push({ id: contact.id, name: contact.name, status: "skipped - no sender_id" });
+        pushDetail({ id: contact.id, name: contact.name, status: "skipped - no sender_id" });
         continue;
       }
 
@@ -150,18 +209,18 @@ serve(async (req) => {
           .update({ metadata: updatedMetadata })
           .eq("id", contact.id);
         
-        results.details.push({ 
-          id: contact.id, 
-          name: contact.name, 
+        pushDetail({
+          id: contact.id,
+          name: contact.name,
           status: "api_error",
-          error: profile.error
+          error: profile.error,
         });
         continue;
       }
 
       if (!profile.username && !profile.name) {
         results.errors++;
-        results.details.push({ id: contact.id, name: contact.name, status: "error - no username or name returned" });
+        pushDetail({ id: contact.id, name: contact.name, status: "error - no username or name returned" });
         continue;
       }
 
@@ -187,7 +246,7 @@ serve(async (req) => {
 
       if (updateError) {
         results.errors++;
-        results.details.push({ id: contact.id, name: contact.name, status: `error - ${updateError.message}` });
+        pushDetail({ id: contact.id, name: contact.name, status: `error - ${updateError.message}` });
         continue;
       }
 
@@ -203,18 +262,28 @@ serve(async (req) => {
         .eq("channel", "instagram");
 
       results.updated++;
-      results.details.push({ 
-        id: contact.id, 
+      pushDetail({
+        id: contact.id,
         name: contact.name,
         newName: displayName,
-        status: `updated via ${profile.source} - @${profile.username || 'no username'}` 
+        status: `updated via ${profile.source} - @${profile.username || "no username"}`,
       });
 
       // Small delay to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    console.log("[Backfill] Complete:", JSON.stringify(results, null, 2));
+    console.log(
+      "[Backfill] Complete:",
+      JSON.stringify({
+        total: results.total,
+        updated: results.updated,
+        skipped: results.skipped,
+        errors: results.errors,
+        api_errors: results.api_errors,
+        details_returned: results.details.length,
+      })
+    );
 
     return new Response(JSON.stringify(results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
