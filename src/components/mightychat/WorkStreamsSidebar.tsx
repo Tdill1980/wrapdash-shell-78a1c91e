@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Mail, Palette, MessageCircle, Cog, TrendingUp, AlertTriangle, Flame, Users } from "lucide-react";
 import { useState } from "react";
-import { ChannelsPanel } from "./ChannelsPanel";
+
 
 export type WorkStream = "website" | "quotes" | "design" | "dms" | "ops";
 
@@ -239,14 +239,11 @@ export function WorkStreamsSidebar({
           </div>
         )}
       </div>
-
-      {/* Channels & Inboxes Status Panel */}
-      <div className="border-t">
-        <ChannelsPanel />
-      </div>
     </div>
   );
 }
+
+
 
 // Helper to map old AgentInbox types to WorkStream
 export function mapInboxToStream(inbox: string): WorkStream {
