@@ -239,6 +239,7 @@ serve(async (req) => {
             customerName: fromName,
             source: 'email',
             notes: `Auto-generated from email. Subject: ${subject}`,
+            conversationId: conversation?.id,
           },
         });
 
