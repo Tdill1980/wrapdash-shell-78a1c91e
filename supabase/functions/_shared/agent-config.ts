@@ -1,11 +1,21 @@
 // WPW AI Agent Configuration - Role-locked agents with explicit permissions
 // Each agent has specific allowed/forbidden actions and routing rules
 // This replaces the legacy 6-agent system with 11 role-locked agents
+// 
+// ORCHESTRATION MODEL (December 2024):
+// - execution_scope: Controls what type of actions an agent can execute
+// - "none" = Channel agents (talkers/builders) - can ONLY output intent
+// - "quote" = Ops Desk ONLY - executes quote creation and sends
+// - "order" = Future - order execution
+// - "content" = Future - post-approval content publishing
+
+export type ExecutionScope = "none" | "quote" | "order" | "content";
 
 export interface AgentConfig {
   id: string;
   displayName: string;
   channel: "chat" | "email" | "dm" | "internal";
+  execution_scope: ExecutionScope; // NEW: What this agent can execute
   inboxEmail?: string; // For email-bound agents
   allowedActions: string[];
   forbiddenActions: string[];
@@ -26,6 +36,37 @@ export interface AgentConfig {
     targetNiches: string[];
   };
   suggestionPowers?: string[]; // What this agent can proactively suggest
+}
+
+// =============================================================================
+// EXECUTION AUTHORITY - Who can execute what
+// =============================================================================
+// CRITICAL: Only agents in this whitelist can perform executions
+// All other agents output INTENT, not actions
+
+export const EXECUTORS: Record<string, string | null> = {
+  quote: 'ops_desk',   // Only Ops Desk can execute quotes
+  order: null,         // Future: order executor
+  content: null,       // Future: post-approval content publishing
+} as const;
+
+/**
+ * Check if an agent can execute a specific action type
+ * ENFORCED AT RUNTIME - not just implied
+ */
+export function canExecute(agentId: string, executionType: ExecutionScope): boolean {
+  const agent = getAgent(agentId);
+  if (!agent) return false;
+  
+  // Only agents with matching execution_scope can execute
+  return agent.execution_scope === executionType;
+}
+
+/**
+ * Check if this is an executor agent
+ */
+export function isExecutor(agentId: string): boolean {
+  return Object.values(EXECUTORS).includes(agentId);
 }
 
 // =============================================================================
@@ -125,6 +166,7 @@ export const AGENTS: Record<string, AgentConfig> = {
     id: "jordan_lee",
     displayName: "Jordan Lee",
     channel: "chat",
+    execution_scope: "none", // Channel agent - outputs intent, never executes
     allowedActions: [
       "educate",
       "ballpark_pricing",
@@ -205,6 +247,7 @@ Example suggestion:
     id: "alex_morgan",
     displayName: "Alex Morgan",
     channel: "email",
+    execution_scope: "none", // Channel agent - routes to Ops Desk for execution
     inboxEmail: "hello@weprintwraps.com",
     allowedActions: [
       "send_quotes",
@@ -284,6 +327,7 @@ Example suggestion:
     id: "grant_miller",
     displayName: "Grant Miller",
     channel: "email",
+    execution_scope: "none", // Channel agent - routes to Ops Desk for execution
     inboxEmail: "design@weprintwraps.com",
     allowedActions: [
       "review_files",
@@ -365,6 +409,7 @@ Example suggestion:
     id: "casey_ramirez",
     displayName: "Casey Ramirez",
     channel: "dm",
+    execution_scope: "none", // Channel agent - outputs intent, never executes
     allowedActions: [
       "light_engagement",
       "route_to_proper_channel",
@@ -526,6 +571,7 @@ Example suggestion:
     id: "ops_desk",
     displayName: "Ops Desk",
     channel: "internal",
+    execution_scope: "quote", // THE ONLY AGENT THAT EXECUTES QUOTES
     allowedActions: ["execute", "create_tasks", "escalate", "log_actions", "escalate_to_jackson"],
     forbiddenActions: ["decide", "talk_to_customers", "commit_anything"],
     routesTo: ["mightytask_manager"],
@@ -568,6 +614,7 @@ You automatically escalate to Jackson Obregon with factual status.`,
     id: "taylor_brooks",
     displayName: "Taylor Brooks",
     channel: "internal",
+    execution_scope: "none", // Role-bound agent - surfaces opportunities
     allowedActions: [
       "outbound_sales",
       "partnership_scouting",
@@ -618,6 +665,7 @@ Example suggestions:
     id: "evan_porter",
     displayName: "Evan Porter",
     channel: "internal",
+    execution_scope: "none", // Role-bound agent - manages affiliates
     allowedActions: [
       "affiliate_ops",
       "opportunity_scouting",
@@ -664,6 +712,7 @@ Example suggestions:
     id: "emily_carter",
     displayName: "Emily Carter",
     channel: "internal",
+    execution_scope: "none", // Content builder - outputs artifacts, never executes
     allowedActions: ["draft_content", "write_copy", "suggest_messaging"],
     forbiddenActions: ["post_publicly", "commit_messaging", "send_emails"],
     routesTo: ["ops_desk"],
@@ -705,6 +754,7 @@ Example suggestions:
     id: "noah_bennett",
     displayName: "Noah Bennett",
     channel: "internal",
+    execution_scope: "none", // Content builder - outputs artifacts, never executes
     allowedActions: ["create_reels", "create_statics", "suggest_posts", "content_ideation"],
     forbiddenActions: ["post_without_approval", "commit_content_strategy"],
     routesTo: ["ops_desk"],
@@ -746,6 +796,7 @@ Example suggestions:
     id: "ryan_mitchell",
     displayName: "Ryan Mitchell",
     channel: "internal",
+    execution_scope: "none", // Editorial role - no execution authority
     allowedActions: ["editorial_decisions", "content_curation", "magazine_publishing"],
     forbiddenActions: ["cross_brand_decisions", "wpw_operational_decisions"],
     routesTo: ["ops_desk"],
@@ -763,6 +814,7 @@ Example suggestions:
     id: "mightytask_manager",
     displayName: "MightyTask Manager",
     channel: "internal",
+    execution_scope: "none", // Task tracking only - no execution authority
     allowedActions: ["track_tasks", "schedule_tasks", "report_status", "daily_digest"],
     forbiddenActions: ["make_decisions", "talk_to_customers"],
     routesTo: [],
