@@ -9,7 +9,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
-import { ContactSidebar } from "@/components/mightychat/ContactSidebar";
 import { WorkStreamsSidebar, type WorkStream, mapStreamToInbox } from "@/components/mightychat/WorkStreamsSidebar";
 import { ConversationContextHeader } from "@/components/mightychat/ConversationContextHeader";
 import { ThreadScopeBanner, DisabledReplyBox } from "@/components/mightychat/ThreadScopeLabel";
@@ -587,282 +586,255 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
           />
         </div>
 
-        {/* CENTER: Conversation List + Thread */}
-        <div className="flex-1 flex gap-2 md:gap-4 min-h-0">
-          {/* Conversation List - full width on mobile when no selection */}
-          <Card className={cn(
-            "flex flex-col transition-all h-full min-h-0",
-            // Desktop: fixed width
-            "lg:w-[280px] lg:flex-shrink-0",
-            // Mobile: full width or hidden based on selection
-            selectedConversation ? "hidden md:flex md:w-[240px]" : "flex-1 md:flex-1 lg:flex-none"
-          )}>
-            <CardHeader className="pb-2 px-3 md:px-6">
-              <CardTitle className="text-base md:text-lg flex items-center justify-between">
-                <span>Conversations</span>
-                <Badge variant="outline" className="text-[10px] md:text-xs">
-                  {filteredConversations.length}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
-              <ScrollArea className="h-full">
-                {loading ? (
-                  <div className="p-4 text-muted-foreground">Loading...</div>
-                ) : filteredConversations.length === 0 ? (
-                  <EmptyStreamState stream={activeStream} />
-                ) : (
-                  filteredConversations.map((conv) => {
-                    const hasQuoteRequest = conv.review_status === 'pending_review';
-                    const isUrgent = conv.priority === 'urgent';
-                    const isHigh = conv.priority === 'high';
-                    const hasUnread = (conv.unread_count ?? 0) > 0;
+        {/* CENTER: Conversations (list) OR Thread (DM) */}
+        <div className="flex-1 min-h-0 flex gap-2 md:gap-4 overflow-hidden">
+          {!selectedConversation ? (
+            <Card className={cn(
+              "flex flex-col transition-all overflow-hidden",
+              // Width
+              "w-full md:w-[360px] md:flex-shrink-0 lg:w-[320px]",
+              // Show ~7 items, scroll for the rest
+              "md:h-[520px]"
+            )}>
+              <CardHeader className="pb-2 px-3 md:px-6">
+                <CardTitle className="text-base md:text-lg flex items-center justify-between">
+                  <span>Conversations</span>
+                  <Badge variant="outline" className="text-[10px] md:text-xs">
+                    {filteredConversations.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
+                <ScrollArea className="h-full">
+                  {loading ? (
+                    <div className="p-4 text-muted-foreground">Loading...</div>
+                  ) : filteredConversations.length === 0 ? (
+                    <EmptyStreamState stream={activeStream} />
+                  ) : (
+                    filteredConversations.map((conv) => {
+                      const hasQuoteRequest = conv.review_status === 'pending_review';
+                      const isUrgent = conv.priority === 'urgent';
+                      const isHigh = conv.priority === 'high';
+                      const hasUnread = (conv.unread_count ?? 0) > 0;
 
-                    const getOwnerAndInbox = () => {
-                      if (conv.channel === 'website') {
-                        return { owner: 'Jordan Lee', inbox: 'Website Chat' };
-                      }
-                      if (conv.channel === 'instagram') {
-                        return { owner: 'Social Team', inbox: 'Instagram DMs' };
-                      }
-                      if (conv.channel === 'email') {
-                        const inbox = conv.recipient_inbox?.toLowerCase() || '';
-                        if (inbox.includes('design')) return { owner: 'Grant Miller', inbox: 'design@weprintwraps.com' };
-                        if (inbox.includes('jackson')) return { owner: 'Manny Chen', inbox: 'jackson@weprintwraps.com' };
-                        return { owner: 'Alex Morgan', inbox: 'hello@weprintwraps.com' };
-                      }
-                      return { owner: 'Alex Morgan', inbox: conv.channel };
-                    };
+                      const getOwnerAndInbox = () => {
+                        if (conv.channel === 'website') {
+                          return { owner: 'Jordan Lee', inbox: 'Website Chat' };
+                        }
+                        if (conv.channel === 'instagram') {
+                          return { owner: 'Social Team', inbox: 'Instagram DMs' };
+                        }
+                        if (conv.channel === 'email') {
+                          const inbox = conv.recipient_inbox?.toLowerCase() || '';
+                          if (inbox.includes('design')) return { owner: 'Grant Miller', inbox: 'design@weprintwraps.com' };
+                          if (inbox.includes('jackson')) return { owner: 'Manny Chen', inbox: 'jackson@weprintwraps.com' };
+                          return { owner: 'Alex Morgan', inbox: 'hello@weprintwraps.com' };
+                        }
+                        return { owner: 'Alex Morgan', inbox: conv.channel };
+                      };
 
-                    const ownerInfo = getOwnerAndInbox();
+                      const ownerInfo = getOwnerAndInbox();
 
-                    return (
-                      <div
-                        key={conv.id}
-                        className={cn(
-                          "p-2 border-b cursor-pointer transition-all duration-200 overflow-hidden",
-                          "hover:bg-muted/50",
-                          selectedConversation?.id === conv.id && "bg-muted",
-                          hasQuoteRequest && "border-l-2 border-l-red-500 bg-red-50/50 dark:bg-red-950/20",
-                          isUrgent && !hasQuoteRequest && "border-l-2 border-l-orange-500",
-                          isHigh && !hasQuoteRequest && !isUrgent && "border-l-2 border-l-amber-400"
-                        )}
-                        onClick={() => {
-                          setSelectedConversation(conv);
-                          loadConversation(conv.id);
-                        }}
-                      >
-                        {/* Header row: Badge + Name + Unread */}
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <AgentBadge channel={conv.channel} recipientInbox={conv.recipient_inbox} />
-                          <span className={cn(
-                            "font-medium flex-1 truncate text-xs min-w-0",
-                            hasUnread && "font-semibold"
-                          )}>
-                            {conv.contact_name || conv.contact_email?.split('@')[0] || conv.subject || `${conv.channel}`}
-                          </span>
-                          {hasUnread && (
-                            <Badge variant="destructive" className="text-[9px] h-4 min-w-[16px] px-1 flex-shrink-0">
-                              {conv.unread_count}
-                            </Badge>
+                      return (
+                        <div
+                          key={conv.id}
+                          className={cn(
+                            "p-2 border-b cursor-pointer transition-all duration-200 overflow-hidden",
+                            "hover:bg-muted/50",
+                            hasQuoteRequest && "border-l-2 border-l-red-500 bg-red-50/50 dark:bg-red-950/20",
+                            isUrgent && !hasQuoteRequest && "border-l-2 border-l-orange-500",
+                            isHigh && !hasQuoteRequest && !isUrgent && "border-l-2 border-l-amber-400"
                           )}
-                        </div>
-
-                        {/* Message Preview - single line */}
-                        {conv.last_message_content && (
-                          <div className="mt-0.5 text-[10px] text-muted-foreground truncate">
-                            {(() => {
-                              const cleanContent = conv.channel === "email" ? stripHtmlTags(conv.last_message_content) : conv.last_message_content;
-                              return cleanContent.slice(0, 50) + (cleanContent.length > 50 ? '...' : '');
-                            })()}
+                          onClick={() => {
+                            setSelectedConversation(conv);
+                            loadConversation(conv.id);
+                          }}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <AgentBadge channel={conv.channel} recipientInbox={conv.recipient_inbox} />
+                            <span
+                              className={cn(
+                                "font-medium flex-1 truncate text-xs min-w-0",
+                                hasUnread && "font-semibold"
+                              )}
+                            >
+                              {conv.contact_name || conv.contact_email?.split('@')[0] || conv.subject || `${conv.channel}`}
+                            </span>
+                            {hasUnread && (
+                              <Badge variant="destructive" className="text-[9px] h-4 min-w-[16px] px-1 flex-shrink-0">
+                                {conv.unread_count}
+                              </Badge>
+                            )}
                           </div>
-                        )}
 
-                        {/* Footer: Owner • Inbox */}
-                        <div className="mt-0.5 text-[9px] text-muted-foreground flex items-center gap-1 min-w-0">
-                          <span className="truncate">{ownerInfo.owner} • {ownerInfo.inbox}</span>
+                          {conv.last_message_content && (
+                            <div className="mt-0.5 text-[10px] text-muted-foreground truncate">
+                              {(() => {
+                                const cleanContent = conv.channel === "email" ? stripHtmlTags(conv.last_message_content) : conv.last_message_content;
+                                return cleanContent.slice(0, 50) + (cleanContent.length > 50 ? '...' : '');
+                              })()}
+                            </div>
+                          )}
+
+                          <div className="mt-0.5 text-[9px] text-muted-foreground flex items-center gap-1 min-w-0">
+                            <span className="truncate">{ownerInfo.owner} • {ownerInfo.inbox}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span
+                              className={cn(
+                                "text-[9px] flex items-center gap-0.5",
+                                isVeryRecent(conv.last_message_at)
+                                  ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                                  : "text-muted-foreground"
+                              )}
+                            >
+                              {isVeryRecent(conv.last_message_at) && (
+                                <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                              )}
+                              {formatTime(conv.last_message_at)}
+                            </span>
+                            {isUrgent && (
+                              <Badge variant="destructive" className="text-[8px] h-3 px-1">URGENT</Badge>
+                            )}
+                            {isHigh && !isUrgent && (
+                              <Badge variant="outline" className="text-[8px] h-3 px-1 text-amber-600 border-amber-300">HIGH</Badge>
+                            )}
+                            {hasQuoteRequest && (
+                              <Badge className="text-[8px] h-3 px-1 bg-red-500 text-white">REVIEW</Badge>
+                            )}
+                          </div>
                         </div>
+                      );
+                    })
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className={cn("flex flex-col flex-1 min-h-0 overflow-hidden") }>
+              <ConversationContextHeader
+                agentId={activeInbox}
+                agentName={activeInbox}
+                channel={selectedConversation.channel}
+                recipientInbox={selectedConversation.recipient_inbox}
+                isExternal={isExternal}
+              />
 
-                        {/* Time + Priority badges */}
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span 
-                            className={cn(
-                              "text-[9px] flex items-center gap-0.5",
-                              isVeryRecent(conv.last_message_at) 
-                                ? "text-emerald-600 dark:text-emerald-400 font-medium" 
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            {isVeryRecent(conv.last_message_at) && (
-                              <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                            )}
-                            {formatTime(conv.last_message_at)}
-                          </span>
-                          {isUrgent && (
-                            <Badge variant="destructive" className="text-[8px] h-3 px-1">URGENT</Badge>
+              <ThreadScopeBanner isExternal={isExternal} />
+
+              <CardHeader className="border-b pb-2 md:pb-3 px-3 md:px-6">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="-ml-2"
+                    onClick={() => {
+                      setSelectedConversation(null);
+                      setMessages([]);
+                    }}
+                    aria-label="Back to conversations"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                  <ChannelIcon channel={selectedConversation.channel} className="w-4 h-4 md:w-5 md:h-5" />
+                  <CardTitle className="text-sm md:text-lg flex-1 truncate">
+                    {selectedConversation.subject || `${selectedConversation.channel} conversation`}
+                  </CardTitle>
+                  <ChannelBadge channel={selectedConversation.channel} size="md" />
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
+                <ScrollArea className="flex-1 min-h-0 p-2 md:p-4">
+                  <div className="flex flex-col justify-end min-h-full">
+                    {messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`mb-3 md:mb-4 flex group ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                      >
+                        {msg.direction === "inbound" && (
+                          <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
+                            <AvatarImage src={getMessageAvatar(msg) || undefined} />
+                            <AvatarFallback className="text-[10px] md:text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
+                              {getMessageInitials(msg)}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className={`max-w-[85%] md:max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
+                          {msg.sender_name && msg.direction === "inbound" && (
+                            <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
+                              {msg.sender_name}
+                            </div>
                           )}
-                          {isHigh && !isUrgent && (
-                            <Badge variant="outline" className="text-[8px] h-3 px-1 text-amber-600 border-amber-300">HIGH</Badge>
-                          )}
-                          {hasQuoteRequest && (
-                            <Badge className="text-[8px] h-3 px-1 bg-red-500 text-white">REVIEW</Badge>
-                          )}
+                          <div className="relative inline-block group">
+                            <div
+                              className={cn(
+                                "p-2 md:p-3 rounded-lg",
+                                msg.direction === "outbound" ? "bg-primary text-primary-foreground" : "bg-muted"
+                              )}
+                            >
+                              <p className="text-xs md:text-sm whitespace-pre-wrap">
+                                {msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className={cn(
+                                "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20",
+                                msg.direction === "outbound" ? "-left-6" : "-right-6"
+                              )}
+                              title="Delete message"
+                            >
+                              <Trash2 className="w-3 h-3 text-destructive" />
+                            </button>
+                          </div>
+                          <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
+                            {formatTime(msg.created_at)}
+                          </div>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+              </CardContent>
 
-          {/* Message Thread - full width on mobile when selected */}
-          <Card className={cn(
-            "flex flex-col flex-1 min-h-0 h-full",
-            // Desktop: always show
-            "lg:flex",
-            // Mobile: full width when selected, hidden when not
-            selectedConversation ? "flex" : "hidden md:flex"
-          )}>
-            {selectedConversation ? (
-              <>
-                <ConversationContextHeader
-                  agentId={activeInbox}
-                  agentName={activeInbox}
-                  channel={selectedConversation.channel}
-                  recipientInbox={selectedConversation.recipient_inbox}
-                  isExternal={isExternal}
-                />
+              <ConversationActionsBar
+                conversationId={selectedConversation.id}
+                contactId={selectedConversation.contact_id}
+                channel={selectedConversation.channel}
+                customerName={selectedConversation.subject || undefined}
+              />
 
-                <ThreadScopeBanner isExternal={isExternal} />
-
-                <CardHeader className="border-b pb-2 md:pb-3 px-3 md:px-6">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="md:hidden -ml-2"
-                      onClick={() => setSelectedConversation(null)}
-                    >
-                      <ArrowLeft className="w-4 h-4" />
+              {canReply ? (
+                <div className="p-2 md:p-4 border-t">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Type a message..."
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      disabled={sendingMessage}
+                      className="text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                    <Button size="icon" onClick={handleSendMessage} disabled={sendingMessage || !newMessage.trim()}>
+                      <Send className={`w-4 h-4 ${sendingMessage ? "animate-pulse" : ""}`} />
                     </Button>
-                    <ChannelIcon channel={selectedConversation.channel} className="w-4 h-4 md:w-5 md:h-5" />
-                    <CardTitle className="text-sm md:text-lg flex-1 truncate">
-                      {selectedConversation.subject || `${selectedConversation.channel} conversation`}
-                    </CardTitle>
-                    <ChannelBadge channel={selectedConversation.channel} size="md" />
                   </div>
-                </CardHeader>
-
-                <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-                  <ScrollArea className="flex-1 max-h-[350px] p-2 md:p-4">
-                    <div className="flex flex-col justify-end">
-                      {messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`mb-3 md:mb-4 flex group ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
-                        >
-                          {msg.direction === "inbound" && (
-                            <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
-                              <AvatarImage src={getMessageAvatar(msg) || undefined} />
-                              <AvatarFallback className="text-[10px] md:text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
-                                {getMessageInitials(msg)}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                          <div className={`max-w-[85%] md:max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
-                            {msg.sender_name && msg.direction === "inbound" && (
-                              <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
-                                {msg.sender_name}
-                              </div>
-                            )}
-                            <div className="relative inline-block group">
-                              <div
-                                className={cn(
-                                  "p-2 md:p-3 rounded-lg",
-                                  msg.direction === "outbound"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted"
-                                )}
-                              >
-                                <p className="text-xs md:text-sm whitespace-pre-wrap">{msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content}</p>
-                              </div>
-                              <button
-                                onClick={() => handleDeleteMessage(msg.id)}
-                                className={cn(
-                                  "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20",
-                                  msg.direction === "outbound" ? "-left-6" : "-right-6"
-                                )}
-                                title="Delete message"
-                              >
-                                <Trash2 className="w-3 h-3 text-destructive" />
-                              </button>
-                            </div>
-                            <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
-                              {formatTime(msg.created_at)}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-                  
-                <ConversationActionsBar
-                  conversationId={selectedConversation.id}
-                  contactId={selectedConversation.contact_id}
-                  channel={selectedConversation.channel}
-                  customerName={selectedConversation.subject || undefined}
+                </div>
+              ) : (
+                <DisabledReplyBox
+                  reason="You cannot reply to external threads in this inbox."
+                  handler={getExternalHandler(activeInbox)}
                 />
-
-                {canReply ? (
-                  <div className="p-2 md:p-4 border-t">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        disabled={sendingMessage}
-                        className="text-sm"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && newMessage.trim() && !sendingMessage) {
-                            handleSendMessage();
-                          }
-                        }}
-                      />
-                      <Button 
-                        size="icon" 
-                        onClick={handleSendMessage}
-                        disabled={sendingMessage || !newMessage.trim()}
-                      >
-                        <Send className={`w-4 h-4 ${sendingMessage ? "animate-pulse" : ""}`} />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <DisabledReplyBox
-                    reason="You cannot reply to external threads in this inbox."
-                    handler={getExternalHandler(activeInbox)}
-                  />
-                )}
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                Select a conversation to view messages
-              </div>
-            )}
-          </Card>
-        </div>
-
-        {/* RIGHT: Contact Sidebar */}
-        <div className="w-[280px] flex-shrink-0 hidden xl:block h-full min-h-0">
-          <ContactSidebar
-            contactId={selectedConversation?.contact_id || null}
-            channel={selectedConversation?.channel || 'website'}
-            conversationId={selectedConversation?.id}
-            subject={selectedConversation?.subject || undefined}
-          />
+              )}
+            </Card>
+          )}
         </div>
       </div>
 
