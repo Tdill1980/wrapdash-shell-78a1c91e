@@ -77,6 +77,7 @@ import AdminOrganizations from "./pages/AdminOrganizations";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
 import OperationsSOP from "./pages/OperationsSOP";
 import RevenueHealth from "./pages/RevenueHealth";
+import AIApprovals from "./pages/AIApprovals";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/ai-approvals" element={<AIApprovals />} />
             <Route path="/wrapcloser" element={<WrapCloser />} />
             <Route path="/inkfusion" element={<InkFusion />} />
             <Route path="/designpanel" element={<DesignPanelPro />} />
