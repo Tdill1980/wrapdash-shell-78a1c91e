@@ -64,23 +64,10 @@ serve(async (req) => {
           continue;
         }
 
-        // Get messages for this conversation
-        const { data: messages, error: msgError } = await supabase
-          .from('messages')
-          .select('content, sender')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: true });
-
-        if (msgError) {
-          console.error(`Error fetching messages for ${conv.id}:`, msgError);
-          results.errors.push(`Failed to fetch messages for ${conv.id}`);
-          continue;
-        }
-
-        // Combine all message content
+        // Use subject and metadata for intent detection (simpler, avoids RLS issues)
         const allContent = [
           conv.subject || '',
-          ...(messages || []).map(m => m.content)
+          (conv.metadata as any)?.intent || '',
         ].join(' ').toLowerCase();
 
         // Check for pricing intent
