@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,8 +193,15 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showAgentChatPanel, setShowAgentChatPanel] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const permissions = useMightyPermissions();
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
 
   // Map stream to AgentInbox for permission checks
   const activeInbox: AgentInbox = mapStreamToInbox(activeStream) as AgentInbox;
@@ -767,53 +774,56 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
                 <CardContent className="p-0 flex flex-col flex-1 min-h-0">
                   <ScrollArea className="flex-1 p-2 md:p-4">
-                    {messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`mb-3 md:mb-4 flex group ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
-                      >
-                        {msg.direction === "inbound" && (
-                          <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
-                            <AvatarImage src={getMessageAvatar(msg) || undefined} />
-                            <AvatarFallback className="text-[10px] md:text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
-                              {getMessageInitials(msg)}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className={`max-w-[85%] md:max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
-                          {msg.sender_name && msg.direction === "inbound" && (
-                            <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
-                              {msg.sender_name}
-                            </div>
+                    <div className="flex flex-col justify-end min-h-full">
+                      {messages.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className={`mb-3 md:mb-4 flex group ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                        >
+                          {msg.direction === "inbound" && (
+                            <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
+                              <AvatarImage src={getMessageAvatar(msg) || undefined} />
+                              <AvatarFallback className="text-[10px] md:text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
+                                {getMessageInitials(msg)}
+                              </AvatarFallback>
+                            </Avatar>
                           )}
-                          <div className="relative inline-block group">
-                            <div
-                              className={cn(
-                                "p-2 md:p-3 rounded-lg",
-                                msg.direction === "outbound"
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted"
-                              )}
-                            >
-                              <p className="text-xs md:text-sm whitespace-pre-wrap">{msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content}</p>
+                          <div className={`max-w-[85%] md:max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
+                            {msg.sender_name && msg.direction === "inbound" && (
+                              <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
+                                {msg.sender_name}
+                              </div>
+                            )}
+                            <div className="relative inline-block group">
+                              <div
+                                className={cn(
+                                  "p-2 md:p-3 rounded-lg",
+                                  msg.direction === "outbound"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted"
+                                )}
+                              >
+                                <p className="text-xs md:text-sm whitespace-pre-wrap">{msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content}</p>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className={cn(
+                                  "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20",
+                                  msg.direction === "outbound" ? "-left-6" : "-right-6"
+                                )}
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3 h-3 text-destructive" />
+                              </button>
                             </div>
-                            <button
-                              onClick={() => handleDeleteMessage(msg.id)}
-                              className={cn(
-                                "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20",
-                                msg.direction === "outbound" ? "-left-6" : "-right-6"
-                              )}
-                              title="Delete message"
-                            >
-                              <Trash2 className="w-3 h-3 text-destructive" />
-                            </button>
-                          </div>
-                          <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
-                            {formatTime(msg.created_at)}
+                            <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
+                              {formatTime(msg.created_at)}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
                   </ScrollArea>
                   
                   <ConversationActionsBar
