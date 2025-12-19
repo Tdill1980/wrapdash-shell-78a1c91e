@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { AIApprovalDetailModal } from "./AIApprovalDetailModal";
 
 interface ActionPayload {
   agent?: string;
@@ -71,6 +72,8 @@ export function AIApprovalsCard() {
   const [actions, setActions] = useState<AIAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedAction, setSelectedAction] = useState<AIAction | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   useEffect(() => {
     fetchPendingActions();
@@ -98,7 +101,7 @@ export function AIApprovalsCard() {
     return ['create_quote', 'auto_quote_generated', 'quote_generated'].includes(actionType);
   };
 
-  const handleApproveAndSend = async (action: AIAction) => {
+  const handleApproveAndSend = async (action: AIAction, tone?: string, design?: string) => {
     setProcessingId(action.id);
     try {
       const payload = action.action_payload;
@@ -114,13 +117,17 @@ export function AIApprovalsCard() {
             actionId: action.id,
             quoteId,
             customerEmail,
-            customerName
+            customerName,
+            tone: tone || 'installer',
+            design: design || 'performance',
           }
         });
 
         if (error) throw error;
 
         setActions((prev) => prev.filter((a) => a.id !== action.id));
+        setDetailModalOpen(false);
+        setSelectedAction(null);
         toast({
           title: data?.emailSent ? "Quote Sent!" : "Approved",
           description: data?.emailSent 
@@ -141,6 +148,17 @@ export function AIApprovalsCard() {
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const handleOpenDetail = (action: AIAction) => {
+    setSelectedAction(action);
+    setDetailModalOpen(true);
+  };
+
+  const handleRejectFromModal = async (actionId: string) => {
+    await handleReject(actionId);
+    setDetailModalOpen(false);
+    setSelectedAction(null);
   };
 
   const handleApprove = async (id: string) => {
@@ -327,11 +345,13 @@ export function AIApprovalsCard() {
               return (
                 <div
                   key={action.id}
+                  onClick={() => isQuote && handleOpenDetail(action)}
                   className={cn(
                     "flex flex-col gap-2 p-3 rounded-lg",
                     "bg-secondary/50 border border-border",
                     "transition-all duration-200 hover:bg-secondary",
-                    isProcessing && "opacity-50 pointer-events-none"
+                    isProcessing && "opacity-50 pointer-events-none",
+                    isQuote && "cursor-pointer"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -383,9 +403,18 @@ export function AIApprovalsCard() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {isQuote ? (
                         <>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleOpenDetail(action)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                            title="View details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -436,6 +465,15 @@ export function AIApprovalsCard() {
           </div>
         )}
       </CardContent>
+
+      <AIApprovalDetailModal
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+        action={selectedAction}
+        onApprove={handleApproveAndSend}
+        onReject={handleRejectFromModal}
+        isProcessing={processingId !== null}
+      />
     </Card>
   );
 }
