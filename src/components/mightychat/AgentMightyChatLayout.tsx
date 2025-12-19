@@ -592,10 +592,10 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
           {/* Conversation List - full width on mobile when no selection */}
           <Card className={cn(
             "flex flex-col transition-all",
-            // Desktop: fixed width, match chat height
-            "lg:w-[280px] lg:flex-shrink-0 lg:max-h-[600px]",
+            // Desktop: fixed width, compact height to fit screen
+            "lg:w-[280px] lg:flex-shrink-0 lg:max-h-[480px]",
             // Mobile: full width or hidden based on selection
-            selectedConversation ? "hidden md:flex md:w-[240px] md:max-h-[600px]" : "flex-1 md:flex-1 lg:flex-none max-h-[600px]"
+            selectedConversation ? "hidden md:flex md:w-[240px] md:max-h-[480px]" : "flex-1 md:flex-1 lg:flex-none max-h-[480px]"
           )}>
             <CardHeader className="pb-2 px-3 md:px-6">
               <CardTitle className="text-base md:text-lg flex items-center justify-between">
@@ -719,10 +719,10 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
           {/* Message Thread - full width on mobile when selected */}
           <Card className={cn(
             "flex flex-col",
-            // Desktop: always show, auto height
-            "lg:flex lg:flex-1 lg:max-h-[600px]",
+            // Desktop: always show, compact height to fit screen
+            "lg:flex lg:flex-1 lg:max-h-[480px]",
             // Mobile: full width when selected, hidden when not
-            selectedConversation ? "flex flex-1 max-h-[600px]" : "hidden md:flex md:flex-1"
+            selectedConversation ? "flex flex-1 max-h-[480px]" : "hidden md:flex md:flex-1"
           )}>
             {selectedConversation ? (
               <>
