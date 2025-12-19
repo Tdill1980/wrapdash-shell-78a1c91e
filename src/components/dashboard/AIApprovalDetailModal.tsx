@@ -238,11 +238,46 @@ export function AIApprovalDetailModal({
     quote_total: payload?.auto_quote?.total_price || 0,
   });
 
-  const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  // Strip HTML tags and clean up email content for display
+  const cleanMessageContent = (content: string): string => {
+    if (!content) return "";
+    
+    // Remove HTML tags
+    let cleaned = content.replace(/<[^>]*>/g, " ");
+    
+    // Remove CSS/style blocks
+    cleaned = cleaned.replace(/\{[^}]*\}/g, " ");
+    
+    // Remove common email artifacts
+    cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, "");
+    cleaned = cleaned.replace(/&nbsp;/g, " ");
+    cleaned = cleaned.replace(/&lt;/g, "<");
+    cleaned = cleaned.replace(/&gt;/g, ">");
+    cleaned = cleaned.replace(/&amp;/g, "&");
+    cleaned = cleaned.replace(/&quot;/g, '"');
+    
+    // Clean up excessive whitespace
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
+    
+    // Limit length for readability
+    if (cleaned.length > 500) {
+      cleaned = cleaned.substring(0, 500) + "...";
+    }
+    
+    return cleaned || "(No message content)";
+  };
+
+  const formatDateTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+    return date.toLocaleDateString([], { month: "short", day: "numeric" }) + 
+           " at " + 
+           date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
@@ -298,39 +333,40 @@ export function AIApprovalDetailModal({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {messages.map((msg) => {
-                    const isBot = msg.direction === "outbound";
+                    // Inbound = customer message (left side)
+                    // Outbound = our reply (right side)
+                    const isOutbound = msg.direction === "outbound";
+                    const cleanedContent = cleanMessageContent(msg.content);
+                    
                     return (
                       <div
                         key={msg.id}
                         className={cn(
-                          "flex gap-2",
-                          isBot ? "flex-row" : "flex-row-reverse"
+                          "flex flex-col gap-1",
+                          isOutbound ? "items-end" : "items-start"
                         )}
                       >
+                        {/* Sender name */}
+                        <span className="text-xs text-muted-foreground px-1">
+                          {msg.sender_name || (isOutbound ? "WePrintWraps" : "Customer")}
+                        </span>
+                        
+                        {/* Message bubble */}
                         <div className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
-                          isBot ? "bg-primary/20" : "bg-secondary"
+                          "max-w-[85%] rounded-2xl px-4 py-2.5",
+                          isOutbound 
+                            ? "bg-primary text-primary-foreground rounded-br-md" 
+                            : "bg-secondary text-secondary-foreground rounded-bl-md"
                         )}>
-                          {isBot ? (
-                            <Bot className="w-4 h-4 text-primary" />
-                          ) : (
-                            <User className="w-4 h-4 text-muted-foreground" />
-                          )}
+                          <p className="text-sm leading-relaxed">{cleanedContent}</p>
                         </div>
-                        <div className={cn(
-                          "max-w-[80%] rounded-lg p-3",
-                          isBot 
-                            ? "bg-secondary/50 text-foreground" 
-                            : "bg-primary/20 text-foreground"
-                        )}>
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          <span className="text-[10px] text-muted-foreground mt-1 block">
-                            {msg.sender_name && <span className="mr-2">{msg.sender_name}</span>}
-                            {formatTime(msg.created_at)}
-                          </span>
-                        </div>
+                        
+                        {/* Timestamp */}
+                        <span className="text-[10px] text-muted-foreground px-1">
+                          {formatDateTime(msg.created_at)}
+                        </span>
                       </div>
                     );
                   })}
