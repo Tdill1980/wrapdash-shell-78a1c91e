@@ -19,8 +19,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Send, XCircle, User, Bot, Mail, Car, DollarSign, 
-  MessageSquare, FileText, Clock, Loader2 
+  MessageSquare, FileText, Clock, Loader2, Image, X, Maximize2, Paperclip 
 } from "lucide-react";
+import { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { 
   generateEmailPreview, 
@@ -35,6 +36,10 @@ interface Message {
   direction: string;
   sender_name: string | null;
   created_at: string;
+  metadata?: {
+    attachments?: string[];
+    [key: string]: unknown;
+  } | null;
 }
 
 interface ActionPayload {
@@ -99,6 +104,7 @@ export function AIApprovalDetailModal({
   const [selectedTone, setSelectedTone] = useState("installer");
   const [selectedDesign, setSelectedDesign] = useState("performance");
   const [quoteData, setQuoteData] = useState<any>(null);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && action) {
@@ -117,12 +123,15 @@ export function AIApprovalDetailModal({
       if (conversationId) {
         const { data, error } = await supabase
           .from("messages")
-          .select("id, content, direction, sender_name, created_at")
+          .select("id, content, direction, sender_name, created_at, metadata")
           .eq("conversation_id", conversationId)
           .order("created_at", { ascending: true });
 
         if (!error && data && data.length > 0) {
-          setMessages(data as Message[]);
+          setMessages(data.map(m => ({
+            ...m,
+            metadata: m.metadata as Message["metadata"]
+          })));
           setLoadingMessages(false);
           return;
         }
@@ -154,12 +163,15 @@ export function AIApprovalDetailModal({
             // Fetch messages from this conversation
             const { data } = await supabase
               .from("messages")
-              .select("id, content, direction, sender_name, created_at")
+              .select("id, content, direction, sender_name, created_at, metadata")
               .eq("conversation_id", convo.id)
               .order("created_at", { ascending: true });
             
             if (data && data.length > 0) {
-              setMessages(data as Message[]);
+              setMessages(data.map(m => ({
+                ...m,
+                metadata: m.metadata as Message["metadata"]
+              })));
               setLoadingMessages(false);
               return;
             }
@@ -339,6 +351,7 @@ export function AIApprovalDetailModal({
                     // Outbound = our reply (right side)
                     const isOutbound = msg.direction === "outbound";
                     const cleanedContent = cleanMessageContent(msg.content);
+                    const attachments = msg.metadata?.attachments || [];
                     
                     return (
                       <div
@@ -361,6 +374,48 @@ export function AIApprovalDetailModal({
                             : "bg-secondary text-secondary-foreground rounded-bl-md"
                         )}>
                           <p className="text-sm leading-relaxed">{cleanedContent}</p>
+                          
+                          {/* Attachments */}
+                          {attachments.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {attachments.map((url, idx) => {
+                                const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)/i) || 
+                                               url.includes("ig_messaging_cdn") ||
+                                               url.includes("fbcdn");
+                                
+                                return isImage ? (
+                                  <button
+                                    key={idx}
+                                    onClick={() => setExpandedImage(url)}
+                                    className="relative group rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
+                                  >
+                                    <img 
+                                      src={url} 
+                                      alt={`Attachment ${idx + 1}`}
+                                      className="w-16 h-16 object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                      <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                  </button>
+                                ) : (
+                                  <a
+                                    key={idx}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-background/50 border border-border/50 hover:border-primary/50 transition-colors text-xs"
+                                  >
+                                    <Paperclip className="w-3 h-3" />
+                                    File {idx + 1}
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                         
                         {/* Timestamp */}
@@ -484,6 +539,30 @@ export function AIApprovalDetailModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Expanded Image Lightbox */}
+      {expandedImage && (
+        <Dialog open={!!expandedImage} onOpenChange={() => setExpandedImage(null)}>
+          <DialogContent className="max-w-4xl p-0 bg-black/95 border-none">
+            <button
+              onClick={() => setExpandedImage(null)}
+              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+            <div className="flex items-center justify-center min-h-[60vh] p-4">
+              <img
+                src={expandedImage}
+                alt="Expanded attachment"
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/placeholder.svg";
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }
