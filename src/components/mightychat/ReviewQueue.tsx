@@ -122,9 +122,11 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   // Helper to get channel from unified item (conversation or ai_action)
   const getItemChannel = (item: any): string => {
     if (item._isAiAction) {
-      // For ai_actions, derive channel from enriched conversation or payload
-      return item._enrichedConversation?.channel || 
-             (item.action_payload as any)?.channel || 
+      // For ai_actions, derive channel from payload.source first, then enriched conversation
+      const payload = item.action_payload as any;
+      return payload?.source || 
+             item._enrichedConversation?.channel || 
+             payload?.channel || 
              "task";
     }
     return item.channel || "unknown";
@@ -281,7 +283,8 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
           <TabsTrigger value="chat" className="text-blue-400">Website ({websiteConvos.length})</TabsTrigger>
         </TabsList>
 
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 h-[calc(100vh-320px)]">
+          <div className="p-4">
           <TabsContent value="all" className="mt-0 space-y-2">
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">Loading...</div>
@@ -391,6 +394,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
               ))
             )}
           </TabsContent>
+          </div>
         </ScrollArea>
       </Tabs>
 
@@ -433,8 +437,9 @@ function ConversationCard({
   const contact = conversation.contacts || conversation._contact;
   const lastMessage = conversation.messages?.[0];
 
-  // Derive channel from either conversation or enriched ai_action
-  const channel = enrichedConvo?.channel || conversation.channel || (payload?.channel as string) || "task";
+  // Derive channel from payload source field, enriched conversation, or conversation
+  const payloadSource = (payload?.source as string) || "";
+  const channel = payloadSource || enrichedConvo?.channel || conversation.channel || "task";
 
   const getOwnerAndInbox = () => {
     const recipientInbox = (enrichedConvo?.recipient_inbox || conversation.recipient_inbox || "").toLowerCase();
@@ -447,30 +452,35 @@ function ConversationCard({
       return { owner: "Alex Morgan", inbox: "hello@weprintwraps.com" };
     }
     if (isAiAction) {
-      return { owner: "AI Task", inbox: conversation.action_type?.replace("_", " ") || "pending" };
+      // Format action type nicely for display
+      const actionLabel = conversation.action_type?.replace(/_/g, " ") || "pending task";
+      return { owner: "AI Task", inbox: actionLabel };
     }
     return { owner: "Alex Morgan", inbox: String(channel || "unknown") };
   };
 
   const ownerInfo = getOwnerAndInbox();
 
-  // Get customer name from various sources
+  // Get customer name from various sources - including sender_username for Instagram
   const customerName = contact?.name || 
     contact?.email || 
     (payload?.customer_name as string) || 
-    (payload?.customer_email as string) || 
+    (payload?.customer_email as string) ||
+    (payload?.sender_username as string) ||
     "Unknown";
 
-  // Get subject from various sources
+  // Get subject/title from various sources
   const subject = conversation.subject || 
     (payload?.subject as string) || 
-    (payload?.action_type as string)?.replace("_", " ");
+    (payload?.quote_number as string) ||
+    (isAiAction ? `${conversation.action_type?.replace(/_/g, " ")} task` : null);
 
   // Get preview text
   const previewText = lastMessage?.content || 
-    (payload?.preview as string) || 
     (payload?.message as string) ||
-    (payload?.content as string);
+    (payload?.preview as string) || 
+    (payload?.content as string) ||
+    (isAiAction && payload?.file_urls ? "Contains file attachment(s)" : null);
 
   return (
     <Card className="hover:bg-accent/50 transition-colors">
