@@ -458,7 +458,7 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
                 content: message_text
               }
             ],
-            max_tokens: 200
+            max_tokens: 500
           })
         });
 
@@ -476,11 +476,6 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
     // Format response according to Jordan's style
     const jordanAgent = AGENTS.jordan_lee;
     aiReply = formatAgentResponse(jordanAgent, aiReply);
-
-    // Add human confirmation (mandatory per constitution)
-    if (!aiReply.includes('reviewed') && !aiReply.includes('team')) {
-      aiReply += `\n\n${WPW_CONSTITUTION.humanConfirmation}`;
-    }
 
     // Save final state and insert response
     await supabase
