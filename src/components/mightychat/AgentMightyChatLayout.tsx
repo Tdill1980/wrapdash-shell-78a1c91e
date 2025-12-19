@@ -592,10 +592,10 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
           {/* Conversation List - full width on mobile when no selection */}
           <Card className={cn(
             "flex flex-col transition-all",
-            // Desktop: fixed width
-            "lg:w-[280px] lg:flex-shrink-0",
+            // Desktop: fixed width, match chat height
+            "lg:w-[280px] lg:flex-shrink-0 lg:max-h-[600px]",
             // Mobile: full width or hidden based on selection
-            selectedConversation ? "hidden md:flex md:w-[240px]" : "flex-1 md:flex-1 lg:flex-none"
+            selectedConversation ? "hidden md:flex md:w-[240px] md:max-h-[600px]" : "flex-1 md:flex-1 lg:flex-none max-h-[600px]"
           )}>
             <CardHeader className="pb-2 px-3 md:px-6">
               <CardTitle className="text-base md:text-lg flex items-center justify-between">
