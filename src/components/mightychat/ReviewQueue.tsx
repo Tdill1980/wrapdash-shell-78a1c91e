@@ -465,13 +465,30 @@ function TaskCard({
   };
   const source = getSource();
 
-  // Get username/identifier
-  const username = (payload?.sender_username as string) || 
-                   (payload?.customer_name as string) || 
-                   item.contacts?.name || 
-                   item._contact?.name ||
-                   item.contacts?.email ||
-                   "Unknown";
+  // Get username/identifier - prefer contact name, then sender_username
+  const getUsername = () => {
+    // For AI actions, try contact name first, then sender_username
+    if (isAiAction) {
+      const contactName = item._contact?.name;
+      // Use contact name if it exists and isn't just "IG User xxxxx" pattern
+      if (contactName && !contactName.match(/^(IG User|ig_)/i)) {
+        return contactName;
+      }
+      // Try customer name from payload
+      if (payload?.customer_name) {
+        return payload.customer_name as string;
+      }
+      // Fall back to sender_username
+      return (payload?.sender_username as string) || contactName || "Unknown";
+    }
+    // For conversations, use contact name
+    const contactName = item.contacts?.name;
+    if (contactName && !contactName.match(/^(IG User|ig_)/i)) {
+      return contactName;
+    }
+    return item.contacts?.email || contactName || "Unknown";
+  };
+  const username = getUsername();
 
   // Get action type for AI actions
   const actionType = isAiAction ? item.action_type : null;
@@ -480,11 +497,29 @@ function TaskCard({
   // Get file URLs for file_review actions
   const fileUrls = (payload?.file_urls as string[]) || [];
 
-  // Get message/preview
-  const message = (payload?.message as string) || 
-                  item.messages?.[0]?.content ||
-                  (payload?.preview as string) ||
-                  "";
+  // Get message/preview - prefer last inbound message
+  const getLastMessage = () => {
+    // Check payload message first (for AI actions)
+    if (payload?.message) {
+      return payload.message as string;
+    }
+    // Get messages array and find last inbound message
+    const messages = item.messages || item._enrichedConversation?.messages;
+    if (messages && messages.length > 0) {
+      // Sort by created_at descending and find last inbound
+      const sortedMessages = [...messages].sort((a: any, b: any) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const lastInbound = sortedMessages.find((m: any) => m.direction === 'inbound');
+      if (lastInbound) {
+        return lastInbound.content;
+      }
+      // Fall back to most recent message
+      return sortedMessages[0]?.content || "";
+    }
+    return (payload?.preview as string) || "";
+  };
+  const message = getLastMessage();
 
   // Format timestamp
   const timestamp = format(new Date(item.created_at), "h:mm a");
