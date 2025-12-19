@@ -189,7 +189,7 @@ All colors MUST be HSL.
   /* Custom Scrollbar for Timeline */
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+    scrollbar-color: hsla(198, 100%, 50%, 0.4) transparent;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
@@ -198,16 +198,43 @@ All colors MUST be HSL.
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
+    background: transparent;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    background: hsla(198, 100%, 50%, 0.4);
+    border-radius: 999px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: hsla(198, 100%, 50%, 0.6);
   }
+}
+
+/* Global Blue Translucent Oval Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsla(198, 100%, 50%, 0.4) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsla(198, 100%, 50%, 0.4);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsla(198, 100%, 50%, 0.6);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: hsla(198, 100%, 50%, 0.7);
 }
