@@ -12,7 +12,9 @@ import {
   CheckSquare,
   Clock,
   Brain,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  AlertCircle
 } from "lucide-react";
 import { AgentSelector } from "./AgentSelector";
 import { AgentChatPanel } from "./AgentChatPanel";
@@ -31,21 +33,19 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const [taskContext, setTaskContext] = useState<Record<string, unknown> | undefined>();
 
   // Fetch recent conversations from last 48 hours
-  const { data: recentConversations, isLoading, refetch, dataUpdatedAt } = useQuery({
+  const { data: conversationsData, isLoading: loadingConversations, refetch: refetchConversations, dataUpdatedAt } = useQuery({
     queryKey: ["review-queue-conversations"],
     queryFn: async () => {
       const fortyEightHoursAgo = new Date();
       fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
       const iso = fortyEightHoursAgo.toISOString();
 
-      // Include threads that were created earlier but received new messages recently
-      // (last_message_at can be null for brand new threads)
       const { data, error } = await supabase
         .from("conversations")
         .select(`
           *,
           contacts (name, email, phone),
-          messages (content, sender, created_at)
+          messages (content, direction, sender_name, created_at)
         `)
         .or(`last_message_at.gte.${iso},and(last_message_at.is.null,created_at.gte.${iso})`)
         .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -55,8 +55,88 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    refetchInterval: 30000,
   });
+
+  // Fetch unresolved ai_actions (from Ops Desk)
+  const { data: aiActionsData, isLoading: loadingActions, refetch: refetchActions } = useQuery({
+    queryKey: ["review-queue-ai-actions"],
+    queryFn: async () => {
+      const { data: actions, error } = await supabase
+        .from("ai_actions")
+        .select("*")
+        .eq("resolved", false)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Enrich with conversation data where available
+      const enriched = await Promise.all(
+        (actions || []).map(async (action) => {
+          const payload = action.action_payload as Record<string, unknown> | null;
+          const conversationId = payload?.conversation_id as string | undefined;
+          
+          let contact = null;
+          let conversationData = null;
+          
+          if (conversationId) {
+            const { data: conv } = await supabase
+              .from("conversations")
+              .select(`*, contacts (name, email, phone)`)
+              .eq("id", conversationId)
+              .single();
+            conversationData = conv;
+            contact = conv?.contacts;
+          }
+
+          return {
+            ...action,
+            _isAiAction: true,
+            _enrichedConversation: conversationData,
+            _contact: contact,
+          };
+        })
+      );
+
+      return enriched;
+    },
+    refetchInterval: 30000,
+  });
+
+  // Merge conversations and ai_actions into unified list
+  const recentConversations: any[] = [
+    ...(conversationsData || []).map(c => ({ ...c, _isAiAction: false })),
+    ...(aiActionsData || []),
+  ].sort((a: any, b: any) => {
+    const dateA = new Date((a as any).last_message_at || a.created_at).getTime();
+    const dateB = new Date((b as any).last_message_at || b.created_at).getTime();
+    return dateB - dateA;
+  });
+
+  const isLoading = loadingConversations || loadingActions;
+  const refetch = () => {
+    refetchConversations();
+    refetchActions();
+  };
+
+  // Helper to get channel from unified item (conversation or ai_action)
+  const getItemChannel = (item: any): string => {
+    if (item._isAiAction) {
+      // For ai_actions, derive channel from enriched conversation or payload
+      return item._enrichedConversation?.channel || 
+             (item.action_payload as any)?.channel || 
+             "task";
+    }
+    return item.channel || "unknown";
+  };
+
+  // Helper to get recipient inbox
+  const getItemInbox = (item: any): string => {
+    if (item._isAiAction) {
+      return item._enrichedConversation?.recipient_inbox || "";
+    }
+    return item.recipient_inbox || "";
+  };
 
   const handleNewTask = () => {
     setTaskContext(undefined);
@@ -70,13 +150,14 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   };
 
   const handleAskAboutConversation = (conversation: any) => {
+    const channel = getItemChannel(conversation);
     setTaskContext({
       type: "conversation_review",
       conversationId: conversation.id,
-      channel: conversation.channel,
-      customerName: conversation.contacts?.name || "Unknown",
-      customerEmail: conversation.contacts?.email,
-      subject: conversation.subject,
+      channel: channel,
+      customerName: conversation.contacts?.name || conversation._contact?.name || "Unknown",
+      customerEmail: conversation.contacts?.email || conversation._contact?.email,
+      subject: conversation.subject || (conversation.action_payload as any)?.subject,
       lastMessage: conversation.messages?.[0]?.content,
     });
     setShowAgentSelector(true);
@@ -88,7 +169,8 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
       case "instagram": return <Instagram className="w-4 h-4" />;
       case "website_chat": 
       case "website": return <MessageCircle className="w-4 h-4" />;
-      default: return <MessageCircle className="w-4 h-4" />;
+      case "task": return <FileText className="w-4 h-4" />;
+      default: return <AlertCircle className="w-4 h-4" />;
     }
   };
 
@@ -98,15 +180,17 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
       case "instagram": return "bg-pink-500/20 text-pink-400";
       case "website_chat": 
       case "website": return "bg-blue-500/20 text-blue-400";
+      case "task": return "bg-amber-500/20 text-amber-400";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
-  // Filter helpers
+  // Filter helpers using our channel helpers
   const filterByInbox = (inbox: string) => {
     return recentConversations?.filter(c => {
-      if (c.channel !== "email") return false;
-      const recipientInbox = (c.recipient_inbox || "").toLowerCase();
+      const channel = getItemChannel(c);
+      if (channel !== "email") return false;
+      const recipientInbox = getItemInbox(c).toLowerCase();
       return recipientInbox.includes(inbox);
     }) || [];
   };
@@ -114,9 +198,12 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const helloEmails = filterByInbox("hello");
   const designEmails = filterByInbox("design");
   const jacksonEmails = filterByInbox("jackson");
-  const allEmails = recentConversations?.filter(c => c.channel === "email") || [];
-  const socialConvos = recentConversations?.filter(c => c.channel === "instagram") || [];
-  const websiteConvos = recentConversations?.filter(c => c.channel === "website_chat" || c.channel === "website") || [];
+  const allEmails = recentConversations?.filter(c => getItemChannel(c) === "email") || [];
+  const socialConvos = recentConversations?.filter(c => getItemChannel(c) === "instagram") || [];
+  const websiteConvos = recentConversations?.filter(c => {
+    const ch = getItemChannel(c);
+    return ch === "website_chat" || ch === "website";
+  }) || [];
 
   return (
     <div className="h-full flex flex-col">
@@ -338,24 +425,52 @@ function ConversationCard({
   getChannelIcon: (channel: string) => React.ReactNode;
   getChannelColor: (channel: string) => string;
 }) {
+  const isAiAction = conversation._isAiAction;
+  const payload = conversation.action_payload as Record<string, unknown> | null;
+  
+  // For ai_actions, use enriched conversation data
+  const enrichedConvo = conversation._enrichedConversation;
+  const contact = conversation.contacts || conversation._contact;
   const lastMessage = conversation.messages?.[0];
 
+  // Derive channel from either conversation or enriched ai_action
+  const channel = enrichedConvo?.channel || conversation.channel || (payload?.channel as string) || "task";
+
   const getOwnerAndInbox = () => {
-    const channel = conversation.channel;
-    const recipientInbox = (conversation.recipient_inbox || "").toLowerCase();
+    const recipientInbox = (enrichedConvo?.recipient_inbox || conversation.recipient_inbox || "").toLowerCase();
 
     if (channel === "instagram") return { owner: "Social Team", inbox: "Instagram DMs" };
-    // Some older code uses website_chat; newer pipeline uses website
     if (channel === "website" || channel === "website_chat") return { owner: "Jordan Lee", inbox: "Website Chat" };
     if (channel === "email") {
       if (recipientInbox.includes("design")) return { owner: "Grant Miller", inbox: "design@weprintwraps.com" };
       if (recipientInbox.includes("jackson")) return { owner: "Manny Chen", inbox: "jackson@weprintwraps.com" };
       return { owner: "Alex Morgan", inbox: "hello@weprintwraps.com" };
     }
+    if (isAiAction) {
+      return { owner: "AI Task", inbox: conversation.action_type?.replace("_", " ") || "pending" };
+    }
     return { owner: "Alex Morgan", inbox: String(channel || "unknown") };
   };
 
   const ownerInfo = getOwnerAndInbox();
+
+  // Get customer name from various sources
+  const customerName = contact?.name || 
+    contact?.email || 
+    (payload?.customer_name as string) || 
+    (payload?.customer_email as string) || 
+    "Unknown";
+
+  // Get subject from various sources
+  const subject = conversation.subject || 
+    (payload?.subject as string) || 
+    (payload?.action_type as string)?.replace("_", " ");
+
+  // Get preview text
+  const previewText = lastMessage?.content || 
+    (payload?.preview as string) || 
+    (payload?.message as string) ||
+    (payload?.content as string);
 
   return (
     <Card className="hover:bg-accent/50 transition-colors">
@@ -363,10 +478,15 @@ function ConversationCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <Badge variant="secondary" className={getChannelColor(conversation.channel)}>
-                {getChannelIcon(conversation.channel)}
-                <span className="ml-1 capitalize">{conversation.channel?.replace("_", " ")}</span>
+              <Badge variant="secondary" className={getChannelColor(channel)}>
+                {getChannelIcon(channel)}
+                <span className="ml-1 capitalize">{channel?.replace("_", " ")}</span>
               </Badge>
+              {isAiAction && (
+                <Badge variant="outline" className="bg-amber-500/20 text-amber-400 text-[10px]">
+                  {conversation.action_type?.replace("_", " ")}
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">
                 {formatRelativeAZ(conversation.created_at)}
               </span>
@@ -379,15 +499,13 @@ function ConversationCard({
               <span className="truncate">{ownerInfo.inbox}</span>
             </div>
 
-            <p className="font-medium truncate">
-              {conversation.contacts?.name || conversation.contacts?.email || "Unknown"}
-            </p>
-            {conversation.subject && (
-              <p className="text-sm text-muted-foreground truncate">{conversation.subject}</p>
+            <p className="font-medium truncate">{customerName}</p>
+            {subject && (
+              <p className="text-sm text-muted-foreground truncate">{subject}</p>
             )}
-            {lastMessage && (
+            {previewText && (
               <p className="text-xs text-muted-foreground truncate mt-1">
-                {lastMessage.content?.substring(0, 80)}...
+                {previewText.substring(0, 80)}...
               </p>
             )}
           </div>
