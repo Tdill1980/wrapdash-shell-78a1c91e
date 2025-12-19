@@ -37,8 +37,9 @@ export const MainLayout = ({ children, userName = "User" }: MainLayoutProps) => 
           onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
           isMobileMenuOpen={mobileMenuOpen}
         />
-        <div className="flex-1 p-4 sm:p-6">{children}</div>
+        <div className="flex-1 min-h-0 p-4 sm:p-6">{children}</div>
       </main>
     </div>
   );
 };
+
