@@ -22,6 +22,21 @@ serve(async (req) => {
 
     console.log("📥 Ingesting message:", body);
 
+    // ========== CHECK AI STATUS FIRST ==========
+    const { data: aiStatus } = await supabase
+      .from("ai_status_settings")
+      .select("mode")
+      .limit(1)
+      .single();
+    
+    const aiMode = aiStatus?.mode || 'off';
+    console.log("🎛️ AI Status Mode:", aiMode);
+
+    // If OFF, log message but don't generate or send any AI response
+    if (aiMode === 'off') {
+      console.log("⛔ AI is OFF - logging message only, no AI response");
+    }
+
     // Check for file attachments
     const hasFiles = body.attachments?.length > 0;
     const fileUrls = body.attachments || [];
@@ -468,38 +483,79 @@ RULES:
 - When you have vehicle info + sqft, give them the actual price!
 - ${hasEmail ? '' : 'ALWAYS ask for their email if you dont have it yet!'}`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: replyPrompt },
-          { role: "user", content: body.message_text || (hasFiles ? "[Customer sent files]" : "") },
-        ],
-      }),
-    });
+    // ========== AI RESPONSE GENERATION (RESPECTS AI STATUS) ==========
+    let aiReply = "";
+    let shouldSendReply = false;
+    
+    if (aiMode === 'off') {
+      // OFF mode: No AI response at all
+      console.log("⛔ AI is OFF - skipping AI response generation");
+      aiReply = "";
+      shouldSendReply = false;
+    } else {
+      // LIVE or MANUAL mode: Generate AI response
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: replyPrompt },
+            { role: "user", content: body.message_text || (hasFiles ? "[Customer sent files]" : "") },
+          ],
+        }),
+      });
 
-    const aiData = await aiResp.json();
-    const aiReply = aiData.choices?.[0]?.message?.content || "Thanks for reaching out! How can I help you today?";
+      const aiData = await aiResp.json();
+      aiReply = aiData.choices?.[0]?.message?.content || "Thanks for reaching out! How can I help you today?";
+      console.log("💬 AI Reply:", aiReply);
+      
+      // Determine if we should send based on mode
+      shouldSendReply = aiMode === 'live'; // Only auto-send in LIVE mode
+      
+      if (aiMode === 'manual') {
+        console.log("✋ MANUAL mode - AI response drafted, awaiting approval");
+      }
+    }
 
-    console.log("💬 AI Reply:", aiReply);
-
-    // 8. Save outbound message
-    if (conversation) {
+    // 8. Save outbound message (with status based on mode)
+    if (conversation && aiReply) {
       await supabase.from("messages").insert({
         conversation_id: conversation.id,
         direction: "outbound",
         channel: body.platform,
         content: aiReply,
+        metadata: {
+          ai_mode: aiMode,
+          status: aiMode === 'manual' ? 'pending_approval' : 'sent',
+          generated_at: new Date().toISOString()
+        }
       });
+      
+      // Create ai_action for manual approval if in MANUAL mode
+      if (aiMode === 'manual') {
+        await supabase.from("ai_actions").insert({
+          action_type: "approve_message",
+          priority: parsed.urgency || "normal",
+          action_payload: {
+            source: body.platform,
+            sender_id: body.sender_id,
+            sender_username: body.sender_username,
+            conversation_id: conversation.id,
+            draft_message: aiReply,
+            original_message: body.message_text,
+            needs_approval: true
+          },
+        });
+        console.log("📋 Created approval task for MANUAL mode");
+      }
     }
 
-    // 9. Send reply back via Instagram
-    if (body.platform === "instagram") {
+    // 9. Send reply back via Instagram (ONLY in LIVE mode)
+    if (body.platform === "instagram" && shouldSendReply && aiReply) {
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-instagram-reply`, {
           method: "POST",
@@ -512,13 +568,21 @@ RULES:
             message: aiReply,
           }),
         });
-        console.log("✅ Instagram reply sent");
+        console.log("✅ Instagram reply sent (LIVE mode)");
       } catch (replyErr) {
         console.error("Instagram reply error:", replyErr);
       }
+    } else if (aiMode !== 'live' && aiReply) {
+      console.log(`📝 Message drafted but NOT sent (mode: ${aiMode})`);
     }
 
-    return new Response(JSON.stringify({ reply: aiReply, intent: parsed, auto_quote: autoQuoteResult }), {
+    return new Response(JSON.stringify({ 
+      reply: aiReply, 
+      intent: parsed, 
+      auto_quote: autoQuoteResult,
+      ai_mode: aiMode,
+      message_sent: shouldSendReply 
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

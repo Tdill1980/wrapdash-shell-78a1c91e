@@ -5,6 +5,7 @@ import { OpsDeskScreen } from "./OpsDeskScreen";
 import { ReviewQueue } from "./ReviewQueue";
 import { AgentChatHistory } from "./AgentChatHistory";
 import { AskAgentButton } from "./AskAgentButton";
+import { AIStatusController } from "./AIStatusController";
 import { MessageSquare, ClipboardList, Brain, History, Film, Sparkles, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,9 @@ export function MightyChatShell() {
 
   return (
     <div className="h-full w-full flex flex-col">
+      {/* AI Status Controller */}
+      <AIStatusController />
+      
       {/* Mode Tabs */}
       <div className="flex items-center gap-2 p-2 border-b border-border bg-background/95 backdrop-blur">
         <Button
