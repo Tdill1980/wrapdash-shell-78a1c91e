@@ -25,7 +25,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 
 interface ReviewQueueProps {
-  onSelectConversation?: (conversationId: string) => void;
+  onSelectConversation?: (conversationId: string, channel?: string) => void;
 }
 
 export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
@@ -377,7 +377,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
                 key={item.id}
                 item={item}
                 onAction={() => handleAskAboutConversation(item)}
-                onSelect={() => onSelectConversation?.(item.id)}
+                onSelect={() => onSelectConversation?.(item.id, getItemSource(item))}
               />
             ))
           )}

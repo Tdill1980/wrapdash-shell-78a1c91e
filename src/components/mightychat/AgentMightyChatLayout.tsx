@@ -87,6 +87,7 @@ interface Message {
 interface AgentMightyChatLayoutProps {
   onOpenOpsDesk: () => void;
   initialConversationId?: string | null;
+  initialConversationChannel?: string | null;
   initialAgentChatId?: string | null;
 }
 
@@ -179,7 +180,7 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
   );
 }
 
-export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, initialAgentChatId }: AgentMightyChatLayoutProps) {
+export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, initialConversationChannel, initialAgentChatId }: AgentMightyChatLayoutProps) {
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("id");
   
@@ -204,6 +205,21 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       setShowAgentChatPanel(true);
     }
   }, [initialAgentChatId]);
+
+  // Set active stream based on initial channel from ReviewQueue
+  useEffect(() => {
+    if (initialConversationChannel) {
+      const channel = initialConversationChannel.toLowerCase();
+      if (channel === 'website' || channel === 'website_chat') {
+        setActiveStream('website');
+      } else if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') {
+        setActiveStream('dms');
+      } else if (channel === 'email') {
+        // Default to quotes for email, the specific inbox will be shown
+        setActiveStream('quotes');
+      }
+    }
+  }, [initialConversationChannel]);
 
   useEffect(() => {
     loadConversations();
@@ -617,7 +633,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                       <div
                         key={conv.id}
                         className={cn(
-                          "p-3 border-b cursor-pointer transition-all duration-200",
+                          "p-3 border-b cursor-pointer transition-all duration-200 overflow-hidden",
                           "hover:bg-muted/50 hover:translate-x-0.5",
                           selectedConversation?.id === conv.id && "bg-muted shadow-sm",
                           hasQuoteRequest && "border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-950/20",
@@ -630,10 +646,10 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                         }}
                       >
                         {/* Customer Name / Subject */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <AgentBadge channel={conv.channel} recipientInbox={conv.recipient_inbox} />
                           <span className={cn(
-                            "font-medium flex-1 truncate text-sm",
+                            "font-medium flex-1 truncate text-sm min-w-0",
                             hasUnread && "font-semibold"
                           )}>
                             {conv.contact_name || conv.contact_email?.split('@')[0] || conv.subject || `${conv.channel} conversation`}
@@ -641,7 +657,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                           {hasUnread && (
                             <Badge 
                               variant="destructive" 
-                              className="text-[10px] h-5 min-w-[20px] flex items-center justify-center animate-pulse"
+                              className="text-[10px] h-5 min-w-[20px] flex-shrink-0 flex items-center justify-center animate-pulse"
                             >
                               {conv.unread_count}
                             </Badge>
@@ -657,7 +673,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
                         {/* Message Preview */}
                         {conv.last_message_content && (
-                          <div className="mt-1 pl-0.5 text-[11px] text-muted-foreground truncate max-w-full">
+                          <div className="mt-1 pl-0.5 text-[11px] text-muted-foreground truncate overflow-hidden">
                             {(() => {
                               const cleanContent = conv.channel === "email" ? stripHtmlTags(conv.last_message_content) : conv.last_message_content;
                               return cleanContent.slice(0, 80) + (cleanContent.length > 80 ? '...' : '');
@@ -666,13 +682,13 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                         )}
 
                         {/* Ownership / Inbox */}
-                        <div className="mt-1 pl-0.5 text-[10px] text-muted-foreground flex items-center gap-1">
-                          <span className="font-medium text-foreground/70">{ownerInfo.owner}</span>
-                          <span className="text-muted-foreground">•</span>
-                          <span className="truncate">{ownerInfo.inbox}</span>
+                        <div className="mt-1 pl-0.5 text-[10px] text-muted-foreground flex items-center gap-1 min-w-0">
+                          <span className="font-medium text-foreground/70 flex-shrink-0">{ownerInfo.owner}</span>
+                          <span className="text-muted-foreground flex-shrink-0">•</span>
+                          <span className="truncate min-w-0">{ownerInfo.inbox}</span>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           <span 
                             className={cn(
                               "text-[11px] flex items-center gap-1",
