@@ -519,7 +519,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   const showMobileList = !selectedConversation;
 
   return (
-    <div className="flex flex-col p-2 md:p-4">
+    <div className="h-full min-h-0 flex flex-col p-2 md:p-4 overflow-hidden">
       {/* Header */}
       <div className="mb-2 md:mb-4 flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -575,7 +575,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       </div>
 
       {/* Main layout - responsive */}
-      <div className="flex gap-2 md:gap-4">
+      <div className="flex-1 min-h-0 flex gap-2 md:gap-4">
         {/* LEFT: Work Streams Sidebar - hidden on mobile */}
         <div className="hidden lg:block">
           <WorkStreamsSidebar
@@ -591,11 +591,11 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
         <div className="flex-1 flex gap-2 md:gap-4 min-h-0">
           {/* Conversation List - full width on mobile when no selection */}
           <Card className={cn(
-            "flex flex-col transition-all",
-            // Desktop: fixed width, match work streams height
-            "lg:w-[280px] lg:flex-shrink-0 lg:max-h-[400px]",
+            "flex flex-col transition-all h-full min-h-0",
+            // Desktop: fixed width
+            "lg:w-[280px] lg:flex-shrink-0",
             // Mobile: full width or hidden based on selection
-            selectedConversation ? "hidden md:flex md:w-[240px] md:max-h-[400px]" : "flex-1 md:flex-1 lg:flex-none max-h-[400px]"
+            selectedConversation ? "hidden md:flex md:w-[240px]" : "flex-1 md:flex-1 lg:flex-none"
           )}>
             <CardHeader className="pb-2 px-3 md:px-6">
               <CardTitle className="text-base md:text-lg flex items-center justify-between">
@@ -718,11 +718,11 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
           {/* Message Thread - full width on mobile when selected */}
           <Card className={cn(
-            "flex flex-col",
-            // Desktop: always show, match work streams height
-            "lg:flex lg:flex-1 lg:max-h-[400px]",
+            "flex flex-col flex-1 min-h-0 h-full",
+            // Desktop: always show
+            "lg:flex",
             // Mobile: full width when selected, hidden when not
-            selectedConversation ? "flex flex-1 max-h-[400px]" : "hidden md:flex md:flex-1"
+            selectedConversation ? "flex" : "hidden md:flex"
           )}>
             {selectedConversation ? (
               <>
@@ -856,7 +856,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
         </div>
 
         {/* RIGHT: Contact Sidebar */}
-        <div className="w-[280px] flex-shrink-0 hidden xl:block">
+        <div className="w-[280px] flex-shrink-0 hidden xl:block h-full min-h-0">
           <ContactSidebar
             contactId={selectedConversation?.contact_id || null}
             channel={selectedConversation?.channel || 'website'}
