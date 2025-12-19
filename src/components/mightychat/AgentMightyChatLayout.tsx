@@ -605,7 +605,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                 </Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 flex-1 min-h-0 max-h-[420px]">
+            <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
               <ScrollArea className="h-full">
                 {loading ? (
                   <div className="p-4 text-muted-foreground">Loading...</div>
