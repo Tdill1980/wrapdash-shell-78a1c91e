@@ -54,9 +54,17 @@ interface KlaviyoCampaign {
   created_at: string;
 }
 
+// Klaviyo segment IDs - update these with your real IDs
+const KLAVIYO_SEGMENTS: Record<string, string> = {
+  "30_day_inactive": "", // Add your Klaviyo segment ID
+  "60_day_inactive": "", // Add your Klaviyo segment ID  
+  "90_day_inactive": "", // Add your Klaviyo segment ID
+};
+
 export default function MightyMailWinback() {
   const queryClient = useQueryClient();
   const [selectedSegment, setSelectedSegment] = useState("30_day_inactive");
+  const [segmentId, setSegmentId] = useState(""); // Direct Klaviyo segment ID input
   const [offerType, setOfferType] = useState<string>("percent_off");
   const [offerValue, setOfferValue] = useState([10]);
   const [urgencyLevel, setUrgencyLevel] = useState("soft");
@@ -132,8 +140,18 @@ export default function MightyMailWinback() {
       return;
     }
 
+    // Get the segment ID - either from direct input or from the mapping
+    const klaviyoSegmentId = segmentId || KLAVIYO_SEGMENTS[selectedSegment];
+    
+    if (!klaviyoSegmentId) {
+      toast.error("Please enter a Klaviyo Segment ID");
+      return;
+    }
+
     setIsGenerating(true);
     try {
+      console.log('[Klaviyo] Sending campaign with segmentId:', klaviyoSegmentId);
+      
       const { data, error } = await supabase.functions.invoke('create-klaviyo-campaign', {
         body: {
           campaignType: 'winback',
@@ -141,15 +159,24 @@ export default function MightyMailWinback() {
           subject: generatedContent.subject,
           previewText: generatedContent.preheader,
           html: previewHtml,
+          segmentId: klaviyoSegmentId, // Pass actual Klaviyo segment ID
           segmentType: selectedSegment,
           offerType,
           offerValue: offerValue[0]
         }
       });
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      if (error) {
+        console.error('[Klaviyo] Edge function error:', error);
+        throw error;
+      }
+      
+      if (!data?.success) {
+        console.error('[Klaviyo] Campaign creation failed:', data);
+        throw new Error(data?.error || "Campaign creation failed");
+      }
 
+      console.log('[Klaviyo] Campaign created:', data);
       toast.success(data.message || "Campaign created successfully!");
       queryClient.invalidateQueries({ queryKey: ['klaviyo-campaigns'] });
       
@@ -157,7 +184,7 @@ export default function MightyMailWinback() {
       setPreviewHtml(null);
       setGeneratedContent(null);
     } catch (err: any) {
-      console.error('Send error:', err);
+      console.error('[Klaviyo] Send error:', err);
       toast.error(err.message || "Failed to send campaign");
     } finally {
       setIsGenerating(false);
@@ -304,6 +331,20 @@ export default function MightyMailWinback() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* Klaviyo Segment ID */}
+                  <div className="space-y-2">
+                    <Label>Klaviyo Segment ID</Label>
+                    <Input 
+                      placeholder="e.g. WYbqVX"
+                      value={segmentId}
+                      onChange={(e) => setSegmentId(e.target.value)}
+                      className="font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Find this in Klaviyo → Audience → Segments → Select segment → Copy ID from URL
+                    </p>
                   </div>
 
                   {/* Offer Type */}

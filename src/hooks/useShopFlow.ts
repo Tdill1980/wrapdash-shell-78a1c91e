@@ -156,22 +156,27 @@ export const useShopFlow = (orderId?: string) => {
         console.error('Error updating WooCommerce:', wooError);
       }
 
-      // Send Klaviyo event
-      try {
-        await supabase.functions.invoke('send-klaviyo-event', {
-          body: {
-            eventName: 'shopflow_status_changed',
-            properties: {
-              order_number: order.order_number,
-              internal_status: newStatus,
-              customer_name: order.customer_name,
-              product_type: order.product_type
-            },
-            customerEmail: '' // Would need to get from order data
-          }
-        });
-      } catch (klaviyoError) {
-        console.error('Error sending Klaviyo event:', klaviyoError);
+      // Send Klaviyo event - only if we have customer email
+      if (order.customer_email) {
+        try {
+          console.log('[Klaviyo] Sending status change event for:', order.customer_email);
+          await supabase.functions.invoke('send-klaviyo-event', {
+            body: {
+              eventName: 'shopflow_status_changed',
+              properties: {
+                order_number: order.order_number,
+                internal_status: newStatus,
+                customer_name: order.customer_name,
+                product_type: order.product_type
+              },
+              customerEmail: order.customer_email
+            }
+          });
+        } catch (klaviyoError) {
+          console.error('[Klaviyo] Error sending status event:', klaviyoError);
+        }
+      } else {
+        console.warn('[Klaviyo] Skipping event - no customer email for order:', order.order_number);
       }
 
       toast({
@@ -256,18 +261,23 @@ export const useShopFlow = (orderId?: string) => {
           }
         });
 
-        await supabase.functions.invoke('send-klaviyo-event', {
-          body: {
-            eventName: 'shopflow_tracking_added',
-            customerEmail: order.customer_name,
-            properties: {
-              order_number: order.order_number,
-              tracking_number: trackingNumber,
-              tracking_url: trackingUrl,
-              product_type: order.product_type
+        // Send Klaviyo tracking event - only if we have customer email
+        if (order.customer_email) {
+          console.log('[Klaviyo] Sending tracking event for:', order.customer_email);
+          await supabase.functions.invoke('send-klaviyo-event', {
+            body: {
+              eventName: 'shopflow_tracking_added',
+              customerEmail: order.customer_email,
+              properties: {
+                order_number: order.order_number,
+                tracking_number: trackingNumber,
+                tracking_url: trackingUrl,
+                product_type: order.product_type,
+                customer_name: order.customer_name
+              }
             }
-          }
-        });
+          });
+        }
       }
 
       toast({
