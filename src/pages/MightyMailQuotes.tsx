@@ -6,8 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Mail, RefreshCw, Search } from "lucide-react";
+import { Eye, Mail, RefreshCw, Search, Pencil, MessageSquare, Instagram } from "lucide-react";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
+import { QuoteEditDialog } from "@/components/mightymail/QuoteEditDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 
 interface Quote {
@@ -37,6 +38,9 @@ interface Quote {
   last_activity?: string;
   open_count?: number;
   click_count?: number;
+  source?: string;
+  source_message?: string;
+  ai_message?: string;
 }
 
 export default function MightyMailQuotes() {
@@ -51,6 +55,7 @@ export default function MightyMailQuotes() {
     autoFollow: 0,
   });
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const { toast } = useToast();
@@ -176,6 +181,24 @@ export default function MightyMailQuotes() {
   function handlePreviewEmail(quote: Quote) {
     setSelectedQuote(quote);
     setEmailPreviewOpen(true);
+  }
+
+  function handleEditQuote(quote: Quote) {
+    setSelectedQuote(quote);
+    setEditDialogOpen(true);
+  }
+
+  function getSourceIcon(source?: string) {
+    switch (source?.toLowerCase()) {
+      case "instagram":
+        return <Instagram className="w-3 h-3 text-pink-400" />;
+      case "website_chat":
+        return <MessageSquare className="w-3 h-3 text-blue-400" />;
+      case "email":
+        return <Mail className="w-3 h-3 text-green-400" />;
+      default:
+        return null;
+    }
   }
 
   const filteredQuotes = quotes.filter(
@@ -344,12 +367,20 @@ export default function MightyMailQuotes() {
                       </td>
                       <td className="py-4 px-2">
                         <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {quote.customer_name}
-                          </p>
+                          <div className="flex items-center gap-1">
+                            {getSourceIcon(quote.source)}
+                            <p className="text-sm font-medium text-foreground">
+                              {quote.customer_name}
+                            </p>
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {quote.customer_email}
                           </p>
+                          {(quote.source_message || quote.ai_message) && (
+                            <p className="text-xs text-muted-foreground/70 truncate max-w-[200px]" title={quote.source_message || quote.ai_message}>
+                              "{(quote.source_message || quote.ai_message)?.slice(0, 40)}..."
+                            </p>
+                          )}
                         </div>
                       </td>
                       <td className="py-4 px-2">
@@ -425,12 +456,22 @@ export default function MightyMailQuotes() {
                         {new Date(quote.created_at).toLocaleDateString()}
                       </td>
                       <td className="py-4 px-2">
-                        <div className="flex gap-2">
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditQuote(quote)}
+                            className="h-8 w-8 p-0"
+                            title="Edit Quote"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handlePreviewEmail(quote)}
                             className="h-8 w-8 p-0"
+                            title="Preview Email"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -440,6 +481,7 @@ export default function MightyMailQuotes() {
                             onClick={() => sendOrderConfirmation(quote)}
                             disabled={sendingEmail === quote.id}
                             className="h-8 w-8 p-0"
+                            title="Send Email"
                           >
                             <Mail className="w-4 h-4" />
                           </Button>
@@ -473,6 +515,16 @@ export default function MightyMailQuotes() {
           }}
           tone={selectedQuote.email_tone}
           design={selectedQuote.email_design}
+        />
+      )}
+
+      {/* Quote Edit Dialog */}
+      {selectedQuote && (
+        <QuoteEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          quote={selectedQuote}
+          onSave={fetchQuotes}
         />
       )}
       </div>

@@ -275,7 +275,9 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
               customerEmail: parsed.customer_email || null,
               productType: wpwProductType,
               conversationId: conversation?.id,
-              autoEmail: false // NEVER auto-send - requires approval
+              autoEmail: false, // NEVER auto-send - requires approval
+              source: body.platform, // Track source (instagram, email, etc)
+              sourceMessage: body.message_text // Store original message
             })
           });
           
@@ -305,7 +307,10 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
           status: 'lead',
           total_price: 0,
           ai_generated: false,
-          ai_message: body.message_text
+          ai_message: body.message_text,
+          source: body.platform, // Track source platform (instagram, email, etc)
+          source_message: body.message_text, // Store original message
+          source_conversation_id: conversation?.id || null
         };
         
         console.log("📝 Inserting quote with data:", JSON.stringify(quoteData));

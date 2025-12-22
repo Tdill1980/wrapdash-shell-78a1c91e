@@ -18,6 +18,8 @@ interface QuoteRequest {
   organizationId?: string;
   conversationId?: string;
   autoEmail?: boolean;
+  source?: string;
+  sourceMessage?: string;
 }
 
 serve(async (req) => {
@@ -41,7 +43,9 @@ serve(async (req) => {
       productType = 'avery', // Default to Avery Printed Wrap
       organizationId,
       conversationId,
-      autoEmail = false
+      autoEmail = false,
+      source = 'api',
+      sourceMessage
     } = body;
 
     console.log('AI Auto-Quote Request:', { vehicleYear, vehicleMake, vehicleModel, customerEmail, productType });
@@ -137,7 +141,10 @@ serve(async (req) => {
       ai_sqft_estimate: sqft,
       ai_labor_hours: 0, // WPW does NOT install
       ai_generated_at: new Date().toISOString(),
-      organization_id: organizationId || null
+      organization_id: organizationId || null,
+      source: source,
+      source_message: sourceMessage || null,
+      source_conversation_id: conversationId || null
     };
 
     const { data: createdQuote, error: quoteError } = await supabase
