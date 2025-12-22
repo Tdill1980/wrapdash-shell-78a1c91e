@@ -16,6 +16,7 @@ interface OrganizationSettings {
   branding: OrganizationBranding;
   subscriptionTier: "free" | "pro" | "enterprise";
   affiliateFounderId?: string;
+  offersInstallation: boolean;
 }
 
 interface OrganizationContextType {
@@ -56,6 +57,7 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
     subdomain: "main",
     branding: {},
     subscriptionTier: "pro",
+    offersInstallation: true,
   });
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -128,6 +130,7 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
             branding: data.branding as OrganizationBranding,
             subscriptionTier: data.subscription_tier as "free" | "pro" | "enterprise",
             affiliateFounderId: data.affiliate_founder_id,
+            offersInstallation: data.offers_installation ?? true,
           });
         }
       } catch (error) {
