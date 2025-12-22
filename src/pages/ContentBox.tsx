@@ -41,6 +41,7 @@ import { MetaVideoAdFastPanel } from "@/components/ads/MetaVideoAdFastPanel";
 import { StaticAdDesigner } from "@/components/ads/StaticAdDesigner";
 import { InspirationAIPanel } from "@/components/contentbox/InspirationAIPanel";
 import { ContentRequestPanel } from "@/components/contentbox/ContentRequestPanel";
+import { BulkVariationGenerator } from "@/components/content/BulkVariationGenerator";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -358,6 +359,7 @@ export default function ContentBox() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState('library');
   const [creatorTab, setCreatorTab] = useState('video-editor');
+  const [showBulkGenerator, setShowBulkGenerator] = useState(false);
   const [syncingSource, setSyncingSource] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 
@@ -447,6 +449,16 @@ export default function ContentBox() {
 
   return (
     <MainLayout>
+      {/* Bulk Variation Generator Modal */}
+      <BulkVariationGenerator
+        open={showBulkGenerator}
+        onClose={() => setShowBulkGenerator(false)}
+        onComplete={(bulkId) => {
+          setShowBulkGenerator(false);
+          navigate(`/bulk-variations?bulk_id=${bulkId}`);
+        }}
+      />
+
       {/* Content Request Panel - Ask the right agent */}
       <ContentRequestPanel />
 
@@ -465,6 +477,17 @@ export default function ContentBox() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
+          {/* Bulk Variations Button */}
+          <Button 
+            size="sm"
+            className="sm:size-default"
+            variant="outline"
+            onClick={() => setShowBulkGenerator(true)}
+          >
+            <Sparkles className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Bulk Variations</span>
+          </Button>
+
           {/* AI Auto-Create Reel Button */}
           <Button 
             size="sm"

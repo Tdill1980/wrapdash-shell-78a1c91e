@@ -233,3 +233,9 @@ verify_jwt = false
 
 [functions.backfill-email-quotes]
 verify_jwt = false
+
+[functions.ai-bulk-variations]
+verify_jwt = false
+
+[functions.ai-auto-tag]
+verify_jwt = false
