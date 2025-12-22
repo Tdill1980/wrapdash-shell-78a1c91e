@@ -12,6 +12,65 @@ export interface EmailTone {
   };
 }
 
+// Print-only tones (for WePrintWraps.com - no installation)
+export const printOnlyTones: Record<string, EmailTone> = {
+  installer: {
+    id: "installer",
+    label: "Pro Print Tone",
+    description: "Direct, technical, and professional. Perfect for installers, fleets, and commercial customers.",
+    subjectTemplate: "Your Vehicle Wrap Print Quote for {{vehicle_make}} {{vehicle_model}}",
+    bodyParagraphs: [
+      "Your estimate is now ready with precise material and shipping details.",
+      "All film selections are made using industry-standard materials and professional print specifications.",
+      "This quote includes accurate SQFT calculations, panel layouts, and warranty-backed film options.",
+      "If you have any questions regarding print quality, material specs, or shipping, we're here to help.",
+    ],
+    closing: "Thanks for trusting us with your vehicle wrap printing.",
+    style: {
+      headerColor: "#1F2937",
+      buttonColor: "#3B82F6",
+      accentColor: "#60A5FA",
+    },
+  },
+  luxury: {
+    id: "luxury",
+    label: "Luxury Print Tone",
+    description: "Smooth, elevated, and refined. Perfect for high-end vehicles and exotic clients.",
+    subjectTemplate: "Your Premium Wrap Print Quote Awaits",
+    bodyParagraphs: [
+      "Your personalized wrap print proposal has been prepared with elevated attention to detail.",
+      "We've curated this recommendation using top-tier films and premium printing specifications.",
+      "Every element—finish, coverage, and precision—has been considered to deliver a refined, professional print.",
+      "We look forward to printing a truly bespoke wrap for your vehicle.",
+    ],
+    closing: "Your vehicle deserves a flawless print — let's bring it to life.",
+    style: {
+      headerColor: "#0A0A0F",
+      buttonColor: "#D4AF37",
+      accentColor: "#F59E0B",
+    },
+  },
+  hype: {
+    id: "hype",
+    label: "Hype Print Tone",
+    description: "Aggressive, energetic, high-conviction. Perfect for drift builds, show cars, and restyle customers.",
+    subjectTemplate: "🔥 Your Wrap Print Quote is Ready — Let's Transform This Ride!",
+    bodyParagraphs: [
+      "Your custom wrap print estimate is ready and it goes HARD.",
+      "This setup was built to stand out — killer color options, elite-grade film, and precision printing.",
+      "If you're ready to turn heads and steal the whole show… your print starts here.",
+      "Spots fill fast. Lock it in and let's print greatness.",
+    ],
+    closing: "Let's make your vehicle impossible to ignore.",
+    style: {
+      headerColor: "#0A0A0F",
+      buttonColor: "#00AFFF",
+      accentColor: "#4EEAFF",
+    },
+  },
+};
+
+// Installer tones (for subdomain shops that offer installation)
 export const emailTones: Record<string, EmailTone> = {
   installer: {
     id: "installer",
@@ -68,6 +127,11 @@ export const emailTones: Record<string, EmailTone> = {
     },
   },
 };
+
+// Helper to get the right tones based on offersInstallation flag
+export function getTonePresets(offersInstallation: boolean): Record<string, EmailTone> {
+  return offersInstallation ? emailTones : printOnlyTones;
+}
 
 export function renderEmailTemplate(
   tone: string,

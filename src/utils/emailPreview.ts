@@ -17,14 +17,55 @@ interface EmailPreviewData {
   quoteData: QuoteData;
   tone?: string;
   design?: string;
+  offersInstallation?: boolean;
 }
 
-const tonePresets: Record<string, {
+interface TonePreset {
   bodyParagraphs: string[];
   closing: string;
   buttonColor: string;
   accentColor: string;
-}> = {
+}
+
+// Print-only tones (WePrintWraps.com - no installation)
+const printOnlyTonePresets: Record<string, TonePreset> = {
+  installer: {
+    bodyParagraphs: [
+      "Your estimate is now ready with precise material and shipping details.",
+      "All film selections are made using industry-standard materials and professional print specifications.",
+      "This quote includes accurate SQFT calculations, panel layouts, and warranty-backed film options.",
+      "If you have any questions regarding print quality, material specs, or shipping, we're here to help.",
+    ],
+    closing: "Thanks for trusting us with your vehicle wrap printing.",
+    buttonColor: "#3B82F6",
+    accentColor: "#60A5FA",
+  },
+  luxury: {
+    bodyParagraphs: [
+      "Your personalized wrap print proposal has been prepared with elevated attention to detail.",
+      "We've curated this recommendation using top-tier films and premium printing specifications.",
+      "Every element—finish, coverage, and precision—has been considered to deliver a refined, professional print.",
+      "We look forward to printing a truly bespoke wrap for your vehicle.",
+    ],
+    closing: "Your vehicle deserves a flawless print — let's bring it to life.",
+    buttonColor: "#D4AF37",
+    accentColor: "#F59E0B",
+  },
+  hype: {
+    bodyParagraphs: [
+      "Your custom wrap print estimate is ready and it goes HARD.",
+      "This setup was built to stand out — killer color options, elite-grade film, and precision printing.",
+      "If you're ready to turn heads and steal the whole show… your print starts here.",
+      "Spots fill fast. Lock it in and let's print greatness.",
+    ],
+    closing: "Let's make your vehicle impossible to ignore.",
+    buttonColor: "#00AFFF",
+    accentColor: "#4EEAFF",
+  },
+};
+
+// Installer tones (subdomain shops that offer installation)
+const installerTonePresets: Record<string, TonePreset> = {
   installer: {
     bodyParagraphs: [
       "Your estimate is now ready with precise material and installation details.",
@@ -59,6 +100,11 @@ const tonePresets: Record<string, {
     accentColor: "#4EEAFF",
   },
 };
+
+// Helper to get the right tones
+export function getTonePresets(offersInstallation: boolean): Record<string, TonePreset> {
+  return offersInstallation ? installerTonePresets : printOnlyTonePresets;
+}
 
 const designStyles: Record<string, {
   backgroundColor: string;
@@ -121,7 +167,9 @@ export function generateEmailPreview({
   quoteData,
   tone = "installer",
   design = "performance",
+  offersInstallation = true,
 }: EmailPreviewData): string {
+  const tonePresets = getTonePresets(offersInstallation);
   const tonePreset = tonePresets[tone] || tonePresets.installer;
   const styles = designStyles[design] || designStyles.performance;
   const body = tonePreset.bodyParagraphs.join("<br><br>");

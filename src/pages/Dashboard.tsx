@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useOrganization } from "@/contexts/OrganizationContext";
 import {
   Database,
   Mail,
@@ -131,6 +132,7 @@ const adminModules = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { organizationSettings } = useOrganization();
   const { data: designs, isLoading } = useDesignVault();
   const { orders: shopflowOrders, loading: shopflowLoading } = useShopFlow();
   const { products, settings, loading: productsLoading } = useProducts();
@@ -554,6 +556,7 @@ export default function Dashboard() {
                     <option>Satin</option>
                   </select>
                 </div>
+                {organizationSettings.offersInstallation && (
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Install Hours</label>
                   <input 
@@ -565,6 +568,7 @@ export default function Dashboard() {
                     className="w-full bg-background border border-border text-xs px-3 py-2 rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
+                )}
               </div>
 
               {/* Margin Slider */}
@@ -597,10 +601,12 @@ export default function Dashboard() {
                   </span>
                   <span className="text-foreground">${materialCost.toFixed(2)}</span>
                 </div>
+                {organizationSettings.offersInstallation && (
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Install ({installHours}hrs @ ${settings.install_rate_per_hour}/hr)</span>
                   <span className="text-foreground">${installFee.toFixed(2)}</span>
                 </div>
+                )}
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Tax ({settings.tax_rate_percentage}%)</span>
                   <span className="text-foreground">${taxAmount.toFixed(2)}</span>

@@ -32,6 +32,7 @@ interface QuoteEmailRequest {
   design?: string;
   quoteId?: string;
   customerId?: string;
+  offersInstallation?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -48,6 +49,7 @@ const handler = async (req: Request): Promise<Response> => {
       design = "performance",
       quoteId,
       customerId,
+      offersInstallation = true,
     }: QuoteEmailRequest = await req.json();
 
     if (!customerEmail || !quoteData.quote_total) {
@@ -77,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
       footer_text: branding?.footer_text || "",
       logo_url: branding?.logo_url || "",
       ...quoteData,
-    });
+    }, offersInstallation);
 
     const subject = getSubjectLine(tone, quoteData);
 
@@ -147,9 +149,48 @@ function getSubjectLine(tone: string, quoteData: any): string {
 function renderEmailTemplate(
   tone: string,
   design: string,
-  data: Record<string, any>
+  data: Record<string, any>,
+  offersInstallation: boolean = true
 ): string {
-  const tonePresets: Record<string, any> = {
+  // Print-only tones (WePrintWraps.com - no installation)
+  const printOnlyTonePresets: Record<string, any> = {
+    installer: {
+      bodyParagraphs: [
+        "Your estimate is now ready with precise material and shipping details.",
+        "All film selections are made using industry-standard materials and professional print specifications.",
+        "This quote includes accurate SQFT calculations, panel layouts, and warranty-backed film options.",
+        "If you have any questions regarding print quality, material specs, or shipping, we're here to help.",
+      ],
+      closing: "Thanks for trusting us with your vehicle wrap printing.",
+      buttonColor: "#3B82F6",
+      accentColor: "#60A5FA",
+    },
+    luxury: {
+      bodyParagraphs: [
+        "Your personalized wrap print proposal has been prepared with elevated attention to detail.",
+        "We've curated this recommendation using top-tier films and premium printing specifications.",
+        "Every element—finish, coverage, and precision—has been considered to deliver a refined, professional print.",
+        "We look forward to printing a truly bespoke wrap for your vehicle.",
+      ],
+      closing: "Your vehicle deserves a flawless print — let's bring it to life.",
+      buttonColor: "#D4AF37",
+      accentColor: "#F59E0B",
+    },
+    hype: {
+      bodyParagraphs: [
+        "Your custom wrap print estimate is ready and it goes HARD.",
+        "This setup was built to stand out — killer color options, elite-grade film, and precision printing.",
+        "If you're ready to turn heads and steal the whole show… your print starts here.",
+        "Spots fill fast. Lock it in and let's print greatness.",
+      ],
+      closing: "Let's make your vehicle impossible to ignore.",
+      buttonColor: "#00AFFF",
+      accentColor: "#4EEAFF",
+    },
+  };
+
+  // Installer tones (subdomain shops that offer installation)
+  const installerTonePresets: Record<string, any> = {
     installer: {
       bodyParagraphs: [
         "Your estimate is now ready with precise material and installation details.",
@@ -185,6 +226,7 @@ function renderEmailTemplate(
     },
   };
 
+  const tonePresets = offersInstallation ? installerTonePresets : printOnlyTonePresets;
   const tonePreset = tonePresets[tone] || tonePresets.installer;
   const body = tonePreset.bodyParagraphs.join("<br><br>");
   const styles = getDesignStyles(design);
@@ -282,7 +324,7 @@ function renderEmailTemplate(
               ${data.product_name ? `<div class="quote-row"><span>Product</span><span>${data.product_name}</span></div>` : ""}
               ${data.sqft ? `<div class="quote-row"><span>Coverage</span><span>${data.sqft} sq ft</span></div>` : ""}
               ${data.material_cost ? `<div class="quote-row"><span>Material Cost</span><span>$${Number(data.material_cost).toFixed(2)}</span></div>` : ""}
-              ${data.labor_cost ? `<div class="quote-row"><span>Labor Cost</span><span>$${Number(data.labor_cost).toFixed(2)}</span></div>` : ""}
+              ${offersInstallation && data.labor_cost ? `<div class="quote-row"><span>Labor Cost</span><span>$${Number(data.labor_cost).toFixed(2)}</span></div>` : ""}
               <div class="quote-row"><span>Total</span><span>$${Number(data.quote_total).toFixed(2)}</span></div>
             </div>
             
