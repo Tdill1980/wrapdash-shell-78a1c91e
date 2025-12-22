@@ -4340,6 +4340,95 @@ export type Database = {
           },
         ]
       }
+      quote_drafts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          confidence: number | null
+          conversation_id: string | null
+          created_at: string | null
+          customer_email: string
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          material: string | null
+          organization_id: string | null
+          original_message: string | null
+          price_per_sqft: number | null
+          rejected_reason: string | null
+          sent_at: string | null
+          source: string | null
+          source_agent: string
+          sqft: number | null
+          status: string | null
+          total_price: number | null
+          updated_at: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_email: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          material?: string | null
+          organization_id?: string | null
+          original_message?: string | null
+          price_per_sqft?: number | null
+          rejected_reason?: string | null
+          sent_at?: string | null
+          source?: string | null
+          source_agent: string
+          sqft?: number | null
+          status?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_email?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          material?: string | null
+          organization_id?: string | null
+          original_message?: string | null
+          price_per_sqft?: number | null
+          rejected_reason?: string | null
+          sent_at?: string | null
+          source?: string | null
+          source_agent?: string
+          sqft?: number | null
+          status?: string | null
+          total_price?: number | null
+          updated_at?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_line_items: {
         Row: {
           created_at: string

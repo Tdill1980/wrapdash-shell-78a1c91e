@@ -74,6 +74,7 @@ import YouTubeEditor from "./pages/organic/YouTubeEditor";
 import MightyEdit from "./pages/MightyEdit";
 import MyProducts from "./pages/settings/MyProducts";
 import AdminOrganizations from "./pages/AdminOrganizations";
+import QuoteDrafts from "./pages/QuoteDrafts";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
 import OperationsSOP from "./pages/OperationsSOP";
 import RevenueHealth from "./pages/RevenueHealth";
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/mightymail-ai" element={<MightyMailAI />} />
             <Route path="/mightymail/winback" element={<MightyMailWinback />} />
             <Route path="/mightymail/campaign-sender" element={<MightyMailCampaignSender />} />
+            <Route path="/quote-drafts" element={<QuoteDrafts />} />
             <Route path="/ai-pipeline" element={<AIPipeline />} />
             <Route path="/mightychat" element={<MightyChat />} />
             <Route path="/contentbox" element={<ContentBox />} />

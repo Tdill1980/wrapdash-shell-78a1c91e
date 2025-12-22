@@ -182,6 +182,7 @@ export function enforceExecutionGate(
     "create_quote": "quote",
     "send_quote": "quote",
     "execute_quote": "quote",
+    "approve_quote": "quote",
     "create_order": "order",
     "publish_content": "content",
     "post_content": "content",
