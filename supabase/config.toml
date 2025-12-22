@@ -239,3 +239,9 @@ verify_jwt = false
 
 [functions.ai-auto-tag]
 verify_jwt = false
+
+[functions.mux-create-clip]
+verify_jwt = false
+
+[functions.mux-stitch-reel]
+verify_jwt = false

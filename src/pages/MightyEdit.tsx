@@ -24,6 +24,8 @@ import { useMightyEdit, VideoEditItem } from "@/hooks/useMightyEdit";
 import { VideoEditCard } from "@/components/mighty-edit/VideoEditCard";
 import { MusicMatcher } from "@/components/mighty-edit/MusicMatcher";
 import { RenderQueue } from "@/components/mighty-edit/RenderQueue";
+import { ClipPreview } from "@/components/mighty-edit/ClipPreview";
+import { RenderResult } from "@/components/mighty-edit/RenderResult";
 
 interface ContentFactoryPreset {
   action?: string;
@@ -555,6 +557,22 @@ export default function MightyEdit() {
                     </CardContent>
                   </Card>
 
+                  {/* Render Result - Show when video has been rendered */}
+                  {selectedVideo.final_render_url && (
+                    <RenderResult
+                      renderUrl={selectedVideo.final_render_url}
+                      status={selectedVideo.render_status}
+                      title="Final Rendered Video"
+                    />
+                  )}
+
+                  {/* Extracted Shorts/Clips Preview */}
+                  {selectedVideo.shorts_extracted && selectedVideo.shorts_extracted.length > 0 && (
+                    <ClipPreview
+                      clips={selectedVideo.shorts_extracted}
+                      title="Extracted Clips"
+                    />
+                  )}
                   {/* Action Buttons */}
                   <div className="flex gap-3 flex-wrap">
                     {/* Generate AI Suggestions - for videos that need scanning */}
