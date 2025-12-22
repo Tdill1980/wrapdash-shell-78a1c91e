@@ -4463,6 +4463,9 @@ export type Database = {
           product_name: string | null
           quote_number: string
           reseller_profit: number | null
+          source: string | null
+          source_conversation_id: string | null
+          source_message: string | null
           sqft: number | null
           status: string | null
           total_price: number
@@ -4517,6 +4520,9 @@ export type Database = {
           product_name?: string | null
           quote_number: string
           reseller_profit?: number | null
+          source?: string | null
+          source_conversation_id?: string | null
+          source_message?: string | null
           sqft?: number | null
           status?: string | null
           total_price: number
@@ -4571,6 +4577,9 @@ export type Database = {
           product_name?: string | null
           quote_number?: string
           reseller_profit?: number | null
+          source?: string | null
+          source_conversation_id?: string | null
+          source_message?: string | null
           sqft?: number | null
           status?: string | null
           total_price?: number
