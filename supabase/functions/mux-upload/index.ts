@@ -19,13 +19,17 @@ serve(async (req) => {
       throw new Error('MUX credentials not configured');
     }
 
-    const { file_url, content_file_id, organization_id } = await req.json();
+    const body = await req.json();
+    console.log('[mux-upload] Received body:', JSON.stringify(body));
+    
+    const { file_url, content_file_id, organization_id } = body;
     
     if (!file_url) {
+      console.error('[mux-upload] No file_url in body. Keys received:', Object.keys(body));
       throw new Error('file_url is required');
     }
 
-    console.log('Creating MUX asset from URL:', file_url);
+    console.log('[mux-upload] Creating MUX asset from URL:', file_url);
 
     // Create MUX asset from URL
     const muxAuth = btoa(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`);
@@ -69,9 +73,15 @@ serve(async (req) => {
         .eq('id', content_file_id);
     }
 
+    // Get playback_id from the asset
+    const playbackId = asset.playback_ids?.[0]?.id || null;
+    
+    console.log('[mux-upload] Asset created:', asset.id, 'Playback ID:', playbackId);
+
     return new Response(JSON.stringify({
       success: true,
       asset_id: asset.id,
+      playback_id: playbackId,
       status: asset.status,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
