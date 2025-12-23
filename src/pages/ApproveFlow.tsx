@@ -42,12 +42,11 @@ import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
 export default function ApproveFlow() {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const [activeRole, setActiveRole] = useState<"designer" | "customer">("designer");
+  // Designer-only view - activeRole is always "designer"
+  const activeRole = "designer";
   const [chatMessage, setChatMessage] = useState("");
-  const [revisionNotes, setRevisionNotes] = useState("");
   const [uploadNotes, setUploadNotes] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<string>("latest");
-  const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [isGenerating3D, setIsGenerating3D] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -247,20 +246,6 @@ export default function ApproveFlow() {
     await approveDesign();
   };
 
-  const handleRequestRevision = async () => {
-    if (!revisionNotes.trim()) {
-      toast({
-        title: "Revision notes required",
-        description: "Please provide details about what needs to be changed",
-        variant: "destructive",
-      });
-      return;
-    }
-    await requestRevision(revisionNotes);
-    setRevisionNotes("");
-    setShowRevisionForm(false);
-  };
-
   const handleGenerate3D = async () => {
     if (!latestVersion) {
       toast({
@@ -384,25 +369,6 @@ export default function ApproveFlow() {
             <span className="text-gradient">Flow™</span>
           </h1>
           
-          <div className="flex items-center gap-2">
-            <Button
-              variant={activeRole === "designer" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveRole("designer")}
-              className="text-xs sm:text-sm"
-            >
-              DESIGNER
-            </Button>
-            <Button
-              variant={activeRole === "customer" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveRole("customer")}
-              className="text-xs sm:text-sm"
-            >
-              CUSTOMER
-            </Button>
-          </div>
-
           <Button
             variant="outline"
             size="sm"
@@ -1002,61 +968,9 @@ export default function ApproveFlow() {
           </Card>
         </div>
 
-        {/* RIGHT: Action Buttons */}
+        {/* RIGHT: Designer Tools */}
         <div className="lg:col-span-1 space-y-4">
-          {/* Action Buttons */}
-          {activeRole === "customer" && (
-            <Card className="p-4 bg-card border-border space-y-3">
-              {!showRevisionForm ? (
-                <>
-                  <Button
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500"
-                    onClick={handleApprove}
-                    disabled={project.status === 'approved'}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    {project.status === 'approved' ? 'Design Approved' : 'Approve Design'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setShowRevisionForm(true)}
-                    disabled={project.status === 'approved'}
-                  >
-                    Request Revision
-                  </Button>
-                </>
-              ) : (
-                <div className="space-y-3">
-                  <Textarea
-                    placeholder="What needs to be changed?"
-                    value={revisionNotes}
-                    onChange={(e) => setRevisionNotes(e.target.value)}
-                    className="text-xs"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={handleRequestRevision}
-                    >
-                      Submit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setShowRevisionForm(false);
-                        setRevisionNotes("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
+          {/* Designer tools can be added here if needed */}
         </div>
       </div>
 
