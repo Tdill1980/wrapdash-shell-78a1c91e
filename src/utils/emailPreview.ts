@@ -167,7 +167,7 @@ export function generateEmailPreview({
   quoteData,
   tone = "installer",
   design = "performance",
-  offersInstallation = true,
+  offersInstallation = false, // WPW is print-only by default
 }: EmailPreviewData): string {
   const tonePresets = getTonePresets(offersInstallation);
   const tonePreset = tonePresets[tone] || tonePresets.installer;
