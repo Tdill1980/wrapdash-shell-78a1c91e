@@ -1886,9 +1886,13 @@ export type Database = {
       }
       content_queue: {
         Row: {
+          ad_placement: string | null
           ai_metadata: Json | null
           ai_prompt: string | null
+          brand: string | null
           caption: string | null
+          channel: string | null
+          content_purpose: string | null
           content_type: string | null
           created_at: string | null
           created_by: string | null
@@ -1911,9 +1915,13 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          ad_placement?: string | null
           ai_metadata?: Json | null
           ai_prompt?: string | null
+          brand?: string | null
           caption?: string | null
+          channel?: string | null
+          content_purpose?: string | null
           content_type?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -1936,9 +1944,13 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          ad_placement?: string | null
           ai_metadata?: Json | null
           ai_prompt?: string | null
+          brand?: string | null
           caption?: string | null
+          channel?: string | null
+          content_purpose?: string | null
           content_type?: string | null
           created_at?: string | null
           created_by?: string | null

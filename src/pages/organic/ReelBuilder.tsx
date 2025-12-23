@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Upload,
   Video,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
@@ -43,6 +44,7 @@ import { SmartAssistPanel } from "@/components/reel-builder/SmartAssistPanel";
 import { DaraFormatSelector } from "@/components/reel-builder/DaraFormatSelector";
 import { MediaLibraryModal } from "@/components/media/MediaLibraryModal";
 import { PostRenderModal } from "@/components/reel-builder/PostRenderModal";
+import { ContentMetadataPanel, useContentMetadata, ContentMetadata } from "@/components/content/ContentMetadataPanel";
 import { MediaFile } from "@/components/media/MediaLibrary";
 import { DARA_FORMATS, DaraFormat } from "@/lib/dara-denney-formats";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +55,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Clip {
   id: string;
@@ -110,20 +117,10 @@ export default function ReelBuilder() {
   const [selectedDaraFormat, setSelectedDaraFormat] = useState<DaraFormat | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
+  const [metadataOpen, setMetadataOpen] = useState(false);
+  const [contentMetadata, setContentMetadata] = useContentMetadata("wpw");
   const videoRef = useRef<HTMLVideoElement>(null);
   const uploadVideoRef = useRef<HTMLVideoElement>(null);
-
-  // Handle play/pause with ref
-  const handlePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play().catch(console.error);
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
 
   const beatSync = useReelBeatSync();
   const captionsEngine = useReelCaptions();
@@ -292,6 +289,18 @@ export default function ReelBuilder() {
     setIsAutoProcessing(false);
   };
 
+  // Handle play/pause with ref
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play().catch(console.error);
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
   // Auto-save when render succeeds
   useEffect(() => {
     const saveRenderedVideo = async () => {
@@ -304,7 +313,7 @@ export default function ReelBuilder() {
               file_url: videoRender.outputUrl,
               file_type: 'video',
               source: 'ai_reel_builder',
-              brand: 'wpw',
+              brand: contentMetadata.brand,
               tags: ['ai-created', 'reel', 'auto-generated'],
               original_filename: `AI-Reel-${Date.now()}.mp4`,
               ai_labels: {
@@ -319,7 +328,7 @@ export default function ReelBuilder() {
 
           if (fileError) throw fileError;
 
-          // Save to content_queue (for scheduling/review)
+          // Save to content_queue (for scheduling/review) with metadata
           const { error: queueError } = await supabase
             .from('content_queue')
             .insert({
@@ -327,6 +336,11 @@ export default function ReelBuilder() {
               status: 'draft',
               output_url: videoRender.outputUrl,
               caption: autoCreateState?.suggestedHook || reelConcept,
+              brand: contentMetadata.brand,
+              channel: contentMetadata.channel,
+              content_purpose: contentMetadata.contentPurpose,
+              platform: contentMetadata.platform,
+              ad_placement: contentMetadata.adPlacement,
               ai_metadata: {
                 concept: reelConcept,
                 clips_used: clips.map(c => c.id),
@@ -348,7 +362,7 @@ export default function ReelBuilder() {
     };
 
     saveRenderedVideo();
-  }, [videoRender.status, videoRender.outputUrl]);
+  }, [videoRender.status, videoRender.outputUrl, contentMetadata]);
 
   // Handle render reel - redirects to MightyEdit (Creatomate deprecated)
   const handleRenderReel = async () => {
@@ -595,7 +609,6 @@ export default function ReelBuilder() {
         </div>
       )}
 
-      {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -611,6 +624,17 @@ export default function ReelBuilder() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Content Metadata Toggle */}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setMetadataOpen(!metadataOpen)}
+              className={metadataOpen ? "bg-primary/10 border-primary/40" : ""}
+            >
+              <Settings className="w-4 h-4 mr-1.5" />
+              {contentMetadata.brand.toUpperCase()} • {contentMetadata.contentPurpose === 'paid' ? '💰' : '🌱'}
+            </Button>
+            
             {/* Dara Format Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -701,6 +725,16 @@ export default function ReelBuilder() {
           </div>
         </div>
       </div>
+
+      {/* Content Metadata Panel (Collapsible) */}
+      {metadataOpen && (
+        <div className="max-w-7xl mx-auto px-4 py-3 border-b border-border/30 bg-card/30">
+          <ContentMetadataPanel 
+            metadata={contentMetadata} 
+            onChange={setContentMetadata}
+          />
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

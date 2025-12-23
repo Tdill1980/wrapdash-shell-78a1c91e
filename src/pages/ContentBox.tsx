@@ -80,6 +80,7 @@ const STYLE_MODIFIERS = [
 ];
 
 // MediaCard moved to MediaLibrary component
+import { ContentMetadataPanel, useContentMetadata, ContentMetadata } from "@/components/content/ContentMetadataPanel";
 
 function GeneratorModal({ 
   open, 
@@ -101,6 +102,12 @@ function GeneratorModal({
   const [styleModifier, setStyleModifier] = useState('none');
   const [additionalContext, setAdditionalContext] = useState('');
   const [autoTransform, setAutoTransform] = useState(false);
+  const [contentMetadata, setContentMetadata] = useState<ContentMetadata>({
+    brand: 'wpw',
+    channel: '@weprintwraps',
+    contentPurpose: 'organic',
+    platform: 'instagram',
+  });
 
   const hasMismatch = selectedFiles.some(f => f.brand !== brand);
 
@@ -242,19 +249,28 @@ function GeneratorModal({
             />
           </div>
 
+          {/* Content Metadata Panel */}
+          <ContentMetadataPanel 
+            metadata={contentMetadata} 
+            onChange={setContentMetadata}
+          />
+
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button
               onClick={() => onGenerate({
-                brand,
+                brand: contentMetadata.brand,
                 content_type: contentType,
                 goal,
-                platform,
+                platform: contentMetadata.platform,
                 style: styleModifier,
                 media_urls: selectedFiles.map(f => f.file_url),
                 tags: selectedFiles.flatMap(f => f.tags || []),
                 additional_context: additionalContext,
-                auto_transform: autoTransform
+                auto_transform: autoTransform,
+                channel: contentMetadata.channel,
+                content_purpose: contentMetadata.contentPurpose,
+                ad_placement: contentMetadata.adPlacement,
               })}
               className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
               disabled={generating}

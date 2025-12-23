@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +18,10 @@ import {
   FileText,
   BookOpen,
   Wand2,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from "lucide-react";
+import { ContentMetadataPanel, ContentMetadata } from "@/components/content/ContentMetadataPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -83,12 +85,38 @@ export function ContentCalendarEditModal({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showMetadata, setShowMetadata] = useState(false);
   
   const [title, setTitle] = useState(content?.title || "");
   const [caption, setCaption] = useState(content?.caption || "");
   const [contentType, setContentType] = useState(content?.content_type || "reel");
   const [platform, setPlatform] = useState(content?.platform || "instagram");
   const [status, setStatus] = useState(content?.status || "draft");
+  
+  const [contentMetadata, setContentMetadata] = useState<ContentMetadata>({
+    brand: content?.brand || "wpw",
+    channel: "",
+    contentPurpose: "organic",
+    platform: content?.platform || "instagram",
+    contentType: content?.content_type || "reel",
+  });
+
+  // Update metadata when content changes
+  useEffect(() => {
+    if (content) {
+      setTitle(content.title || "");
+      setCaption(content.caption || "");
+      setContentType(content.content_type || "reel");
+      setPlatform(content.platform || "instagram");
+      setStatus(content.status || "draft");
+      setContentMetadata(prev => ({
+        ...prev,
+        brand: content.brand || "wpw",
+        platform: content.platform || "instagram",
+        contentType: content.content_type || "reel",
+      }));
+    }
+  }, [content]);
 
   if (!content) return null;
 
@@ -121,36 +149,21 @@ export function ContentCalendarEditModal({
   const handleGenerateWithAI = async () => {
     setIsGenerating(true);
     try {
-      // Navigate to appropriate creator based on content type
+      // Navigate to appropriate creator based on content type, passing metadata
+      const navState = { 
+        calendarItem: content,
+        autoGenerate: true,
+        metadata: contentMetadata,
+      };
+
       if (contentType === 'reel' || contentType === 'story') {
-        navigate('/organic/reel-builder', { 
-          state: { 
-            calendarItem: content,
-            autoGenerate: true 
-          } 
-        });
+        navigate('/organic/reel-builder', { state: navState });
       } else if (contentType === 'static' || contentType === 'carousel') {
-        navigate('/organic/static-creator', { 
-          state: { 
-            calendarItem: content,
-            autoGenerate: true 
-          } 
-        });
+        navigate('/organic/static-creator', { state: navState });
       } else if (contentType === 'magazine' || contentType === 'article') {
-        navigate('/contentbox', { 
-          state: { 
-            calendarItem: content,
-            contentType: 'magazine',
-            autoGenerate: true 
-          } 
-        });
+        navigate('/contentbox', { state: { ...navState, contentType: 'magazine' } });
       } else {
-        navigate('/contentbox', { 
-          state: { 
-            calendarItem: content,
-            autoGenerate: true 
-          } 
-        });
+        navigate('/contentbox', { state: navState });
       }
       onClose();
     } finally {
@@ -308,6 +321,29 @@ export function ContentCalendarEditModal({
             )}
           </div>
 
+          {/* Content Metadata Toggle */}
+          <div className="pt-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowMetadata(!showMetadata)}
+              className="w-full"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              {showMetadata ? "Hide" : "Show"} Brand & Channel Settings
+            </Button>
+            
+            {showMetadata && (
+              <div className="mt-3">
+                <ContentMetadataPanel 
+                  metadata={contentMetadata} 
+                  onChange={setContentMetadata}
+                  showContentType
+                />
+              </div>
+            )}
+          </div>
+
           {/* Actions */}
           <div className="flex flex-col gap-2 pt-4 border-t">
             {isEditing ? (
@@ -362,7 +398,6 @@ export function ContentCalendarEditModal({
                   <Button 
                     variant="secondary"
                     onClick={() => {
-                      // Navigate to view the created content
                       navigate('/contentbox');
                       onClose();
                     }}
