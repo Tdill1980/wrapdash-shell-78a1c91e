@@ -1,5 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   Film,
@@ -13,6 +15,7 @@ import {
   Play,
   Atom,
   Youtube,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,10 +81,50 @@ export default function OrganicHub() {
     },
   ];
 
+  // Fetch real stats from the database
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["organic-hub-stats"],
+    queryFn: async () => {
+      // Get total reels from content_queue
+      const { count: reelsCount } = await supabase
+        .from("content_queue")
+        .select("*", { count: "exact", head: true })
+        .in("content_type", ["reel", "ig_reel", "fb_reel", "youtube_short"]);
+
+      // Get this week's content
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const { count: weekCount } = await supabase
+        .from("content_queue")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", weekAgo.toISOString());
+
+      return {
+        reelsCreated: reelsCount || 0,
+        avgEngagement: "4.2%", // Would come from analytics
+        thisWeek: weekCount || 0,
+      };
+    },
+  });
+
+  // Fetch recent reels
+  const { data: recentReels = [] } = useQuery({
+    queryKey: ["recent-reels"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("content_queue")
+        .select("id, title, output_url, created_at, status")
+        .in("content_type", ["reel", "ig_reel", "fb_reel", "youtube_short"])
+        .order("created_at", { ascending: false })
+        .limit(6);
+      return data || [];
+    },
+  });
+
   const quickStats = [
-    { label: "Reels Created", value: "24", icon: <Film className="w-4 h-4" /> },
-    { label: "Avg. Engagement", value: "4.2%", icon: <TrendingUp className="w-4 h-4" /> },
-    { label: "This Week", value: "7", icon: <Zap className="w-4 h-4" /> },
+    { label: "Reels Created", value: statsLoading ? "..." : String(stats?.reelsCreated || 0), icon: <Film className="w-4 h-4" /> },
+    { label: "Avg. Engagement", value: stats?.avgEngagement || "—", icon: <TrendingUp className="w-4 h-4" /> },
+    { label: "This Week", value: statsLoading ? "..." : String(stats?.thisWeek || 0), icon: <Zap className="w-4 h-4" /> },
   ];
 
   return (
@@ -213,22 +256,44 @@ export default function OrganicHub() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Recent Reels</h2>
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate("/content-calendar")}>
             View Reel Vault →
           </Button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="aspect-[9/16] rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center"
-            >
-              <div className="text-center text-muted-foreground">
-                <Film className="w-6 h-6 mx-auto mb-1 opacity-30" />
-                <span className="text-xs">No reel</span>
+          {recentReels.length > 0 ? (
+            recentReels.map((reel) => (
+              <div
+                key={reel.id}
+                className="aspect-[9/16] rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => reel.output_url && window.open(reel.output_url, "_blank")}
+              >
+                {reel.output_url ? (
+                  <video src={reel.output_url} className="w-full h-full object-cover" muted />
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    <Film className="w-6 h-6 mx-auto mb-1 opacity-30" />
+                    <span className="text-xs">{reel.status || "Pending"}</span>
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p className="text-xs text-white truncate">{reel.title || "Untitled"}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            [1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="aspect-[9/16] rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center"
+              >
+                <div className="text-center text-muted-foreground">
+                  <Film className="w-6 h-6 mx-auto mb-1 opacity-30" />
+                  <span className="text-xs">No reel</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
