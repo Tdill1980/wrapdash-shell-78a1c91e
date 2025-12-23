@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { WaveformVisualizer } from "@/components/audio/WaveformVisualizer";
 
 interface MusicTrack {
   id: string;
@@ -58,6 +59,7 @@ interface MusicPickerProps {
 
 export function MusicPicker({ selectedUrl, onSelect, className }: MusicPickerProps) {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handlePlay = (track: MusicTrack) => {
@@ -104,55 +106,74 @@ export function MusicPicker({ selectedUrl, onSelect, className }: MusicPickerPro
         {SAMPLE_TRACKS.map((track) => {
           const isSelected = selectedUrl === track.url;
           const isPlaying = playingId === track.id;
+          const isHovered = hoveredId === track.id;
+          const showWaveform = isPlaying || isHovered || isSelected;
 
           return (
             <div
               key={track.id}
               className={cn(
-                "flex items-center gap-3 p-2 rounded-lg border transition-all cursor-pointer",
+                "flex flex-col p-2 rounded-lg border transition-all cursor-pointer",
                 isSelected
                   ? "border-primary bg-primary/10"
                   : "border-border/50 hover:border-border bg-background/50 hover:bg-background"
               )}
               onClick={() => handleSelect(track)}
+              onMouseEnter={() => setHoveredId(track.id)}
+              onMouseLeave={() => setHoveredId(null)}
             >
-              {/* Play/Pause Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlay(track);
-                }}
-              >
-                {isPlaying ? (
-                  <Pause className="h-4 w-4" />
-                ) : (
-                  <Play className="h-4 w-4" />
-                )}
-              </Button>
+              <div className="flex items-center gap-3">
+                {/* Play/Pause Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlay(track);
+                  }}
+                >
+                  {isPlaying ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                </Button>
 
-              {/* Track Info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{track.name}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{track.duration}</span>
-                  {track.bpm && <span>{track.bpm} BPM</span>}
+                {/* Track Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{track.name}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{track.duration}</span>
+                    {track.bpm && <span>{track.bpm} BPM</span>}
+                  </div>
                 </div>
+
+                {/* Energy Badge */}
+                <Badge
+                  variant="outline"
+                  className={cn("text-xs capitalize shrink-0", energyColors[track.energy])}
+                >
+                  {track.energy}
+                </Badge>
+
+                {/* Selected Indicator */}
+                {isSelected && (
+                  <Check className="h-4 w-4 text-primary shrink-0" />
+                )}
               </div>
 
-              {/* Energy Badge */}
-              <Badge
-                variant="outline"
-                className={cn("text-xs capitalize shrink-0", energyColors[track.energy])}
-              >
-                {track.energy}
-              </Badge>
-
-              {/* Selected Indicator */}
-              {isSelected && (
-                <Check className="h-4 w-4 text-primary shrink-0" />
+              {/* Waveform Visualization */}
+              {showWaveform && (
+                <div className="mt-2 px-2">
+                  <WaveformVisualizer
+                    audioUrl={track.url}
+                    isPlaying={isPlaying}
+                    energy={track.energy}
+                    height={32}
+                    className="opacity-80"
+                  />
+                </div>
               )}
             </div>
           );

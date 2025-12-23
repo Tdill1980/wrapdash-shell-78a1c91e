@@ -38,6 +38,7 @@ import {
   Trash2,
   FolderOpen,
   Image as ImageIcon,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -46,6 +47,8 @@ import { useInspoAnalysis, StyleAnalysis as HookStyleAnalysis } from "@/hooks/us
 import { useInspoLibrary, InspoFile } from "@/hooks/useInspoLibrary";
 import { InspoUploadModal } from "@/components/inspo/InspoUploadModal";
 import { InspoImageCard } from "@/components/inspo/InspoImageCard";
+import { StaticAdUploader } from "@/components/inspo/StaticAdUploader";
+import { useStaticAds, StaticAdFile } from "@/hooks/useStaticAds";
 
 // Local interface for display in modal (matches what AI returns)
 interface StyleAnalysis {
@@ -190,9 +193,11 @@ export default function InspirationHub() {
 
   const { analyzeVideo, analyzing, history, historyLoading, saved, savedLoading, toggleSaved, deleteAnalysis } = useInspoAnalysis();
   const { library, isLoading: libraryLoading, uploadFile, isUploading, deleteFile, reanalyzeAll, reanalyzeProgress } = useInspoLibrary();
+  const { staticAds, isLoading: staticAdsLoading, deleteAd, refetch: refetchStaticAds } = useStaticAds();
   const [analyzingImageId, setAnalyzingImageId] = useState<string | null>(null);
   const [imageAnalysis, setImageAnalysis] = useState<any>(null);
   const [showImageAnalysisModal, setShowImageAnalysisModal] = useState(false);
+  const [staticAdUploadOpen, setStaticAdUploadOpen] = useState(false);
 
   const detectPlatform = (inputUrl: string) => {
     if (inputUrl.includes("instagram.com")) return "Instagram";
@@ -413,6 +418,10 @@ export default function InspirationHub() {
               <FolderOpen className="w-4 h-4 mr-2" />
               My Library
             </TabsTrigger>
+            <TabsTrigger value="static-ads">
+              <LayoutGrid className="w-4 h-4 mr-2" />
+              Static Ads
+            </TabsTrigger>
             <TabsTrigger value="discover">
               <TrendingUp className="w-4 h-4 mr-2" />
               Discover
@@ -512,6 +521,94 @@ export default function InspirationHub() {
                 <Button onClick={() => setUploadModalOpen(true)}>
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Your First File
+                </Button>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Static Ads Tab */}
+          <TabsContent value="static-ads" className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <LayoutGrid className="w-5 h-5 text-primary" />
+                Static Ad Templates
+                {staticAds.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{staticAds.length}</Badge>
+                )}
+              </h3>
+              <Button onClick={() => setStaticAdUploadOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Static Ads
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Upload your static ad images for AI analysis. The AI will extract layout, colors, typography, and CTA patterns to help generate similar ads.
+            </p>
+
+            {staticAdsLoading ? (
+              <Card className="p-12 text-center">
+                <Loader2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground animate-spin" />
+                <p className="text-sm text-muted-foreground">Loading static ads...</p>
+              </Card>
+            ) : staticAds.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {staticAds.map((ad) => (
+                  <Card key={ad.id} className="overflow-hidden group relative">
+                    <img
+                      src={ad.file_url}
+                      alt={ad.original_filename || 'Static ad'}
+                      className="w-full aspect-square object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          toast.info("Opening Static Creator with this style...");
+                          navigate("/organic/static-creator", { state: { staticAd: ad } });
+                        }}
+                      >
+                        <Wand2 className="w-4 h-4 mr-2" />
+                        Generate Similar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteAd(ad.id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                    {ad.tags && ad.tags.length > 0 && (
+                      <div className="absolute bottom-2 left-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {ad.tags[0]?.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    )}
+                    {ad.ai_labels && (
+                      <div className="absolute top-2 right-2">
+                        <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          Analyzed
+                        </Badge>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-12 text-center border-dashed">
+                <LayoutGrid className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h4 className="font-semibold mb-2">No Static Ads Yet</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload static ad images so AI can analyze and help you create similar ads and carousels
+                </p>
+                <Button onClick={() => setStaticAdUploadOpen(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Static Ads
                 </Button>
               </Card>
             )}
@@ -1082,6 +1179,24 @@ export default function InspirationHub() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Static Ad Upload Dialog */}
+      <Dialog open={staticAdUploadOpen} onOpenChange={setStaticAdUploadOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Static Ads</DialogTitle>
+            <DialogDescription>
+              Upload static ad images for AI to analyze layout, colors, and typography patterns.
+            </DialogDescription>
+          </DialogHeader>
+          <StaticAdUploader 
+            onUploadComplete={() => {
+              setStaticAdUploadOpen(false);
+              refetchStaticAds();
+            }} 
+          />
         </DialogContent>
       </Dialog>
     </div>
