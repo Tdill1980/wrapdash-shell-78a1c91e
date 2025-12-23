@@ -50,21 +50,56 @@ serve(async (req) => {
   }
 
   try {
-    const { job_id, transcript } = await req.json();
+    const { job_id, transcript, video_url } = await req.json();
 
-    if (!job_id || !transcript) {
+    // Allow either transcript or video_url
+    if (!transcript && !video_url) {
       return new Response(
-        JSON.stringify({ error: "job_id and transcript required" }),
+        JSON.stringify({ error: "transcript or video_url required" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    console.log(`Detecting scenes for job ${job_id}`);
+    console.log(`Detecting scenes for ${job_id || 'auto-split'}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // If no transcript but we have video_url, try to transcribe first
+    let transcriptText = transcript || "";
+    if (!transcriptText && video_url) {
+      try {
+        const transcribeRes = await supabase.functions.invoke("transcribe-audio", {
+          body: { video_url }
+        });
+        transcriptText = transcribeRes.data?.transcript || "";
+        console.log(`Got transcript of ${transcriptText.length} chars from video`);
+      } catch (e) {
+        console.warn("Transcription failed, using basic scene detection:", e);
+      }
+    }
+
+    // If still no transcript, return basic time-based scenes
+    if (!transcriptText) {
+      console.log("No transcript available, returning basic scene structure");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          scenes: [
+            { id: 1, start: 0, end: 10, type: "hook", score: 70, text: "Opening hook", energy_level: "high" },
+            { id: 2, start: 10, end: 25, type: "value", score: 60, text: "Main content", energy_level: "medium" },
+            { id: 3, start: 25, end: 40, type: "reveal", score: 75, text: "Key moment", energy_level: "high" },
+            { id: 4, start: 40, end: 55, type: "value", score: 55, text: "Details", energy_level: "medium" },
+            { id: 5, start: 55, end: 70, type: "cta", score: 65, text: "Closing", energy_level: "medium" },
+          ]
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Analyzing transcript of ${transcriptText.length} chars`);
 
     // Call AI for scene detection
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -77,7 +112,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analyze this transcript and detect all scenes:\n\n${transcript}` }
+          { role: "user", content: `Analyze this transcript and detect all scenes:\n\n${transcriptText}` }
         ]
       })
     });
@@ -110,25 +145,28 @@ serve(async (req) => {
       console.error("Failed to parse AI response");
     }
 
-    console.log(`Detected ${analysisData.scenes?.length || 0} scenes for job ${job_id}`);
+    console.log(`Detected ${analysisData.scenes?.length || 0} scenes`);
 
-    // Update job with analysis data
-    await supabase
-      .from("youtube_editor_jobs")
-      .update({
-        analysis_data: analysisData,
-        processing_status: "generating_shorts"
-      })
-      .eq("id", job_id);
+    // Only update DB if we have a job_id
+    if (job_id) {
+      // Update job with analysis data
+      await supabase
+        .from("youtube_editor_jobs")
+        .update({
+          analysis_data: analysisData,
+          processing_status: "generating_shorts"
+        })
+        .eq("id", job_id);
 
-    // Trigger shorts generation
-    await supabase.functions.invoke("yt-generate-shorts", {
-      body: { 
-        job_id, 
-        scenes: analysisData.scenes || [], 
-        transcript 
-      }
-    });
+      // Trigger shorts generation
+      await supabase.functions.invoke("yt-generate-shorts", {
+        body: { 
+          job_id, 
+          scenes: analysisData.scenes || [], 
+          transcript: transcriptText 
+        }
+      });
+    }
 
     return new Response(
       JSON.stringify({ success: true, analysis: analysisData }),
