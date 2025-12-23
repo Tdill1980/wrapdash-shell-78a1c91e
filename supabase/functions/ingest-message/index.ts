@@ -545,6 +545,15 @@ RULES:
       
       // Create ai_action for manual approval if in MANUAL mode
       if (aiMode === 'manual') {
+        // Determine AI agent based on platform
+        const aiAgent = body.platform === 'instagram' ? 'Casey Ramirez' : 'Alex Morgan';
+        
+        // Handle image-only messages (no text but has files)
+        let displayOriginalMessage = body.message_text || '';
+        if (!displayOriginalMessage && hasFiles && fileUrls.length > 0) {
+          displayOriginalMessage = `[Customer sent ${fileUrls.length} attachment(s)]`;
+        }
+        
         await supabase.from("ai_actions").insert({
           action_type: "approve_message",
           priority: parsed.urgency || "normal",
@@ -554,11 +563,13 @@ RULES:
             sender_username: body.sender_username,
             conversation_id: conversation.id,
             draft_message: aiReply,
-            original_message: body.message_text,
-            needs_approval: true
+            original_message: displayOriginalMessage,
+            needs_approval: true,
+            agent: aiAgent,
+            attachments: hasFiles ? fileUrls : []
           },
         });
-        console.log("📋 Created approval task for MANUAL mode");
+        console.log("📋 Created approval task for MANUAL mode - Agent:", aiAgent);
       }
     }
 
