@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +22,11 @@ import {
   startOfWeek,
   endOfWeek
 } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
+import { ContentCalendarEditModal } from '@/components/calendar/ContentCalendarEditModal';
 
 interface ScheduledContent {
   id: string;
@@ -71,6 +73,9 @@ const CONTENT_TYPE_CONFIG: Record<string, { label: string; emoji: string; bgClas
   reel: { label: 'Reel', emoji: '🎬', bgClass: 'bg-orange-500/20', textClass: 'text-orange-400' },
   ad: { label: 'Ad', emoji: '💰', bgClass: 'bg-green-500/20', textClass: 'text-green-400' },
   short: { label: 'Short', emoji: '⚡', bgClass: 'bg-red-500/20', textClass: 'text-red-400' },
+  magazine: { label: 'Magazine', emoji: '📚', bgClass: 'bg-emerald-500/20', textClass: 'text-emerald-400' },
+  carousel: { label: 'Carousel', emoji: '🎠', bgClass: 'bg-cyan-500/20', textClass: 'text-cyan-400' },
+  static: { label: 'Static', emoji: '🖼️', bgClass: 'bg-teal-500/20', textClass: 'text-teal-400' },
 };
 
 // Maps content_type + platform to unified badge key
@@ -94,8 +99,12 @@ const getContentTypeKey = (contentType: string, platform: string): string => {
 };
 
 export default function ContentCalendar30Day() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedChannel, setSelectedChannel] = useState('all');
+  const [selectedContent, setSelectedContent] = useState<ScheduledContent | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   // Fetch scheduled content
   const { data: scheduledContent = [], isLoading } = useQuery({
@@ -390,13 +399,17 @@ export default function ContentCalendar30Day() {
                           <div
                             key={item.id}
                             className={cn(
-                              'text-[10px] p-1 rounded cursor-pointer hover:opacity-80 transition-opacity relative',
+                              'text-[10px] p-1 rounded cursor-pointer hover:opacity-80 hover:ring-1 hover:ring-primary/50 transition-all relative',
                               // Red styling if task exists but content not created
                               hasLinkedTask && !contentCreated 
                                 ? 'border-l-4 border-l-red-500 bg-red-500/10' 
                                 : [channelStyle.border, channelStyle.bg]
                             )}
                             title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
+                            onClick={() => {
+                              setSelectedContent(item);
+                              setEditModalOpen(true);
+                            }}
                           >
                             <div className="flex items-center gap-1 mb-0.5">
                               <span className="font-medium truncate text-[9px]">
@@ -499,6 +512,20 @@ export default function ContentCalendar30Day() {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      <ContentCalendarEditModal
+        content={selectedContent}
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setSelectedContent(null);
+        }}
+        onUpdate={() => {
+          queryClient.invalidateQueries({ queryKey: ['content-calendar-30day'] });
+        }}
+        isContentCreated={selectedContent ? isContentCreated(selectedContent.id) : false}
+      />
     </MainLayout>
   );
 }

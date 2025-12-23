@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Image, Video, Music, Check, Tag, Trash2, Target } from "lucide-react";
@@ -5,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { VideoThumbnail } from "./VideoThumbnail";
 
 interface MediaFile {
   id: string;
@@ -82,16 +84,19 @@ export function MediaCard({
       >
         {/* Thumbnail */}
         <div className="relative w-32 h-20 rounded overflow-hidden bg-muted flex-shrink-0">
-          {file.thumbnail_url || (isImage && file.file_url) ? (
+          {isImage && file.file_url ? (
             <img 
               src={file.thumbnail_url || file.file_url} 
               alt={file.original_filename || "Media"} 
               className="w-full h-full object-cover" 
             />
           ) : isVideo ? (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-              <Video className="w-8 h-8 text-muted-foreground" />
-            </div>
+            <VideoThumbnail 
+              videoUrl={file.file_url} 
+              thumbnailUrl={file.thumbnail_url}
+              alt={file.original_filename || "Video"}
+              showPlayIcon={false}
+            />
           ) : isAudio ? (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
               <Music className="w-8 h-8 text-muted-foreground" />
@@ -163,16 +168,18 @@ export function MediaCard({
     >
       {/* THUMBNAIL */}
       <div className="w-full h-32 sm:h-40 bg-muted overflow-hidden">
-        {file.thumbnail_url || (isImage && file.file_url) ? (
+        {isImage && file.file_url ? (
           <img 
             src={file.thumbnail_url || file.file_url} 
             alt={file.original_filename || "Media"} 
             className="w-full h-full object-cover" 
           />
         ) : isVideo ? (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-            <Video className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
-          </div>
+          <VideoThumbnail 
+            videoUrl={file.file_url} 
+            thumbnailUrl={file.thumbnail_url}
+            alt={file.original_filename || "Video"}
+          />
         ) : isAudio ? (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
             <Music className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground" />
