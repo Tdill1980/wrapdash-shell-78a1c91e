@@ -1,0 +1,382 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Sparkles, 
+  Calendar, 
+  Edit, 
+  Check, 
+  X, 
+  Loader2,
+  Image,
+  Video,
+  FileText,
+  BookOpen,
+  Wand2,
+  ExternalLink
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+
+interface ScheduledContent {
+  id: string;
+  title: string | null;
+  brand: string;
+  content_type: string;
+  platform: string;
+  scheduled_date: string;
+  scheduled_time: string;
+  status: string | null;
+  caption: string | null;
+}
+
+interface ContentCalendarEditModalProps {
+  content: ScheduledContent | null;
+  open: boolean;
+  onClose: () => void;
+  onUpdate: () => void;
+  isContentCreated?: boolean;
+}
+
+const CONTENT_TYPES = [
+  { value: 'reel', label: 'Reel', icon: Video },
+  { value: 'story', label: 'Story', icon: Video },
+  { value: 'static', label: 'Static Post', icon: Image },
+  { value: 'carousel', label: 'Carousel', icon: Image },
+  { value: 'article', label: 'Article', icon: FileText },
+  { value: 'magazine', label: 'Magazine Content', icon: BookOpen },
+  { value: 'email', label: 'Email', icon: FileText },
+  { value: 'ad', label: 'Meta Ad', icon: Video },
+];
+
+const PLATFORMS = [
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'email', label: 'Email' },
+  { value: 'magazine', label: 'Magazine' },
+];
+
+const STATUSES = [
+  { value: 'draft', label: 'Draft', color: 'bg-muted text-muted-foreground' },
+  { value: 'ready', label: 'Ready to Post', color: 'bg-green-500/20 text-green-400' },
+  { value: 'needs_design', label: 'Needs Design', color: 'bg-amber-500/20 text-amber-400' },
+  { value: 'scheduled', label: 'Scheduled', color: 'bg-blue-500/20 text-blue-400' },
+  { value: 'posted', label: 'Posted', color: 'bg-purple-500/20 text-purple-400' },
+];
+
+export function ContentCalendarEditModal({ 
+  content, 
+  open, 
+  onClose, 
+  onUpdate,
+  isContentCreated = false
+}: ContentCalendarEditModalProps) {
+  const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  const [title, setTitle] = useState(content?.title || "");
+  const [caption, setCaption] = useState(content?.caption || "");
+  const [contentType, setContentType] = useState(content?.content_type || "reel");
+  const [platform, setPlatform] = useState(content?.platform || "instagram");
+  const [status, setStatus] = useState(content?.status || "draft");
+
+  if (!content) return null;
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('content_calendar')
+        .update({
+          title,
+          caption,
+          content_type: contentType,
+          platform,
+          status,
+        })
+        .eq('id', content.id);
+
+      if (error) throw error;
+      toast.success("Content updated!");
+      setIsEditing(false);
+      onUpdate();
+    } catch (err) {
+      console.error('Update error:', err);
+      toast.error("Failed to update content");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleGenerateWithAI = async () => {
+    setIsGenerating(true);
+    try {
+      // Navigate to appropriate creator based on content type
+      if (contentType === 'reel' || contentType === 'story') {
+        navigate('/organic/reel-builder', { 
+          state: { 
+            calendarItem: content,
+            autoGenerate: true 
+          } 
+        });
+      } else if (contentType === 'static' || contentType === 'carousel') {
+        navigate('/organic/static-creator', { 
+          state: { 
+            calendarItem: content,
+            autoGenerate: true 
+          } 
+        });
+      } else if (contentType === 'magazine' || contentType === 'article') {
+        navigate('/contentbox', { 
+          state: { 
+            calendarItem: content,
+            contentType: 'magazine',
+            autoGenerate: true 
+          } 
+        });
+      } else {
+        navigate('/contentbox', { 
+          state: { 
+            calendarItem: content,
+            autoGenerate: true 
+          } 
+        });
+      }
+      onClose();
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const getStatusInfo = () => {
+    return STATUSES.find(s => s.value === status) || STATUSES[0];
+  };
+
+  const getContentTypeIcon = () => {
+    const ct = CONTENT_TYPES.find(c => c.value === contentType);
+    return ct?.icon || Video;
+  };
+
+  const ContentTypeIcon = getContentTypeIcon();
+  const statusInfo = getStatusInfo();
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-primary" />
+            {isEditing ? "Edit Content" : "Content Details"}
+          </DialogTitle>
+          <DialogDescription>
+            Scheduled for {content.scheduled_date} at {content.scheduled_time}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Status Banner */}
+          <div className={`flex items-center justify-between p-3 rounded-lg ${statusInfo.color}`}>
+            <div className="flex items-center gap-2">
+              {isContentCreated ? (
+                <Check className="w-4 h-4 text-green-400" />
+              ) : (
+                <X className="w-4 h-4 text-amber-400" />
+              )}
+              <span className="text-sm font-medium">
+                {isContentCreated ? "Content Created" : "Content Not Created"}
+              </span>
+            </div>
+            <Badge variant="secondary" className={statusInfo.color}>
+              {statusInfo.label}
+            </Badge>
+          </div>
+
+          {/* Title */}
+          <div className="space-y-2">
+            <Label>Title</Label>
+            {isEditing ? (
+              <Input 
+                value={title} 
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Content title..."
+              />
+            ) : (
+              <p className="text-sm p-2 bg-muted rounded-lg">
+                {content.title || "Untitled"}
+              </p>
+            )}
+          </div>
+
+          {/* Content Type & Platform */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Content Type</Label>
+              {isEditing ? (
+                <Select value={contentType} onValueChange={setContentType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTENT_TYPES.map(ct => (
+                      <SelectItem key={ct.value} value={ct.value}>
+                        <div className="flex items-center gap-2">
+                          <ct.icon className="w-4 h-4" />
+                          {ct.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                  <ContentTypeIcon className="w-4 h-4" />
+                  <span className="text-sm capitalize">{content.content_type}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Platform</Label>
+              {isEditing ? (
+                <Select value={platform} onValueChange={setPlatform}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLATFORMS.map(p => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm p-2 bg-muted rounded-lg capitalize">
+                  {content.platform}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-2">
+            <Label>Status</Label>
+            {isEditing ? (
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUSES.map(s => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Badge className={statusInfo.color}>
+                {statusInfo.label}
+              </Badge>
+            )}
+          </div>
+
+          {/* Caption */}
+          <div className="space-y-2">
+            <Label>Caption / Notes</Label>
+            {isEditing ? (
+              <Textarea 
+                value={caption} 
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Add caption or notes..."
+                className="min-h-[100px]"
+              />
+            ) : (
+              <p className="text-sm p-2 bg-muted rounded-lg min-h-[60px]">
+                {content.caption || "No caption yet"}
+              </p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-2 pt-4 border-t">
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex-1"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
+                  Save
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditing(true)}
+                  className="w-full"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Details
+                </Button>
+
+                {!isContentCreated && (
+                  <Button 
+                    onClick={handleGenerateWithAI}
+                    disabled={isGenerating}
+                    className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Wand2 className="w-4 h-4 mr-2" />
+                    )}
+                    Create with AI
+                  </Button>
+                )}
+
+                {isContentCreated && (
+                  <Button 
+                    variant="secondary"
+                    onClick={() => {
+                      // Navigate to view the created content
+                      navigate('/contentbox');
+                      onClose();
+                    }}
+                    className="w-full"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Created Content
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
