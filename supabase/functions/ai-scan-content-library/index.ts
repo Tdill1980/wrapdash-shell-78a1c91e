@@ -21,25 +21,62 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get videos to scan
-    let query = supabase
+    // Get videos from both content_files AND contentbox_assets
+    let videos: any[] = [];
+    
+    // First try content_files
+    let cfQuery = supabase
       .from("content_files")
       .select("*")
       .eq("file_type", "video");
 
     if (content_file_id) {
-      query = query.eq("id", content_file_id);
+      cfQuery = cfQuery.eq("id", content_file_id);
     } else if (organization_id) {
-      query = query.eq("organization_id", organization_id);
+      cfQuery = cfQuery.eq("organization_id", organization_id);
     }
 
-    const { data: videos, error: videosError } = await query;
+    const { data: cfVideos, error: cfError } = await cfQuery;
+    if (cfError) {
+      console.error("content_files query error:", cfError);
+    } else if (cfVideos) {
+      videos = [...cfVideos];
+    }
+    
+    // Also get from contentbox_assets (where agent chat videos go)
+    let cbQuery = supabase
+      .from("contentbox_assets")
+      .select("*")
+      .eq("asset_type", "video");
 
-    if (videosError) {
-      throw new Error(`Failed to fetch videos: ${videosError.message}`);
+    if (content_file_id) {
+      cbQuery = cbQuery.eq("id", content_file_id);
+    } else if (organization_id) {
+      cbQuery = cbQuery.eq("organization_id", organization_id);
     }
 
-    console.log(`Scanning ${videos?.length || 0} videos for AI editing`);
+    const { data: cbVideos, error: cbError } = await cbQuery;
+    if (cbError) {
+      console.error("contentbox_assets query error:", cbError);
+    } else if (cbVideos) {
+      // Map contentbox_assets to match content_files structure
+      const mappedCb = cbVideos.map(v => ({
+        id: v.id,
+        file_url: v.file_url,
+        organization_id: v.organization_id,
+        original_filename: v.original_name,
+        duration_seconds: v.duration_seconds,
+        transcript: null,
+        mux_playback_id: null,
+        mux_asset_id: null,
+        source: 'contentbox'
+      }));
+      videos = [...videos, ...mappedCb];
+    }
+
+    console.log(`Found ${videos.length} videos to scan (${cfVideos?.length || 0} from content_files, ${cbVideos?.length || 0} from contentbox_assets)`);
+
+    console.log(`Scanning ${videos.length} videos for AI editing`);
 
     const results = [];
 
