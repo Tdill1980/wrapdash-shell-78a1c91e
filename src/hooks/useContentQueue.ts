@@ -21,6 +21,12 @@ interface ContentQueueItem {
   ai_metadata: Json | null;
   created_at: string | null;
   updated_at: string | null;
+  // New metadata fields
+  brand: string | null;
+  channel: string | null;
+  content_purpose: string | null;
+  ad_placement: string | null;
+  platform: string | null;
 }
 
 export function useContentQueue(organizationId?: string) {
