@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -145,6 +146,10 @@ interface Task {
 type ViewMode = "todo" | "inprogress" | "done" | "all";
 
 export default function MightyTaskUnified() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const handledNavStateRef = useRef(false);
+
   const { organizationId } = useOrganization();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -347,6 +352,35 @@ export default function MightyTaskUnified() {
     const agentName = AVAILABLE_AGENTS.find(a => a.id === agentId)?.name || agentId;
     toast.info(`Opening ${agentName} to execute: ${task.title}`);
   };
+
+  // If the user clicked a calendar item linked to a task, auto-open execution here.
+  useEffect(() => {
+    const state = (location.state || {}) as Record<string, unknown>;
+    const executeTaskId = state.executeTaskId as string | undefined;
+
+    if (!executeTaskId) return;
+    if (handledNavStateRef.current) return;
+    if (loading) return;
+
+    const taskToRun = tasks.find((t) => t.id === executeTaskId);
+    handledNavStateRef.current = true;
+
+    // Clear navigation state so refresh/back doesn't re-trigger.
+    navigate(location.pathname, { replace: true, state: {} });
+
+    if (!taskToRun) {
+      toast.error("Task not found", { description: "That calendar task may have been deleted." });
+      return;
+    }
+
+    // Only auto-execute if it isn't completed.
+    if (taskToRun.status === "completed") {
+      openTaskDetail(taskToRun);
+      return;
+    }
+
+    executeWithAgent(taskToRun);
+  }, [location.state, loading, tasks, navigate, location.pathname]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

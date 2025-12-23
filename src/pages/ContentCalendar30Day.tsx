@@ -407,6 +407,19 @@ export default function ContentCalendar30Day() {
                             )}
                             title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
                             onClick={() => {
+                              if (linkedTask && linkedTask.status !== 'completed') {
+                                // Execute the linked MightyTask (opens MightyTask and auto-starts execution)
+                                navigate('/mightytask', {
+                                  state: {
+                                    executeTaskId: linkedTask.id,
+                                    from: 'content_calendar',
+                                    contentCalendarId: item.id,
+                                  },
+                                });
+                                return;
+                              }
+
+                              // Otherwise open the calendar item details
                               setSelectedContent(item);
                               setEditModalOpen(true);
                             }}
