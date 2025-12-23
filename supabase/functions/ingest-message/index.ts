@@ -576,7 +576,7 @@ RULES:
     // 9. Send reply back via Instagram (ONLY in LIVE mode)
     if (body.platform === "instagram" && shouldSendReply && aiReply) {
       try {
-        await fetch(`${SUPABASE_URL}/functions/v1/send-instagram-reply`, {
+        const sendResult = await fetch(`${SUPABASE_URL}/functions/v1/send-instagram-reply`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -587,7 +587,38 @@ RULES:
             message: aiReply,
           }),
         });
-        console.log("✅ Instagram reply sent (LIVE mode)");
+        
+        if (sendResult.ok) {
+          console.log("✅ Instagram reply sent (LIVE mode)");
+          
+          // Update the saved message to mark as actually sent to Instagram
+          if (conversation) {
+            const { error: updateError } = await supabase
+              .from("messages")
+              .update({
+                metadata: {
+                  ai_mode: aiMode,
+                  status: 'sent',
+                  instagram_sent: true,
+                  sent_at: new Date().toISOString(),
+                  generated_at: new Date().toISOString()
+                }
+              })
+              .eq("conversation_id", conversation.id)
+              .eq("direction", "outbound")
+              .eq("content", aiReply)
+              .order("created_at", { ascending: false })
+              .limit(1);
+            
+            if (updateError) {
+              console.error("Failed to update message status:", updateError);
+            } else {
+              console.log("✅ Message marked as instagram_sent: true");
+            }
+          }
+        } else {
+          console.error("Instagram reply failed:", await sendResult.text());
+        }
       } catch (replyErr) {
         console.error("Instagram reply error:", replyErr);
       }

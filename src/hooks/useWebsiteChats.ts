@@ -51,6 +51,13 @@ export interface ChatConversation {
   }[];
 }
 
+// Helper type for message metadata
+interface MessageMetadata {
+  status?: 'pending_approval' | 'sent' | 'approved';
+  instagram_sent?: boolean;
+  ai_mode?: string;
+}
+
 export function useWebsiteChats() {
   const query = useQuery({
     queryKey: ['website-chats'],
