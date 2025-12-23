@@ -38,6 +38,9 @@ interface ContentFactoryPreset {
   hashtags?: string;
   attached_assets?: Array<{ url: string; type: string; name: string }>;
   claimed_asset_id?: string;
+  source?: string;
+  task_id?: string;
+  calendar_id?: string;
 }
 
 export default function MightyEdit() {
@@ -54,11 +57,15 @@ export default function MightyEdit() {
     executeEdits,
     updateEditItem,
     selectMusic,
+    markTaskComplete,
   } = useMightyEdit();
 
   const [activeTab, setActiveTab] = useState("scanner");
   const [selectedVideo, setSelectedVideo] = useState<VideoEditItem | null>(null);
   const [presetApplied, setPresetApplied] = useState(false);
+  const [calendarPreset, setCalendarPreset] = useState<ContentFactoryPreset | null>(null);
+  const [showVideoPicker, setShowVideoPicker] = useState(false);
+  const [availableVideos, setAvailableVideos] = useState<any[]>([]);
 
   // Helper: Ensure video exists in video_edit_queue before executing edits
   const ensureVideoInQueue = async (video: VideoEditItem): Promise<string | null> => {
@@ -157,7 +164,7 @@ export default function MightyEdit() {
     return inserted.id;
   };
 
-  // Wrapper for executeEdits that ensures video is in queue first
+  // Wrapper for executeEdits that ensures video is in queue first and marks task complete
   const handleExecuteEdits = async (renderType: "full" | "shorts" | "all") => {
     if (!selectedVideo) return;
     
@@ -168,9 +175,16 @@ export default function MightyEdit() {
     }
     
     await executeEdits(queueId, renderType);
+    
+    // If this was from a calendar preset, mark the linked task as complete
+    if (calendarPreset?.task_id) {
+      console.log('[MightyEdit] Marking task complete:', calendarPreset.task_id);
+      await markTaskComplete(calendarPreset.task_id);
+      setCalendarPreset(null);
+    }
   };
 
-  // Check for preset from Agent Chat (via sessionStorage)
+  // Check for preset from Agent Chat or Content Calendar (via sessionStorage)
   useEffect(() => {
     if (presetApplied) return;
     
@@ -179,9 +193,35 @@ export default function MightyEdit() {
       try {
         const preset: ContentFactoryPreset = JSON.parse(storedPreset);
         console.log('[MightyEdit] Loaded preset from sessionStorage:', preset);
-        console.log('[MightyEdit] Preset overlays:', preset.overlays);
         
-        // If preset has attached assets, create a video item from them
+        // Handle calendar presets - need to show video picker
+        if (preset.source === 'content_calendar') {
+          console.log('[MightyEdit] Calendar preset detected, loading video picker...');
+          setCalendarPreset(preset);
+          setActiveTab("editor");
+          setPresetApplied(true);
+          setShowVideoPicker(true);
+          
+          // Load recent videos for selection
+          (async () => {
+            const { data: videos, error } = await supabase
+              .from('contentbox_assets')
+              .select('*')
+              .eq('asset_type', 'video')
+              .order('created_at', { ascending: false })
+              .limit(12);
+            
+            if (!error && videos) {
+              setAvailableVideos(videos);
+            }
+          })();
+          
+          // Clear preset after processing
+          sessionStorage.removeItem('mightyedit_preset');
+          return;
+        }
+        
+        // If preset has attached assets, create a video item from them (agent chat flow)
         if (preset.attached_assets && preset.attached_assets.length > 0) {
           const firstAsset = preset.attached_assets[0];
           
@@ -193,14 +233,10 @@ export default function MightyEdit() {
               style: 'bold' as const,
               duration: o.duration,
             };
-            console.log('[MightyEdit] Mapped overlay:', mapped);
             return mapped;
           });
           
-          console.log('[MightyEdit] Total mapped overlays:', mappedOverlays.length);
-          
           const videoFromPreset: VideoEditItem = {
-            // This is a local-only placeholder; ensureVideoInQueue will create the DB row.
             id: preset.claimed_asset_id || `preset-${Date.now()}`,
             organization_id: null,
             content_file_id: null,
@@ -222,12 +258,9 @@ export default function MightyEdit() {
             updated_at: new Date().toISOString(),
           };
           
-          console.log('[MightyEdit] Auto-selecting video from preset with overlays:', videoFromPreset.text_overlays?.length);
           setSelectedVideo(videoFromPreset);
           setActiveTab("editor");
           setPresetApplied(true);
-          
-          // Clear the preset after use
           sessionStorage.removeItem('mightyedit_preset');
         }
       } catch (e) {
@@ -437,6 +470,81 @@ export default function MightyEdit() {
 
           {/* Editor Tab */}
           <TabsContent value="editor" className="space-y-4">
+            {/* Video Picker for Calendar Presets */}
+            {showVideoPicker && calendarPreset && (
+              <Card className="bg-card border-border border-2 border-primary/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Film className="w-5 h-5 text-primary" />
+                    Select Video for: {calendarPreset.hook || 'Content'}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Creating {calendarPreset.content_type} for {calendarPreset.platform}
+                    {calendarPreset.caption && ` • "${calendarPreset.caption.slice(0, 50)}..."`}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {availableVideos.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Film className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No videos available. Upload content first.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {availableVideos.map((video) => (
+                        <div
+                          key={video.id}
+                          className="relative cursor-pointer group rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
+                          onClick={() => {
+                            // Create video item from selected asset with calendar preset data
+                            const videoItem: VideoEditItem = {
+                              id: video.id,
+                              organization_id: video.organization_id,
+                              content_file_id: video.id,
+                              title: calendarPreset.hook || video.original_name || 'Video',
+                              source_url: video.file_url,
+                              transcript: null,
+                              duration_seconds: video.duration_seconds,
+                              ai_edit_suggestions: null,
+                              selected_music_id: null,
+                              selected_music_url: null,
+                              text_overlays: calendarPreset.hook ? [
+                                { text: calendarPreset.hook, timestamp: '0s', style: 'bold' as const, duration: 3 }
+                              ] : [],
+                              speed_ramps: [],
+                              chapters: [],
+                              shorts_extracted: [],
+                              final_render_url: null,
+                              render_status: 'pending',
+                              status: 'ready_for_review',
+                              created_at: video.created_at,
+                              updated_at: video.created_at,
+                            };
+                            setSelectedVideo(videoItem);
+                            setShowVideoPicker(false);
+                            toast.success(`Selected: ${video.original_name || 'Video'}`);
+                          }}
+                        >
+                          <div className="aspect-video bg-muted">
+                            <video
+                              src={video.file_url}
+                              className="w-full h-full object-cover"
+                              muted
+                              onMouseEnter={(e) => e.currentTarget.play()}
+                              onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+                            />
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                            <span className="text-white text-xs truncate">{video.original_name || 'Video'}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {selectedVideo ? (
               <Card className="bg-card border-border">
                 <CardHeader>

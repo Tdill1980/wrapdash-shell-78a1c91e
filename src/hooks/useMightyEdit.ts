@@ -156,6 +156,27 @@ export function useMightyEdit() {
     toast.success("Music selected");
   }, [updateEditItem]);
 
+  // Mark a linked task as complete after successful render
+  const markTaskComplete = useCallback(async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: "completed" })
+        .eq("id", taskId);
+
+      if (error) {
+        console.error("Failed to mark task complete:", error);
+        return false;
+      }
+
+      toast.success("Task marked as complete!");
+      return true;
+    } catch (err) {
+      console.error("Error marking task complete:", err);
+      return false;
+    }
+  }, []);
+
   return {
     isScanning,
     isMatching,
@@ -167,6 +188,7 @@ export function useMightyEdit() {
     matchMusic,
     executeEdits,
     updateEditItem,
-    selectMusic
+    selectMusic,
+    markTaskComplete
   };
 }

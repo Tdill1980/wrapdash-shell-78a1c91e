@@ -408,14 +408,21 @@ export default function ContentCalendar30Day() {
                             title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
                             onClick={() => {
                               if (linkedTask && linkedTask.status !== 'completed') {
-                                // Execute the linked MightyTask (opens MightyTask and auto-starts execution)
-                                navigate('/mightytask', {
-                                  state: {
-                                    executeTaskId: linkedTask.id,
-                                    from: 'content_calendar',
-                                    contentCalendarId: item.id,
-                                  },
-                                });
+                                // Route directly to MightyEdit with calendar preset
+                                const preset = {
+                                  action: 'create_content',
+                                  content_type: getContentTypeKey(item.content_type, item.platform),
+                                  platform: item.platform,
+                                  hook: item.title || 'Content',
+                                  cta: '',
+                                  caption: item.caption || '',
+                                  hashtags: '',
+                                  source: 'content_calendar',
+                                  task_id: linkedTask.id,
+                                  calendar_id: item.id,
+                                };
+                                sessionStorage.setItem('mightyedit_preset', JSON.stringify(preset));
+                                navigate('/mighty-edit');
                                 return;
                               }
 
