@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export type RenderStatus = 'idle' | 'starting' | 'rendering' | 'succeeded' | 'failed';
+export type RenderStatus = 'idle' | 'starting' | 'rendering' | 'succeeded' | 'failed' | 'deprecated';
 
 interface RenderOverlay {
   text: string;
@@ -64,153 +64,52 @@ export function useVideoRender() {
   }, []);
 
   const checkStatus = useCallback(async (renderId: string) => {
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/render-video-reel`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-          },
-          body: JSON.stringify({
-            action: 'status',
-            render_id: renderId,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to check status');
-      }
-
-      const creatomateStatus = data.status;
-      let newStatus: RenderStatus = 'rendering';
-
-      if (creatomateStatus === 'succeeded') {
-        newStatus = 'succeeded';
-        // Stop polling
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-        }
-        toast.success('Video rendered successfully!');
-      } else if (creatomateStatus === 'failed') {
-        newStatus = 'failed';
-        // Stop polling
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-        }
-        toast.error(`Render failed: ${data.error_message || 'Unknown error'}`);
-      }
-
-      setState(prev => ({
-        ...prev,
-        status: newStatus,
-        progress: data.progress || prev.progress,
-        outputUrl: data.url || null,
-        errorMessage: data.error_message || null,
-      }));
-
-      return { status: newStatus, url: data.url };
-    } catch (error) {
-      console.error('[useVideoRender] Status check error:', error);
-      return { status: 'rendering' as RenderStatus, url: null };
-    }
+    // Deprecated - MightyEdit uses different status checking
+    console.warn('[useVideoRender] DEPRECATED: This render pipeline is no longer available. Use MightyEdit instead.');
+    return { status: 'deprecated' as RenderStatus, url: null };
   }, []);
 
   const startRender = useCallback(async (params: RenderParams) => {
-    const { videoUrl, additionalClips, headline, subtext, templateId, organizationId, musicUrl, overlays, inspoStyle } = params;
-
-    if (!videoUrl) {
-      toast.error('Video URL is required');
-      return null;
-    }
-
+    // Show deprecation notice and redirect users to MightyEdit
+    console.warn('[useVideoRender] DEPRECATED: render-video-reel is disabled. Redirecting to MightyEdit flow.');
+    
     setState({
-      status: 'starting',
+      status: 'deprecated',
       renderId: null,
       progress: 0,
       outputUrl: null,
-      errorMessage: null,
+      errorMessage: 'This render pipeline has been replaced by MightyEdit.',
     });
 
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/render-video-reel`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-          },
-          body: JSON.stringify({
-            action: 'start',
-            video_url: videoUrl,
-            additional_clips: additionalClips,
-            headline,
-            subtext,
-            template_id: templateId,
-            organization_id: organizationId,
-            music_url: musicUrl,
-            overlays,
-            inspo_style: inspoStyle,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to start render');
-      }
-
-      const renderId = data.render_id;
-
-      setState(prev => ({
-        ...prev,
-        status: 'rendering',
-        renderId,
-        progress: 5, // Initial progress
-      }));
-
-      toast.success('Video render started! This may take a minute...');
-
-      // Start polling for status
-      pollingRef.current = setInterval(async () => {
-        const { status } = await checkStatus(renderId);
-        if (status === 'succeeded' || status === 'failed') {
-          if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-          }
-        }
-      }, 3000); // Poll every 3 seconds
-
-      return renderId;
-    } catch (error) {
-      console.error('[useVideoRender] Start render error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      setState(prev => ({
-        ...prev,
-        status: 'failed',
-        errorMessage,
-      }));
-
-      toast.error(`Failed to start render: ${errorMessage}`);
-      return null;
+    // Store video info in sessionStorage for MightyEdit to pick up
+    if (params.videoUrl) {
+      const preset = {
+        attached_assets: [{ url: params.videoUrl, type: 'video' }],
+        overlays: params.overlays?.map(o => ({
+          text: o.text,
+          start: o.time,
+          duration: o.duration,
+        })) || [],
+        headline: params.headline,
+        subtext: params.subtext,
+        musicUrl: params.musicUrl,
+      };
+      sessionStorage.setItem('mightyedit_preset', JSON.stringify(preset));
     }
-  }, [checkStatus]);
+
+    toast.error('Creatomate render is disabled', {
+      description: 'Opening MightyEdit instead...',
+      action: {
+        label: 'Open MightyEdit',
+        onClick: () => {
+          window.location.href = '/mighty-edit';
+        },
+      },
+      duration: 8000,
+    });
+
+    return null;
+  }, []);
 
   const reset = useCallback(() => {
     if (pollingRef.current) {
@@ -229,6 +128,7 @@ export function useVideoRender() {
   return {
     ...state,
     isRendering: state.status === 'starting' || state.status === 'rendering',
+    isDeprecated: state.status === 'deprecated',
     startRender,
     checkStatus,
     reset,
