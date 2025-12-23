@@ -77,15 +77,20 @@ Return JSON only:
     console.log(`Video mood detected: ${videoMood.mood}, energy: ${videoMood.energy}`);
 
     // Fetch music from library matching mood
+    // First check if music_library table exists and has data
     const { data: musicLibrary, error: musicError } = await supabase
       .from("music_library")
       .select("*")
-      .or(`mood.eq.${videoMood.mood},mood.eq.neutral,is_global.eq.true`)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(50);
 
     if (musicError) {
       console.error("Music library fetch error:", musicError);
+      // If table doesn't exist or is empty, return AI-generated placeholder recommendations
+      console.log("Music library empty or unavailable - returning AI suggestions only");
     }
+    
+    console.log(`Found ${musicLibrary?.length || 0} tracks in music library`);
 
     // Score and rank music tracks
     const scoredTracks = (musicLibrary || []).map(track => {

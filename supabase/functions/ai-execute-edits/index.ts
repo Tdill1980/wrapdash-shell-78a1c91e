@@ -92,11 +92,23 @@ serve(async (req) => {
     // If we still don't have a Mux asset ID, we need to upload to Mux first
     if (!muxAssetId && editItem.source_url) {
       console.log(`[ai-execute-edits] No Mux asset found, uploading video to Mux...`);
+      console.log(`[ai-execute-edits] Source URL: ${editItem.source_url}`);
       
       try {
+        // NOTE: mux-upload expects "file_url" not "video_url"
         const muxUploadRes = await supabase.functions.invoke("mux-upload", {
-          body: { video_url: editItem.source_url }
+          body: { 
+            file_url: editItem.source_url,
+            content_file_id: editItem.content_file_id,
+            organization_id: editItem.organization_id
+          }
         });
+        
+        console.log(`[ai-execute-edits] Mux upload response:`, muxUploadRes.data);
+        
+        if (muxUploadRes.error) {
+          console.error("[ai-execute-edits] Mux upload error:", muxUploadRes.error);
+        }
         
         if (muxUploadRes.data?.asset_id) {
           muxAssetId = muxUploadRes.data.asset_id;
@@ -113,6 +125,8 @@ serve(async (req) => {
               })
               .eq("id", editItem.content_file_id);
           }
+        } else {
+          console.error("[ai-execute-edits] Mux upload did not return asset_id");
         }
       } catch (e) {
         console.error("[ai-execute-edits] Mux upload failed:", e);
