@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
+import { Send, ArrowLeft, RefreshCw, Trash2, Clock, CheckCheck, Check } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
 import { WorkStreamsSidebar, type WorkStream, mapStreamToInbox } from "@/components/mightychat/WorkStreamsSidebar";
 import { ConversationContextHeader } from "@/components/mightychat/ConversationContextHeader";
@@ -80,6 +81,11 @@ interface Message {
   metadata: {
     avatar_url?: string;
     username?: string;
+    status?: 'pending_approval' | 'sent' | 'approved';
+    ai_mode?: string;
+    instagram_sent?: boolean;
+    sent_at?: string;
+    generated_at?: string;
   } | null;
 }
 
@@ -789,8 +795,36 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                               <Trash2 className="w-3 h-3 text-destructive" />
                             </button>
                           </div>
-                          <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
+                          <div className="text-[10px] md:text-xs text-muted-foreground mt-1 flex items-center gap-1 justify-end">
                             {formatTime(msg.created_at)}
+                            {msg.direction === "outbound" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-flex items-center">
+                                      {msg.metadata?.status === 'pending_approval' ? (
+                                        <Clock className="w-3 h-3 text-amber-500" />
+                                      ) : msg.metadata?.instagram_sent || msg.metadata?.status === 'sent' ? (
+                                        <CheckCheck className="w-3 h-3 text-green-500" />
+                                      ) : (
+                                        <Check className="w-3 h-3 text-muted-foreground" />
+                                      )}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left" className="text-xs">
+                                    {msg.metadata?.status === 'pending_approval' ? (
+                                      <span className="text-amber-500">⏳ Pending approval - not sent yet</span>
+                                    ) : msg.metadata?.instagram_sent ? (
+                                      <span className="text-green-500">✓ Sent to Instagram</span>
+                                    ) : msg.metadata?.status === 'sent' ? (
+                                      <span className="text-green-500">✓ Sent</span>
+                                    ) : (
+                                      <span>Saved</span>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </div>
                       </div>
