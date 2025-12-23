@@ -149,12 +149,12 @@ export default function CustomerPortal() {
             )}
 
             <Button 
-              onClick={() => navigate(`/approveflow/${projectId}`)}
+              onClick={() => navigate(`/approveflow/${projectId}/proof`)}
               className="w-full"
               size="lg"
             >
               <MessageSquare className="mr-2 h-5 w-5" />
-              View Design Proofs & Chat
+              View Design Proof
             </Button>
           </CardContent>
         </Card>

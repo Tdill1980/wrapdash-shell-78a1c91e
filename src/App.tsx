@@ -22,6 +22,7 @@ import MyShopFlow from "./pages/MyShopFlow";
 import MightyCustomer from "./pages/MightyCustomer";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
+import ApproveFlowProof from "./pages/ApproveFlowProof";
 import CustomerPortal from "./pages/CustomerPortal";
 import MightyMail from "./pages/MightyMail";
 import MightyMailAdmin from "./pages/MightyMailAdmin";
@@ -118,6 +119,7 @@ const App = () => (
             <Route path="/mighty-customer" element={<MightyCustomer />} />
             <Route path="/approveflow" element={<ApproveFlowList />} />
             <Route path="/approveflow/:projectId" element={<ApproveFlow />} />
+            <Route path="/approveflow/:projectId/proof" element={<ApproveFlowProof />} />
             <Route path="/customer/:projectId" element={<CustomerPortal />} />
             <Route path="/email-campaigns" element={<MightyMail />} />
             <Route path="/admin/mightymail" element={<MightyMailAdmin />} />

@@ -86,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${portalUrl}" style="display: inline-block; background: linear-gradient(135deg, #2F81F7 0%, #15D1FF 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+              <a href="${portalUrl}/proof" style="display: inline-block; background: linear-gradient(135deg, #2F81F7 0%, #15D1FF 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
                 View & Approve Design
               </a>
             </div>
@@ -146,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
       metadata: {
         proof_url: proofUrl,
         has_3d_renders: !!renderUrls,
-        portal_url: portalUrl,
+        portal_url: `${portalUrl}/proof`,
         email_id: emailData.id
       }
     });
