@@ -242,6 +242,7 @@ export function AIApprovalDetailModal({
     },
     tone: selectedTone,
     design: selectedDesign,
+    offersInstallation: false, // WPW does NOT do installs
   });
 
   const subjectLine = getSubjectLine(selectedTone, quoteData || {
@@ -249,6 +250,18 @@ export function AIApprovalDetailModal({
     vehicle_model: payload?.vehicle?.model,
     quote_total: payload?.auto_quote?.total_price || 0,
   });
+
+  // Check if message content is HTML garbage (email templates, notifications)
+  const isHtmlGarbage = (content: string): boolean => {
+    if (!content) return false;
+    const lowerContent = content.toLowerCase();
+    return lowerContent.includes('<!doctype') || 
+           lowerContent.includes('<html') || 
+           lowerContent.includes('<head') ||
+           lowerContent.includes('<meta charset') ||
+           lowerContent.includes('font-family:') ||
+           lowerContent.includes('background-color:');
+  };
 
   // Strip HTML tags and clean up email content for display
   const cleanMessageContent = (content: string): string => {
@@ -278,6 +291,17 @@ export function AIApprovalDetailModal({
     
     return cleaned || "(No message content)";
   };
+
+  // Filter out HTML garbage messages
+  const cleanMessages = messages.filter(msg => !isHtmlGarbage(msg.content));
+
+  // Extract original request info from action payload
+  const originalMessage = payload?.original_message as string | undefined;
+  
+  // Extract vehicle info - handle both payload.vehicle and payload.auto_quote formats
+  const vehicleYear = payload?.vehicle?.year || payload?.auto_quote?.vehicle_year;
+  const vehicleMake = payload?.vehicle?.make || payload?.auto_quote?.vehicle_make;
+  const vehicleModel = payload?.vehicle?.model || payload?.auto_quote?.vehicle_model;
 
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -334,97 +358,134 @@ export function AIApprovalDetailModal({
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
-              ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <MessageSquare className="w-8 h-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    No conversation history available
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    This quote may have been generated automatically
-                  </p>
-                </div>
               ) : (
                 <div className="space-y-4">
-                  {messages.map((msg) => {
-                    // Inbound = customer message (left side)
-                    // Outbound = our reply (right side)
-                    const isOutbound = msg.direction === "outbound";
-                    const cleanedContent = cleanMessageContent(msg.content);
-                    const attachments = msg.metadata?.attachments || [];
+                  {/* Original Request Card - Always show at top */}
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">Original Request</span>
+                    </div>
                     
-                    return (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          "flex flex-col gap-1",
-                          isOutbound ? "items-end" : "items-start"
-                        )}
-                      >
-                        {/* Sender name */}
-                        <span className="text-xs text-muted-foreground px-1">
-                          {msg.sender_name || (isOutbound ? "WePrintWraps" : "Customer")}
-                        </span>
-                        
-                        {/* Message bubble */}
-                        <div className={cn(
-                          "max-w-[85%] rounded-2xl px-4 py-2.5",
-                          isOutbound 
-                            ? "bg-primary text-primary-foreground rounded-br-md" 
-                            : "bg-secondary text-secondary-foreground rounded-bl-md"
-                        )}>
-                          <p className="text-sm leading-relaxed">{cleanedContent}</p>
-                          
-                          {/* Attachments */}
-                          {attachments.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {attachments.map((url, idx) => {
-                                const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)/i) || 
-                                               url.includes("ig_messaging_cdn") ||
-                                               url.includes("fbcdn");
-                                
-                                return isImage ? (
-                                  <button
-                                    key={idx}
-                                    onClick={() => setExpandedImage(url)}
-                                    className="relative group rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
-                                  >
-                                    <img 
-                                      src={url} 
-                                      alt={`Attachment ${idx + 1}`}
-                                      className="w-16 h-16 object-cover"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = "/placeholder.svg";
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                                      <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                  </button>
-                                ) : (
-                                  <a
-                                    key={idx}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-background/50 border border-border/50 hover:border-primary/50 transition-colors text-xs"
-                                  >
-                                    <Paperclip className="w-3 h-3" />
-                                    File {idx + 1}
-                                  </a>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Timestamp */}
-                        <span className="text-[10px] text-muted-foreground px-1">
-                          {formatDateTime(msg.created_at)}
+                    {/* Vehicle Info */}
+                    {vehicleMake && (
+                      <div className="flex items-center gap-2 text-sm mb-2">
+                        <Car className="w-4 h-4 text-muted-foreground" />
+                        <span>
+                          {vehicleYear} {vehicleMake} {vehicleModel}
                         </span>
                       </div>
-                    );
-                  })}
+                    )}
+                    
+                    {/* Product Type */}
+                    {payload?.auto_quote?.product_name && (
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Product: {payload.auto_quote.product_name}
+                      </div>
+                    )}
+                    
+                    {/* Original Message Text */}
+                    {originalMessage ? (
+                      <p className="text-sm leading-relaxed bg-background/50 rounded-lg p-3 mt-2">
+                        "{originalMessage}"
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic mt-2">
+                        Quote generated from customer inquiry
+                      </p>
+                    )}
+                    
+                    {/* Quote Total */}
+                    {(payload?.auto_quote?.total_price || payload?.quote_total) && (
+                      <div className="flex items-center gap-2 mt-3 pt-2 border-t border-primary/20">
+                        <DollarSign className="w-4 h-4 text-green-500" />
+                        <span className="font-semibold">
+                          ${Number(payload.auto_quote?.total_price || payload.quote_total).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Conversation Messages - filtered */}
+                  {cleanMessages.length > 0 ? (
+                    cleanMessages.map((msg) => {
+                      const isOutbound = msg.direction === "outbound";
+                      const cleanedContent = cleanMessageContent(msg.content);
+                      const attachments = msg.metadata?.attachments || [];
+                      
+                      return (
+                        <div
+                          key={msg.id}
+                          className={cn(
+                            "flex flex-col gap-1",
+                            isOutbound ? "items-end" : "items-start"
+                          )}
+                        >
+                          <span className="text-xs text-muted-foreground px-1">
+                            {msg.sender_name || (isOutbound ? "WePrintWraps" : "Customer")}
+                          </span>
+                          
+                          <div className={cn(
+                            "max-w-[85%] rounded-2xl px-4 py-2.5",
+                            isOutbound 
+                              ? "bg-primary text-primary-foreground rounded-br-md" 
+                              : "bg-secondary text-secondary-foreground rounded-bl-md"
+                          )}>
+                            <p className="text-sm leading-relaxed">{cleanedContent}</p>
+                            
+                            {attachments.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {attachments.map((url, idx) => {
+                                  const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)/i) || 
+                                                 url.includes("ig_messaging_cdn") ||
+                                                 url.includes("fbcdn");
+                                  
+                                  return isImage ? (
+                                    <button
+                                      key={idx}
+                                      onClick={() => setExpandedImage(url)}
+                                      className="relative group rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
+                                    >
+                                      <img 
+                                        src={url} 
+                                        alt={`Attachment ${idx + 1}`}
+                                        className="w-16 h-16 object-cover"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                        <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                      </div>
+                                    </button>
+                                  ) : (
+                                    <a
+                                      key={idx}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-background/50 border border-border/50 hover:border-primary/50 transition-colors text-xs"
+                                    >
+                                      <Paperclip className="w-3 h-3" />
+                                      File {idx + 1}
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <span className="text-[10px] text-muted-foreground px-1">
+                            {formatDateTime(msg.created_at)}
+                          </span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-4 text-xs text-muted-foreground">
+                      No additional conversation messages
+                    </div>
+                  )}
                 </div>
               )}
             </ScrollArea>
