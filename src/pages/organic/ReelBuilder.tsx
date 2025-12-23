@@ -350,7 +350,7 @@ export default function ReelBuilder() {
     saveRenderedVideo();
   }, [videoRender.status, videoRender.outputUrl]);
 
-  // Handle render reel - now with multi-clip support
+  // Handle render reel - redirects to MightyEdit (Creatomate deprecated)
   const handleRenderReel = async () => {
     if (clips.length === 0) {
       toast.error('Add clips first');
@@ -374,15 +374,26 @@ export default function ReelBuilder() {
       ...overlaysEngine.exportForCreatomate(),
     ];
 
-    await videoRender.startRender({
-      videoUrl: clipUrls[0], // Primary video
-      additionalClips: clipUrls.slice(1), // Additional clips for concatenation
-      headline: suggestedHook || autoCreateState?.suggestedHook || reelConcept || clips[0]?.suggestedOverlay || undefined,
-      subtext: suggestedCta || autoCreateState?.suggestedCta || undefined,
-      musicUrl: audioUrl || undefined,
-      overlays: allOverlays.length > 0 ? allOverlays : undefined,
-      inspoStyle: extractedInspoStyle || undefined,
+    // Store preset for MightyEdit to pick up
+    const preset = {
+      attached_assets: clipUrls.map(url => ({ url, type: 'video' })),
+      overlays: allOverlays.map(o => ({
+        text: o.text,
+        start: o.time,
+        duration: o.duration,
+      })),
+      headline: suggestedHook || autoCreateState?.suggestedHook || reelConcept || clips[0]?.suggestedOverlay,
+      subtext: suggestedCta || autoCreateState?.suggestedCta,
+      musicUrl: audioUrl,
+    };
+    sessionStorage.setItem('mightyedit_preset', JSON.stringify(preset));
+
+    toast.info('Redirecting to MightyEdit...', {
+      description: 'The Creatomate render pipeline has been replaced.',
     });
+    
+    // Navigate to MightyEdit with the preset
+    navigate('/mighty-edit');
   };
 
   const handleDownloadVideo = () => {
