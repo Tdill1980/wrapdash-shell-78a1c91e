@@ -183,7 +183,9 @@ serve(async (req) => {
         customer_email: customerEmail || '',
         conversation_id: conversationId,
         pricing_model: 'WPW_WHOLESALE',
-        pending_email: !!customerEmail // Flag that email can be sent on approval
+        pending_email: !!customerEmail, // Flag that email can be sent on approval
+        original_message: sourceMessage || '', // Store original customer message
+        source: source
       },
       priority: 'high',
       organization_id: organizationId

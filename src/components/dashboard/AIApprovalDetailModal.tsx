@@ -106,13 +106,52 @@ export function AIApprovalDetailModal({
   const [selectedDesign, setSelectedDesign] = useState("performance");
   const [quoteData, setQuoteData] = useState<any>(null);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [fallbackOriginalMessage, setFallbackOriginalMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && action) {
       fetchConversation();
       fetchQuoteData();
+      fetchOriginalMessageFallback();
     }
   }, [open, action]);
+
+  // Fetch original message from messages table as fallback
+  const fetchOriginalMessageFallback = async () => {
+    if (!action?.action_payload) return;
+    
+    const conversationId = action.action_payload.conversation_id;
+    if (!conversationId) return;
+
+    try {
+      // Get first inbound message that's not HTML garbage
+      const { data } = await supabase
+        .from("messages")
+        .select("content")
+        .eq("conversation_id", conversationId)
+        .eq("direction", "inbound")
+        .order("created_at", { ascending: true })
+        .limit(10);
+
+      if (data && data.length > 0) {
+        // Find first non-HTML message
+        for (const msg of data) {
+          const content = msg.content?.toLowerCase() || '';
+          const isHtml = content.includes('<!doctype') || 
+                         content.includes('<html') || 
+                         content.includes('<head') ||
+                         content.includes('font-family:');
+          
+          if (!isHtml && msg.content && msg.content.trim().length > 0) {
+            setFallbackOriginalMessage(msg.content.trim());
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching fallback original message:", err);
+    }
+  };
 
   const fetchConversation = async () => {
     setLoadingMessages(true);
@@ -296,8 +335,8 @@ export function AIApprovalDetailModal({
   // Filter out HTML garbage messages
   const cleanMessages = messages.filter(msg => !isHtmlGarbage(msg.content));
 
-  // Extract original request info from action payload
-  const originalMessage = payload?.original_message as string | undefined;
+  // Extract original request info from action payload, fallback to messages table
+  const originalMessage = (payload?.original_message as string) || fallbackOriginalMessage || null;
   
   // Extract vehicle info - handle both payload.vehicle and payload.auto_quote formats
   const vehicleYear = payload?.vehicle?.year || payload?.auto_quote?.vehicle_year;
