@@ -17,9 +17,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { 
+import {
   Send, XCircle, User, Bot, Mail, Car, DollarSign, 
-  MessageSquare, FileText, Clock, Loader2, Image, X, Maximize2, Paperclip 
+  MessageSquare, FileText, Clock, Loader2, Image, X, Maximize2, Paperclip,
+  Instagram, AtSign, Globe
 } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
@@ -362,10 +363,42 @@ export function AIApprovalDetailModal({
                 <div className="space-y-4">
                   {/* Original Request Card - Always show at top */}
                   <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium text-primary">Original Request</span>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-primary">Original Request</span>
+                      </div>
+                      
+                      {/* Source Badge */}
+                      {(payload?.source as string) && (
+                        <Badge variant="outline" className="text-xs flex items-center gap-1">
+                          {(payload?.source as string) === 'instagram' ? (
+                            <Instagram className="w-3 h-3" />
+                          ) : (payload?.source as string) === 'email' ? (
+                            <Mail className="w-3 h-3" />
+                          ) : (
+                            <Globe className="w-3 h-3" />
+                          )}
+                          {(payload?.source as string).charAt(0).toUpperCase() + (payload?.source as string).slice(1)}
+                        </Badge>
+                      )}
                     </div>
+                    
+                    {/* Customer/Sender Info */}
+                    {(payload?.sender_username as string) && (
+                      <div className="flex items-center gap-2 text-sm mb-2 text-muted-foreground">
+                        <AtSign className="w-3 h-3" />
+                        <span>{payload.sender_username as string}</span>
+                      </div>
+                    )}
+                    
+                    {/* AI Agent Info */}
+                    {(payload?.agent as string) && (
+                      <div className="flex items-center gap-2 text-sm mb-2">
+                        <Bot className="w-3 h-3 text-cyan-500" />
+                        <span className="text-cyan-500 font-medium">{payload.agent as string}</span>
+                      </div>
+                    )}
                     
                     {/* Vehicle Info */}
                     {vehicleMake && (
@@ -384,15 +417,24 @@ export function AIApprovalDetailModal({
                       </div>
                     )}
                     
-                    {/* Original Message Text */}
+                    {/* Original Customer Message */}
                     {originalMessage ? (
-                      <p className="text-sm leading-relaxed bg-background/50 rounded-lg p-3 mt-2">
-                        "{originalMessage}"
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic mt-2">
-                        Quote generated from customer inquiry
-                      </p>
+                      <div className="mt-3">
+                        <span className="text-xs text-muted-foreground mb-1 block">Customer said:</span>
+                        <p className="text-sm leading-relaxed bg-secondary rounded-lg p-3">
+                          "{originalMessage}"
+                        </p>
+                      </div>
+                    ) : null}
+                    
+                    {/* AI Draft Message */}
+                    {(payload?.draft_message as string) && (
+                      <div className="mt-3">
+                        <span className="text-xs text-muted-foreground mb-1 block">AI response draft:</span>
+                        <p className="text-sm leading-relaxed bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3">
+                          {payload.draft_message as string}
+                        </p>
+                      </div>
                     )}
                     
                     {/* Quote Total */}
