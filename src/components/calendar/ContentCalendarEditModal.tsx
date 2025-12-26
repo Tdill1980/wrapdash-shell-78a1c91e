@@ -19,12 +19,14 @@ import {
   BookOpen,
   Wand2,
   ExternalLink,
-  Settings
+  Settings,
+  MessageSquare
 } from "lucide-react";
 import { ContentMetadataPanel, ContentMetadata } from "@/components/content/ContentMetadataPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { getAgentForContentType } from "@/hooks/useCalendarTaskSync";
 
 interface ScheduledContent {
   id: string;
@@ -380,18 +382,45 @@ export function ContentCalendarEditModal({
                 </Button>
 
                 {!isContentCreated && (
-                  <Button 
-                    onClick={handleGenerateWithAI}
-                    disabled={isGenerating}
-                    className="w-full bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Wand2 className="w-4 h-4 mr-2" />
-                    )}
-                    Create with AI
-                  </Button>
+                  <>
+                    <Button 
+                      onClick={() => {
+                        // Route to agent chat with calendar context
+                        const agentId = getAgentForContentType(contentType);
+                        const context = {
+                          source: 'content_calendar',
+                          calendar_id: content.id,
+                          content_type: contentType,
+                          platform,
+                          brand: content.brand,
+                          title: title || 'Untitled',
+                          caption: caption || '',
+                          scheduled_date: content.scheduled_date,
+                        };
+                        sessionStorage.setItem('agent_chat_context', JSON.stringify(context));
+                        navigate(`/mightytask?agent=${agentId}&calendarId=${content.id}`);
+                        onClose();
+                      }}
+                      className="w-full"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Execute with Agent
+                    </Button>
+
+                    <Button 
+                      variant="outline"
+                      onClick={handleGenerateWithAI}
+                      disabled={isGenerating}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Wand2 className="w-4 h-4 mr-2" />
+                      )}
+                      Quick Create (Skip Agent)
+                    </Button>
+                  </>
                 )}
 
                 {isContentCreated && (
