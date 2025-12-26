@@ -8,7 +8,10 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Plus,
-  Filter
+  Filter,
+  RefreshCw,
+  MessageSquare,
+  Loader2
 } from 'lucide-react';
 import { 
   format, 
@@ -27,6 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
 import { ContentCalendarEditModal } from '@/components/calendar/ContentCalendarEditModal';
+import { useCalendarTaskSync, getAgentForContentType } from '@/hooks/useCalendarTaskSync';
 
 interface ScheduledContent {
   id: string;
@@ -105,6 +109,9 @@ export default function ContentCalendar30Day() {
   const [selectedChannel, setSelectedChannel] = useState('all');
   const [selectedContent, setSelectedContent] = useState<ScheduledContent | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  // Calendar-Task sync hook
+  const { syncTasks, isSyncing } = useCalendarTaskSync();
 
   // Fetch scheduled content
   const { data: scheduledContent = [], isLoading } = useQuery({
@@ -257,15 +264,30 @@ export default function ContentCalendar30Day() {
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        {/* Read-Only Banner */}
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-muted border border-border">
-          <Calendar className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <p className="font-medium">📅 Read-only Reference View</p>
-            <p className="text-sm text-muted-foreground">
-              Execute tasks from MightyTask channels: Ink & Edge Magazine, WPW Campaigns, Distribution, or WrapTVWorld.
-            </p>
+        {/* Action Banner */}
+        <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted border border-border">
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="font-medium">📅 Content Calendar</p>
+              <p className="text-sm text-muted-foreground">
+                Click items to open agent chat and create content. Red items need creation.
+              </p>
+            </div>
           </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => syncTasks()}
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Sync Tasks
+          </Button>
         </div>
 
         {/* Header */}
@@ -275,7 +297,7 @@ export default function ContentCalendar30Day() {
               <Calendar className="h-8 w-8 text-primary" />
               Content Calendar
             </h1>
-            <p className="text-muted-foreground">30-day view across all channels (read-only)</p>
+            <p className="text-muted-foreground">30-day view across all channels • Click to deploy agents</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={goToToday}>
@@ -407,28 +429,24 @@ export default function ContentCalendar30Day() {
                             )}
                             title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
                             onClick={() => {
-                              if (linkedTask && linkedTask.status !== 'completed') {
-                                // Route directly to MightyEdit with calendar preset
-                                const preset = {
-                                  action: 'create_content',
-                                  content_type: getContentTypeKey(item.content_type, item.platform),
-                                  platform: item.platform,
-                                  hook: item.title || 'Content',
-                                  cta: '',
-                                  caption: item.caption || '',
-                                  hashtags: '',
-                                  source: 'content_calendar',
-                                  task_id: linkedTask.id,
-                                  calendar_id: item.id,
-                                };
-                                sessionStorage.setItem('mightyedit_preset', JSON.stringify(preset));
-                                navigate('/mighty-edit');
-                                return;
-                              }
-
-                              // Otherwise open the calendar item details
-                              setSelectedContent(item);
-                              setEditModalOpen(true);
+                              // Route to agent chat with calendar context
+                              const agentId = getAgentForContentType(item.content_type);
+                              const context = {
+                                source: 'content_calendar',
+                                calendar_id: item.id,
+                                task_id: linkedTask?.id || null,
+                                content_type: getContentTypeKey(item.content_type, item.platform),
+                                platform: item.platform,
+                                brand: item.brand,
+                                title: item.title || 'Untitled',
+                                caption: item.caption || '',
+                                scheduled_date: item.scheduled_date,
+                                is_created: contentCreated,
+                              };
+                              
+                              // Store context and navigate to MightyTask with agent chat open
+                              sessionStorage.setItem('agent_chat_context', JSON.stringify(context));
+                              navigate(`/mightytask?agent=${agentId}&calendarId=${item.id}`);
                             }}
                           >
                             <div className="flex items-center gap-1 mb-0.5">
