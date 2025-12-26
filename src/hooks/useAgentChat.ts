@@ -164,9 +164,57 @@ export function useAgentChat(): UseAgentChatReturn {
 
       if (error) throw error;
 
-      setChatId(data.chat_id);
+      const newChatId = data.chat_id;
+      setChatId(newChatId);
       setAgent(data.agent);
       setMessages(data.messages || []);
+
+      // AUTO-SEND: If context has initial_prompt, send it immediately as first message
+      const initialPrompt = (context as Record<string, unknown> | undefined)?.initial_prompt;
+      if (initialPrompt && typeof initialPrompt === 'string' && newChatId) {
+        console.log("[useAgentChat] Auto-sending initial prompt:", initialPrompt.slice(0, 50) + "...");
+        // Small delay to ensure chat is ready
+        setTimeout(async () => {
+          try {
+            setSending(true);
+            const tempUserMsg = {
+              id: `temp-${Date.now()}`,
+              sender: "user" as const,
+              content: initialPrompt,
+              created_at: new Date().toISOString(),
+            };
+            setMessages(prev => [...prev, tempUserMsg]);
+
+            const { data: sendData, error: sendError } = await supabase.functions.invoke("agent-chat", {
+              body: {
+                action: "send",
+                chat_id: newChatId,
+                message: initialPrompt,
+              },
+            });
+
+            if (sendError) throw sendError;
+
+            const agentMsg = {
+              id: `agent-${Date.now()}`,
+              sender: "agent" as const,
+              content: sendData.message,
+              created_at: new Date().toISOString(),
+              metadata: { confirmed: sendData.confirmed },
+            };
+            setMessages(prev => [...prev, agentMsg]);
+
+            if (sendData.confirmed) {
+              setConfirmed(true);
+              setSuggestedTask(sendData.suggested_task);
+            }
+          } catch (err) {
+            console.error("[useAgentChat] Auto-send error:", err);
+          } finally {
+            setSending(false);
+          }
+        }, 100);
+      }
     } catch (err) {
       console.error("Start chat error:", err);
       toast.error("Failed to start agent chat");
