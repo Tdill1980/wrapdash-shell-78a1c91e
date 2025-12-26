@@ -643,6 +643,13 @@ When an image is generated, it will be included in your response.
       // Combine all videos (current first, then historical)
       const allVideoAttachments = [...currentVideoAttachments, ...historicalVideoAttachments];
       
+      // CONTENT CREATION CONTEXT - check if this is a MightyTask content request
+      const taskContext = (chat?.context || {}) as Record<string, unknown>;
+      const taskContentType = taskContext.task_content_type as string | undefined;
+      const taskSource = taskContext.source as string | undefined;
+      const isContentTask = taskSource === 'mightytask' && taskContentType && 
+        ['ig_reel', 'ig_story', 'fb_reel', 'fb_story', 'youtube_short', 'youtube_video', 'meta_ad'].includes(taskContentType);
+      
       // Add video context for Noah if ANY videos exist in this conversation
       if (allVideoAttachments.length > 0 && chat?.agent_id === 'noah_bennett') {
         const mostRecentVideo = allVideoAttachments[0];
@@ -666,44 +673,80 @@ When they give content creation instructions, emit the CREATE_CONTENT block with
 `;
         aiMessages.push({ role: "system", content: videoContext });
         console.log(`[agent-chat] Added video context for Noah: ${currentVideoAttachments.length} current + ${historicalVideoAttachments.length} historical = ${allVideoAttachments.length} total video(s)`);
+      }
         
-        // AUTO-PROCEED: If videos attached AND user is requesting content, skip confirmation
-        const lowerMessage = body.message?.toLowerCase() || '';
-        const contentKeywords = ['create', 'make', 'story', 'reel', 'video', 'post', 'instagram', 'content', 'promo', 'sale', 'discount', 'christmas', 'holiday'];
-        const isContentRequest = contentKeywords.some(kw => lowerMessage.includes(kw));
+      // AUTO-PROCEED for content creation - either with video OR for content tasks from MightyTask
+      const msgLower = body.message?.toLowerCase() || '';
+      const contentKeywords = ['create', 'make', 'story', 'reel', 'video', 'post', 'instagram', 'content', 'promo', 'sale', 'discount', 'christmas', 'holiday', 'execute', 'task'];
+      const isContentRequest = contentKeywords.some(kw => msgLower.includes(kw));
+      
+      // Force CREATE_CONTENT for Noah when: (1) has video AND content request, OR (2) is content task from MightyTask
+      if (chat?.agent_id === 'noah_bennett' && (isContentRequest || isContentTask)) {
+        const hasVideo = allVideoAttachments.length > 0;
+        const mostRecentVideo = hasVideo ? allVideoAttachments[0] : null;
         
-        if (isContentRequest) {
-          aiMessages.push({
-            role: "system",
-            content: `
-AUTOMATION OVERRIDE: User has attached ${allVideoAttachments.length} video(s) AND is requesting content creation.
-You MUST proceed directly to CREATE_CONTENT output.
-DO NOT ask for confirmation. DO NOT say you "cannot process" the video.
-The video URL is: ${mostRecentVideo.url}
-Include it as attached_assets in your CREATE_CONTENT block like this:
-
-===CREATE_CONTENT===
-action: create_content
-content_type: story
-platform: instagram
-asset_source: attached
+        const contentTypeMap: Record<string, string> = {
+          ig_reel: 'reel', ig_story: 'story', fb_reel: 'reel', fb_story: 'story',
+          youtube_short: 'short', youtube_video: 'video', meta_ad: 'ad'
+        };
+        const platformMap: Record<string, string> = {
+          ig_reel: 'instagram', ig_story: 'instagram', fb_reel: 'facebook', fb_story: 'facebook',
+          youtube_short: 'youtube', youtube_video: 'youtube', meta_ad: 'meta'
+        };
+        
+        const contentType = taskContentType ? contentTypeMap[taskContentType] || 'reel' : 'reel';
+        const platform = taskContentType ? platformMap[taskContentType] || 'instagram' : 'instagram';
+        
+        let assetSection = '';
+        if (hasVideo && mostRecentVideo) {
+          assetSection = `asset_source: attached
 attached_assets:
   - url: ${mostRecentVideo.url}
     type: video
-    name: ${mostRecentVideo.name || 'Attached Video'}
-hook: [extract from user message]
-cta: [based on context]
+    name: ${mostRecentVideo.name || 'Attached Video'}`;
+        } else {
+          assetSection = `asset_source: contentbox
+asset_query:
+  tags: [weprintwraps, wrap, install]
+  type: video
+  limit: 1`;
+        }
+        
+        aiMessages.push({
+          role: "system",
+          content: `
+🚨 CONTENT CREATION OVERRIDE 🚨
+${isContentTask ? `This is a MightyTask content creation task (${taskContentType}).` : 'User is requesting content creation.'}
+${hasVideo ? `Video attached: ${mostRecentVideo?.url}` : 'No video attached - use ContentBox assets.'}
+
+You MUST output a CREATE_CONTENT block FIRST, then add any commentary AFTER.
+DO NOT ask for clarification. DO NOT say you need more info.
+Extract hook/CTA from user's message or task description.
+
+OUTPUT THIS EXACT FORMAT:
+
+===CREATE_CONTENT===
+action: create_content
+content_type: ${contentType}
+platform: ${platform}
+${assetSection}
+hook: [extract from context - max 6 words]
+cta: [call to action - max 8 words]
 overlays:
-  - text: [price or key message] start: 2 duration: 3
-caption: [short caption]
-hashtags: #weprintwraps
+  - text: [key message]
+    start: 2
+    duration: 3
+caption: [engaging caption from context]
+hashtags: #weprintwraps #wraps
 ===END_CREATE_CONTENT===
 
-EMIT THIS BLOCK NOW. Do not ask for clarification.
+Then after the block, add: "I understand. I will create this ${contentType} for ${platform}. Ready when you say go."
+Set confirmed: true.
+
+EMIT THE BLOCK NOW.
 `
-          });
-          console.log(`[agent-chat] AUTOMATION OVERRIDE: Content request detected with video, forcing CREATE_CONTENT`);
-        }
+        });
+        console.log(`[agent-chat] CONTENT OVERRIDE: isContentTask=${isContentTask}, hasVideo=${hasVideo}, taskContentType=${taskContentType}`);
       }
 
       // Add chat history with vision support for attachments
