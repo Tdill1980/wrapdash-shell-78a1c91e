@@ -134,16 +134,39 @@ export function AIApprovalDetailModal({
         .limit(10);
 
       if (data && data.length > 0) {
-        // Find first non-HTML message
+        // Find first message with usable content
         for (const msg of data) {
-          const content = msg.content?.toLowerCase() || '';
+          if (!msg.content || msg.content.trim().length === 0) continue;
+          
+          const content = msg.content.toLowerCase();
           const isHtml = content.includes('<!doctype') || 
                          content.includes('<html') || 
                          content.includes('<head') ||
                          content.includes('font-family:');
           
-          if (!isHtml && msg.content && msg.content.trim().length > 0) {
+          // If it's plain text, use directly
+          if (!isHtml) {
             setFallbackOriginalMessage(msg.content.trim());
+            return;
+          }
+          
+          // If it's HTML, try to extract readable text
+          const cleanedContent = msg.content
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')  // Remove style blocks
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove script blocks
+            .replace(/<!--[\s\S]*?-->/g, '')                  // Remove comments
+            .replace(/<[^>]*>/g, ' ')                         // Strip remaining HTML tags
+            .replace(/&nbsp;/g, ' ')                          // Replace HTML entities
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/\s+/g, ' ')                             // Normalize whitespace
+            .trim();
+          
+          // Use if we got meaningful content after cleaning
+          if (cleanedContent.length > 20) {
+            setFallbackOriginalMessage(cleanedContent.substring(0, 1000));
             return;
           }
         }
