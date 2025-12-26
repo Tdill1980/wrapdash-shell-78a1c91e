@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
+import { useProxyAttachment, needsProxy } from "@/hooks/useProxyAttachment";
 import { 
   generateEmailPreview, 
   getSubjectLine, 
@@ -111,6 +112,7 @@ export function AIApprovalDetailModal({
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [fallbackOriginalMessage, setFallbackOriginalMessage] = useState<string | null>(null);
   const [conversationMeta, setConversationMeta] = useState<{ channel: string; recipient_inbox: string | null } | null>(null);
+  const { proxyAndOpen, getProxiedUrl, loading: proxyLoading } = useProxyAttachment();
 
   useEffect(() => {
     if (open && action) {
@@ -612,37 +614,63 @@ export function AIApprovalDetailModal({
                                 {attachments.map((url, idx) => {
                                   const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)/i) || 
                                                  url.includes("ig_messaging_cdn") ||
-                                                 url.includes("fbcdn");
+                                                 url.includes("fbcdn") ||
+                                                 url.includes("lookaside");
+                                  const isBlocked = needsProxy(url);
+                                  const isLoading = proxyLoading[url];
                                   
                                   return isImage ? (
                                     <button
                                       key={idx}
-                                      onClick={() => setExpandedImage(url)}
+                                      onClick={() => {
+                                        if (isBlocked) {
+                                          proxyAndOpen(url);
+                                        } else {
+                                          setExpandedImage(url);
+                                        }
+                                      }}
+                                      disabled={isLoading}
                                       className="relative group rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
                                     >
-                                      <img 
-                                        src={url} 
-                                        alt={`Attachment ${idx + 1}`}
-                                        className="w-16 h-16 object-cover"
-                                        onError={(e) => {
-                                          (e.target as HTMLImageElement).src = "/placeholder.svg";
-                                        }}
-                                      />
-                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                                        <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                      </div>
+                                      {isLoading ? (
+                                        <div className="w-16 h-16 flex items-center justify-center bg-muted">
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <img 
+                                            src={isBlocked ? "/placeholder.svg" : url} 
+                                            alt={`Attachment ${idx + 1}`}
+                                            className="w-16 h-16 object-cover"
+                                            onError={(e) => {
+                                              (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                            }}
+                                          />
+                                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                                            <Maximize2 className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                          </div>
+                                          {isBlocked && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[8px] text-white text-center py-0.5">
+                                              Click to load
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
                                     </button>
                                   ) : (
-                                    <a
+                                    <button
                                       key={idx}
-                                      href={url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                                      onClick={() => proxyAndOpen(url)}
+                                      disabled={isLoading}
                                       className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-background/50 border border-border/50 hover:border-primary/50 transition-colors text-xs"
                                     >
-                                      <Paperclip className="w-3 h-3" />
+                                      {isLoading ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Paperclip className="w-3 h-3" />
+                                      )}
                                       File {idx + 1}
-                                    </a>
+                                    </button>
                                   );
                                 })}
                               </div>
