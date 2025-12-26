@@ -49,7 +49,12 @@ export function useProxyAttachment() {
 
       if (error || data?.error) {
         console.error("Proxy error:", error || data?.error);
-        toast.error("Attachment link expired. New attachments will be auto-cached.");
+        // Handle expired attachments gracefully
+        if (data?.error === "attachment_expired") {
+          toast.error("This attachment has expired and is no longer available.");
+        } else {
+          toast.error("Attachment couldn't be retrieved. The link may have expired.");
+        }
         return;
       }
 

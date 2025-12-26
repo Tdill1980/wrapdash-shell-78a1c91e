@@ -108,9 +108,23 @@ serve(async (req) => {
 
     if (!externalResponse.ok) {
       console.error(`[proxy-external-attachment] External fetch failed: ${externalResponse.status}`);
+      
+      // 403 specifically means the URL signature expired (common for FB/IG CDN)
+      if (externalResponse.status === 403) {
+        return new Response(
+          JSON.stringify({
+            error: "attachment_expired",
+            message: "This attachment link has expired and cannot be retrieved. Instagram/Facebook media links expire after a short time.",
+            status: 403,
+          }),
+          { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } } // 410 Gone
+        );
+      }
+      
       return new Response(
         JSON.stringify({
-          error: "Failed to fetch external file",
+          error: "fetch_failed",
+          message: "Failed to fetch external file",
           status: externalResponse.status,
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
