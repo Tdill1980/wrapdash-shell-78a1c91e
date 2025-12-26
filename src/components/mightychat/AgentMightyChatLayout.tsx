@@ -26,31 +26,71 @@ import type { AgentInbox } from "@/components/mightychat/AgentInboxTabs";
 // Helper to strip HTML tags and extract readable text from email content
 const stripHtmlTags = (html: string): string => {
   if (!html) return "";
-  
+
   // Check if content looks like HTML
   if (!html.includes("<") || !html.includes(">")) {
     return html;
   }
-  
+
   // Create a temporary element to parse HTML
   const doc = new DOMParser().parseFromString(html, "text/html");
-  
+
   // Remove script and style elements
   const scripts = doc.querySelectorAll("script, style");
-  scripts.forEach(el => el.remove());
-  
+  scripts.forEach((el) => el.remove());
+
   // Get text content
   let text = doc.body?.textContent || doc.documentElement?.textContent || html;
-  
+
   // Clean up whitespace
   text = text.replace(/\s+/g, " ").trim();
-  
+
   // If we ended up with empty content, return a placeholder
   if (!text || text.length < 3) {
     return "[Email content - view original]";
   }
-  
+
   return text;
+};
+
+const formatThreadText = (raw: string): string => {
+  if (!raw) return "";
+
+  // Some ingested messages concatenate fields; add line breaks for readability.
+  // IMPORTANT: keep newlines (we render with whitespace-pre-wrap).
+  const withSections = raw
+    .replace(/\s*(From:)/gi, "\n$1")
+    .replace(/\s*(Platform:)/gi, "\n$1")
+    .replace(/\s*(Message:)/gi, "\n$1")
+    .replace(/\s*(Files\s*\(\d+\):)/gi, "\n$1")
+    // Put each URL on its own line so long tokens don't become unreadable
+    .replace(/\s*(https?:\/\/)/g, "\n$1");
+
+  return withSections
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+};
+
+const renderLinkifiedText = (text: string) => {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, idx) => {
+    if (/^https?:\/\//.test(part)) {
+      return (
+        <a
+          key={`u-${idx}`}
+          href={part}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 break-all text-primary"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={`t-${idx}`}>{part}</span>;
+  });
 };
 
 interface Conversation {
@@ -788,8 +828,12 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                                 msg.direction === "outbound" ? "bg-primary text-primary-foreground" : "bg-muted"
                               )}
                             >
-                              <p className="text-xs md:text-sm whitespace-pre-wrap">
-                                {msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content}
+                              <p className="text-xs md:text-sm whitespace-pre-wrap break-all">
+                                {renderLinkifiedText(
+                                  formatThreadText(
+                                    msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content
+                                  )
+                                )}
                               </p>
                             </div>
                             <button
