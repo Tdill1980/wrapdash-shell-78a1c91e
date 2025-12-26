@@ -1,6 +1,7 @@
 // supabase/functions/receive-email-webhook/index.ts
 // Email webhook with MCP agent routing: Alex (hello@), Grant (design@), Jackson (ops_desk)
 // Now auto-generates quotes for pricing inquiries (pending approval)
+// Now caches email attachments immediately to Supabase Storage
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -22,6 +23,88 @@ const INBOX_AGENT_MAP: Record<string, string> = {
   support: 'alex_morgan',    // Support routes to Alex
   general: 'alex_morgan',    // Default to Alex
 };
+
+// Initialize Supabase client early for attachment caching
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseGlobal = createClient(supabaseUrl, supabaseServiceKey);
+
+// Cache an email attachment to Supabase Storage
+async function cacheEmailAttachment(
+  attachment: { name?: string; contentBytes?: string; contentType?: string; url?: string },
+  senderId: string,
+  index: number
+): Promise<{ url: string; name: string; type: string } | null> {
+  try {
+    const filename = attachment.name || `attachment_${index}`;
+    const contentType = attachment.contentType || 'application/octet-stream';
+    
+    console.log(`📥 Caching email attachment ${index + 1}: ${filename}`);
+    
+    let buffer: ArrayBuffer;
+    
+    // Handle base64 encoded content (most common from Power Automate)
+    if (attachment.contentBytes) {
+      // Decode base64 to binary
+      const binaryString = atob(attachment.contentBytes);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      buffer = bytes.buffer;
+      console.log(`📦 Decoded base64 content: ${bytes.length} bytes`);
+    } 
+    // Handle URL-based attachments (for larger files)
+    else if (attachment.url) {
+      const response = await fetch(attachment.url);
+      if (!response.ok) {
+        console.error(`❌ Failed to fetch attachment URL: ${response.status}`);
+        return null;
+      }
+      buffer = await response.arrayBuffer();
+      console.log(`📦 Fetched from URL: ${buffer.byteLength} bytes`);
+    } else {
+      console.error(`❌ Attachment has no contentBytes or URL`);
+      return null;
+    }
+    
+    // Sanitize filename and create storage path
+    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const timestamp = Date.now();
+    const sanitizedSenderId = senderId.replace(/[^a-zA-Z0-9@._-]/g, '_');
+    const storagePath = `email-attachments/${sanitizedSenderId}/${timestamp}_${sanitizedFilename}`;
+    
+    // Upload to storage
+    const { error: uploadError } = await supabaseGlobal.storage
+      .from("media-library")
+      .upload(storagePath, buffer, {
+        contentType,
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error(`❌ Upload failed:`, uploadError);
+      return null;
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabaseGlobal.storage
+      .from("media-library")
+      .getPublicUrl(storagePath);
+    
+    console.log(`✅ Cached email attachment: ${urlData.publicUrl}`);
+    
+    return {
+      url: urlData.publicUrl,
+      name: filename,
+      type: contentType
+    };
+    
+  } catch (err) {
+    console.error(`❌ Error caching email attachment:`, err);
+    return null;
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -61,10 +144,26 @@ serve(async (req) => {
 
     console.log('📧 Parsed email:', { fromEmail, fromName, toEmail, subject: subject.substring(0, 50) });
 
-    // Initialize Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // *** Extract and cache email attachments ***
+    const rawAttachments = payload.attachments || [];
+    const cachedAttachments: { url: string; name: string; type: string }[] = [];
+    
+    if (rawAttachments.length > 0) {
+      console.log(`📎 ${rawAttachments.length} attachment(s) found - caching...`);
+      
+      for (let i = 0; i < rawAttachments.length; i++) {
+        const attachment = rawAttachments[i];
+        const cached = await cacheEmailAttachment(attachment, fromEmail, i);
+        if (cached) {
+          cachedAttachments.push(cached);
+        }
+      }
+      
+      console.log(`✅ Cached ${cachedAttachments.length}/${rawAttachments.length} attachments`);
+    }
+
+    // Initialize Supabase (use global client)
+    const supabase = supabaseGlobal;
 
     // WPW organization ID
     const WPW_ORG_ID = '51aa96db-c06d-41ae-b3cb-25b045c75caf';
@@ -191,13 +290,17 @@ serve(async (req) => {
       console.log('💬 Created new conversation:', conversation.id);
     }
 
-    // Insert the message
+    // Insert the message with cached attachments in metadata
+    const messageContent = cachedAttachments.length > 0 
+      ? `${body}\n\n[📎 ${cachedAttachments.length} file(s) attached]`
+      : body;
+      
     const { data: message, error: msgError } = await supabase
       .from('messages')
       .insert({
         conversation_id: conversation.id,
         direction: 'inbound',
-        content: body,
+        content: messageContent,
         sender_name: fromName,
         sender_email: fromEmail,
         channel: 'email',
@@ -207,6 +310,8 @@ serve(async (req) => {
           to_email: toEmail,
           recipient_inbox: recipientInbox,
           assigned_agent: assignedAgent,
+          // Store cached attachment URLs
+          attachments: cachedAttachments.length > 0 ? cachedAttachments : undefined,
         },
       })
       .select()
