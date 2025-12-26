@@ -76,6 +76,25 @@ serve(async (req) => {
     const lastYearEnd = new Date(now.getTime());
     lastYearEnd.setFullYear(lastYearEnd.getFullYear() - 1);
 
+    // Helper to fetch with retry logic for transient errors
+    async function fetchWithRetry(url: string, retries = 3, delay = 1000): Promise<Response> {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        const response = await fetch(url);
+        if (response.ok) {
+          return response;
+        }
+        // On 5xx errors, retry with exponential backoff
+        if (response.status >= 500 && attempt < retries) {
+          console.log(`[sync-woocommerce-sales] Retry ${attempt}/${retries} after ${response.status} error, waiting ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          delay *= 2; // Exponential backoff
+          continue;
+        }
+        throw new Error(`WooCommerce API error: ${response.status}`);
+      }
+      throw new Error("WooCommerce API: max retries exceeded");
+    }
+
     // Helper to fetch orders and calculate totals incrementally (no storage)
     async function fetchOrderTotals(
       afterDate: Date,
@@ -92,10 +111,7 @@ serve(async (req) => {
       const baseUrl = `${wooUrl}/wp-json/wc/v3/orders?after=${afterDate.toISOString()}&before=${beforeDate.toISOString()}&per_page=100&status=completed,processing&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
 
       while (hasMore) {
-        const response = await fetch(`${baseUrl}&page=${page}`);
-        if (!response.ok) {
-          throw new Error(`WooCommerce API error: ${response.status}`);
-        }
+        const response = await fetchWithRetry(`${baseUrl}&page=${page}`);
         
         const orders = await response.json();
         if (orders.length === 0) {
