@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, ArrowLeft, RefreshCw, Trash2, Clock, CheckCheck, Check } from "lucide-react";
+import { Send, ArrowLeft, RefreshCw, Trash2, Clock, CheckCheck, Check, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
 import { WorkStreamsSidebar, type WorkStream, mapStreamToInbox } from "@/components/mightychat/WorkStreamsSidebar";
@@ -18,6 +18,7 @@ import { AgentBadge, QuoteStatusBadge } from "@/components/mightychat/InboxFilte
 import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
 import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
 import { useMightyPermissions, isExternalConversation, getExternalHandler } from "@/hooks/useMightyPermissions";
+import { useProxyAttachment, needsProxy } from "@/hooks/useProxyAttachment";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatTimeAZ } from "@/lib/timezone";
@@ -73,25 +74,53 @@ const formatThreadText = (raw: string): string => {
     .join("\n");
 };
 
-const renderLinkifiedText = (text: string) => {
+// Component for rendering links with proxy support for blocked domains
+function LinkifiedText({ text, proxyAndOpen, loading }: { 
+  text: string; 
+  proxyAndOpen: (url: string) => Promise<void>;
+  loading: Record<string, boolean>;
+}) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
-  return parts.map((part, idx) => {
-    if (/^https?:\/\//.test(part)) {
-      return (
-        <a
-          key={`u-${idx}`}
-          href={part}
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2 break-all text-primary"
-        >
-          {part}
-        </a>
-      );
-    }
-    return <span key={`t-${idx}`}>{part}</span>;
-  });
-};
+  return (
+    <>
+      {parts.map((part, idx) => {
+        if (/^https?:\/\//.test(part)) {
+          const isBlocked = needsProxy(part);
+          const isLoading = loading[part];
+          
+          if (isBlocked) {
+            return (
+              <button
+                key={`u-${idx}`}
+                onClick={() => proxyAndOpen(part)}
+                disabled={isLoading}
+                className="underline underline-offset-2 break-all text-primary hover:text-primary/80 inline-flex items-center gap-1"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin inline" />
+                ) : null}
+                {part.length > 60 ? part.slice(0, 60) + "..." : part}
+              </button>
+            );
+          }
+          
+          return (
+            <a
+              key={`u-${idx}`}
+              href={part}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 break-all text-primary"
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={`t-${idx}`}>{part}</span>;
+      })}
+    </>
+  );
+}
 
 interface Conversation {
   id: string;
@@ -249,6 +278,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const permissions = useMightyPermissions();
+  const { proxyAndOpen, loading: proxyLoading } = useProxyAttachment();
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -829,11 +859,13 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                               )}
                             >
                               <p className="text-xs md:text-sm whitespace-pre-wrap break-all">
-                                {renderLinkifiedText(
-                                  formatThreadText(
+                                <LinkifiedText
+                                  text={formatThreadText(
                                     msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content
-                                  )
-                                )}
+                                  )}
+                                  proxyAndOpen={proxyAndOpen}
+                                  loading={proxyLoading}
+                                />
                               </p>
                             </div>
                             <button
