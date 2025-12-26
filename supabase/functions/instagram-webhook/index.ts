@@ -1,5 +1,6 @@
 // INSTAGRAM WEBHOOK WITH USERNAME/AVATAR LOOKUP + FILE HANDLING
 // Updated to load PAGE_ACCESS_TOKEN from database for 60-day token model
+// Now caches attachment files immediately to avoid expired CDN links
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -12,6 +13,68 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 // Cache for access token (refreshed once per request batch)
 let cachedAccessToken: string | null = null;
 let tokenSource: string = "unknown";
+
+// Download and store an Instagram attachment immediately to avoid expiration
+async function cacheInstagramAttachment(url: string, senderId: string, index: number): Promise<string | null> {
+  try {
+    console.log(`📥 Caching attachment ${index + 1} from: ${url.substring(0, 80)}...`);
+    
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; WrapCommandBot/1.0)"
+      }
+    });
+    
+    if (!response.ok) {
+      console.error(`❌ Failed to fetch attachment: ${response.status}`);
+      return null;
+    }
+    
+    const contentType = response.headers.get("content-type") || "application/octet-stream";
+    const buffer = await response.arrayBuffer();
+    
+    // Determine file extension from content type
+    const extMap: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/gif": "gif",
+      "image/webp": "webp",
+      "video/mp4": "mp4",
+      "video/quicktime": "mov",
+      "application/pdf": "pdf"
+    };
+    const ext = extMap[contentType] || "bin";
+    
+    // Create unique filename
+    const timestamp = Date.now();
+    const storagePath = `instagram-attachments/${senderId}/${timestamp}_${index}.${ext}`;
+    
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from("media-library")
+      .upload(storagePath, buffer, {
+        contentType,
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error(`❌ Upload failed:`, uploadError);
+      return null;
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from("media-library")
+      .getPublicUrl(storagePath);
+    
+    console.log(`✅ Cached attachment: ${urlData.publicUrl}`);
+    return urlData.publicUrl;
+    
+  } catch (err) {
+    console.error(`❌ Error caching attachment:`, err);
+    return null;
+  }
+}
 
 // Load access token from database (preferred) or fallback to secret
 async function getAccessToken(): Promise<string> {
@@ -199,17 +262,31 @@ serve(async (req) => {
       const senderId = event.sender?.id || "unknown";
       const text = event.message?.text || "";
       
-      // *** NEW: Extract file attachments ***
+      // *** Extract and CACHE file attachments immediately ***
       const attachments = event.message?.attachments || [];
       const hasFiles = attachments.length > 0;
-      const fileUrls = attachments
+      const originalFileUrls = attachments
         .map((a: any) => a.payload?.url)
         .filter(Boolean);
 
       console.log(`Received DM from ${senderId}: "${text}"`);
       if (hasFiles) {
-        console.log(`📁 ${attachments.length} file(s) attached:`, fileUrls);
+        console.log(`📁 ${attachments.length} file(s) attached - caching immediately...`);
       }
+
+      // Cache attachments IMMEDIATELY before they expire
+      const cachedFileUrls: string[] = [];
+      for (let i = 0; i < originalFileUrls.length; i++) {
+        const cachedUrl = await cacheInstagramAttachment(originalFileUrls[i], senderId, i);
+        if (cachedUrl) {
+          cachedFileUrls.push(cachedUrl);
+        } else {
+          // Keep original URL as fallback (may already be expired)
+          cachedFileUrls.push(originalFileUrls[i]);
+        }
+      }
+      
+      const fileUrls = cachedFileUrls; // Use cached URLs from now on
 
       // ---------------------------------------------------------------------
       // 3. FETCH INSTAGRAM USER PROFILE
