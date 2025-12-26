@@ -764,12 +764,84 @@ EMIT THIS BLOCK NOW. Do not ask for clarification.
       const confirmed = agentMessage.toLowerCase().includes("ready when you say go") ||
                        agentMessage.toLowerCase().includes("i understand. i will");
 
+      // Check if this is a CREATE_CONTENT block output from Noah/Emily
+      const hasCreateContentBlock = agentMessage.includes("===CREATE_CONTENT===");
+      
+      // Check if user is saying "deploy" after CREATE_CONTENT was generated
+      const lowerUserMessage = message.toLowerCase();
+      const isDeployCommand = lowerUserMessage.includes("deploy") || 
+                              lowerUserMessage.includes("send it") ||
+                              lowerUserMessage.includes("go live") ||
+                              lowerUserMessage.includes("publish") ||
+                              lowerUserMessage.includes("post it");
+      
+      // Look for previous CREATE_CONTENT in chat history
+      const previousMessages = chatHistory || [];
+      const lastAgentMessage = previousMessages.filter((m: any) => m.sender === "agent").pop();
+      const hadCreateContentBefore = lastAgentMessage?.content?.includes("===CREATE_CONTENT===");
+      
+      // If user says deploy and we had CREATE_CONTENT, route to content_drafts
+      let contentDraftCreated = false;
+      let contentDraftId = null;
+      
+      if (isDeployCommand && hadCreateContentBefore && 
+          (chat?.agent_id === "noah_bennett" || chat?.agent_id === "emily_carter")) {
+        console.log("[agent-chat] Deploy command detected after CREATE_CONTENT - routing to content_drafts");
+        
+        // Parse the CREATE_CONTENT block from the previous message
+        const createContentMatch = lastAgentMessage.content.match(/===CREATE_CONTENT===[\s\S]*?===END_CREATE_CONTENT===/);
+        if (createContentMatch) {
+          const contentBlock = createContentMatch[0];
+          
+          // Extract fields from the block
+          const contentType = contentBlock.match(/content_type:\s*(\w+)/)?.[1] || "reel";
+          const platform = contentBlock.match(/platform:\s*(\w+)/)?.[1] || "instagram";
+          const caption = contentBlock.match(/caption:\s*(.+?)(?=\n|===)/)?.[1]?.trim() || "";
+          const hashtags = contentBlock.match(/hashtags:\s*(.+?)(?=\n|===)/)?.[1]?.trim()?.split(/\s+/) || [];
+          
+          // Find media URL from attached_assets or elsewhere
+          const mediaUrlMatch = contentBlock.match(/url:\s*(https?:\/\/[^\s\n]+)/);
+          const mediaUrl = mediaUrlMatch?.[1] || null;
+          
+          // Create content_draft entry for Ops Desk to execute
+          const { data: draft, error: draftError } = await supabase
+            .from("content_drafts")
+            .insert({
+              organization_id: chat?.organization_id,
+              created_by_agent: chat?.agent_id,
+              content_type: contentType,
+              platform: platform,
+              media_url: mediaUrl,
+              caption: caption,
+              hashtags: hashtags,
+              status: "pending_review",
+            })
+            .select()
+            .single();
+          
+          if (draftError) {
+            console.error("[agent-chat] Failed to create content_draft:", draftError);
+          } else {
+            contentDraftCreated = true;
+            contentDraftId = draft.id;
+            console.log(`[agent-chat] Created content_draft ${draft.id} - routing to Ops Desk for publishing`);
+          }
+        }
+      }
+
       // Save agent response
       await supabase.from("agent_chat_messages").insert({
         agent_chat_id: chat_id,
         sender: "agent",
-        content: agentMessage,
-        metadata: { confirmed },
+        content: contentDraftCreated 
+          ? `${agentMessage}\n\n✅ **Content queued for publishing!** Routing to Ops Desk for review and scheduling. You'll see it in the Content Drafts queue.`
+          : agentMessage,
+        metadata: { 
+          confirmed, 
+          has_create_content: hasCreateContentBlock,
+          content_draft_id: contentDraftId,
+          content_draft_created: contentDraftCreated,
+        },
       });
 
       // Update chat status if confirmed
@@ -783,9 +855,13 @@ EMIT THIS BLOCK NOW. Do not ask for clarification.
       return new Response(
         JSON.stringify({
           success: true,
-          message: agentMessage,
+          message: contentDraftCreated 
+            ? `${agentMessage}\n\n✅ **Content queued for publishing!** Routing to Ops Desk for review and scheduling.`
+            : agentMessage,
           confirmed,
           suggested_task: confirmed ? extractSuggestedTask(agentMessage) : null,
+          content_draft_created: contentDraftCreated,
+          content_draft_id: contentDraftId,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

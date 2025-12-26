@@ -1658,6 +1658,96 @@ export type Database = {
           },
         ]
       }
+      content_drafts: {
+        Row: {
+          caption: string | null
+          content_type: string
+          created_at: string | null
+          created_by: string | null
+          created_by_agent: string | null
+          hashtags: string[] | null
+          id: string
+          media_url: string | null
+          organization_id: string | null
+          platform: string
+          platform_post_id: string | null
+          publish_error: string | null
+          published_at: string | null
+          published_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scheduled_for: string | null
+          status: string
+          task_id: string | null
+          thumbnail_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          caption?: string | null
+          content_type: string
+          created_at?: string | null
+          created_by?: string | null
+          created_by_agent?: string | null
+          hashtags?: string[] | null
+          id?: string
+          media_url?: string | null
+          organization_id?: string | null
+          platform: string
+          platform_post_id?: string | null
+          publish_error?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_for?: string | null
+          status?: string
+          task_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          caption?: string | null
+          content_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          created_by_agent?: string | null
+          hashtags?: string[] | null
+          id?: string
+          media_url?: string | null
+          organization_id?: string | null
+          platform?: string
+          platform_post_id?: string | null
+          publish_error?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scheduled_for?: string | null
+          status?: string
+          task_id?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_drafts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_drafts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_files: {
         Row: {
           ai_labels: Json | null
