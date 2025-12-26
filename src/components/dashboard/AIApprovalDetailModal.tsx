@@ -20,8 +20,10 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Send, XCircle, User, Bot, Mail, Car, DollarSign, 
   MessageSquare, FileText, Clock, Loader2, Image, X, Maximize2, Paperclip,
-  Instagram, AtSign, Globe
+  Instagram, AtSign, Globe, ExternalLink
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { 
@@ -100,6 +102,7 @@ export function AIApprovalDetailModal({
   onReject,
   isProcessing,
 }: AIApprovalDetailModalProps) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedTone, setSelectedTone] = useState("installer");
@@ -107,14 +110,70 @@ export function AIApprovalDetailModal({
   const [quoteData, setQuoteData] = useState<any>(null);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [fallbackOriginalMessage, setFallbackOriginalMessage] = useState<string | null>(null);
+  const [conversationMeta, setConversationMeta] = useState<{ channel: string; recipient_inbox: string | null } | null>(null);
 
   useEffect(() => {
     if (open && action) {
       fetchConversation();
       fetchQuoteData();
       fetchOriginalMessageFallback();
+      fetchConversationMeta();
     }
   }, [open, action]);
+
+  // Fetch conversation metadata for "View Full Thread" navigation
+  const fetchConversationMeta = async () => {
+    if (!action?.action_payload?.conversation_id) {
+      setConversationMeta(null);
+      return;
+    }
+    
+    try {
+      const { data } = await supabase
+        .from("conversations")
+        .select("channel, recipient_inbox")
+        .eq("id", action.action_payload.conversation_id)
+        .maybeSingle();
+      
+      if (data) {
+        setConversationMeta(data);
+      }
+    } catch (err) {
+      console.error("Error fetching conversation meta:", err);
+    }
+  };
+
+  // Map conversation channel/inbox to WorkStream for navigation
+  const getWorkStream = (channel: string | null, inbox: string | null): string => {
+    if (!channel) return "quotes";
+    const ch = channel.toLowerCase();
+    
+    if (ch === "website" || ch === "website_chat") return "website";
+    if (ch === "instagram" || ch === "facebook" || ch === "messenger") return "dms";
+    if (ch === "email") {
+      const ib = inbox?.toLowerCase() || "";
+      if (ib.includes("design")) return "design";
+      if (ib.includes("jackson")) return "ops";
+      return "quotes";
+    }
+    return "quotes";
+  };
+
+  const handleViewFullThread = () => {
+    const conversationId = action?.action_payload?.conversation_id;
+    if (!conversationId) {
+      toast.error("No conversation linked to this action");
+      return;
+    }
+    
+    const stream = conversationMeta 
+      ? getWorkStream(conversationMeta.channel, conversationMeta.recipient_inbox)
+      : "quotes";
+    
+    // Navigate to MightyChat with conversation pre-selected
+    navigate(`/mightychat?id=${conversationId}&stream=${stream}`);
+    onOpenChange(false);
+  };
 
   // Fetch original message from messages table as fallback
   const fetchOriginalMessageFallback = async () => {
@@ -410,11 +469,22 @@ export function AIApprovalDetailModal({
         <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Conversation History */}
           <div className="w-1/2 border-r border-border flex flex-col">
-            <div className="p-3 border-b border-border bg-secondary/30">
+            <div className="p-3 border-b border-border bg-secondary/30 flex items-center justify-between">
               <h3 className="text-sm font-medium flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 Conversation History
               </h3>
+              {action?.action_payload?.conversation_id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleViewFullThread}
+                  className="h-7 text-xs gap-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  View Full Thread
+                </Button>
+              )}
             </div>
             <ScrollArea className="flex-1 p-4">
               {loadingMessages ? (

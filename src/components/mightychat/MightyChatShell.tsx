@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AgentMightyChatLayout } from "./AgentMightyChatLayout";
 import { OpsDeskScreen } from "./OpsDeskScreen";
@@ -9,14 +10,32 @@ import { AskAgentButton } from "./AskAgentButton";
 import { AIStatusController } from "./AIStatusController";
 import { MessageSquare, ClipboardList, Brain, History, Bot, Film, Sparkles, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { WorkStream } from "./WorkStreamsSidebar";
 
 export type MightyMode = "chat" | "ops" | "review" | "history" | "agents";
 
 export function MightyChatShell() {
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<MightyMode>("review");
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedConversationChannel, setSelectedConversationChannel] = useState<string | null>(null);
   const [selectedAgentChatId, setSelectedAgentChatId] = useState<string | null>(null);
+  const [initialStream, setInitialStream] = useState<WorkStream | null>(null);
+
+  // Handle URL params for deep-linking from AI Approval modal
+  useEffect(() => {
+    const id = searchParams.get("id");
+    const stream = searchParams.get("stream") as WorkStream | null;
+    
+    if (id) {
+      setSelectedConversationId(id);
+      setMode("chat");
+      
+      if (stream && ["website", "quotes", "design", "dms", "ops"].includes(stream)) {
+        setInitialStream(stream);
+      }
+    }
+  }, [searchParams]);
 
   const handleSelectConversation = (conversationId: string, channel?: string) => {
     setSelectedConversationId(conversationId);
@@ -108,6 +127,7 @@ export function MightyChatShell() {
             initialConversationId={selectedConversationId}
             initialConversationChannel={selectedConversationChannel}
             initialAgentChatId={selectedAgentChatId}
+            initialStream={initialStream}
           />
         )}
         {mode === "agents" && (
