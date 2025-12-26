@@ -20,6 +20,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ContentToolsNav } from "@/components/content/ContentToolsNav";
 
 export default function OrganicHub() {
   const navigate = useNavigate();
@@ -129,6 +130,11 @@ export default function OrganicHub() {
 
   return (
     <div className="min-h-screen bg-background p-6 space-y-8">
+      {/* Unified Content Tools Navigation */}
+      <div className="max-w-6xl mx-auto">
+        <ContentToolsNav />
+      </div>
+
       {/* Header */}
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

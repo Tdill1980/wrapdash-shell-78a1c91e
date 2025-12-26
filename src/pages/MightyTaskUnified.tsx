@@ -39,6 +39,7 @@ import { DailyFlywheel } from "@/components/mightytask/DailyFlywheel";
 import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
 import { AVAILABLE_AGENTS } from "@/components/mightychat/AgentSelector";
 import { TaskDetailModal } from "@/components/mightytask/TaskDetailModal";
+import { ContentToolsNav } from "@/components/content/ContentToolsNav";
 
 // Channel configuration
 type ChannelKey = 'all' | 'ink_edge_publisher' | 'wpw' | 'wraptvworld' | 'ink_edge_content';
@@ -400,6 +401,9 @@ export default function MightyTaskUnified() {
   return (
     <MainLayout>
       <div className="space-y-6 w-full p-6">
+        {/* Unified Content Tools Navigation */}
+        <ContentToolsNav />
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

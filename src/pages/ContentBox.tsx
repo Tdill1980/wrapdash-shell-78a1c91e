@@ -42,6 +42,7 @@ import { StaticAdDesigner } from "@/components/ads/StaticAdDesigner";
 import { InspirationAIPanel } from "@/components/contentbox/InspirationAIPanel";
 import { ContentRequestPanel } from "@/components/contentbox/ContentRequestPanel";
 import { BulkVariationGenerator } from "@/components/content/BulkVariationGenerator";
+import { ContentToolsNav } from "@/components/content/ContentToolsNav";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -477,6 +478,11 @@ export default function ContentBox() {
 
       {/* Content Request Panel - Ask the right agent */}
       <ContentRequestPanel />
+
+      {/* Unified Content Tools Navigation */}
+      <div className="mb-4">
+        <ContentToolsNav />
+      </div>
 
       {/* Header - Mobile Responsive */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
