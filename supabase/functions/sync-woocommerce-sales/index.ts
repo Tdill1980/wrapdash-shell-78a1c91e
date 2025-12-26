@@ -139,8 +139,22 @@ serve(async (req) => {
       return { revenue, count, todayRevenue };
     }
 
-    console.log("[sync-woocommerce-sales] Fetching current month orders...");
-    const current = await fetchOrderTotals(monthStart, monthEnd, todayStart);
+    let currentRevenue = 0;
+    let orderCount = 0;
+    let todayRevenue = 0;
+    let currentFetchError: string | null = null;
+
+    try {
+      console.log("[sync-woocommerce-sales] Fetching current month orders...");
+      const current = await fetchOrderTotals(monthStart, monthEnd, todayStart);
+      currentRevenue = current.revenue;
+      orderCount = current.count;
+      todayRevenue = current.todayRevenue;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      currentFetchError = msg;
+      console.error("[sync-woocommerce-sales] Current month fetch failed:", e);
+    }
 
     // Last year fetch - best effort, don't fail if it errors
     let lastYearRevenue: number | null = null;
@@ -156,10 +170,10 @@ serve(async (req) => {
     }
 
     // Calculate metrics
-    const yoyDifference = lastYearRevenue != null ? current.revenue - lastYearRevenue : null;
+    const yoyDifference = lastYearRevenue != null ? currentRevenue - lastYearRevenue : null;
     const yoyPercentChange =
       lastYearRevenue != null && lastYearRevenue > 0
-        ? ((current.revenue - lastYearRevenue) / lastYearRevenue) * 100
+        ? ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100
         : null;
 
     const MONTHLY_TARGET = 400000;
@@ -167,28 +181,34 @@ serve(async (req) => {
     const daysInMonth = new Date(tzYear, tzMonth0 + 1, 0).getDate();
     const daysElapsed = tzDay;
     const daysRemaining = daysInMonth - daysElapsed;
-    const remainingTarget = MONTHLY_TARGET - current.revenue;
+    const remainingTarget = MONTHLY_TARGET - currentRevenue;
     const dailyPaceRequired = daysRemaining > 0 ? remainingTarget / daysRemaining : 0;
-    const percentComplete = (current.revenue / MONTHLY_TARGET) * 100;
-
-    const expectedPercent = (daysElapsed / daysInMonth) * 100;
-    const progressDiff = percentComplete - expectedPercent;
+    const percentComplete = (currentRevenue / MONTHLY_TARGET) * 100;
 
     let status: string;
-    if (percentComplete >= 100) {
-      status = "AHEAD";
-    } else if (progressDiff >= 5) {
-      status = "AHEAD";
-    } else if (progressDiff >= -10) {
-      status = "ON_TRACK";
-    } else if (progressDiff >= -25) {
-      status = "BEHIND";
+    if (currentFetchError) {
+      status = "UNAVAILABLE";
     } else {
-      status = "CRITICAL";
+      const expectedPercent = (daysElapsed / daysInMonth) * 100;
+      const progressDiff = percentComplete - expectedPercent;
+
+      if (percentComplete >= 100) {
+        status = "AHEAD";
+      } else if (progressDiff >= 5) {
+        status = "AHEAD";
+      } else if (progressDiff >= -10) {
+        status = "ON_TRACK";
+      } else if (progressDiff >= -25) {
+        status = "BEHIND";
+      } else {
+        status = "CRITICAL";
+      }
     }
 
     const suggestions: string[] = [];
-    if (status === "CRITICAL" || status === "BEHIND") {
+    if (status === "UNAVAILABLE") {
+      suggestions.push("Sales data source is temporarily unavailable. Please retry in a few minutes.");
+    } else if (status === "CRITICAL" || status === "BEHIND") {
       suggestions.push(
         `Send promotional email - potential to recover $${Math.round(remainingTarget * 0.1).toLocaleString()}`,
         "Follow up on pending quotes from last 30 days",
@@ -197,9 +217,9 @@ serve(async (req) => {
     }
 
     const result = {
-      currentRevenue: current.revenue,
-      orderCount: current.count,
-      todayRevenue: current.todayRevenue,
+      currentRevenue,
+      orderCount,
+      todayRevenue,
       daysElapsed,
       daysRemaining,
       dailyPaceRequired,
@@ -214,10 +234,12 @@ serve(async (req) => {
       suggestions,
       dataSource: "woocommerce",
       lastUpdated: new Date().toISOString(),
+      ...(currentFetchError ? { error: "woocommerce_unavailable", message: currentFetchError } : {}),
     };
 
     console.log("[sync-woocommerce-sales] Done:", result.currentRevenue, "revenue,", result.orderCount, "orders");
 
+    // IMPORTANT: return 200 even when WooCommerce is flaky, so the UI can render a fallback state.
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
