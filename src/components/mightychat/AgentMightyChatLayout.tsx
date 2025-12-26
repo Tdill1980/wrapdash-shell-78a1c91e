@@ -94,6 +94,7 @@ interface AgentMightyChatLayoutProps {
   initialConversationId?: string | null;
   initialConversationChannel?: string | null;
   initialAgentChatId?: string | null;
+  initialStream?: WorkStream | null;
 }
 
 // Empty state explanations for each stream
@@ -185,7 +186,7 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
   );
 }
 
-export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, initialConversationChannel, initialAgentChatId }: AgentMightyChatLayoutProps) {
+export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, initialConversationChannel, initialAgentChatId, initialStream }: AgentMightyChatLayoutProps) {
   const [searchParams] = useSearchParams();
   const selectedId = searchParams.get("id");
   
@@ -194,7 +195,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeStream, setActiveStream] = useState<WorkStream>('quotes'); // Default to quotes (hello@ inbox) which typically has most traffic
+  const [activeStream, setActiveStream] = useState<WorkStream>(initialStream || 'quotes'); // Default to quotes (hello@ inbox) which typically has most traffic
+
+  // Handle initialStream from URL params
+  useEffect(() => {
+    if (initialStream) {
+      setActiveStream(initialStream);
+    }
+  }, [initialStream]);
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showAgentChatPanel, setShowAgentChatPanel] = useState(false);
