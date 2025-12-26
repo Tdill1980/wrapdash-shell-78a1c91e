@@ -26,6 +26,7 @@ import { MusicMatcher } from "@/components/mighty-edit/MusicMatcher";
 import { RenderQueue } from "@/components/mighty-edit/RenderQueue";
 import { ClipPreview } from "@/components/mighty-edit/ClipPreview";
 import { RenderResult } from "@/components/mighty-edit/RenderResult";
+import { ContentToolsNav } from "@/components/content/ContentToolsNav";
 
 interface ContentFactoryPreset {
   action?: string;
@@ -330,6 +331,9 @@ export default function MightyEdit() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Unified Content Tools Navigation */}
+        <ContentToolsNav />
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
