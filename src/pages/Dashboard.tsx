@@ -45,6 +45,7 @@ import { ContentFactoryCard } from "@/components/dashboard/ContentFactoryCard";
 import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
 import { SalesGoalTracker } from "@/components/dashboard/SalesGoalTracker";
 import { AIApprovalsCard } from "@/components/dashboard/AIApprovalsCard";
+import { ContentToolsCard } from "@/components/dashboard/ContentToolsCard";
 
 const metrics = [
   {
@@ -853,6 +854,9 @@ export default function Dashboard() {
         
         {/* AI Content Factory Card */}
         <ContentFactoryCard />
+        
+        {/* Content Tools Quick Access */}
+        <ContentToolsCard />
         
         {/* UTIM Analytics Dashboard */}
         <UTIMAnalyticsDashboard />
