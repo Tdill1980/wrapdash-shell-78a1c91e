@@ -227,6 +227,18 @@ serve(async (req) => {
       // Extract vehicle info from email content
       const vehicleInfo = extractVehicleInfo(emailContent);
       
+      // Extract plain text from email body for sourceMessage
+      const plainTextContent = body
+        .replace(/<[^>]*>/g, ' ')    // Strip HTML tags
+        .replace(/&nbsp;/g, ' ')      // Replace HTML entities
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/\s+/g, ' ')         // Normalize whitespace
+        .trim()
+        .substring(0, 1000);          // Limit length
+      
       try {
         const { data: quoteResult, error: quoteError } = await supabase.functions.invoke('ai-auto-quote', {
           body: {
@@ -240,6 +252,7 @@ serve(async (req) => {
             source: 'email',
             notes: `Auto-generated from email. Subject: ${subject}`,
             conversationId: conversation?.id,
+            sourceMessage: plainTextContent || body.substring(0, 1000), // Pass original message content
           },
         });
 
