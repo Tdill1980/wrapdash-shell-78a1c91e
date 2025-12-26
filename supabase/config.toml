@@ -245,3 +245,6 @@ verify_jwt = false
 
 [functions.mux-stitch-reel]
 verify_jwt = false
+
+[functions.publish-content]
+verify_jwt = false

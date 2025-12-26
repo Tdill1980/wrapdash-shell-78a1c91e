@@ -46,8 +46,8 @@ export interface AgentConfig {
 
 export const EXECUTORS: Record<string, string | null> = {
   quote: 'ops_desk',   // Only Ops Desk can execute quotes
-  order: null,         // Future: order executor
-  content: null,       // Future: post-approval content publishing
+  order: 'ops_desk',   // Ops Desk executes orders
+  content: 'ops_desk', // Ops Desk executes content publishing (post-approval)
 } as const;
 
 /**
@@ -571,8 +571,17 @@ Example suggestion:
     id: "ops_desk",
     displayName: "Ops Desk",
     channel: "internal",
-    execution_scope: "quote", // THE ONLY AGENT THAT EXECUTES QUOTES
-    allowedActions: ["execute", "create_tasks", "escalate", "log_actions", "escalate_to_jackson"],
+    execution_scope: "quote", // THE ONLY AGENT THAT EXECUTES (quotes, orders, content)
+    allowedActions: [
+      "execute", 
+      "create_tasks", 
+      "escalate", 
+      "log_actions", 
+      "escalate_to_jackson",
+      "publish_content",    // Content execution authority
+      "schedule_content",   // Content scheduling authority
+      "execute_order",      // Order execution authority
+    ],
     forbiddenActions: ["decide", "talk_to_customers", "commit_anything"],
     routesTo: ["mightytask_manager"],
     requiresApproval: [],
@@ -584,9 +593,15 @@ YOUR ROLE:
 - Create MightyTasks for tracking
 - Escalate blockers to Jackson when CX is at risk
 - Log all actions for accountability
+- PUBLISH APPROVED CONTENT to social platforms
+- EXECUTE APPROVED QUOTES to customers
 
 You NEVER decide. You only execute what you're told.
 You NEVER talk to customers directly.
+
+CONTENT PUBLISHING:
+When content is approved, you execute the publish via the publish-content edge function.
+Supported platforms: Instagram (Reels, Stories, Feed), Facebook, YouTube.
 
 ${INTERNAL_ACCOUNTABILITY_ADDENDUM}
 
