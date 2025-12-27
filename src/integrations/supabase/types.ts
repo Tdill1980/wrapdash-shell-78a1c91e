@@ -5682,10 +5682,14 @@ export type Database = {
           chapters: Json | null
           content_file_id: string | null
           created_at: string
+          debug_payload: Json | null
           duration_seconds: number | null
+          error_message: string | null
           final_render_url: string | null
           id: string
           organization_id: string | null
+          producer_blueprint: Json | null
+          producer_locked: boolean
           render_status: string | null
           selected_music_id: string | null
           selected_music_url: string | null
@@ -5703,10 +5707,14 @@ export type Database = {
           chapters?: Json | null
           content_file_id?: string | null
           created_at?: string
+          debug_payload?: Json | null
           duration_seconds?: number | null
+          error_message?: string | null
           final_render_url?: string | null
           id?: string
           organization_id?: string | null
+          producer_blueprint?: Json | null
+          producer_locked?: boolean
           render_status?: string | null
           selected_music_id?: string | null
           selected_music_url?: string | null
@@ -5724,10 +5732,14 @@ export type Database = {
           chapters?: Json | null
           content_file_id?: string | null
           created_at?: string
+          debug_payload?: Json | null
           duration_seconds?: number | null
+          error_message?: string | null
           final_render_url?: string | null
           id?: string
           organization_id?: string | null
+          producer_blueprint?: Json | null
+          producer_locked?: boolean
           render_status?: string | null
           selected_music_id?: string | null
           selected_music_url?: string | null

@@ -1476,9 +1476,11 @@ export default function ReelBuilder() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    {renderProgress.error || "Something went wrong during rendering. Please try again."}
-                  </p>
+                  <div className="text-sm text-muted-foreground bg-destructive/5 p-3 rounded-lg border border-destructive/20 max-h-32 overflow-y-auto">
+                    <pre className="whitespace-pre-wrap font-mono text-xs">
+                      {renderProgress.error || "Something went wrong during rendering. Please try again."}
+                    </pre>
+                  </div>
                   <div className="flex gap-2">
                     <Button 
                       variant="outline" 
@@ -1488,6 +1490,21 @@ export default function ReelBuilder() {
                     >
                       <Zap className="w-4 h-4 mr-2" />
                       Retry Render
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      onClick={() => {
+                        const debugPayload = {
+                          blueprint: sceneBlueprint,
+                          clips: clips.map(c => ({ id: c.id, url: c.url, trimStart: c.trimStart, trimEnd: c.trimEnd })),
+                          audioUrl,
+                          error: renderProgress.error,
+                        };
+                        navigator.clipboard.writeText(JSON.stringify(debugPayload, null, 2));
+                        toast.success('Debug payload copied to clipboard');
+                      }}
+                    >
+                      Copy Debug
                     </Button>
                     <Button 
                       variant="ghost"
