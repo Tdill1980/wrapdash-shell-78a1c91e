@@ -4921,6 +4921,56 @@ export type Database = {
           },
         ]
       }
+      saved_views: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          filter_json: Json
+          id: string
+          is_system: boolean
+          name: string
+          organization_id: string | null
+          sort_json: Json
+          target_file_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filter_json?: Json
+          id?: string
+          is_system?: boolean
+          name: string
+          organization_id?: string | null
+          sort_json?: Json
+          target_file_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filter_json?: Json
+          id?: string
+          is_system?: boolean
+          name?: string
+          organization_id?: string | null
+          sort_json?: Json
+          target_file_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_views_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shopflow_logs: {
         Row: {
           created_at: string
