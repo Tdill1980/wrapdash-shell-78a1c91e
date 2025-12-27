@@ -278,7 +278,16 @@ export function useAgentChat(): UseAgentChatReturn {
     }
   }, [chatId]);
 
-  const delegateTask = useCallback(async (description: string): Promise<{ success: boolean; taskId?: string }> => {
+  const delegateTask = useCallback(async (description: string, contextOverrides?: Record<string, unknown>): Promise<{ 
+    success: boolean; 
+    taskId?: string;
+    execution?: {
+      success: boolean;
+      status?: string;
+      output_url?: string;
+      error?: string;
+    };
+  }> => {
     if (!chatId || !confirmed) {
       toast.error("Cannot delegate: agent has not confirmed understanding");
       return { success: false };
@@ -295,13 +304,31 @@ export function useAgentChat(): UseAgentChatReturn {
           description,
           // IMPORTANT: `tasks.assigned_to` is a UUID in the database
           assigned_to: userId,
+          // Pass additional context for execution
+          ...contextOverrides,
         },
       });
 
       if (error) throw error;
 
-      toast.success("Task delegated successfully");
-      return { success: true, taskId: data.task_id };
+      // Check if execution was successful
+      const executionSuccess = data.execution?.success !== false;
+      const executionMessage = executionSuccess 
+        ? "Task delegated and execution started!" 
+        : "Task delegated (execution pending)";
+      
+      toast.success(executionMessage);
+      
+      return { 
+        success: true, 
+        taskId: data.task_id,
+        execution: data.execution ? {
+          success: data.execution.success,
+          status: data.execution.status,
+          output_url: data.execution.output_url,
+          error: data.execution_error || data.execution.error,
+        } : undefined,
+      };
     } catch (err) {
       console.error("Delegate error:", err);
       toast.error("Failed to delegate task");

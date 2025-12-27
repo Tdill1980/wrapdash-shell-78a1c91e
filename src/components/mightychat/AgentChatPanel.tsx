@@ -262,6 +262,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
     if (result.success) {
       setShowDelegateModal(false);
     }
+    return result;
   }, [delegateTask]);
 
   const handleResumeChat = useCallback(async (existingChatId: string) => {
