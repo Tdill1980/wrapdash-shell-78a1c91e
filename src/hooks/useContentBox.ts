@@ -190,23 +190,27 @@ export function useContentBox() {
 
       if (error) throw error;
 
-      // Auto-analyze on upload (non-blocking, async)
-      // Only runs if not already analyzed and not manually overridden
-      if (data && !data.visual_analyzed_at) {
-        const visualTags = data.visual_tags as Record<string, unknown> | null;
-        const manualOverride = visualTags?.meta && (visualTags.meta as Record<string, unknown>)?.manual_override;
-        
-        if (!manualOverride) {
-          // Fire and forget - don't block upload
-          if (fileType === 'video') {
-            supabase.functions.invoke('ai-analyze-video-frame', {
-              body: { file_id: data.id, file_url: publicUrl }
-            }).catch(err => console.error('Auto-analyze video failed:', err));
-          } else if (fileType === 'image') {
-            supabase.functions.invoke('ai-analyze-image', {
-              body: { file_id: data.id, file_url: publicUrl }
-            }).catch(err => console.error('Auto-analyze image failed:', err));
-          }
+      // Auto-analyze on upload (non-blocking, safe)
+      const visualTags = data?.visual_tags as Record<string, unknown> | null;
+      const metaObj = visualTags?.meta as Record<string, unknown> | undefined;
+      const manualOverride = metaObj?.manual_override === true;
+      
+      if (
+        data &&
+        !data.visual_analyzed_at &&
+        !manualOverride &&
+        data.content_category !== 'inspo_reference'
+      ) {
+        if (fileType === 'video') {
+          supabase.functions.invoke('ai-analyze-video-frame', {
+            body: { video_id: data.id }
+          }).catch(err => console.error('Auto-analyze video failed:', err));
+        }
+
+        if (fileType === 'image') {
+          supabase.functions.invoke('ai-analyze-image', {
+            body: { content_file_id: data.id }
+          }).catch(err => console.error('Auto-analyze image failed:', err));
         }
       }
 
