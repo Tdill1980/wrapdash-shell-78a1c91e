@@ -33,6 +33,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { SceneBlueprint, SceneBlueprintScene, validateBlueprint, createTestBlueprint } from "@/types/SceneBlueprint";
+import { AutoCreateInput, AutoCreateNavigationState } from "@/types/AutoCreateInput";
 import { CreativeAssembly } from "@/lib/editor-brain/creativeAssembler";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
@@ -83,30 +84,14 @@ interface Clip {
   reason?: string;
 }
 
-interface AutoCreateState {
-  autoCreatedClips?: Array<{
-    id: string;
-    order: number;
-    trim_start: number;
-    trim_end: number;
-    reason?: string;
-    suggested_overlay?: string;
-    file_url?: string;
-    thumbnail_url?: string;
-    original_filename?: string;
-    duration_seconds?: number;
-  }>;
-  reelConcept?: string;
-  suggestedHook?: string;
-  suggestedCta?: string;
-  musicVibe?: string;
-  autoRunSmartAssist?: boolean;
-}
-
 export default function ReelBuilder() {
   const navigate = useNavigate();
   const location = useLocation();
-  const autoCreateState = location.state as AutoCreateState | undefined;
+  const autoCreateState = location.state as AutoCreateNavigationState | undefined;
+  
+  // ============ DETERMINISTIC AUTO-CREATE FLAG ============
+  // Prevents double-execution when coming from MightyTask/Calendar
+  const hasAutoCreatedFromInput = useRef(false);
 
   const [clips, setClips] = useState<Clip[]>([]);
   const [selectedClip, setSelectedClip] = useState<string | null>(null);
@@ -777,6 +762,141 @@ export default function ReelBuilder() {
 
     runAutoProcess();
   }, [autoCreateState]);
+
+  // ============ DETERMINISTIC AUTO-CREATE FROM MIGHTYTASK/CALENDAR ============
+  // This fires ONCE when autoCreate + autoCreateInput is passed from navigation
+  // No guessing, no defaults - uses the exact contract from the source
+  useEffect(() => {
+    const input = autoCreateState?.autoCreateInput;
+    const shouldAutoCreate = autoCreateState?.autoCreate;
+
+    // Skip if not a deterministic auto-create request
+    if (!shouldAutoCreate || !input) return;
+    // Prevent double-execution
+    if (hasAutoCreatedFromInput.current) return;
+    
+    hasAutoCreatedFromInput.current = true;
+    
+    console.log('🚀 DETERMINISTIC AUTO-CREATE STARTING WITH INPUT:', input);
+    
+    // Set the format based on input.style
+    const format = input.style as DaraFormatType;
+    setSelectedDaraFormat(format as DaraFormat);
+    
+    // Set content metadata from input
+    setContentMetadata({
+      brand: input.brand || 'wpw',
+      channel: '',
+      contentPurpose: 'organic',
+      platform: input.platform,
+      contentType: input.contentType,
+    });
+    
+    // Set UI state from input
+    setReelConcept(input.topic);
+    setSuggestedHook(input.hook || null);
+    setSuggestedCta(input.cta || null);
+    
+    // Run the auto-create with the input
+    handleAIAutoCreateWithInput(input);
+    
+  }, [autoCreateState]);
+
+  // ============ HANDLE AUTO-CREATE WITH DETERMINISTIC INPUT ============
+  // This reads the contract and configures everything - no defaults, no guessing
+  const handleAIAutoCreateWithInput = async (input: AutoCreateInput) => {
+    setIsAutoProcessing(true);
+    
+    try {
+      console.log('🎬 Running auto-create with input:', input);
+      
+      // Run AI auto-create with the style from input
+      const result = await autoCreateReel.autoCreate({
+        maxVideos: 50,
+        daraFormat: input.style as DaraFormatType,
+      });
+      
+      if (result && result.selected_videos && result.selected_videos.length > 0) {
+        // Load the AI-selected clips directly
+        const newClips: Clip[] = result.selected_videos
+          .sort((a, b) => a.order - b.order)
+          .map((video) => ({
+            id: video.id,
+            name: video.original_filename || `Clip ${video.order}`,
+            url: video.file_url || "",
+            duration: video.duration_seconds || 10,
+            thumbnail: video.thumbnail_url,
+            trimStart: video.trim_start || 0,
+            trimEnd: video.trim_end || (video.duration_seconds || 10),
+            speed: 1,
+            suggestedOverlay: video.suggested_overlay,
+            reason: video.reason,
+          }));
+
+        setClips(newClips);
+        
+        // Store extracted visual style for rendering
+        if (result.extracted_style) {
+          setExtractedInspoStyle(result.extracted_style);
+        }
+
+        // ============ AUTO-CREATE BLUEPRINT FROM AI-SELECTED CLIPS ============
+        const blueprint = buildBlueprintFromAutoCreate(newClips, {
+          suggested_cta: input.cta || result.suggested_cta,
+          reel_concept: input.topic, // Use the exact topic from calendar
+        }, input.platform);
+        setSceneBlueprint(blueprint);
+        console.log("✅ Blueprint created from deterministic input:", blueprint.id);
+
+        // Apply the hook from INPUT (not AI-generated) as overlay
+        if (input.hook) {
+          overlaysEngine.clearOverlays();
+          overlaysEngine.addOverlay({
+            text: input.hook,
+            style: "modern",
+            position: "top-center",
+            start: 0,
+            end: 3,
+            color: result.extracted_style?.text_color || "#E1306C",
+          });
+        }
+
+        // ============ AUTO-GENERATE CAPTIONS WITH INPUT CONTEXT ============
+        const totalDuration = newClips.reduce((sum, clip) => sum + (clip.trimEnd - clip.trimStart), 0);
+        const captionStyle = (input.captionStyle || 'dara') as CaptionStyle;
+        
+        captionsEngine.generateCaptions("", captionStyle, {
+          duration: totalDuration,
+          concept: input.topic,
+          hook: input.hook,
+          cta: input.cta,
+        }).then((captions) => {
+          if (captions.length > 0) {
+            toast.success(`Auto-generated ${captions.length} captions`, {
+              description: "Adjust timing in the Captions tab",
+            });
+          }
+        });
+
+        toast.success(`Auto-created reel for: ${input.topic}`, {
+          description: `${newClips.length} clips • Blueprint ready • From ${input.source}`,
+        });
+      } else {
+        toast.error("AI couldn't find suitable clips", {
+          description: "Try adjusting filters or adding more videos to your library",
+        });
+      }
+    } catch (error) {
+      console.error("Auto-create with input failed:", error);
+      toast.error("Auto-create failed", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsAutoProcessing(false);
+      // Clear navigation state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  };
 
   const handleRunSmartAssist = async () => {
     await smartAssist.runSmartAssist(clips);
