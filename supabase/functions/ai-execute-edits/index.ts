@@ -235,10 +235,23 @@ serve(async (req) => {
       const blueprintId = aiSuggestions.blueprint_id;
       const blueprintSource = aiSuggestions.blueprint_source;
       
+      // ============ NEW: Extract format lock fields ============
+      const format = aiSuggestions.format || 'reel';
+      const aspectRatio = aiSuggestions.aspect_ratio || '9:16';
+      const templateId = aiSuggestions.template_id || 'ig_reel_v1';
+      const overlayPack = aiSuggestions.overlay_pack || 'wpw_signature';
+      const font = aiSuggestions.font || 'Inter Black';
+      const textStyle = aiSuggestions.text_style || 'bold';
+      const caption = aiSuggestions.caption;
+      
       console.log("[ai-execute-edits] Blueprint check:", {
         blueprint_id: blueprintId,
         blueprint_source: blueprintSource,
         scenes_count: scenes.length,
+        format,
+        aspect_ratio: aspectRatio,
+        template_id: templateId,
+        overlay_pack: overlayPack,
       });
       
       // HARD STOP: No blueprint = No render
@@ -322,15 +335,34 @@ serve(async (req) => {
       console.log("[ai-execute-edits] Calling render-reel with", clips.length, "clips");
 
       try {
+        // ============ Determine dimensions from aspect ratio ============
+        let width = 1080;
+        let height = 1920;
+        if (aspectRatio === '1:1') {
+          width = 1080;
+          height = 1080;
+        } else if (aspectRatio === '16:9') {
+          width = 1920;
+          height = 1080;
+        }
+        
         const renderRes = await supabase.functions.invoke("render-reel", {
           body: {
             job_id: video_edit_id,
             clips,
             overlays,
             music_url: editItem.selected_music_url,
-            width: 1080,
-            height: 1920,
+            width,
+            height,
             fps: 30,
+            // ============ NEW: Pass format lock fields ============
+            format,
+            aspect_ratio: aspectRatio,
+            template_id: templateId,
+            overlay_pack: overlayPack,
+            font,
+            text_style: textStyle,
+            caption,
           }
         });
         
@@ -411,6 +443,14 @@ serve(async (req) => {
       overlays_applied: aiSuggestions.scenes?.filter((s: any) => s.text || s.text_overlay).length || 0,
       blueprint_id: aiSuggestions.blueprint_id,
       blueprint_source: aiSuggestions.blueprint_source,
+      // ============ NEW: Include format lock fields ============
+      format: aiSuggestions.format,
+      aspect_ratio: aiSuggestions.aspect_ratio,
+      template_id: aiSuggestions.template_id,
+      overlay_pack: aiSuggestions.overlay_pack,
+      font: aiSuggestions.font,
+      text_style: aiSuggestions.text_style,
+      caption: aiSuggestions.caption,
       render_result: renderResult,
       shorts_count: shortsResults.length,
     };

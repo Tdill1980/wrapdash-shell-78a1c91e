@@ -23,6 +23,22 @@ export interface SceneBlueprint {
   // Metadata for tracking
   createdAt?: string;
   source?: 'ai' | 'manual' | 'hardcoded' | 'smart_assist';
+  
+  // ============ TARGET LOCK (Select Format) ============
+  // These define the render contract - what Creatomate will produce
+  format?: 'reel' | 'story' | 'short';
+  aspectRatio?: '9:16' | '1:1' | '16:9';
+  templateId?: string;
+  
+  // ============ STYLE BINDING (Overlay Pack) ============
+  // Brand overlay configuration - applied to all scenes
+  overlayPack?: string;
+  font?: string;
+  textStyle?: 'bold' | 'minimal' | 'modern';
+  
+  // ============ CAPTION (Auto Captions) ============
+  // Global caption for the entire reel
+  caption?: string;
 }
 
 export interface SceneBlueprintScene {
@@ -45,6 +61,24 @@ export interface SceneBlueprintScene {
   // Editorial reasoning (for debugging)
   cutReason?: string;
 }
+
+// ============ FORMAT → TEMPLATE MAPPING ============
+// Maps format + aspectRatio to Creatomate template IDs
+export const FORMAT_TEMPLATE_MAP: Record<string, { aspectRatio: '9:16' | '1:1' | '16:9'; templateId: string }> = {
+  'reel': { aspectRatio: '9:16', templateId: 'ig_reel_v1' },
+  'story': { aspectRatio: '9:16', templateId: 'ig_story_v1' },
+  'short': { aspectRatio: '9:16', templateId: 'yt_short_v1' },
+  'post': { aspectRatio: '1:1', templateId: 'ig_post_v1' },
+  'landscape': { aspectRatio: '16:9', templateId: 'yt_landscape_v1' },
+};
+
+// ============ OVERLAY PACK DEFINITIONS ============
+export const OVERLAY_PACK_MAP: Record<string, { font: string; textStyle: 'bold' | 'minimal' | 'modern' }> = {
+  'wpw_signature': { font: 'Inter Black', textStyle: 'bold' },
+  'modern-clean': { font: 'Inter', textStyle: 'modern' },
+  'minimal': { font: 'SF Pro', textStyle: 'minimal' },
+  'bold-impact': { font: 'Impact', textStyle: 'bold' },
+};
 
 /**
  * Validates that a blueprint is complete and renderable
@@ -81,6 +115,11 @@ export function validateBlueprint(blueprint: SceneBlueprint | null): { valid: bo
         errors.push(`Scene ${idx + 1} has invalid timing (end <= start)`);
       }
     });
+  }
+  
+  // Warn but don't fail if format not set (for backwards compat)
+  if (!blueprint.format && !blueprint.templateId) {
+    console.warn('[validateBlueprint] No format or templateId set - using defaults');
   }
   
   return {
@@ -180,5 +219,12 @@ export function createTestBlueprint(clips: Array<{ id: string; url: string; dura
     },
     createdAt: new Date().toISOString(),
     source: 'hardcoded',
+    // ============ NEW: Default format lock ============
+    format: 'reel',
+    aspectRatio: '9:16',
+    templateId: 'ig_reel_v1',
+    overlayPack: 'wpw_signature',
+    font: 'Inter Black',
+    textStyle: 'bold',
   };
 }
