@@ -268,7 +268,15 @@ export default function ReelBuilder() {
       setReelConcept(job.hook || 'Agent-created reel');
 
       // ✅ Music: only a URL is renderable. (Style is a hint, not executable.)
-      setAudioUrl(job.musicUrl || null);
+      // ✅ FIX #2: Resolve music style to URL if no direct URL provided
+      const resolveMusicUrl = (j: ProducerJob): string | null => {
+        if (j.musicUrl) return j.musicUrl;
+        if (j.musicStyle === 'upbeat') return '/audio/upbeat-industrial.mp3';
+        if (j.musicStyle === 'hiphop') return '/audio/modern-hiphop.mp3';
+        if (j.musicStyle === 'cinematic') return '/audio/cinematic-epic.mp3';
+        return null;
+      };
+      setAudioUrl(resolveMusicUrl(job));
 
       // Reset any previous overlays so we don't accidentally render a giant paragraph blob
       overlaysEngine.clearOverlays();
@@ -278,7 +286,10 @@ export default function ReelBuilder() {
 
       let cursor = 0;
       const scenes: SceneBlueprintScene[] = newClips.map((clip, index) => {
-        const clipDuration = Math.max(0, (clip.trimEnd ?? 0) - (clip.trimStart ?? 0));
+        // ✅ FIX #1: Handle undefined trimEnd by falling back to clip.duration
+        const clipStart = clip.trimStart ?? 0;
+        const clipEnd = clip.trimEnd ?? clipStart + (clip.duration ?? 5); // default 5s if no duration
+        const clipDuration = Math.max(0.5, clipEnd - clipStart); // minimum 0.5s scene
         const sceneStart = cursor;
         const sceneEnd = cursor + clipDuration;
         cursor = sceneEnd;
@@ -309,8 +320,8 @@ export default function ReelBuilder() {
           sceneId: `producer_${index + 1}`,
           clipId: clip.id,
           clipUrl: clip.url,
-          start: clip.trimStart,
-          end: clip.trimEnd,
+          start: clipStart,
+          end: clipEnd,
           purpose,
           text: overlay?.text,
           textPosition: overlay?.position || 'center',
