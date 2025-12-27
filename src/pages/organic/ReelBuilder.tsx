@@ -35,8 +35,9 @@ import { useReelCaptions, CaptionStyle } from "@/hooks/useReelCaptions";
 import { useReelOverlays, BrandPackId } from "@/hooks/useReelOverlays";
 import { useEditorBrain } from "@/hooks/useEditorBrain";
 import { useSmartAssist } from "@/hooks/useSmartAssist";
-import { useVideoRender } from "@/hooks/useVideoRender";
 import { useAutoCreateReel, DaraFormatType } from "@/hooks/useAutoCreateReel";
+import { useMightyEdit, RenderProgress } from "@/hooks/useMightyEdit";
+import { RenderProgressBar } from "@/components/mighty-edit/RenderProgressBar";
 import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
 import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
 import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
@@ -127,7 +128,8 @@ export default function ReelBuilder() {
   const overlaysEngine = useReelOverlays();
   const editorBrain = useEditorBrain();
   const smartAssist = useSmartAssist();
-  const videoRender = useVideoRender();
+  const { executeEdits, renderProgress, isExecuting, stopPolling } = useMightyEdit();
+  const [isRenderingReel, setIsRenderingReel] = useState(false);
   const autoCreateReel = useAutoCreateReel();
 
   // Single video upload handler - uploads video, then AI analyzes and finds best scenes
@@ -301,16 +303,16 @@ export default function ReelBuilder() {
     }
   };
 
-  // Auto-save when render succeeds
+  // Auto-save when render succeeds via renderProgress
   useEffect(() => {
     const saveRenderedVideo = async () => {
-      if (videoRender.status === 'succeeded' && videoRender.outputUrl) {
+      if (renderProgress?.status === 'complete' && renderProgress.outputUrl) {
         try {
           // Save to content_files (Media Library)
           const { data: fileData, error: fileError } = await supabase
             .from('content_files')
             .insert({
-              file_url: videoRender.outputUrl,
+              file_url: renderProgress.outputUrl,
               file_type: 'video',
               source: 'ai_reel_builder',
               brand: contentMetadata.brand,
@@ -334,7 +336,7 @@ export default function ReelBuilder() {
             .insert({
               content_type: 'reel',
               status: 'draft',
-              output_url: videoRender.outputUrl,
+              output_url: renderProgress.outputUrl,
               caption: autoCreateState?.suggestedHook || reelConcept,
               brand: contentMetadata.brand,
               channel: contentMetadata.channel,
@@ -351,7 +353,7 @@ export default function ReelBuilder() {
 
           if (queueError) throw queueError;
 
-          setSavedVideoUrl(videoRender.outputUrl);
+          setSavedVideoUrl(renderProgress.outputUrl);
           setShowPostRenderModal(true);
           toast.success('Reel saved to library and queue!');
         } catch (error) {
@@ -362,52 +364,103 @@ export default function ReelBuilder() {
     };
 
     saveRenderedVideo();
-  }, [videoRender.status, videoRender.outputUrl, contentMetadata]);
+  }, [renderProgress?.status, renderProgress?.outputUrl, contentMetadata]);
 
-  // Handle render reel - redirects to MightyEdit (Creatomate deprecated)
+  // Handle render reel - uses MightyEdit Mux pipeline directly
   const handleRenderReel = async () => {
     if (clips.length === 0) {
       toast.error('Add clips first');
       return;
     }
 
-    // Collect all clip URLs for multi-clip render
-    const clipUrls = clips.map(c => c.url).filter(Boolean);
-    if (clipUrls.length === 0) {
-      toast.error('No video URLs available');
-      return;
+    setIsRenderingReel(true);
+
+    try {
+      // Collect all clip URLs
+      const clipUrls = clips.map(c => c.url).filter(Boolean);
+      if (clipUrls.length === 0) {
+        toast.error('No video URLs available');
+        setIsRenderingReel(false);
+        return;
+      }
+
+      // Build overlays from AI suggestions + engine overlays
+      const allOverlays = [
+        ...clips.filter(c => c.suggestedOverlay).map((c, idx) => ({
+          text: c.suggestedOverlay!,
+          timestamp: `${clips.slice(0, idx).reduce((acc, cl) => acc + (cl.trimEnd - cl.trimStart), 0)}s`,
+          style: 'bold' as const,
+          duration: 2,
+        })),
+      ];
+
+      // First create a content_files entry for the primary clip
+      const primaryClipUrl = clipUrls[0];
+      const { data: contentFile, error: cfError } = await supabase
+        .from('content_files')
+        .insert({
+          file_url: primaryClipUrl,
+          file_type: 'video',
+          source: 'reel_builder',
+          original_filename: 'ReelBuilder Upload',
+        })
+        .select('id')
+        .single();
+
+      if (cfError) {
+        console.error('[ReelBuilder] Failed to create content file:', cfError);
+        toast.error('Failed to prepare video for rendering');
+        setIsRenderingReel(false);
+        return;
+      }
+
+      // Create video_edit_queue entry
+      const { data: queueEntry, error: queueError } = await supabase
+        .from('video_edit_queue')
+        .insert({
+          content_file_id: contentFile.id,
+          source_url: primaryClipUrl,
+          title: reelConcept || 'Reel Builder Export',
+          text_overlays: allOverlays,
+          selected_music_url: audioUrl,
+          ai_edit_suggestions: {
+            scenes: clips.map((c, i) => ({
+              order: i + 1,
+              start_time: c.trimStart,
+              end_time: c.trimEnd,
+              label: c.name,
+              speed: c.speed || 1,
+            })),
+            hook: suggestedHook || autoCreateState?.suggestedHook,
+            cta: suggestedCta || autoCreateState?.suggestedCta,
+          },
+          render_status: 'pending',
+          status: 'ready_for_review',
+        })
+        .select('id')
+        .single();
+
+      if (queueError) {
+        console.error('[ReelBuilder] Failed to create queue entry:', queueError);
+        toast.error('Failed to start render');
+        setIsRenderingReel(false);
+        return;
+      }
+
+      console.log('[ReelBuilder] Created queue entry:', queueEntry.id);
+      toast.success('Render started!', { description: 'Processing with Mux...' });
+
+      // Call executeEdits with the queue ID
+      await executeEdits(queueEntry.id, 'full');
+      
+    } catch (err) {
+      console.error('[ReelBuilder] Render failed:', err);
+      toast.error('Render failed', { 
+        description: err instanceof Error ? err.message : 'Unknown error' 
+      });
+    } finally {
+      setIsRenderingReel(false);
     }
-
-    // Build overlays from AI suggestions + engine overlays
-    const allOverlays = [
-      ...clips.filter(c => c.suggestedOverlay).map((c, idx) => ({
-        text: c.suggestedOverlay!,
-        time: clips.slice(0, idx).reduce((acc, cl) => acc + (cl.trimEnd - cl.trimStart), 0),
-        duration: 2,
-      })),
-      ...overlaysEngine.exportForCreatomate(),
-    ];
-
-    // Store preset for MightyEdit to pick up
-    const preset = {
-      attached_assets: clipUrls.map(url => ({ url, type: 'video' })),
-      overlays: allOverlays.map(o => ({
-        text: o.text,
-        start: o.time,
-        duration: o.duration,
-      })),
-      headline: suggestedHook || autoCreateState?.suggestedHook || reelConcept || clips[0]?.suggestedOverlay,
-      subtext: suggestedCta || autoCreateState?.suggestedCta,
-      musicUrl: audioUrl,
-    };
-    sessionStorage.setItem('mightyedit_preset', JSON.stringify(preset));
-
-    toast.info('Redirecting to MightyEdit...', {
-      description: 'The Creatomate render pipeline has been replaced.',
-    });
-    
-    // Navigate to MightyEdit with the preset
-    navigate('/mighty-edit');
   };
 
   const handleDownloadVideo = () => {
@@ -710,13 +763,13 @@ export default function ReelBuilder() {
             <Button
               size="sm"
               className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
-              disabled={clips.length === 0 || videoRender.isRendering}
+              disabled={clips.length === 0 || isRenderingReel || isExecuting}
               onClick={handleRenderReel}
             >
-              {videoRender.isRendering ? (
+              {isRenderingReel || isExecuting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                  {videoRender.progress}%
+                  Rendering...
                 </>
               ) : (
                 'Render Reel'
@@ -1030,21 +1083,13 @@ export default function ReelBuilder() {
         onSendToReview={handleSendToReview}
       />
 
-      {/* Render Progress Overlay */}
-      {videoRender.isRendering && (
-        <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-[#405DE6] to-[#E1306C] animate-pulse" />
-              <Loader2 className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Rendering Your Reel</h2>
-              <p className="text-muted-foreground mt-1">This takes 30-60 seconds</p>
-            </div>
-            <Progress value={videoRender.progress} className="w-64 mx-auto" />
-            <p className="text-sm text-muted-foreground">{videoRender.progress}% complete</p>
-          </div>
+      {/* Render Progress Bar - Shows during Mux rendering */}
+      {renderProgress && (
+        <div className="fixed bottom-4 right-4 z-50 w-96">
+          <RenderProgressBar 
+            progress={renderProgress}
+            onDismiss={stopPolling}
+          />
         </div>
       )}
     </div>
