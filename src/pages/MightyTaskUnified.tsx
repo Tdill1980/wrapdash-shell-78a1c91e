@@ -28,6 +28,7 @@ import {
   DollarSign,
   Video,
   Newspaper,
+  Wand2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -40,6 +41,7 @@ import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
 import { AVAILABLE_AGENTS } from "@/components/mightychat/AgentSelector";
 import { TaskDetailModal } from "@/components/mightytask/TaskDetailModal";
 import { ContentToolsNav } from "@/components/content/ContentToolsNav";
+import { AutoCreateInput, getChannelBrand, getPlatformFromContentType } from "@/types/AutoCreateInput";
 
 // Channel configuration
 type ChannelKey = 'all' | 'ink_edge_publisher' | 'wpw' | 'wraptvworld' | 'ink_edge_content';
@@ -354,6 +356,51 @@ export default function MightyTaskUnified() {
     toast.info(`Opening ${agentName} to execute: ${task.title}`);
   };
 
+  // ============ BUILD REEL DIRECTLY (SKIP AGENT) ============
+  // Sends task directly to ReelBuilder with full AutoCreateInput contract
+  const buildReelDirectly = (task: Task, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    
+    const contentType = task.content_type;
+    const isVideoContent = ['ig_reel', 'ig_story', 'fb_reel', 'fb_story', 'youtube_short', 'youtube_video', 'meta_ad'].includes(contentType || '');
+    
+    if (!isVideoContent) {
+      toast.error("This task isn't a video content type");
+      return;
+    }
+    
+    // Build the deterministic AutoCreateInput contract
+    const autoCreateInput: AutoCreateInput = {
+      source: 'mightytask',
+      taskId: task.id,
+      contentType: ['ig_story', 'fb_story'].includes(contentType || '') ? 'story' : 'reel',
+      platform: getPlatformFromContentType(contentType),
+      topic: task.title,
+      hook: task.description?.split('\n')[0] || task.title,
+      cta: 'Follow for more',
+      style: 'dara',
+      musicStyle: 'hiphop',
+      captionStyle: 'dara',
+      brand: getChannelBrand(task.channel),
+    };
+    
+    console.log('🚀 Building reel directly from MightyTask:', autoCreateInput);
+    
+    navigate('/organic/reel-builder', {
+      state: {
+        autoCreate: true,
+        autoCreateInput,
+      },
+    });
+    
+    toast.success(`Building reel for: ${task.title}`);
+  };
+
+  // Check if task is video content (can be built directly)
+  const isVideoContentType = (contentType?: string | null) => {
+    return ['ig_reel', 'ig_story', 'fb_reel', 'fb_story', 'youtube_short', 'youtube_video', 'meta_ad'].includes(contentType || '');
+  };
+
   // If the user clicked a calendar item linked to a task, auto-open execution here.
   useEffect(() => {
     const state = (location.state || {}) as Record<string, unknown>;
@@ -654,17 +701,32 @@ export default function MightyTaskUnified() {
                           </div>
                         )}
 
-                        {/* Execute with Agent Button */}
+                        {/* Action Buttons */}
                         {task.status !== "completed" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-primary border-primary/30 hover:bg-primary/10"
-                            onClick={(e) => executeWithAgent(task, e)}
-                          >
-                            <Play className="w-3 h-3 mr-1" />
-                            Execute
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {/* Build Reel Directly (Video content only) */}
+                            {isVideoContentType(task.content_type) && (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                                onClick={(e) => buildReelDirectly(task, e)}
+                              >
+                                <Wand2 className="w-3 h-3 mr-1" />
+                                Build
+                              </Button>
+                            )}
+                            {/* Execute with Agent Button */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-primary border-primary/30 hover:bg-primary/10"
+                              onClick={(e) => executeWithAgent(task, e)}
+                            >
+                              <Play className="w-3 h-3 mr-1" />
+                              Execute
+                            </Button>
+                          </div>
                         )}
 
                         {/* Actions */}
@@ -675,6 +737,16 @@ export default function MightyTaskUnified() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {/* Build Reel (video content only) */}
+                            {isVideoContentType(task.content_type) && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                buildReelDirectly(task);
+                              }}>
+                                <Wand2 className="w-4 h-4 mr-2" />
+                                Build Reel (Skip Agent)
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               executeWithAgent(task);

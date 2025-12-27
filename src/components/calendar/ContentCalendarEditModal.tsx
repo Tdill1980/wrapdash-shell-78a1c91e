@@ -151,21 +151,53 @@ export function ContentCalendarEditModal({
   const handleGenerateWithAI = async () => {
     setIsGenerating(true);
     try {
-      // Navigate to appropriate creator based on content type, passing metadata
-      const navState = { 
-        calendarItem: content,
-        autoGenerate: true,
-        metadata: contentMetadata,
-      };
-
+      // Navigate to appropriate creator based on content type, passing full AutoCreateInput contract
       if (contentType === 'reel' || contentType === 'story') {
-        navigate('/organic/reel-builder', { state: navState });
+        // ============ DETERMINISTIC AUTO-CREATE ============
+        // Pass the EXACT calendar data to ReelBuilder - no guessing, no defaults
+        navigate('/organic/reel-builder', {
+          state: {
+            autoCreate: true,
+            autoCreateInput: {
+              source: 'content_calendar' as const,
+              calendarId: content.id,
+              contentType: contentType as 'reel' | 'story',
+              platform: platform as 'instagram' | 'tiktok' | 'youtube' | 'facebook',
+              topic: title || caption || 'Untitled',  // THE EXACT calendar copy
+              hook: caption?.split('\n')[0] || title || undefined,  // First line as hook
+              cta: 'Follow for more',
+              style: 'dara' as const,
+              musicStyle: 'hiphop' as const,
+              captionStyle: 'dara' as const,
+              brand: content.brand,
+            },
+          },
+        });
       } else if (contentType === 'static' || contentType === 'carousel') {
-        navigate('/organic/static-creator', { state: navState });
+        navigate('/organic/static-creator', { 
+          state: { 
+            calendarItem: content,
+            autoGenerate: true,
+            metadata: contentMetadata,
+          } 
+        });
       } else if (contentType === 'magazine' || contentType === 'article') {
-        navigate('/contentbox', { state: { ...navState, contentType: 'magazine' } });
+        navigate('/contentbox', { 
+          state: { 
+            calendarItem: content,
+            autoGenerate: true,
+            metadata: contentMetadata,
+            contentType: 'magazine' 
+          } 
+        });
       } else {
-        navigate('/contentbox', { state: navState });
+        navigate('/contentbox', { 
+          state: { 
+            calendarItem: content,
+            autoGenerate: true,
+            metadata: contentMetadata,
+          } 
+        });
       }
       onClose();
     } finally {
