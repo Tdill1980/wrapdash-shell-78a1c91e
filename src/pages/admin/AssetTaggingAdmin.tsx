@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Loader2, Eye, Edit, RefreshCw, CheckCircle, XCircle, Lock, Image, Video } from "lucide-react";
+import { Loader2, Eye, Edit, RefreshCw, CheckCircle, XCircle, Lock, Image, Video, Zap } from "lucide-react";
 import { ManualTagEditorModal } from "@/components/admin/ManualTagEditorModal";
+import { useVisualAnalyzer } from "@/hooks/useVisualAnalyzer";
 
 interface ContentFileRow {
   id: string;
@@ -26,6 +27,24 @@ const AssetTaggingAdmin = () => {
   const queryClient = useQueryClient();
   const [selectedAsset, setSelectedAsset] = useState<ContentFileRow | null>(null);
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
+  const { analyzeAllUntagged, getStatus, analyzing: bulkAnalyzing } = useVisualAnalyzer();
+
+  const { data: status } = useQuery({
+    queryKey: ["visual-analyzer-status"],
+    queryFn: getStatus,
+  });
+
+  const handleBulkAnalyze = async () => {
+    try {
+      const result = await analyzeAllUntagged(50);
+      toast.success(`Bulk analysis complete: ${result.processed} processed, ${result.skipped} skipped, ${result.failed} failed`);
+      queryClient.invalidateQueries({ queryKey: ["asset-tagging-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["visual-analyzer-status"] });
+    } catch (err) {
+      console.error("Bulk analysis failed:", err);
+      toast.error("Bulk analysis failed");
+    }
+  };
 
   const { data: assets, isLoading } = useQuery({
     queryKey: ["asset-tagging-admin"],
@@ -102,14 +121,32 @@ const AssetTaggingAdmin = () => {
           <div>
             <h1 className="text-2xl font-bold">Asset Tagging Admin</h1>
             <p className="text-muted-foreground">Review and manually override AI-generated tags</p>
+            {status && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {status.analyzed} analyzed · {status.unanalyzed} unanalyzed
+              </p>
+            )}
           </div>
-          <Button
-            variant="outline"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["asset-tagging-admin"] })}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleBulkAnalyze}
+              disabled={bulkAnalyzing || !status?.unanalyzed}
+            >
+              {bulkAnalyzing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4 mr-2" />
+              )}
+              Bulk Analyze ({status?.unanalyzed || 0})
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["asset-tagging-admin"] })}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <Card>
