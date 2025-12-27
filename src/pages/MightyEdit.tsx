@@ -27,6 +27,7 @@ import { RenderQueue } from "@/components/mighty-edit/RenderQueue";
 import { ClipPreview } from "@/components/mighty-edit/ClipPreview";
 import { RenderResult } from "@/components/mighty-edit/RenderResult";
 import { ContentToolsNav } from "@/components/content/ContentToolsNav";
+import { RenderProgressBar } from "@/components/mighty-edit/RenderProgressBar";
 
 interface ContentFactoryPreset {
   action?: string;
@@ -52,6 +53,7 @@ export default function MightyEdit() {
     isExecuting,
     editQueue,
     musicRecommendations,
+    renderProgress,
     fetchEditQueue,
     scanContentLibrary,
     matchMusic,
@@ -59,6 +61,7 @@ export default function MightyEdit() {
     updateEditItem,
     selectMusic,
     markTaskComplete,
+    stopPolling,
   } = useMightyEdit();
 
   const [activeTab, setActiveTab] = useState("scanner");
@@ -167,21 +170,41 @@ export default function MightyEdit() {
 
   // Wrapper for executeEdits that ensures video is in queue first and marks task complete
   const handleExecuteEdits = async (renderType: "full" | "shorts" | "all") => {
-    if (!selectedVideo) return;
+    if (!selectedVideo) {
+      console.error('[MightyEdit] No video selected');
+      toast.error('No video selected');
+      return;
+    }
+    
+    console.log('[MightyEdit] ====== RENDER BUTTON CLICKED ======');
+    console.log('[MightyEdit] Selected video:', selectedVideo);
+    console.log('[MightyEdit] Render type:', renderType);
     
     const queueId = await ensureVideoInQueue(selectedVideo);
     if (!queueId) {
       console.error('[MightyEdit] Could not ensure video in queue');
+      toast.error('Failed to prepare video for rendering');
       return;
     }
     
-    await executeEdits(queueId, renderType);
+    console.log('[MightyEdit] Video queue ID:', queueId);
+    console.log('[MightyEdit] Calling executeEdits...');
     
-    // If this was from a calendar preset, mark the linked task as complete
-    if (calendarPreset?.task_id) {
-      console.log('[MightyEdit] Marking task complete:', calendarPreset.task_id);
-      await markTaskComplete(calendarPreset.task_id);
-      setCalendarPreset(null);
+    try {
+      await executeEdits(queueId, renderType);
+      console.log('[MightyEdit] executeEdits completed');
+      
+      // If this was from a calendar preset, mark the linked task as complete
+      if (calendarPreset?.task_id) {
+        console.log('[MightyEdit] Marking task complete:', calendarPreset.task_id);
+        await markTaskComplete(calendarPreset.task_id);
+        setCalendarPreset(null);
+      }
+    } catch (err) {
+      console.error('[MightyEdit] executeEdits failed:', err);
+      toast.error('Render failed', {
+        description: err instanceof Error ? err.message : 'Unknown error'
+      });
     }
   };
 
@@ -331,6 +354,14 @@ export default function MightyEdit() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Render Progress Bar - Shows when rendering is in progress */}
+        {renderProgress && (
+          <RenderProgressBar 
+            progress={renderProgress} 
+            onDismiss={stopPolling}
+          />
+        )}
+        
         {/* Unified Content Tools Navigation */}
         <ContentToolsNav />
 
