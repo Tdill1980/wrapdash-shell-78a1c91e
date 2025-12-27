@@ -267,19 +267,29 @@ You MUST NOT:
 🎬 CONTENT CREATION VIA CONTENT FACTORY 🎬
 You create content using EXISTING ContentBox assets via Content Factory + MightyEdit.
 
-When content is ready to be created, output ONLY this block:
+When content is ready to be created, output ONLY this block with the CANONICAL SCHEMA:
 
 ===CREATE_CONTENT===
 action: create_content
 content_type: reel | story | short | ad
 platform: instagram | facebook | youtube | meta
+
+# Asset Selection (use ONE of these)
+use_attached_assets: true | false
+saved_view_id: [optional - UUID of a saved view to pull from]
+
+# OR use asset_query for ContentBox
 asset_source: contentbox | attached
 asset_query:
   tags: [chicago, test_lab, ppf, inkfusion]
   type: video
   limit: 3
+
+# Creative (required)
 hook: [max 6 words - attention grabbing]
 cta: [max 8 words - call to action]
+
+# Overlays (array)
 overlays:
   - text: [overlay text]
     start: 2
@@ -287,9 +297,36 @@ overlays:
   - text: [overlay text]
     start: 6
     duration: 3
+
+# Caption & Hashtags
 caption: [caption text for social post]
 hashtags: [#wraplife #ppf #chicago]
+
+# Music (optional)
+music:
+  style: holiday | upbeat | cinematic | chill | none
+  suggestion: [optional description of music vibe]
+
+# Credits (optional - for UGC attribution)
+credits:
+  tag: [@username]
+  reason: [why crediting - e.g. "Original footage"]
+
 ===END_CREATE_CONTENT===
+
+VALID PARAMETER NAMES (use ONLY these):
+- content_type, platform (required)
+- use_attached_assets, saved_view_id (asset selection)
+- asset_source, asset_query (alternative asset selection)
+- hook, cta, caption, hashtags (creative)
+- overlays (array with text, start, duration)
+- music (object with style, suggestion)
+- credits (object with tag, reason)
+
+❌ INVALID PARAMETERS (will cause errors):
+- music_style (use music.style instead)
+- attached_assets (use use_attached_assets: true instead)
+- vibe (use music.suggestion instead)
 
 CONTENT STRATEGY:
 - Hooks that stop the scroll: Pain point, surprising stat, or bold claim
@@ -699,11 +736,7 @@ When they give content creation instructions, emit the CREATE_CONTENT block with
         
         let assetSection = '';
         if (hasVideo && mostRecentVideo) {
-          assetSection = `asset_source: attached
-attached_assets:
-  - url: ${mostRecentVideo.url}
-    type: video
-    name: ${mostRecentVideo.name || 'Attached Video'}`;
+          assetSection = `use_attached_assets: true`;
         } else {
           assetSection = `asset_source: contentbox
 asset_query:
@@ -723,7 +756,7 @@ You MUST output a CREATE_CONTENT block FIRST, then add any commentary AFTER.
 DO NOT ask for clarification. DO NOT say you need more info.
 Extract hook/CTA from user's message or task description.
 
-OUTPUT THIS EXACT FORMAT:
+OUTPUT THIS EXACT FORMAT (CANONICAL SCHEMA):
 
 ===CREATE_CONTENT===
 action: create_content
@@ -738,7 +771,18 @@ overlays:
     duration: 3
 caption: [engaging caption from context]
 hashtags: #weprintwraps #wraps
+music:
+  style: upbeat
+  suggestion: [optional - describe vibe]
+credits:
+  tag: [optional - @username if UGC]
+  reason: [optional - why crediting]
 ===END_CREATE_CONTENT===
+
+IMPORTANT SCHEMA RULES:
+- Use "music:" with nested "style:" and "suggestion:" (NOT "music_style:")
+- Use "credits:" with nested "tag:" and "reason:" (NOT just "credits: @user")
+- Use "use_attached_assets: true" for attached videos (NOT "attached_assets:")
 
 Then after the block, add: "I understand. I will create this ${contentType} for ${platform}. Ready when you say go."
 Set confirmed: true.
