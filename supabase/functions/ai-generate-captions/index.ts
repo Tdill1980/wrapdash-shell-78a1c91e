@@ -39,7 +39,7 @@ serve(async (req) => {
   }
 
   try {
-    const { video_url, style = "sabri", duration = 15 } = await req.json();
+    const { video_url, style = "sabri", duration = 15, concept, hook, cta } = await req.json();
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
     if (!apiKey) {
@@ -47,6 +47,12 @@ serve(async (req) => {
     }
 
     const stylePrompt = STYLE_PROMPTS[style as keyof typeof STYLE_PROMPTS] || STYLE_PROMPTS.sabri;
+
+    // Build context from AI-provided data
+    let contextInfo = "";
+    if (concept) contextInfo += `\nReel Concept: ${concept}`;
+    if (hook) contextInfo += `\nSuggested Hook: ${hook}`;
+    if (cta) contextInfo += `\nSuggested CTA: ${cta}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -65,19 +71,24 @@ ${stylePrompt}
 
 Generate 4-6 timed captions for a ${duration}-second reel.
 Each caption should appear at strategic moments for maximum retention.
+${contextInfo}
 
-Structure:
-1. Hook caption (0-2s) - grab attention immediately
-2. Tease caption (2-4s) - build anticipation
-3. Process captions (4-10s) - show the transformation
-4. Reveal caption (10-12s) - showcase the result
-5. CTA caption (12-15s) - call to action or brand tag`,
+Structure captions based on reel duration:
+- Hook caption (0-2s) - grab attention immediately
+- Tease/build-up captions (2s to ${Math.floor(duration * 0.6)}s) - show progress
+- Reveal caption (${Math.floor(duration * 0.7)}s to ${Math.floor(duration * 0.85)}s) - showcase result
+- CTA caption (${Math.floor(duration * 0.85)}s to ${duration}s) - call to action
+
+IMPORTANT: Time captions proportionally to the actual ${duration}s duration.`,
           },
           {
             role: "user",
             content: `Generate viral captions for a vehicle wrap reel${video_url ? ` (video: ${video_url})` : ''}.
 Duration: ${duration} seconds.
 Style: ${style}.
+${concept ? `Theme: ${concept}` : ''}
+${hook ? `Use this hook concept: ${hook}` : ''}
+${cta ? `End with CTA similar to: ${cta}` : ''}
 
 Create engaging captions that will maximize watch time and engagement.`,
           },
@@ -118,12 +129,12 @@ Create engaging captions that will maximize watch time and engagement.`,
       const errorText = await response.text();
       console.error("AI API error:", errorText);
       
-      // Return fallback captions
+      // Return fallback captions scaled to duration
       const fallbackCaptions = [
-        { text: style === "sabri" ? "WATCH THIS 🔥" : style === "dara" ? "wait for it..." : "The transformation", start: 0, end: 2 },
-        { text: style === "sabri" ? "THIS IS INSANE" : style === "dara" ? "honestly obsessed" : "Premium finish", start: 2, end: 4 },
-        { text: style === "sabri" ? "THE REVEAL" : style === "dara" ? "the way this turned out 😍" : "Before and after", start: 10, end: 12 },
-        { text: style === "sabri" ? "LINK IN BIO 💰" : style === "dara" ? "dm for info ✨" : "Contact us", start: 12, end: 15 },
+        { text: hook || (style === "sabri" ? "WATCH THIS 🔥" : style === "dara" ? "wait for it..." : "The transformation"), start: 0, end: 2 },
+        { text: style === "sabri" ? "THIS IS INSANE" : style === "dara" ? "honestly obsessed" : "Premium finish", start: 2, end: Math.min(4, duration * 0.3) },
+        { text: style === "sabri" ? "THE REVEAL" : style === "dara" ? "the way this turned out 😍" : "Before and after", start: Math.floor(duration * 0.7), end: Math.floor(duration * 0.85) },
+        { text: cta || (style === "sabri" ? "LINK IN BIO 💰" : style === "dara" ? "dm for info ✨" : "Contact us"), start: Math.floor(duration * 0.85), end: duration },
       ];
       
       return new Response(
@@ -137,6 +148,7 @@ Create engaging captions that will maximize watch time and engagement.`,
     
     if (toolCall?.function?.arguments) {
       const result = JSON.parse(toolCall.function.arguments);
+      console.log(`Generated ${result.captions?.length || 0} captions for ${duration}s ${style} reel`);
       return new Response(
         JSON.stringify({ success: true, captions: result.captions }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

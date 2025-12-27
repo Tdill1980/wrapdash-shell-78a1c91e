@@ -49,11 +49,22 @@ export function useReelCaptions() {
   });
 
   const generateCaptions = useCallback(
-    async (videoUrl: string, style: CaptionStyle = "sabri"): Promise<Caption[]> => {
+    async (
+      videoUrl: string, 
+      style: CaptionStyle = "sabri",
+      options?: { duration?: number; concept?: string; hook?: string; cta?: string }
+    ): Promise<Caption[]> => {
       setLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke("ai-generate-captions", {
-          body: { video_url: videoUrl, style },
+          body: { 
+            video_url: videoUrl, 
+            style,
+            duration: options?.duration || 15,
+            concept: options?.concept,
+            hook: options?.hook,
+            cta: options?.cta,
+          },
         });
 
         if (error) {
