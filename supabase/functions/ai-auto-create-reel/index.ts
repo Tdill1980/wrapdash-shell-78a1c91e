@@ -95,7 +95,7 @@ serve(async (req) => {
   }
 
   try {
-    const { organization_id, filter_category, max_videos, use_inspo, dara_format, video_url, video_duration } = await req.json();
+    const { organization_id, filter_category, max_videos, use_inspo, dara_format, video_url, video_duration, topic, content_type } = await req.json();
 
     // ═══════════════════════════════════════════════════════════════
     // SINGLE VIDEO AUTO-EDIT MODE
@@ -625,13 +625,26 @@ Return JSON ONLY:
              !filename.includes("render");
     });
 
+    // FAIL-LOUD: Not enough raw clips
+    if (rawVideos.length < 3) {
+      console.warn(`FAIL-LOUD: Only ${rawVideos.length} raw clips available.`);
+      return new Response(JSON.stringify({
+        error: "INSUFFICIENT_RAW_CLIPS",
+        message: `Only ${rawVideos.length} raw clips available after filtering.`,
+        suggestion: "Upload more source footage or adjust filters."
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // SCORE + FILTER + FAIL-LOUD
     // ═══════════════════════════════════════════════════════════════
-    const intent = getIntent(dara_format || "", filter_category || "");
+    const intent = getIntent(topic || "", content_type || "");
     const SCORE_THRESHOLD = 10;
 
-    const scored = (rawVideos.length > 0 ? rawVideos : videos)
+    const scored = rawVideos
       .map(v => ({ ...v, score: scoreVideoForTopic(v, intent) }))
       .filter(v => v.score > SCORE_THRESHOLD)
       .sort((a, b) => b.score - a.score);
@@ -721,7 +734,13 @@ Return JSON ONLY:
       result = JSON.parse(jsonMatch?.[0] ?? "{}");
     } catch {
       console.error("Failed to parse AI response:", content);
-      result = { selected_videos: [], error: "Failed to parse AI response" };
+      return new Response(JSON.stringify({
+        error: "AI_SELECTION_PARSE_FAILED",
+        message: "AI returned an invalid response.",
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
     // Enrich selected videos with full data
