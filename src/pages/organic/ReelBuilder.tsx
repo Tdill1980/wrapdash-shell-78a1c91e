@@ -33,7 +33,7 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
-import { SceneBlueprint, SceneBlueprintScene, validateBlueprint, createTestBlueprint } from "@/types/SceneBlueprint";
+import { SceneBlueprint, SceneBlueprintScene, validateBlueprint, createTestBlueprint, FORMAT_TEMPLATE_MAP, OVERLAY_PACK_MAP } from "@/types/SceneBlueprint";
 import { AutoCreateInput, AutoCreateNavigationState } from "@/types/AutoCreateInput";
 import { ProducerJob, hasLockedProducerJob } from "@/types/ProducerJob";
 import { CreativeAssembly } from "@/lib/editor-brain/creativeAssembler";
@@ -196,6 +196,13 @@ export default function ReelBuilder() {
       },
       createdAt: new Date().toISOString(),
       source: 'smart_assist',
+      // ============ DEFAULT FORMAT LOCK ============
+      format: 'reel',
+      aspectRatio: '9:16',
+      templateId: FORMAT_TEMPLATE_MAP['reel']?.templateId || 'ig_reel_v1',
+      overlayPack: 'wpw_signature',
+      font: OVERLAY_PACK_MAP['wpw_signature']?.font || 'Inter Black',
+      textStyle: OVERLAY_PACK_MAP['wpw_signature']?.textStyle || 'bold',
     };
   }, []);
 
@@ -240,6 +247,14 @@ export default function ReelBuilder() {
       },
       createdAt: new Date().toISOString(),
       source: 'ai',
+      // ============ DEFAULT FORMAT LOCK ============
+      format: 'reel',
+      aspectRatio: '9:16',
+      templateId: FORMAT_TEMPLATE_MAP['reel']?.templateId || 'ig_reel_v1',
+      overlayPack: 'wpw_signature',
+      font: OVERLAY_PACK_MAP['wpw_signature']?.font || 'Inter Black',
+      textStyle: OVERLAY_PACK_MAP['wpw_signature']?.textStyle || 'bold',
+      caption: autoResult.reel_concept,
     };
   }, []);
 
@@ -351,6 +366,14 @@ export default function ReelBuilder() {
         },
         createdAt: new Date().toISOString(),
         source: 'manual',
+        // ============ DEFAULT FORMAT LOCK ============
+        format: job.contentType === 'story' ? 'story' : job.contentType === 'short' ? 'short' : 'reel',
+        aspectRatio: '9:16',
+        templateId: FORMAT_TEMPLATE_MAP[job.contentType === 'story' ? 'story' : job.contentType === 'short' ? 'short' : 'reel']?.templateId || 'ig_reel_v1',
+        overlayPack: job.style || 'wpw_signature',
+        font: OVERLAY_PACK_MAP[job.style || 'wpw_signature']?.font || 'Inter Black',
+        textStyle: OVERLAY_PACK_MAP[job.style || 'wpw_signature']?.textStyle || 'bold',
+        caption: job.caption,
       };
 
       setSceneBlueprint(blueprint);
@@ -850,6 +873,17 @@ export default function ReelBuilder() {
       const blueprintPayload = sanitizeForJson({
         blueprint_id: sceneBlueprint.id,
         blueprint_source: sceneBlueprint.source,
+        // ============ NEW: Format lock fields ============
+        format: sceneBlueprint.format,
+        aspect_ratio: sceneBlueprint.aspectRatio,
+        template_id: sceneBlueprint.templateId,
+        // ============ NEW: Style binding fields ============
+        overlay_pack: sceneBlueprint.overlayPack,
+        font: sceneBlueprint.font,
+        text_style: sceneBlueprint.textStyle,
+        // ============ NEW: Caption ============
+        caption: sceneBlueprint.caption,
+        // Scenes array
         scenes: sceneBlueprint.scenes.map((scene, i) => ({
           order: i + 1,
           scene_id: scene.sceneId,
@@ -860,6 +894,7 @@ export default function ReelBuilder() {
           purpose: scene.purpose,
           label: scene.purpose,
           text: scene.text,
+          text_overlay: scene.text, // Alias for render compatibility
           text_position: scene.textPosition,
           animation: scene.animation,
           cut_reason: scene.cutReason,
