@@ -245,7 +245,8 @@ serve(async (req) => {
       console.log(`[render-reel] Poll status: ${status}`);
 
       if (status === "succeeded") {
-        finalUrl = pollJson?.url ?? null;
+        // Defensive URL resolution - Creatomate may return URL in different fields
+        finalUrl = pollJson?.url || pollJson?.result_url || pollJson?.outputs?.[0]?.url || null;
         console.log("[render-reel] Render succeeded! URL:", finalUrl);
         break;
       }
@@ -280,9 +281,9 @@ serve(async (req) => {
       return json({ ok: false, error: msg, render_id: renderId }, 500);
     }
 
-    // Success - update DB
+    // Success - update DB with VERIFICATION
     console.log("[render-reel] Updating DB with success...");
-    await supabase
+    const { data: saved, error: saveError } = await supabase
       .from("video_edit_queue")
       .update({
         render_status: "complete",
@@ -292,12 +293,33 @@ serve(async (req) => {
           renderer: "creatomate",
           creatomate_render_id: renderId,
           completed_at: new Date().toISOString(),
+          final_url_saved: finalUrl,
         },
       })
-      .eq("id", body.job_id);
+      .eq("id", body.job_id)
+      .select("id, final_render_url, render_status");
 
+    // Verify save succeeded
+    if (saveError || !saved?.length) {
+      console.error("[render-reel] SAVE FAILED!", saveError, "job_id:", body.job_id);
+      return json({
+        ok: false,
+        error: "Render succeeded but failed to save final_render_url to database",
+        finalUrl,
+        saveError: saveError?.message || "No rows updated - check job_id and RLS",
+        job_id: body.job_id,
+      }, 500);
+    }
+
+    console.log("[render-reel] DB save verified:", JSON.stringify(saved));
     console.log("[render-reel] ====== FUNCTION COMPLETE ======");
-    return json({ ok: true, render_id: renderId, final_url: finalUrl });
+    return json({ 
+      ok: true, 
+      render_id: renderId, 
+      final_url: finalUrl,
+      db_verified: true,
+      saved_row: saved[0]
+    });
 
   } catch (err) {
     console.error("[render-reel] FATAL ERROR:", err);
