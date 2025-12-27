@@ -745,6 +745,12 @@ export default function ReelBuilder() {
   // Handle auto-created clips from ContentBox - FULL AUTO PROCESSING
   useEffect(() => {
     const runAutoProcess = async () => {
+      // 🔒 CRITICAL: Skip if a locked ProducerJob exists - agent takes authority
+      if (producerJobState?.skipAutoCreate && producerJobState?.producerJob?.lock) {
+        console.log('[ReelBuilder] Skipping auto-process - ProducerJob is locked');
+        return;
+      }
+      
       if (!autoCreateState?.autoCreatedClips || autoCreateState.autoCreatedClips.length === 0) {
         return;
       }
@@ -830,6 +836,12 @@ export default function ReelBuilder() {
   // This fires ONCE when autoCreate + autoCreateInput is passed from navigation
   // No guessing, no defaults - uses the exact contract from the source
   useEffect(() => {
+    // 🔒 CRITICAL: Skip if a locked ProducerJob exists - agent takes authority
+    if (producerJobState?.skipAutoCreate && producerJobState?.producerJob?.lock) {
+      console.log('[ReelBuilder] Skipping deterministic auto-create - ProducerJob is locked');
+      return;
+    }
+    
     const input = autoCreateState?.autoCreateInput;
     const shouldAutoCreate = autoCreateState?.autoCreate;
 
