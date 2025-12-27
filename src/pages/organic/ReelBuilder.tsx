@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -133,6 +134,12 @@ export default function ReelBuilder() {
   const { executeEdits, renderProgress, isExecuting, stopPolling } = useMightyEdit();
   const [isRenderingReel, setIsRenderingReel] = useState(false);
   const autoCreateReel = useAutoCreateReel();
+  
+  // ✅ RUN 2 + RUN 3: Track queue ID for diagnostics panel
+  const [lastQueueId, setLastQueueId] = useState<string | null>(null);
+  const [diagnosticsData, setDiagnosticsData] = useState<any>(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [isLoadingDiagnostics, setIsLoadingDiagnostics] = useState(false);
 
   // Validate blueprint whenever it changes
   useEffect(() => {
@@ -369,6 +376,143 @@ export default function ReelBuilder() {
       description: `${testBlueprint.scenes.length} scenes, ${testBlueprint.totalDuration.toFixed(1)}s total`,
     });
   }, [clips]);
+
+  // ✅ RUN 2: Test Render - Creates hardcoded blueprint and triggers render
+  const handleTestRender = useCallback(async () => {
+    if (clips.length === 0) {
+      toast.error('Add at least 1 clip first');
+      return;
+    }
+
+    setIsRenderingReel(true);
+    toast.info('Test render starting...');
+
+    try {
+      const firstClipUrl = clips[0].url;
+      
+      // Create hardcoded test blueprint with 2 scenes
+      const testScenes = [
+        {
+          order: 1,
+          scene_id: 'test_1',
+          clip_id: clips[0].id,
+          clip_url: firstClipUrl,
+          start_time: 0,
+          end_time: 1.5,
+          purpose: 'hook',
+          label: 'hook',
+          text: 'OLD LOOK',
+          text_overlay: 'OLD LOOK',
+          text_position: 'center',
+          animation: 'pop',
+          cut_reason: 'Test hook scene',
+        },
+        {
+          order: 2,
+          scene_id: 'test_2',
+          clip_id: clips[0].id,
+          clip_url: firstClipUrl,
+          start_time: 1.5,
+          end_time: 3.0,
+          purpose: 'b_roll',
+          label: 'b_roll',
+          text: 'NEW VIBE',
+          text_overlay: 'NEW VIBE',
+          text_position: 'center',
+          animation: 'pop',
+          cut_reason: 'Test b-roll scene',
+        },
+      ];
+
+      // First create content_files entry
+      const { data: contentFile, error: cfError } = await supabase
+        .from('content_files')
+        .insert({
+          file_url: firstClipUrl,
+          file_type: 'video',
+          source: 'test_render',
+          original_filename: 'Test Render Upload',
+        })
+        .select('id')
+        .single();
+
+      if (cfError) {
+        console.error('[TestRender] Failed to create content file:', cfError);
+        toast.error('Failed to prepare test video');
+        setIsRenderingReel(false);
+        return;
+      }
+
+      // Create queue entry with hardcoded blueprint
+      const { data: queueEntry, error: queueError } = await supabase
+        .from('video_edit_queue')
+        .insert({
+          content_file_id: contentFile.id,
+          source_url: firstClipUrl,
+          title: 'Test Render - OLD LOOK → NEW VIBE',
+          ai_edit_suggestions: {
+            blueprint_id: 'test',
+            blueprint_source: 'test',
+            scenes: testScenes,
+            end_card: null,
+          },
+          render_status: 'pending',
+          status: 'ready_for_review',
+        })
+        .select('id')
+        .single();
+
+      if (queueError) {
+        console.error('[TestRender] Failed to create queue entry:', queueError);
+        toast.error('Failed to start test render');
+        setIsRenderingReel(false);
+        return;
+      }
+
+      console.log('[TestRender] ✅ Created queue entry:', queueEntry.id);
+      setLastQueueId(queueEntry.id);
+      setDiagnosticsOpen(true);
+      
+      toast.success('Test render started!', { description: `Queue ID: ${queueEntry.id.slice(0, 8)}...` });
+
+      // Call executeEdits
+      await executeEdits(queueEntry.id, 'full');
+      
+    } catch (err) {
+      console.error('[TestRender] Failed:', err);
+      toast.error('Test render failed', { 
+        description: err instanceof Error ? err.message : 'Unknown error' 
+      });
+    } finally {
+      setIsRenderingReel(false);
+    }
+  }, [clips, executeEdits]);
+
+  // ✅ RUN 3: Refresh diagnostics data from queue
+  const handleRefreshDiagnostics = useCallback(async () => {
+    if (!lastQueueId) return;
+    
+    setIsLoadingDiagnostics(true);
+    try {
+      const { data, error } = await supabase
+        .from('video_edit_queue')
+        .select('*')
+        .eq('id', lastQueueId)
+        .single();
+      
+      if (error) {
+        console.error('[Diagnostics] Fetch error:', error);
+        toast.error('Failed to fetch diagnostics');
+      } else {
+        setDiagnosticsData(data);
+        console.log('[Diagnostics] Data refreshed:', data);
+      }
+    } catch (err) {
+      console.error('[Diagnostics] Exception:', err);
+    } finally {
+      setIsLoadingDiagnostics(false);
+    }
+  }, [lastQueueId]);
 
   // Single video upload handler - uploads video, then AI analyzes and finds best scenes
   const handleVideoUpload = useCallback(async (acceptedFiles: File[]) => {
@@ -1257,6 +1401,19 @@ export default function ReelBuilder() {
               )}
             </Button>
             
+            {/* ✅ RUN 2: Test Render Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestRender}
+              disabled={clips.length === 0 || isRenderingReel || isExecuting}
+              className="border-amber-500/50 hover:bg-amber-500/10"
+              title="Quick test render with hardcoded overlays"
+            >
+              <Zap className="w-4 h-4 mr-1.5 text-amber-500" />
+              Test Render
+            </Button>
+            
             <Button
               size="sm"
               className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
@@ -1284,6 +1441,118 @@ export default function ReelBuilder() {
             metadata={contentMetadata} 
             onChange={setContentMetadata}
           />
+        </div>
+      )}
+
+      {/* ✅ RUN 3: Render Diagnostics Panel */}
+      {lastQueueId && (
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <Collapsible open={diagnosticsOpen} onOpenChange={setDiagnosticsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Render Diagnostics
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {lastQueueId.slice(0, 8)}...
+                  </Badge>
+                </span>
+                <ChevronDown className={cn("w-4 h-4 transition-transform", diagnosticsOpen && "rotate-180")} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <Card className="border-border/50">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Queue Entry: {lastQueueId.slice(0, 12)}...</CardTitle>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={handleRefreshDiagnostics}
+                      disabled={isLoadingDiagnostics}
+                    >
+                      {isLoadingDiagnostics ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Refresh'
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {diagnosticsData ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">render_status:</span>{' '}
+                          <Badge variant={diagnosticsData.render_status === 'complete' ? 'default' : diagnosticsData.render_status === 'failed' ? 'destructive' : 'secondary'}>
+                            {diagnosticsData.render_status}
+                          </Badge>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">status:</span>{' '}
+                          <Badge variant="outline">{diagnosticsData.status}</Badge>
+                        </div>
+                      </div>
+                      
+                      {diagnosticsData.error_message && (
+                        <div className="bg-destructive/10 border border-destructive/30 rounded p-2">
+                          <p className="text-xs font-medium text-destructive">Error:</p>
+                          <p className="text-xs text-muted-foreground mt-1">{diagnosticsData.error_message}</p>
+                        </div>
+                      )}
+                      
+                      {diagnosticsData.final_render_url && (
+                        <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
+                          <p className="text-xs font-medium text-green-500">Render URL:</p>
+                          <a 
+                            href={diagnosticsData.final_render_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline break-all"
+                          >
+                            {diagnosticsData.final_render_url}
+                          </a>
+                        </div>
+                      )}
+                      
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full justify-between text-xs">
+                            debug_payload
+                            <ChevronDown className="w-3 h-3" />
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <pre className="text-[10px] bg-muted/50 p-2 rounded overflow-auto max-h-40 mt-1">
+                            {JSON.stringify(diagnosticsData.debug_payload, null, 2) || 'null'}
+                          </pre>
+                        </CollapsibleContent>
+                      </Collapsible>
+                      
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full justify-between text-xs">
+                            ai_edit_suggestions
+                            <ChevronDown className="w-3 h-3" />
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <pre className="text-[10px] bg-muted/50 p-2 rounded overflow-auto max-h-40 mt-1">
+                            {JSON.stringify(diagnosticsData.ai_edit_suggestions, null, 2) || 'null'}
+                          </pre>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-xs text-muted-foreground">Click "Refresh" to load diagnostics</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       )}
 

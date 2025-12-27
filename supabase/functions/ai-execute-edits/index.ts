@@ -20,6 +20,10 @@ serve(async (req) => {
 
   console.log("[ai-execute-edits] ====== FUNCTION INVOKED ======");
 
+  // Early variable declarations for debug payload
+  let videoEditId: string | null = null;
+  let supabase: any = null;
+
   try {
     // Validate Mux credentials first
     const MUX_TOKEN_ID = Deno.env.get("MUX_TOKEN_ID");
@@ -43,6 +47,7 @@ serve(async (req) => {
     console.log("[ai-execute-edits] Request body:", JSON.stringify(body));
     
     const { video_edit_id, render_type = "full", organization_id } = body;
+    videoEditId = video_edit_id;
 
     if (!video_edit_id) {
       console.error("[ai-execute-edits] Missing video_edit_id");
@@ -63,7 +68,7 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch the video edit queue item
     console.log("[ai-execute-edits] Fetching video edit item:", video_edit_id);
@@ -98,6 +103,9 @@ serve(async (req) => {
       .eq("id", video_edit_id);
 
     const aiSuggestions = editItem.ai_edit_suggestions || {};
+    
+    // ✅ RUN 1: Console log before processing scenes
+    console.log("[ai-execute-edits] EXECUTING WITH AI_SUGGESTIONS:", JSON.stringify(aiSuggestions, null, 2));
     
     // Get the Mux asset ID
     let muxAssetId: string | null = null;
@@ -139,7 +147,12 @@ serve(async (req) => {
         
         if (muxUploadRes.error) {
           console.error("[ai-execute-edits] Mux upload error:", muxUploadRes.error);
-          await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${muxUploadRes.error.message}`);
+          await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${muxUploadRes.error.message}`, {
+            stage: "mux_upload",
+            ai_edit_suggestions: aiSuggestions,
+            mux_error: muxUploadRes.error,
+            render_type,
+          });
           return new Response(
             JSON.stringify({ success: false, error: `Mux upload failed: ${muxUploadRes.error.message}` }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -148,7 +161,12 @@ serve(async (req) => {
         
         if (!muxUploadRes.data?.asset_id) {
           console.error("[ai-execute-edits] Mux upload did not return asset_id");
-          await updateQueueFailed(supabase, video_edit_id, "Mux upload completed but no asset_id returned");
+          await updateQueueFailed(supabase, video_edit_id, "Mux upload completed but no asset_id returned", {
+            stage: "mux_upload",
+            ai_edit_suggestions: aiSuggestions,
+            mux_response: muxUploadRes.data,
+            render_type,
+          });
           return new Response(
             JSON.stringify({ success: false, error: "Mux upload completed but no asset_id returned" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -174,7 +192,12 @@ serve(async (req) => {
         }
       } catch (e) {
         console.error("[ai-execute-edits] Mux upload exception:", e);
-        await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown'}`);
+        await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown'}`, {
+          stage: "mux_upload",
+          ai_edit_suggestions: aiSuggestions,
+          exception: e instanceof Error ? e.stack : String(e),
+          render_type,
+        });
         return new Response(
           JSON.stringify({ success: false, error: `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown'}` }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -184,7 +207,13 @@ serve(async (req) => {
 
     if (!muxAssetId) {
       console.error("[ai-execute-edits] No Mux asset ID available");
-      await updateQueueFailed(supabase, video_edit_id, "No video source URL available");
+      await updateQueueFailed(supabase, video_edit_id, "No video source URL available", {
+        stage: "mux_asset_check",
+        ai_edit_suggestions: aiSuggestions,
+        source_url: editItem.source_url,
+        content_file_id: editItem.content_file_id,
+        render_type,
+      });
       return new Response(
         JSON.stringify({ success: false, error: "No video source URL available" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -215,7 +244,13 @@ serve(async (req) => {
       // HARD STOP: No blueprint = No render
       if (!blueprintId || scenes.length === 0) {
         console.error("[ai-execute-edits] AUTHORITY VIOLATION: No valid blueprint provided");
-        await updateQueueFailed(supabase, video_edit_id, "Render blocked: No scene blueprint provided. Authority required.");
+        await updateQueueFailed(supabase, video_edit_id, "Render blocked: No scene blueprint provided. Authority required.", {
+          stage: "authority_check",
+          ai_edit_suggestions: aiSuggestions,
+          blueprint_id: blueprintId,
+          scenes_count: scenes.length,
+          render_type,
+        });
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -271,7 +306,13 @@ serve(async (req) => {
       
       if (clips.length === 0) {
         console.error("[ai-execute-edits] Blueprint had scenes but none were valid");
-        await updateQueueFailed(supabase, video_edit_id, "Blueprint scenes were invalid (no valid time ranges)");
+        await updateQueueFailed(supabase, video_edit_id, "Blueprint scenes were invalid (no valid time ranges)", {
+          stage: "scene_validation",
+          ai_edit_suggestions: aiSuggestions,
+          scenes_parsed: scenes.length,
+          clips_valid: clips.length,
+          render_type,
+        });
         return new Response(
           JSON.stringify({ success: false, error: "No valid clips in blueprint" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
@@ -361,10 +402,24 @@ serve(async (req) => {
     const isSuccess = renderResult?.success || shortsResults.length > 0;
     const isComplete = renderResult?.ready === true;
     
+    // ✅ RUN 1 + RUN 4: Build debug payload for success case
+    const debugPayload = {
+      stage: "complete",
+      mux_asset_id: muxAssetId,
+      render_type,
+      clips_rendered: aiSuggestions.scenes?.length || 0,
+      overlays_applied: aiSuggestions.scenes?.filter((s: any) => s.text || s.text_overlay).length || 0,
+      blueprint_id: aiSuggestions.blueprint_id,
+      blueprint_source: aiSuggestions.blueprint_source,
+      render_result: renderResult,
+      shorts_count: shortsResults.length,
+    };
+    
     const updateData: any = {
       render_status: isComplete ? "complete" : (isSuccess ? "processing" : "failed"),
       status: isComplete ? "complete" : (isSuccess ? "rendering" : "error"),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      debug_payload: debugPayload, // ✅ Always write debug payload
     };
 
     if (renderResult?.download_url) {
@@ -374,6 +429,11 @@ serve(async (req) => {
     if (shortsResults.length > 0) {
       updateData.shorts_extracted = shortsResults;
     }
+    
+    // ✅ If render failed, also write error_message
+    if (!isSuccess && renderResult?.error) {
+      updateData.error_message = renderResult.error;
+    }
 
     console.log("[ai-execute-edits] Update data:", JSON.stringify(updateData));
 
@@ -381,6 +441,61 @@ serve(async (req) => {
       .from("video_edit_queue")
       .update(updateData)
       .eq("id", video_edit_id);
+
+    // ✅ RUN 4: Insert into content_files when render completes successfully
+    if (isComplete && renderResult?.download_url) {
+      console.log("[ai-execute-edits] 🎉 Render complete - inserting into content_files for ContentBox...");
+      
+      try {
+        const contentFileInsert = {
+          file_type: "video",
+          file_url: renderResult.download_url,
+          thumbnail_url: null, // Could be added later via Mux thumbnail
+          content_category: "rendered",
+          processing_status: "ready",
+          organization_id: editItem.organization_id || null,
+          source: "mightyedit",
+          brand: editItem.brand || "wpw",
+          original_filename: `Rendered-${video_edit_id.slice(0, 8)}.mp4`,
+          metadata: {
+            source: "mightyedit",
+            video_edit_queue_id: video_edit_id,
+            task_id: editItem.task_id || null,
+            content_calendar_id: editItem.content_calendar_id || aiSuggestions.content_calendar_id || null,
+            agent_name: editItem.agent_name || aiSuggestions.agent_name || null,
+            blueprint_id: aiSuggestions.blueprint_id,
+            status: editItem.scheduled_at ? "scheduled" : "completed",
+            rendered_at: new Date().toISOString(),
+          },
+          tags: ["ai-rendered", "mightyedit", "auto-generated"],
+          ai_labels: {
+            render_type,
+            clips_count: aiSuggestions.scenes?.length || 0,
+            concept: editItem.title,
+          },
+        };
+
+        const { data: insertedFile, error: insertError } = await supabase
+          .from("content_files")
+          .insert(contentFileInsert)
+          .select("id")
+          .single();
+
+        if (insertError) {
+          console.error("[ai-execute-edits] Failed to insert content_file:", insertError);
+        } else {
+          console.log("[ai-execute-edits] ✅ Content file created:", insertedFile.id);
+          // Update the queue with the content_file reference
+          await supabase
+            .from("video_edit_queue")
+            .update({ rendered_content_file_id: insertedFile.id })
+            .eq("id", video_edit_id);
+        }
+      } catch (cfError) {
+        console.error("[ai-execute-edits] Exception inserting content_file:", cfError);
+        // Don't fail the whole request - the render succeeded
+      }
+    }
 
     const response = {
       success: isSuccess,
@@ -403,6 +518,19 @@ serve(async (req) => {
 
   } catch (err) {
     console.error("[ai-execute-edits] FATAL ERROR:", err);
+    
+    // ✅ RUN 1: Try to update queue with error if we have the context
+    if (supabase && videoEditId) {
+      try {
+        await updateQueueFailed(supabase, videoEditId, `Fatal error: ${err instanceof Error ? err.message : 'Unknown'}`, {
+          stage: "fatal_catch",
+          exception: err instanceof Error ? err.stack : String(err),
+        });
+      } catch (updateErr) {
+        console.error("[ai-execute-edits] Failed to update queue with fatal error:", updateErr);
+      }
+    }
+    
     return new Response(
       JSON.stringify({ success: false, error: err instanceof Error ? err.message : "Unknown error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
@@ -410,13 +538,17 @@ serve(async (req) => {
   }
 });
 
-// Helper to update queue with failure
-async function updateQueueFailed(supabase: any, videoEditId: string, error: string) {
+// ✅ RUN 1: Helper to update queue with failure - NOW WRITES error_message + debug_payload
+async function updateQueueFailed(supabase: any, videoEditId: string, error: string, debugPayload?: any) {
+  console.log("[ai-execute-edits] updateQueueFailed called:", { videoEditId, error, hasDebugPayload: !!debugPayload });
+  
   await supabase
     .from("video_edit_queue")
     .update({ 
       render_status: "failed", 
       status: "error",
+      error_message: error, // ✅ NOW PERSISTED
+      debug_payload: debugPayload || { error_only: true, message: error }, // ✅ NOW PERSISTED
       updated_at: new Date().toISOString() 
     })
     .eq("id", videoEditId);
