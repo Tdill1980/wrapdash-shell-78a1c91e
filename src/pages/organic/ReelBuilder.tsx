@@ -32,7 +32,8 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from "lucide-react";
-import { SceneBlueprint, validateBlueprint, createTestBlueprint } from "@/types/SceneBlueprint";
+import { SceneBlueprint, SceneBlueprintScene, validateBlueprint, createTestBlueprint } from "@/types/SceneBlueprint";
+import { CreativeAssembly } from "@/lib/editor-brain/creativeAssembler";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
 import { useReelCaptions, CaptionStyle } from "@/hooks/useReelCaptions";
@@ -153,6 +154,54 @@ export default function ReelBuilder() {
       console.log('[ReelBuilder] Blueprint validation:', validation);
     }
   }, [sceneBlueprint]);
+
+  // ============ BUILD BLUEPRINT FROM SMART ASSIST ============
+  // Converts CreativeAssembly + Clips into authoritative SceneBlueprint
+  const buildBlueprintFromSmartAssist = useCallback((
+    creative: CreativeAssembly,
+    sourceClips: Clip[],
+    platform: 'instagram' | 'tiktok' | 'youtube' | 'facebook' = 'instagram'
+  ): SceneBlueprint => {
+    const scenes: SceneBlueprintScene[] = creative.sequence.map((seq, index) => {
+      const clip = sourceClips[index] || sourceClips[0];
+      const purpose: SceneBlueprintScene['purpose'] = 
+        index === 0 ? 'hook' : 
+        index === creative.sequence.length - 1 ? 'cta' : 
+        'b_roll';
+      
+      // Find overlay that falls within this scene's timing
+      const overlay = creative.overlays.find(o => o.start >= seq.start && o.start < seq.end);
+      
+      return {
+        sceneId: `smart_${index + 1}`,
+        clipId: clip.id,
+        clipUrl: clip.url,
+        start: seq.start,
+        end: seq.end,
+        purpose,
+        text: overlay?.text,
+        textPosition: overlay?.position || 'center',
+        animation: overlay?.animation === 'typewriter' ? 'pop' : (overlay?.animation || seq.transition || 'pop') as SceneBlueprintScene['animation'],
+        cutReason: seq.label || `Smart Assist scene ${index + 1}`,
+      };
+    });
+
+    const totalDuration = scenes.reduce((sum, s) => sum + (s.end - s.start), 0);
+
+    return {
+      id: `bp_smart_${Date.now()}`,
+      platform,
+      totalDuration,
+      scenes,
+      endCard: {
+        duration: 3,
+        text: creative.cta || 'Follow for more',
+        cta: creative.cta || 'Follow for more',
+      },
+      createdAt: new Date().toISOString(),
+      source: 'ai',
+    };
+  }, []);
 
   // Generate test blueprint from clips (for verification)
   const handleCreateTestBlueprint = useCallback(() => {
@@ -635,6 +684,10 @@ export default function ReelBuilder() {
 
           setClips(editedClips);
           
+          // ============ AUTO-CREATE BLUEPRINT FROM SMART ASSIST ============
+          const blueprint = buildBlueprintFromSmartAssist(result.creative, editedClips, 'instagram');
+          setSceneBlueprint(blueprint);
+          
           // Step 4: Apply brand overlays if available
           if (autoCreateState.suggestedHook) {
             overlaysEngine.addOverlay({
@@ -648,7 +701,7 @@ export default function ReelBuilder() {
           }
 
           toast.success("AI Reel Created!", {
-            description: `${editedClips.length} clips edited and ready to render`,
+            description: `${editedClips.length} clips + blueprint ready to render`,
           });
         }
       }
@@ -683,7 +736,14 @@ export default function ReelBuilder() {
     });
 
     setClips(newClips);
-    toast.success("AI Timeline Applied!");
+
+    // ============ CREATE AUTHORITATIVE BLUEPRINT ============
+    const blueprint = buildBlueprintFromSmartAssist(smartAssist.creative, newClips, 'instagram');
+    setSceneBlueprint(blueprint);
+    
+    toast.success("AI Timeline + Blueprint Applied!", {
+      description: `${blueprint.scenes.length} scenes ready to render`,
+    });
   };
 
   const handleAddClipsFromLibrary = (files: MediaFile[]) => {

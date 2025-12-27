@@ -22,7 +22,7 @@ export interface SceneBlueprint {
   
   // Metadata for tracking
   createdAt?: string;
-  source?: 'ai' | 'manual' | 'hardcoded';
+  source?: 'ai' | 'manual' | 'hardcoded' | 'smart_assist';
 }
 
 export interface SceneBlueprintScene {
