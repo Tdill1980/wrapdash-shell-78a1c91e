@@ -44,6 +44,7 @@ import { useSmartAssist } from "@/hooks/useSmartAssist";
 import { useAutoCreateReel, DaraFormatType } from "@/hooks/useAutoCreateReel";
 import { useMightyEdit, RenderProgress } from "@/hooks/useMightyEdit";
 import { RenderProgressBar } from "@/components/mighty-edit/RenderProgressBar";
+import { RenderResult } from "@/components/mighty-edit/RenderResult";
 import { BeatSyncPanel } from "@/components/reel/BeatSyncPanel";
 import { CaptionsPanel } from "@/components/reel/CaptionsPanel";
 import { BrandOverlayPanel } from "@/components/reel/BrandOverlayPanel";
@@ -1287,8 +1288,87 @@ export default function ReelBuilder() {
               </Card>
             )}
 
+            {/* RENDERED VIDEO OUTPUT - Shows when render is complete */}
+            {((renderProgress?.status === 'complete' && renderProgress.outputUrl) || savedVideoUrl) && (
+              <Card className="border-2 border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    Your Reel is Ready!
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <RenderResult
+                    renderUrl={renderProgress?.outputUrl || savedVideoUrl}
+                    status="complete"
+                    title="AI-Generated Reel"
+                    duration={sceneBlueprint?.totalDuration}
+                  />
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => {
+                        setSavedVideoUrl(null);
+                        stopPolling();
+                        setClips([]);
+                        setSceneBlueprint(null);
+                        setReelConcept(null);
+                        setSuggestedHook(null);
+                        setSuggestedCta(null);
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Another Reel
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => navigate('/organic?tab=content-queue')}
+                    >
+                      View in Queue
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* RENDER FAILED - Shows when render fails */}
+            {renderProgress?.status === 'failed' && (
+              <Card className="border-2 border-destructive/30 bg-gradient-to-br from-destructive/10 to-destructive/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="w-4 h-4" />
+                    Render Failed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {renderProgress.error || "Something went wrong during rendering. Please try again."}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={handleRenderReel}
+                      disabled={isExecuting || !blueprintValidation.valid}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Retry Render
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      onClick={() => stopPolling()}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Preview - Shows when clips exist */}
-            {clips.length > 0 && (
+            {clips.length > 0 && !(renderProgress?.status === 'complete' && renderProgress.outputUrl) && !savedVideoUrl && (
               <Card>
                 <CardContent className="p-4">
                   {/* Grid Style Preview - 2x2 grid layout */}
