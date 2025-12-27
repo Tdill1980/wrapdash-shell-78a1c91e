@@ -1,5 +1,8 @@
 project_id = "wzwqhfbmymrengjqikjl"
 
+[functions.ai-analyze-video-frame]
+verify_jwt = true
+
 [functions.render-grid-ad]
 verify_jwt = false
 

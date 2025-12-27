@@ -1776,6 +1776,8 @@ export type Database = {
           updated_at: string
           uploader_id: string | null
           vehicle_info: Json | null
+          visual_analyzed_at: string | null
+          visual_tags: Json | null
           width: number | null
         }
         Insert: {
@@ -1805,6 +1807,8 @@ export type Database = {
           updated_at?: string
           uploader_id?: string | null
           vehicle_info?: Json | null
+          visual_analyzed_at?: string | null
+          visual_tags?: Json | null
           width?: number | null
         }
         Update: {
@@ -1834,6 +1838,8 @@ export type Database = {
           updated_at?: string
           uploader_id?: string | null
           vehicle_info?: Json | null
+          visual_analyzed_at?: string | null
+          visual_tags?: Json | null
           width?: number | null
         }
         Relationships: [
