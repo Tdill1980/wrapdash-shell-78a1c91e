@@ -201,36 +201,66 @@ serve(async (req) => {
     if (render_type === "full" || render_type === "all") {
       console.log("[ai-execute-edits] Creating full reel...");
       
-      const clips: ClipSegment[] = [];
-      const scenes = aiSuggestions.scenes || aiSuggestions.segments || aiSuggestions.broll_cues || [];
+      // AUTHORITY CHECK: Blueprint scenes are REQUIRED
+      const scenes = aiSuggestions.scenes || [];
+      const blueprintId = aiSuggestions.blueprint_id;
+      const blueprintSource = aiSuggestions.blueprint_source;
       
-      if (scenes.length > 0) {
-        console.log("[ai-execute-edits] Using AI-suggested scenes:", scenes.length);
+      console.log("[ai-execute-edits] Blueprint check:", {
+        blueprint_id: blueprintId,
+        blueprint_source: blueprintSource,
+        scenes_count: scenes.length,
+        ai_edit_suggestions: JSON.stringify(aiSuggestions)
+      });
+      
+      // HARD STOP: No blueprint = No render
+      if (!blueprintId || scenes.length === 0) {
+        console.error("[ai-execute-edits] AUTHORITY VIOLATION: No valid blueprint provided");
+        console.error("[ai-execute-edits] ai_edit_suggestions was:", JSON.stringify(aiSuggestions));
+        await updateQueueFailed(supabase, video_edit_id, "Render blocked: No scene blueprint provided. Authority required.");
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Render blocked: No scene blueprint provided. Rendering requires an authoritative blueprint with scenes.",
+            authority_check: "FAILED",
+            blueprint_id: blueprintId,
+            scenes_provided: scenes.length
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+      
+      console.log("[ai-execute-edits] AUTHORITY PASSED: Using blueprint", blueprintId, "with", scenes.length, "scenes");
+      
+      const clips: ClipSegment[] = [];
+      
+      for (const scene of scenes.slice(0, 8)) {
+        const startTime = parseFloat(scene.start_time || scene.start || 0);
+        const endTime = parseFloat(scene.end_time || scene.end || (startTime + 5));
         
-        for (const scene of scenes.slice(0, 8)) {
-          const startTime = parseFloat(scene.start_time || scene.timestamp || scene.start || 0);
-          const endTime = parseFloat(scene.end_time || scene.end || (startTime + (scene.duration || 5)));
-          
-          if (endTime > startTime && startTime < videoDuration) {
-            clips.push({
-              asset_id: muxAssetId,
-              start_time: startTime,
-              end_time: Math.min(endTime, videoDuration),
-              label: scene.label || scene.description || `Clip ${clips.length + 1}`
-            });
-          }
+        if (endTime > startTime) {
+          clips.push({
+            asset_id: muxAssetId,
+            start_time: startTime,
+            end_time: Math.min(endTime, videoDuration),
+            label: scene.label || scene.purpose || `Scene ${scene.order || clips.length + 1}`
+          });
         }
       }
       
-      // Fallback: use full video as a single clip
+      // Secondary check: scenes existed but none were valid
       if (clips.length === 0) {
-        console.log("[ai-execute-edits] No AI clips, using full video");
-        clips.push({
-          asset_id: muxAssetId,
-          start_time: 0,
-          end_time: Math.min(videoDuration, 60), // Max 60s for full video
-          label: "Full Video"
-        });
+        console.error("[ai-execute-edits] Blueprint had scenes but none were valid");
+        await updateQueueFailed(supabase, video_edit_id, "Blueprint scenes were invalid (no valid time ranges)");
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Blueprint scenes were invalid - no valid time ranges found",
+            authority_check: "PASSED",
+            validation_check: "FAILED"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
       }
 
       console.log("[ai-execute-edits] Stitching", clips.length, "clips");
