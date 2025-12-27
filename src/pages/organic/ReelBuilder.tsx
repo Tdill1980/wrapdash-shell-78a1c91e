@@ -53,6 +53,7 @@ import { ContentMetadataPanel, useContentMetadata, ContentMetadata } from "@/com
 import { MediaFile } from "@/components/media/MediaLibrary";
 import { DARA_FORMATS, DaraFormat } from "@/lib/dara-denney-formats";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeForJson } from "@/lib/sanitizeForJson";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -481,7 +482,8 @@ export default function ReelBuilder() {
       }
 
       // Build the blueprint payload FIRST so we can log it
-      const blueprintPayload = {
+      // CRITICAL: sanitizeForJson removes undefined values that cause Supabase to silently drop keys
+      const blueprintPayload = sanitizeForJson({
         blueprint_id: sceneBlueprint.id,
         blueprint_source: sceneBlueprint.source,
         scenes: sceneBlueprint.scenes.map((scene, i) => ({
@@ -501,7 +503,7 @@ export default function ReelBuilder() {
         end_card: sceneBlueprint.endCard,
         hook: sceneBlueprint.scenes.find(s => s.purpose === 'hook')?.text,
         cta: sceneBlueprint.endCard?.cta || sceneBlueprint.scenes.find(s => s.purpose === 'cta')?.text,
-      };
+      });
 
       // LOG THE PAYLOAD before insert
       console.log('[ReelBuilder] 📦 Blueprint payload to save:', JSON.stringify(blueprintPayload, null, 2));
