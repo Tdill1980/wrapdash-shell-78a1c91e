@@ -29,7 +29,31 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <style>
+      #app-loading {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(ellipse at top, #111827, #030712);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      #app-loading span {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: #60a5fa;
+        opacity: 0.9;
+      }
+    </style>
+    <div id="root">
+      <div id="app-loading">
+        <div class="loader">
+          <span>WrapCommandAI</span>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force dark background immediately - prevents white flash */
+html,
+body,
+#root {
+  background-color: #0b0f1a;
+  color-scheme: dark;
+}
+
 /* Hide scrollbar for horizontal scroll containers */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -40,9 +48,11 @@ All colors MUST be HSL.
       --destructive: 0 62.8% 30.6%;
       --destructive-foreground: 240 10% 98%;
       
-      /* Borders - neutral */
-      --border: 0 0% 100% / 0.06;
-      --input: 0 0% 100% / 0.06;
+      /* Borders - separated HSL and opacity for browser compatibility */
+      --border: 0 0% 100%;
+      --border-opacity: 0.06;
+      --input: 0 0% 100%;
+      --input-opacity: 0.06;
       --ring: 198 100% 50%;
       --radius: 0.5rem;                   /* 8px radius */
       
@@ -58,7 +68,8 @@ All colors MUST be HSL.
       --sidebar-primary-foreground: 240 10% 98%;
       --sidebar-accent: 214 21% 21%;
       --sidebar-accent-foreground: 240 10% 98%;
-      --sidebar-border: 0 0% 100% / 0.06;
+      --sidebar-border: 0 0% 100%;
+      --sidebar-border-opacity: 0.06;
       --sidebar-ring: 198 100% 50%;
       
       /* Instagram gradient colors */
