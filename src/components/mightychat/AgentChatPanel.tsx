@@ -10,7 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Send, X, CheckCircle2, Clock, Loader2, Image, Film, FileText, History, Wand2, ExternalLink } from "lucide-react";
+import { Send, X, CheckCircle2, Clock, Loader2, Image, Film, FileText, History, Wand2, ExternalLink, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAgentChat, type AgentChatMessage } from "@/hooks/useAgentChat";
 import { DelegateTaskModal } from "./DelegateTaskModal";
@@ -20,6 +20,7 @@ import { RecentAgentChats } from "./RecentAgentChats";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { ProducerJob, ProducerJobClip, ProducerJobOverlay } from "@/types/ProducerJob";
 interface AgentChatPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -476,16 +477,147 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                         )}
                       </div>
                       
+                      {/* PRIMARY ACTION: Create as Locked ProducerJob in ReelBuilder */}
                       <Button 
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        onClick={async () => {
+                          console.log('[AgentChatPanel] Creating locked ProducerJob from agent output');
+                          toast.info('Loading clips from ContentBox...');
+                          
+                          let clips: ProducerJobClip[] = [];
+                          
+                          // 1. If attached_assets exist, use them directly
+                          const attachedAssets = contentFactoryPreset.attached_assets || [];
+                          if (attachedAssets.length > 0) {
+                            clips = attachedAssets.map((asset, idx) => ({
+                              id: `attached_${idx}_${Date.now()}`,
+                              url: asset.url,
+                              duration: 10,
+                              trimStart: 0,
+                              trimEnd: 10,
+                              suggestedOverlay: contentFactoryPreset.overlays?.[idx]?.text,
+                              reason: 'Agent attached asset',
+                            }));
+                          }
+                          
+                          // 2. If no attached assets but asset_query exists, query contentbox
+                          if (clips.length === 0 && contentFactoryPreset.asset_query) {
+                            const query = contentFactoryPreset.asset_query;
+                            console.log('[AgentChatPanel] Querying contentbox with:', query);
+                            
+                            let dbQuery = supabase
+                              .from('content_files')
+                              .select('id, file_url, thumbnail_url, duration_seconds, original_filename, tags')
+                              .eq('file_type', 'video')
+                              .order('created_at', { ascending: false })
+                              .limit(query.limit || 4);
+                            
+                            // Filter by tags if provided
+                            if (query.tags && query.tags.length > 0) {
+                              dbQuery = dbQuery.overlaps('tags', query.tags);
+                            }
+                            
+                            const { data: videos, error } = await dbQuery;
+                            
+                            if (error) {
+                              console.error('[AgentChatPanel] ContentBox query failed:', error);
+                              toast.error('Failed to load clips from ContentBox');
+                            } else if (videos && videos.length > 0) {
+                              clips = videos.map((video, idx) => ({
+                                id: video.id,
+                                url: video.file_url,
+                                thumbnail: video.thumbnail_url,
+                                duration: video.duration_seconds || 10,
+                                trimStart: 0,
+                                trimEnd: Math.min(video.duration_seconds || 10, 5), // Default 5s per clip
+                                suggestedOverlay: contentFactoryPreset.overlays?.[idx]?.text,
+                                reason: `Matched tags: ${(video.tags as string[] || []).slice(0, 3).join(', ')}`,
+                              }));
+                              console.log('[AgentChatPanel] Found', clips.length, 'clips from ContentBox');
+                            }
+                          }
+                          
+                          // 3. If still no clips, try to get the most recent videos
+                          if (clips.length === 0) {
+                            console.log('[AgentChatPanel] No clips found, loading recent videos...');
+                            const { data: recentVideos } = await supabase
+                              .from('content_files')
+                              .select('id, file_url, thumbnail_url, duration_seconds, original_filename')
+                              .eq('file_type', 'video')
+                              .order('created_at', { ascending: false })
+                              .limit(4);
+                            
+                            if (recentVideos && recentVideos.length > 0) {
+                              clips = recentVideos.map((video, idx) => ({
+                                id: video.id,
+                                url: video.file_url,
+                                thumbnail: video.thumbnail_url,
+                                duration: video.duration_seconds || 10,
+                                trimStart: 0,
+                                trimEnd: Math.min(video.duration_seconds || 10, 5),
+                                suggestedOverlay: contentFactoryPreset.overlays?.[idx]?.text,
+                                reason: 'Most recent video',
+                              }));
+                            }
+                          }
+                          
+                          if (clips.length === 0) {
+                            toast.error('No video clips found. Please upload some videos first.');
+                            return;
+                          }
+                          
+                          // 4. Build the locked ProducerJob
+                          const overlays: ProducerJobOverlay[] = (contentFactoryPreset.overlays || []).map(o => ({
+                            text: o.text,
+                            start: o.start,
+                            duration: o.duration,
+                            position: 'center' as const,
+                            style: 'bold' as const,
+                          }));
+                          
+                          const producerJob: ProducerJob = {
+                            source: 'agent',
+                            agentId: agentId || undefined,
+                            platform: (contentFactoryPreset.platform as 'instagram' | 'tiktok' | 'youtube' | 'facebook') || 'instagram',
+                            contentType: (contentFactoryPreset.content_type as 'reel' | 'story' | 'short') || 'reel',
+                            clips,
+                            overlays,
+                            hook: contentFactoryPreset.hook,
+                            cta: contentFactoryPreset.cta,
+                            caption: contentFactoryPreset.caption,
+                            hashtags: contentFactoryPreset.hashtags?.split(/[,\s]+/).filter(Boolean),
+                            musicStyle: 'upbeat',
+                            lock: true, // 🔒 CRITICAL: No auto-create will run
+                            createdAt: new Date().toISOString(),
+                          };
+                          
+                          console.log('[AgentChatPanel] ProducerJob created:', producerJob);
+                          toast.success(`Loaded ${clips.length} clips with ${overlays.length} overlays`);
+                          
+                          // 5. Navigate to ReelBuilder with the locked job
+                          navigate('/organic/reel-builder', {
+                            state: {
+                              producerJob,
+                              skipAutoCreate: true,
+                            },
+                          });
+                        }}
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Create in ReelBuilder
+                      </Button>
+                      
+                      {/* Secondary: Open in MightyEdit (legacy single-video flow) */}
+                      <Button 
+                        variant="outline"
                         className="w-full"
                         onClick={async () => {
-                          // Claim attachments as ContentBox assets before navigating
+                          // Original MightyEdit flow for single video edits
                           const attachedAssets = contentFactoryPreset.attached_assets || [];
                           let claimedAssetId: string | null = null;
                           
                           if (attachedAssets.length > 0) {
                             try {
-                              // Insert into contentbox_assets to claim ownership
                               const { data: asset, error } = await supabase
                                 .from('contentbox_assets')
                                 .insert({
@@ -500,27 +632,20 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                                 .select()
                                 .single();
                               
-                              if (error) {
-                                console.error('[AgentChatPanel] Failed to claim asset:', error);
-                              } else {
+                              if (!error) {
                                 claimedAssetId = asset.id;
-                                console.log('[AgentChatPanel] Claimed asset:', asset);
                               }
                             } catch (e) {
                               console.error('[AgentChatPanel] Error claiming asset:', e);
                             }
                           }
                           
-                          // Store preset with claimed asset ID
                           const presetWithAssets = {
                             ...contentFactoryPreset,
                             attached_assets: attachedAssets,
                             claimed_asset_id: claimedAssetId,
                           };
-                          console.log('[AgentChatPanel] Overlays being saved:', contentFactoryPreset.overlays);
-                          console.log('[AgentChatPanel] Full preset being saved:', presetWithAssets);
                           sessionStorage.setItem('mightyedit_preset', JSON.stringify(presetWithAssets));
-                          console.log('[AgentChatPanel] Navigating to MightyEdit with preset');
                           navigate('/mighty-edit');
                         }}
                       >

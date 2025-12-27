@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { SceneBlueprint, SceneBlueprintScene, validateBlueprint, createTestBlueprint } from "@/types/SceneBlueprint";
 import { AutoCreateInput, AutoCreateNavigationState } from "@/types/AutoCreateInput";
+import { ProducerJob, hasLockedProducerJob } from "@/types/ProducerJob";
 import { CreativeAssembly } from "@/lib/editor-brain/creativeAssembler";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
@@ -89,10 +90,12 @@ export default function ReelBuilder() {
   const navigate = useNavigate();
   const location = useLocation();
   const autoCreateState = location.state as AutoCreateNavigationState | undefined;
+  const producerJobState = location.state as { producerJob?: ProducerJob; skipAutoCreate?: boolean } | undefined;
   
   // ============ DETERMINISTIC AUTO-CREATE FLAG ============
   // Prevents double-execution when coming from MightyTask/Calendar
   const hasAutoCreatedFromInput = useRef(false);
+  const hasLoadedProducerJob = useRef(false);
 
   const [clips, setClips] = useState<Clip[]>([]);
   const [selectedClip, setSelectedClip] = useState<string | null>(null);
@@ -232,6 +235,65 @@ export default function ReelBuilder() {
       source: 'ai',
     };
   }, []);
+
+  // ============ LOAD PRODUCER JOB FROM AGENT ============
+  // When an agent (like Noah) creates a locked ProducerJob, load it directly
+  // NO auto-create runs, NO AI re-selection - clips and overlays are exactly as specified
+  useEffect(() => {
+    if (hasLoadedProducerJob.current) return;
+    
+    if (producerJobState?.skipAutoCreate && producerJobState?.producerJob?.lock) {
+      const job = producerJobState.producerJob;
+      console.log('[ReelBuilder] 🔒 Loading LOCKED ProducerJob from agent:', job);
+      hasLoadedProducerJob.current = true;
+      
+      // Convert ProducerJob clips to ReelBuilder clips
+      const newClips: Clip[] = job.clips.map((clip, index) => ({
+        id: clip.id,
+        name: clip.reason || `Clip ${index + 1}`,
+        url: clip.url,
+        duration: clip.duration,
+        thumbnail: clip.thumbnail,
+        trimStart: clip.trimStart,
+        trimEnd: clip.trimEnd,
+        speed: 1,
+        suggestedOverlay: clip.suggestedOverlay,
+        reason: clip.reason,
+      }));
+      
+      setClips(newClips);
+      setSuggestedHook(job.hook || null);
+      setSuggestedCta(job.cta || null);
+      setReelConcept(job.hook || 'Agent-created reel');
+      
+      // Apply overlays to the overlay engine
+      if (job.overlays && job.overlays.length > 0) {
+        job.overlays.forEach((overlay) => {
+          overlaysEngine.addOverlay({
+            text: overlay.text,
+            style: 'modern',
+            position: overlay.position === 'top' ? 'top-center' : 
+                     overlay.position === 'bottom' ? 'bottom-center' : 'center',
+            start: overlay.start,
+            end: overlay.start + overlay.duration,
+            color: '#E1306C',
+          });
+        });
+      }
+      
+      // Build the blueprint from the job
+      const blueprint = buildBlueprintFromAutoCreate(newClips, {
+        suggested_cta: job.cta,
+        reel_concept: job.hook,
+      }, job.platform);
+      
+      setSceneBlueprint(blueprint);
+      
+      toast.success(`Loaded ${newClips.length} clips with ${job.overlays?.length || 0} overlays`, {
+        description: 'Ready to render - no AI re-thinking',
+      });
+    }
+  }, [producerJobState, buildBlueprintFromAutoCreate, overlaysEngine]);
 
   // Generate test blueprint from clips (for verification)
   const handleCreateTestBlueprint = useCallback(() => {
