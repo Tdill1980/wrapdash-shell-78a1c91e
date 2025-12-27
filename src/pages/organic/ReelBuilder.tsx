@@ -1282,12 +1282,31 @@ export default function ReelBuilder() {
   const handleGenerateCaptions = async (style: CaptionStyle) => {
     const captions = await captionsEngine.generateCaptions("", style);
     if (captions.length > 0) {
+      // ✅ WIRE TO BLUEPRINT: Set caption and scene text
+      if (sceneBlueprint) {
+        setSceneBlueprint(prev => prev ? {
+          ...prev,
+          caption: captions.map(c => c.text).join(' '),
+          scenes: prev.scenes.map((scene, i) => ({
+            ...scene,
+            text: captions[i]?.text || scene.text,
+          })),
+        } : prev);
+      }
       toast.success(`Generated ${captions.length} captions`);
     }
   };
 
   const handleApplyBrandPack = (packId: BrandPackId) => {
     overlaysEngine.applyBrandPack(packId, totalDuration);
+    // ✅ WIRE TO BLUEPRINT: Set overlay pack styling
+    const packConfig = OVERLAY_PACK_MAP[packId] || OVERLAY_PACK_MAP['wpw_signature'];
+    setSceneBlueprint(prev => prev ? {
+      ...prev,
+      overlayPack: packId,
+      font: packConfig.font,
+      textStyle: packConfig.textStyle,
+    } : prev);
     toast.success(`Applied ${packId.toUpperCase()} overlay pack`);
   };
 
@@ -1357,13 +1376,37 @@ export default function ReelBuilder() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setSelectedDaraFormat(null)}>
+                <DropdownMenuItem onClick={() => {
+                  setSelectedDaraFormat(null);
+                  // ✅ WIRE TO BLUEPRINT: Reset to default format
+                  if (sceneBlueprint) {
+                    const defaultFormat = FORMAT_TEMPLATE_MAP['reel'];
+                    setSceneBlueprint(prev => prev ? {
+                      ...prev,
+                      format: 'reel',
+                      aspectRatio: defaultFormat.aspectRatio,
+                      templateId: defaultFormat.templateId,
+                    } : prev);
+                  }
+                }}>
                   <span className="text-muted-foreground">Auto (AI Chooses)</span>
                 </DropdownMenuItem>
                 {Object.values(DARA_FORMATS).map((format) => (
                   <DropdownMenuItem 
                     key={format.id} 
-                    onClick={() => setSelectedDaraFormat(format.id)}
+                    onClick={() => {
+                      setSelectedDaraFormat(format.id);
+                      // ✅ WIRE TO BLUEPRINT: Set format, aspectRatio, templateId
+                      if (sceneBlueprint) {
+                        const templateMapping = FORMAT_TEMPLATE_MAP[format.id] || FORMAT_TEMPLATE_MAP['reel'];
+                        setSceneBlueprint(prev => prev ? {
+                          ...prev,
+                          format: 'reel',
+                          aspectRatio: templateMapping.aspectRatio,
+                          templateId: format.id, // Use format ID as template identifier
+                        } : prev);
+                      }
+                    }}
                     className={selectedDaraFormat === format.id ? "bg-primary/10" : ""}
                   >
                     <span className="mr-2">{format.emoji}</span>
@@ -1395,7 +1438,22 @@ export default function ReelBuilder() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => editorBrain.extractBestScenes(clips, setClips)}
+              onClick={() => {
+                editorBrain.extractBestScenes(clips, setClips);
+                // ✅ WIRE TO BLUEPRINT: Optimize scenes in blueprint
+                if (sceneBlueprint && sceneBlueprint.scenes.length > 0) {
+                  const priorityOrder: Record<string, number> = { hook: 0, cta: 1, proof: 2, payoff: 3, pattern_interrupt: 4, reveal: 5, b_roll: 6 };
+                  const optimized = [...sceneBlueprint.scenes]
+                    .sort((a, b) => (priorityOrder[a.purpose] || 99) - (priorityOrder[b.purpose] || 99))
+                    .slice(0, 5);
+                  setSceneBlueprint(prev => prev ? {
+                    ...prev,
+                    scenes: optimized,
+                    totalDuration: optimized.reduce((sum, s) => sum + (s.end - s.start), 0),
+                  } : prev);
+                  toast.success('Optimized to best 5 scenes');
+                }
+              }}
               disabled={clips.length === 0 || editorBrain.isAnalyzing}
             >
               <Scissors className="w-4 h-4 mr-1.5" />
@@ -1404,7 +1462,23 @@ export default function ReelBuilder() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => editorBrain.autoSequence(clips, setClips)}
+              onClick={() => {
+                editorBrain.autoSequence(clips, setClips);
+                // ✅ WIRE TO BLUEPRINT: Resequence timing in blueprint
+                if (sceneBlueprint && sceneBlueprint.scenes.length >= 2) {
+                  const sliceDuration = sceneBlueprint.totalDuration / sceneBlueprint.scenes.length;
+                  const resequenced = sceneBlueprint.scenes.map((scene, i) => ({
+                    ...scene,
+                    start: i * sliceDuration,
+                    end: (i + 1) * sliceDuration,
+                  }));
+                  setSceneBlueprint(prev => prev ? {
+                    ...prev,
+                    scenes: resequenced,
+                  } : prev);
+                  toast.success('Scenes resequenced with even timing');
+                }
+              }}
               disabled={clips.length < 2 || editorBrain.isSequencing}
             >
               {editorBrain.isSequencing ? (
@@ -1474,7 +1548,16 @@ export default function ReelBuilder() {
         <div className="max-w-7xl mx-auto px-4 py-3 border-b border-border/30 bg-card/30">
           <ContentMetadataPanel 
             metadata={contentMetadata} 
-            onChange={setContentMetadata}
+            onChange={(newMetadata) => {
+              setContentMetadata(newMetadata);
+              // ✅ WIRE TO BLUEPRINT: Sync brand to blueprint
+              if (newMetadata.brand !== contentMetadata.brand && sceneBlueprint) {
+                setSceneBlueprint(prev => prev ? {
+                  ...prev,
+                  brand: newMetadata.brand,
+                } : prev);
+              }
+            }}
           />
         </div>
       )}
