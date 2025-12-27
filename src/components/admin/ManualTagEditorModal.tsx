@@ -40,9 +40,21 @@ interface VideoTags {
   has_finished_result: boolean;
   has_logo: boolean;
   has_person: boolean;
-  environment: "shop" | "outdoor" | "unknown";
+  environment: "shop" | "outdoor" | "studio" | "unknown";
   dominant_motion: "static" | "hand_install" | "peel_motion" | "camera_pan";
   quality_score: number;
+  wrap_type_category: {
+    category: "commercial_business" | "restyle_personal";
+    confidence: number;
+  };
+  wrap_process_stage: {
+    stage: "install" | "final_reveal" | "before" | "unknown";
+    confidence: number;
+  };
+  content_origin: {
+    source: "professional" | "ugc" | "unknown";
+    confidence: number;
+  };
 }
 
 interface ImageTags {
@@ -70,6 +82,9 @@ const defaultVideoTags: VideoTags = {
   environment: "unknown",
   dominant_motion: "static",
   quality_score: 50,
+  wrap_type_category: { category: "restyle_personal", confidence: 0.5 },
+  wrap_process_stage: { stage: "unknown", confidence: 0.5 },
+  content_origin: { source: "unknown", confidence: 0.5 },
 };
 
 const defaultImageTags: ImageTags = {
@@ -109,6 +124,9 @@ export function ManualTagEditorModal({
         environment: v.environment ?? "unknown",
         dominant_motion: v.dominant_motion ?? "static",
         quality_score: v.quality_score ?? 50,
+        wrap_type_category: v.wrap_type_category ?? { category: "restyle_personal", confidence: 0.5 },
+        wrap_process_stage: v.wrap_process_stage ?? { stage: "unknown", confidence: 0.5 },
+        content_origin: v.content_origin ?? { source: "unknown", confidence: 0.5 },
       });
     } else if (!isVideo && existing.image) {
       const i = existing.image as Partial<ImageTags>;
@@ -286,6 +304,76 @@ export function ManualTagEditorModal({
                   max={100}
                   step={1}
                 />
+              </div>
+
+              {/* Classification Tags */}
+              <div className="pt-4 border-t space-y-4">
+                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                  Content Classification
+                </h4>
+
+                <div className="space-y-2">
+                  <Label>Wrap Type Category</Label>
+                  <Select
+                    value={videoTags.wrap_type_category.category}
+                    onValueChange={(v) => setVideoTags((t) => ({
+                      ...t,
+                      wrap_type_category: { category: v as "commercial_business" | "restyle_personal", confidence: 1.0 }
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="commercial_business">Commercial / Business</SelectItem>
+                      <SelectItem value="restyle_personal">Restyle / Personal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Commercial: fleet, business branding, utility | Restyle: show cars, aesthetic, personal
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Process Stage</Label>
+                  <Select
+                    value={videoTags.wrap_process_stage.stage}
+                    onValueChange={(v) => setVideoTags((t) => ({
+                      ...t,
+                      wrap_process_stage: { stage: v as "install" | "final_reveal" | "before" | "unknown", confidence: 1.0 }
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="install">Install (in progress)</SelectItem>
+                      <SelectItem value="final_reveal">Final Reveal</SelectItem>
+                      <SelectItem value="before">Before (unwrapped)</SelectItem>
+                      <SelectItem value="unknown">Unknown</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Content Origin</Label>
+                  <Select
+                    value={videoTags.content_origin.source}
+                    onValueChange={(v) => setVideoTags((t) => ({
+                      ...t,
+                      content_origin: { source: v as "professional" | "ugc" | "unknown", confidence: 1.0 }
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="ugc">UGC (User Generated)</SelectItem>
+                      <SelectItem value="unknown">Unknown</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           ) : (

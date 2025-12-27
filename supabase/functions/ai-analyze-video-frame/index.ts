@@ -17,6 +17,18 @@ interface VisualTags {
   environment: "shop" | "outdoor" | "studio" | "unknown";
   quality_score: number;
   analyzed_frames: number;
+  wrap_type_category: {
+    category: "commercial_business" | "restyle_personal";
+    confidence: number;
+  };
+  wrap_process_stage: {
+    stage: "install" | "final_reveal" | "before" | "unknown";
+    confidence: number;
+  };
+  content_origin: {
+    source: "professional" | "ugc" | "unknown";
+    confidence: number;
+  };
 }
 
 serve(async (req) => {
@@ -97,16 +109,36 @@ Do NOT infer intent or marketing angles. Just describe what you see.`;
     const userContent = [
       {
         type: "text",
-        text: `Analyze these 3 frames from a video. Return a JSON object with these boolean/string fields:
+        text: `Analyze these 3 frames from a video. Return a JSON object with these fields:
+
+BOOLEAN FIELDS:
 - has_vehicle: Is there a vehicle visible?
 - has_wrap_install: Is someone actively installing a wrap?
 - has_finished_result: Is there a completed wrapped vehicle?
 - has_peel: Is there vinyl being peeled/revealed?
-- has_logo: Is there visible branding/logo?
+- has_logo: Is there visible business branding/logo on the wrap?
 - has_person: Is there a person visible?
+
+STRING FIELDS:
 - dominant_motion: One of "static", "hand_install", "peel_motion", "camera_pan", "unknown"
 - environment: One of "shop", "outdoor", "studio", "unknown"
+
+NUMBER FIELDS:
 - quality_score: 0-100 based on clarity, framing, lighting
+
+CLASSIFICATION FIELDS (each with category and confidence 0-1):
+- wrap_type_category: { category: "commercial_business" | "restyle_personal", confidence: 0-1 }
+  - commercial_business: visible company logo, phone/URL, fleet vehicle, utility van/truck, simple readable layout
+  - restyle_personal: no business branding, show cars, color fades/patterns, aesthetic-driven, beauty shots
+  
+- wrap_process_stage: { stage: "install" | "final_reveal" | "before" | "unknown", confidence: 0-1 }
+  - install: active installation in progress
+  - final_reveal: completed wrap being shown
+  - before: unwrapped vehicle
+  
+- content_origin: { source: "professional" | "ugc" | "unknown", confidence: 0-1 }
+  - professional: studio lighting, cinematic angles, high production
+  - ugc: phone footage, casual angles, real-world setting
 
 Return ONLY valid JSON, no explanation.`
       },
@@ -176,6 +208,18 @@ Return ONLY valid JSON, no explanation.`
         environment: parsed.environment || "unknown",
         quality_score: Math.min(100, Math.max(0, Number(parsed.quality_score) || 50)),
         analyzed_frames: 3,
+        wrap_type_category: {
+          category: parsed.wrap_type_category?.category || "restyle_personal",
+          confidence: Math.min(1, Math.max(0, Number(parsed.wrap_type_category?.confidence) || 0.5)),
+        },
+        wrap_process_stage: {
+          stage: parsed.wrap_process_stage?.stage || "unknown",
+          confidence: Math.min(1, Math.max(0, Number(parsed.wrap_process_stage?.confidence) || 0.5)),
+        },
+        content_origin: {
+          source: parsed.content_origin?.source || "unknown",
+          confidence: Math.min(1, Math.max(0, Number(parsed.content_origin?.confidence) || 0.5)),
+        },
       };
     } catch (parseError) {
       console.error("Failed to parse AI response:", parseError);
@@ -191,6 +235,9 @@ Return ONLY valid JSON, no explanation.`
         environment: "unknown",
         quality_score: 50,
         analyzed_frames: 3,
+        wrap_type_category: { category: "restyle_personal", confidence: 0 },
+        wrap_process_stage: { stage: "unknown", confidence: 0 },
+        content_origin: { source: "unknown", confidence: 0 },
       };
     }
 
