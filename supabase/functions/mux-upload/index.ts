@@ -87,7 +87,7 @@ serve(async (req) => {
       body: JSON.stringify({
         input: [{ url: file_url }],
         playback_policy: ['public'],
-        mp4_support: 'standard', // Enable MP4 downloads
+        // Note: mp4_support removed - deprecated for basic assets
         passthrough: JSON.stringify({ content_file_id, organization_id }),
       }),
     });
