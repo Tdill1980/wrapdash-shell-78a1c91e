@@ -1,7 +1,7 @@
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Loader2, ExternalLink, X } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Download, X, ExternalLink } from "lucide-react";
 import { RenderProgress } from "@/hooks/useMightyEdit";
 
 interface RenderProgressBarProps {
@@ -21,14 +21,10 @@ export function RenderProgressBar({ progress, onDismiss }: RenderProgressBarProp
     }
   };
 
-  const getStatusColor = () => {
-    switch (progress.status) {
-      case 'complete':
-        return 'bg-green-500';
-      case 'failed':
-        return 'bg-destructive';
-      default:
-        return 'bg-primary';
+  const handleDownload = () => {
+    if (progress.outputUrl) {
+      // Open in new tab - Mux URLs are direct downloads
+      window.open(progress.outputUrl, '_blank');
     }
   };
 
@@ -61,11 +57,12 @@ export function RenderProgressBar({ progress, onDismiss }: RenderProgressBarProp
           {progress.status === 'complete' && progress.outputUrl && (
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => window.open(progress.outputUrl, '_blank')}
+              variant="default"
+              onClick={handleDownload}
+              className="shrink-0"
             >
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Open
+              <Download className="w-4 h-4 mr-1" />
+              Download
             </Button>
           )}
           
