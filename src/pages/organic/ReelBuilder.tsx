@@ -1046,27 +1046,97 @@ export default function ReelBuilder() {
             {clips.length > 0 && (
               <Card>
                 <CardContent className="p-4">
-                  <div className="aspect-[9/16] max-h-[400px] mx-auto bg-black rounded-xl flex items-center justify-center relative overflow-hidden">
-                    <video
-                      ref={videoRef}
-                      key={selectedClip || clips[0]?.id}
-                      src={selectedClip ? clips.find(c => c.id === selectedClip)?.url : clips[0]?.url}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loop
-                      muted
-                      playsInline
-                      onEnded={() => setIsPlaying(false)}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="absolute z-10"
-                      onClick={handlePlayPause}
-                    >
-                      {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                    </Button>
-                  </div>
+                  {/* Grid Style Preview - 2x2 grid layout */}
+                  {selectedDaraFormat === 'grid_style' ? (
+                    <div className="aspect-[9/16] max-h-[500px] mx-auto bg-black rounded-xl relative overflow-hidden">
+                      {/* 2x2 Grid of clips */}
+                      <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-1 p-1">
+                        {clips.slice(0, 4).map((clip, idx) => (
+                          <div 
+                            key={clip.id} 
+                            className={cn(
+                              "relative overflow-hidden rounded-md cursor-pointer transition-all",
+                              selectedClip === clip.id && "ring-2 ring-primary"
+                            )}
+                            onClick={() => setSelectedClip(clip.id)}
+                          >
+                            <video
+                              src={clip.url}
+                              className="w-full h-full object-cover"
+                              loop
+                              muted
+                              playsInline
+                              autoPlay={isPlaying}
+                            />
+                            {/* Overlay text for each cell */}
+                            {clip.suggestedOverlay && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <p className="text-white font-bold text-xs sm:text-sm text-center px-2 drop-shadow-lg">
+                                  {clip.suggestedOverlay}
+                                </p>
+                              </div>
+                            )}
+                            {/* Cell number indicator */}
+                            <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-primary/80 flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-white">{idx + 1}</span>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Fill empty cells if less than 4 clips */}
+                        {clips.length < 4 && Array.from({ length: 4 - clips.length }).map((_, idx) => (
+                          <div 
+                            key={`empty-${idx}`}
+                            className="bg-muted/20 rounded-md flex items-center justify-center border-2 border-dashed border-muted-foreground/30 cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => setShowLibraryModal(true)}
+                          >
+                            <Plus className="w-6 h-6 text-muted-foreground/50" />
+                          </div>
+                        ))}
+                      </div>
+                      {/* Center overlay message */}
+                      {suggestedHook && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="bg-black/60 backdrop-blur-sm px-4 py-3 rounded-xl">
+                            <p className="text-white font-bold text-lg sm:text-xl text-center drop-shadow-lg">
+                              {suggestedHook}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Play/Pause overlay button */}
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="absolute bottom-4 right-4 z-10"
+                        onClick={handlePlayPause}
+                      >
+                        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                      </Button>
+                    </div>
+                  ) : (
+                    /* Standard single video preview */
+                    <div className="aspect-[9/16] max-h-[400px] mx-auto bg-black rounded-xl flex items-center justify-center relative overflow-hidden">
+                      <video
+                        ref={videoRef}
+                        key={selectedClip || clips[0]?.id}
+                        src={selectedClip ? clips.find(c => c.id === selectedClip)?.url : clips[0]?.url}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loop
+                        muted
+                        playsInline
+                        onEnded={() => setIsPlaying(false)}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="absolute z-10"
+                        onClick={handlePlayPause}
+                      >
+                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
