@@ -92,13 +92,14 @@ serve(async (req) => {
 
     console.log(`Backfill starting: limit=${limit}, user=${user.id}`);
 
-    // Query unanalyzed videos with mux_playback_id
+    // Query unanalyzed videos with mux_playback_id (exclude inspo_reference)
     const { data: videos, error: queryError } = await supabase
       .from("content_files")
       .select("id, mux_playback_id, visual_analyzed_at")
       .eq("file_type", "video")
       .is("visual_analyzed_at", null)
       .not("mux_playback_id", "is", null)
+      .neq("content_category", "inspo_reference")
       .limit(limit);
 
     if (queryError) {
@@ -123,8 +124,10 @@ serve(async (req) => {
     let skipped = 0;
     let failed = 0;
 
-    // Process each video with throttling
-    for (const video of videos) {
+    // Process each video with throttling (indexed loop for O(n) performance)
+    for (let i = 0; i < videos.length; i++) {
+      const video = videos[i];
+      
       // Double-check not already analyzed (race condition protection)
       if (video.visual_analyzed_at) {
         console.log(`Skipping already analyzed: ${video.id}`);
@@ -139,7 +142,7 @@ serve(async (req) => {
       }
 
       try {
-        console.log(`Analyzing video: ${video.id}`);
+        console.log(`Analyzing video ${i + 1}/${videos.length}: ${video.id}`);
 
         // Call ai-analyze-video-frame
         const { data: analyzeResult, error: analyzeError } = await supabase.functions.invoke(
@@ -168,8 +171,8 @@ serve(async (req) => {
         failed++;
       }
 
-      // Throttle: wait 750ms before next video
-      if (videos.indexOf(video) < videos.length - 1) {
+      // Throttle: wait 750ms before next video (skip on last)
+      if (i < videos.length - 1) {
         await new Promise(resolve => setTimeout(resolve, THROTTLE_MS));
       }
     }
