@@ -235,8 +235,14 @@ serve(async (req) => {
       const clips: ClipSegment[] = [];
       
       for (const scene of scenes.slice(0, 8)) {
-        const startTime = parseFloat(scene.start_time || scene.start || 0);
-        const endTime = parseFloat(scene.end_time || scene.end || (startTime + 5));
+        // STRICT AUTHORITY: Only accept blueprint schema fields - NO FALLBACKS
+        const startTime = Number(scene.start_time);
+        const endTime = Number(scene.end_time);
+        
+        if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+          console.error("[ai-execute-edits] AUTHORITY VIOLATION: Scene missing start_time/end_time:", scene);
+          throw new Error(`AUTHORITY VIOLATION: Scene ${scene.order || 'unknown'} missing start_time/end_time`);
+        }
         
         if (endTime > startTime) {
           clips.push({

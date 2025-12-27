@@ -5542,7 +5542,7 @@ export type Database = {
       }
       video_edit_queue: {
         Row: {
-          ai_edit_suggestions: Json | null
+          ai_edit_suggestions: Json
           chapters: Json | null
           content_file_id: string | null
           created_at: string
@@ -5563,7 +5563,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          ai_edit_suggestions?: Json | null
+          ai_edit_suggestions?: Json
           chapters?: Json | null
           content_file_id?: string | null
           created_at?: string
@@ -5584,7 +5584,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          ai_edit_suggestions?: Json | null
+          ai_edit_suggestions?: Json
           chapters?: Json | null
           content_file_id?: string | null
           created_at?: string
