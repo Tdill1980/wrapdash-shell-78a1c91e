@@ -1297,6 +1297,62 @@ export type Database = {
           },
         ]
       }
+      caption_library: {
+        Row: {
+          agitate: string[]
+          audience: string
+          created_at: string | null
+          cta: string | null
+          hook: string[]
+          id: string
+          intensity: string
+          is_system: boolean | null
+          organization_id: string | null
+          pain_type: string
+          resolve: string[]
+          updated_at: string | null
+          wrap_type_category: string
+        }
+        Insert: {
+          agitate: string[]
+          audience: string
+          created_at?: string | null
+          cta?: string | null
+          hook: string[]
+          id?: string
+          intensity: string
+          is_system?: boolean | null
+          organization_id?: string | null
+          pain_type: string
+          resolve: string[]
+          updated_at?: string | null
+          wrap_type_category: string
+        }
+        Update: {
+          agitate?: string[]
+          audience?: string
+          created_at?: string | null
+          cta?: string | null
+          hook?: string[]
+          id?: string
+          intensity?: string
+          is_system?: boolean | null
+          organization_id?: string | null
+          pain_type?: string
+          resolve?: string[]
+          updated_at?: string | null
+          wrap_type_category?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caption_library_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_scripts: {
         Row: {
           created_at: string | null

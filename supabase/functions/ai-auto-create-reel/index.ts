@@ -756,6 +756,43 @@ Return JSON ONLY:
       };
     });
 
+    // ═══════════════════════════════════════════════════════════════
+    // CAPTION LIBRARY SELECTION (DETERMINISTIC - NO AI GUESSING)
+    // ═══════════════════════════════════════════════════════════════
+    let caption_text: string | null = null;
+    
+    // Use tags from the first enriched video to determine wrap type and pain signals
+    const primaryVideo = enrichedVideos[0];
+    const visualTags = primaryVideo?.visual_tags as Record<string, any> || {};
+    const wrapTypeCategory = visualTags?.wrap_type_category?.category;
+    const painSignals = visualTags?.pain_signals;
+
+    if (wrapTypeCategory && painSignals) {
+      const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+      
+      const { data: captionRow } = await supabase
+        .from("caption_library")
+        .select("*")
+        .eq("wrap_type_category", wrapTypeCategory)
+        .eq("pain_type", painSignals.pain_type || "customer_expectations")
+        .eq("audience", painSignals.audience || "business_owner")
+        .eq("intensity", painSignals.intensity || "medium")
+        .limit(1)
+        .single();
+
+      if (captionRow) {
+        caption_text = [
+          pick(captionRow.hook || []),
+          pick(captionRow.agitate || []),
+          pick(captionRow.resolve || []),
+          captionRow.cta
+        ].filter(Boolean).join("\n\n");
+        console.log("Selected caption from library:", caption_text?.substring(0, 50));
+      } else {
+        console.log("No caption match for:", { wrapTypeCategory, painSignals });
+      }
+    }
+
     return new Response(JSON.stringify({
       ...result,
       selected_videos: enrichedVideos,
@@ -763,12 +800,15 @@ Return JSON ONLY:
       inspo_files_used: inspoContext ? true : false,
       // Include extracted style for render function to use
       extracted_style: extractedStyle,
+      // Caption text from library (deterministic selection)
+      caption_text,
       // Diagnostics for debugging
       diagnostics: {
         intent,
         threshold: SCORE_THRESHOLD,
         total_videos: videos.length,
         qualifying_videos: scored.length,
+        caption_source: caption_text ? "library" : "none",
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
