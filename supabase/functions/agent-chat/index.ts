@@ -921,7 +921,8 @@ EMIT THE BLOCK NOW.
         .single();
 
       if (!chat) throw new Error("Chat not found");
-      if (chat.status !== "confirmed") {
+      // Allow delegation from confirmed or already-delegated chats (re-delegation)
+      if (chat.status !== "confirmed" && chat.status !== "delegated") {
         throw new Error("Cannot delegate: agent has not confirmed understanding");
       }
 
