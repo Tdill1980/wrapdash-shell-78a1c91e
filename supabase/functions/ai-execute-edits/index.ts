@@ -197,9 +197,9 @@ serve(async (req) => {
     const shortsResults: any[] = [];
     const videoDuration = editItem.duration_seconds || 60;
 
-    // FULL REEL: Create stitched video
+    // FULL REEL: Use Creatomate renderer (render-reel)
     if (render_type === "full" || render_type === "all") {
-      console.log("[ai-execute-edits] Creating full reel...");
+      console.log("[ai-execute-edits] Creating full reel via Creatomate...");
       
       // AUTHORITY CHECK: Blueprint scenes are REQUIRED
       const scenes = aiSuggestions.scenes || [];
@@ -210,21 +210,17 @@ serve(async (req) => {
         blueprint_id: blueprintId,
         blueprint_source: blueprintSource,
         scenes_count: scenes.length,
-        ai_edit_suggestions: JSON.stringify(aiSuggestions)
       });
       
       // HARD STOP: No blueprint = No render
       if (!blueprintId || scenes.length === 0) {
         console.error("[ai-execute-edits] AUTHORITY VIOLATION: No valid blueprint provided");
-        console.error("[ai-execute-edits] ai_edit_suggestions was:", JSON.stringify(aiSuggestions));
         await updateQueueFailed(supabase, video_edit_id, "Render blocked: No scene blueprint provided. Authority required.");
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: "Render blocked: No scene blueprint provided. Rendering requires an authoritative blueprint with scenes.",
+            error: "Render blocked: No scene blueprint provided.",
             authority_check: "FAILED",
-            blueprint_id: blueprintId,
-            scenes_provided: scenes.length
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
@@ -232,71 +228,87 @@ serve(async (req) => {
       
       console.log("[ai-execute-edits] AUTHORITY PASSED: Using blueprint", blueprintId, "with", scenes.length, "scenes");
       
-      const clips: ClipSegment[] = [];
+      // Build clips array for render-reel (Creatomate expects HTTP URLs, not mux:// refs)
+      const clips: { url: string; trimStart: number; trimEnd: number }[] = [];
+      const overlays: { text: string; start: number; end: number; position?: string }[] = [];
       
+      let cursor = 0;
       for (const scene of scenes.slice(0, 8)) {
-        // STRICT AUTHORITY: Only accept blueprint schema fields - NO FALLBACKS
         const startTime = Number(scene.start_time);
         const endTime = Number(scene.end_time);
         
         if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
-          console.error("[ai-execute-edits] AUTHORITY VIOLATION: Scene missing start_time/end_time:", scene);
-          throw new Error(`AUTHORITY VIOLATION: Scene ${scene.order || 'unknown'} missing start_time/end_time`);
+          console.error("[ai-execute-edits] Scene missing start_time/end_time:", scene);
+          continue;
         }
         
         if (endTime > startTime) {
+          // Use the clip_url from blueprint, falling back to source_url
+          const clipUrl = scene.clip_url || editItem.source_url;
+          
           clips.push({
-            asset_id: muxAssetId,
-            start_time: startTime,
-            end_time: Math.min(endTime, videoDuration),
-            label: scene.label || scene.purpose || `Scene ${scene.order || clips.length + 1}`
+            url: clipUrl,
+            trimStart: startTime,
+            trimEnd: Math.min(endTime, videoDuration),
           });
+          
+          // Add text overlay if present
+          if (scene.text) {
+            const duration = endTime - startTime;
+            overlays.push({
+              text: scene.text,
+              start: cursor,
+              end: cursor + Math.min(duration, 3), // overlay max 3s
+              position: scene.text_position || 'center',
+            });
+          }
+          
+          cursor += (endTime - startTime);
         }
       }
       
-      // Secondary check: scenes existed but none were valid
       if (clips.length === 0) {
         console.error("[ai-execute-edits] Blueprint had scenes but none were valid");
         await updateQueueFailed(supabase, video_edit_id, "Blueprint scenes were invalid (no valid time ranges)");
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: "Blueprint scenes were invalid - no valid time ranges found",
-            authority_check: "PASSED",
-            validation_check: "FAILED"
-          }),
+          JSON.stringify({ success: false, error: "No valid clips in blueprint" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 
-      console.log("[ai-execute-edits] Stitching", clips.length, "clips");
+      console.log("[ai-execute-edits] Calling render-reel with", clips.length, "clips");
 
       try {
-        console.log("[ai-execute-edits] Invoking mux-stitch-reel...");
-        
-        const stitchRes = await supabase.functions.invoke("mux-stitch-reel", {
+        const renderRes = await supabase.functions.invoke("render-reel", {
           body: {
+            job_id: video_edit_id,
             clips,
+            overlays,
             music_url: editItem.selected_music_url,
-            video_edit_id,
-            organization_id: editItem.organization_id || organization_id,
-            output_name: editItem.title || "AI Reel"
+            width: 1080,
+            height: 1920,
+            fps: 30,
           }
         });
         
-        console.log("[ai-execute-edits] Stitch result:", JSON.stringify(stitchRes.data));
+        console.log("[ai-execute-edits] render-reel response:", JSON.stringify(renderRes.data));
         
-        if (stitchRes.error) {
-          console.error("[ai-execute-edits] Stitch function error:", stitchRes.error);
-          renderResult = { success: false, error: stitchRes.error.message };
-        } else if (stitchRes.data?.success === false) {
-          console.error("[ai-execute-edits] Stitch returned failure:", stitchRes.data.error);
-          renderResult = stitchRes.data;
+        if (renderRes.error) {
+          console.error("[ai-execute-edits] render-reel error:", renderRes.error);
+          renderResult = { success: false, error: renderRes.error.message };
+        } else if (renderRes.data?.ok === false) {
+          console.error("[ai-execute-edits] render-reel returned failure:", renderRes.data.error);
+          renderResult = { success: false, ...renderRes.data };
         } else {
-          renderResult = stitchRes.data;
+          renderResult = { 
+            success: true, 
+            download_url: renderRes.data?.final_url,
+            ready: true,
+            ...renderRes.data 
+          };
         }
       } catch (e) {
-        console.error("[ai-execute-edits] Stitch exception:", e);
+        console.error("[ai-execute-edits] render-reel exception:", e);
         renderResult = { success: false, error: e instanceof Error ? e.message : 'Unknown' };
       }
     }

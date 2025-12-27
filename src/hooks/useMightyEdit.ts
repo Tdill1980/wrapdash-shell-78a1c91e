@@ -22,6 +22,11 @@ export interface VideoEditItem {
   status: string;
   created_at: string;
   updated_at: string;
+  // New fields for debugging
+  error_message: string | null;
+  debug_payload: any;
+  producer_locked: boolean;
+  producer_blueprint: any;
 }
 
 export interface MusicTrack {
@@ -180,7 +185,7 @@ export function useMightyEdit() {
       try {
         const { data, error } = await supabase
           .from("video_edit_queue")
-          .select("render_status, status, final_render_url, shorts_extracted")
+          .select("render_status, status, final_render_url, shorts_extracted, error_message, debug_payload")
           .eq("id", videoEditId)
           .single();
 
@@ -214,15 +219,16 @@ export function useMightyEdit() {
 
         if (data.render_status === 'failed' || data.status === 'error') {
           clearInterval(pollIntervalRef.current!);
+          const errorMsg = data.error_message || 'Check logs for details';
           setRenderProgress({
             videoEditId,
             status: 'failed',
             progress: 0,
             message: 'Render failed',
-            error: 'Check logs for details'
+            error: errorMsg
           });
           toast.error("Render failed", {
-            description: "Check the Render Queue for more details"
+            description: errorMsg.length > 100 ? errorMsg.substring(0, 100) + '...' : errorMsg
           });
           return;
         }

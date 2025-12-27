@@ -272,3 +272,6 @@ verify_jwt = false
 
 [functions.ai-generate-video-blueprint]
 verify_jwt = false
+
+[functions.render-reel]
+verify_jwt = false

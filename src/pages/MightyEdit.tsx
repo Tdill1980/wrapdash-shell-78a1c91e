@@ -280,6 +280,10 @@ export default function MightyEdit() {
             status: 'ready_for_review',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
+            error_message: null,
+            debug_payload: null,
+            producer_locked: false,
+            producer_blueprint: null,
           };
           
           setSelectedVideo(videoFromPreset);
@@ -333,6 +337,10 @@ export default function MightyEdit() {
           status: latestAsset.scan_status === 'ready' ? 'ready_for_review' : 'pending',
           created_at: latestAsset.created_at,
           updated_at: latestAsset.created_at,
+          error_message: null,
+          debug_payload: null,
+          producer_locked: false,
+          producer_blueprint: null,
         };
         setSelectedVideo(fallbackVideo);
         setActiveTab("editor");
@@ -554,6 +562,10 @@ export default function MightyEdit() {
                               status: 'ready_for_review',
                               created_at: video.created_at,
                               updated_at: video.created_at,
+                              error_message: null,
+                              debug_payload: null,
+                              producer_locked: false,
+                              producer_blueprint: null,
                             };
                             setSelectedVideo(videoItem);
                             setShowVideoPicker(false);
