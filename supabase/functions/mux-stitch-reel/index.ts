@@ -168,6 +168,17 @@ serve(async (req) => {
     console.log("[mux-stitch-reel] Creating stitched asset via Mux API...");
     console.log("[mux-stitch-reel] Input array:", JSON.stringify(inputArray));
 
+    // Helper function for readable Mux errors
+    function muxReadableError(status: number, bodyText: string): string {
+      if (bodyText.includes("mp4_support") && bodyText.includes("deprecated")) {
+        return "Mux rejected: deprecated mp4_support parameter. Redeploy functions.";
+      }
+      if (bodyText.includes("invalid") || bodyText.includes("Invalid")) {
+        return `Mux rejected request: invalid parameters - ${bodyText.substring(0, 200)}`;
+      }
+      return `Mux API error ${status}: ${bodyText.substring(0, 300)}`;
+    }
+
     // Create stitched asset via Mux
     const createAssetResponse = await fetch("https://api.mux.com/video/v1/assets", {
       method: "POST",
@@ -177,15 +188,32 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         input: inputArray,
-        playback_policy: ["public"],
-        mp4_support: "standard" // Enable MP4 downloads
+        playback_policy: ["public"]
+        // Note: mp4_support removed - deprecated for basic assets
       })
     });
 
     if (!createAssetResponse.ok) {
       const errorText = await createAssetResponse.text();
-      console.error(`[mux-stitch-reel] Mux API error:`, errorText);
-      throw new Error(`Mux API error: ${createAssetResponse.status} - ${errorText}`);
+      const readableError = muxReadableError(createAssetResponse.status, errorText);
+      console.error(`[mux-stitch-reel] ${readableError}`);
+      
+      // Update video_edit_queue with error if ID provided
+      if (video_edit_id) {
+        await supabase
+          .from("video_edit_queue")
+          .update({
+            render_status: "failed",
+            error_message: readableError,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", video_edit_id);
+      }
+      
+      return new Response(
+        JSON.stringify({ success: false, error: readableError }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 502 }
+      );
     }
 
     const assetData = await createAssetResponse.json();
