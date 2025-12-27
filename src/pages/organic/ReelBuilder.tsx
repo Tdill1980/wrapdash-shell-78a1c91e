@@ -779,9 +779,10 @@ export default function ReelBuilder() {
     
     console.log('🚀 DETERMINISTIC AUTO-CREATE STARTING WITH INPUT:', input);
     
-    // Set the format based on input.style
-    const format = input.style as DaraFormatType;
-    setSelectedDaraFormat(format as DaraFormat);
+    // Set the format based on input.style - validate it exists in DARA_FORMATS
+    const format = input.style as DaraFormat;
+    const isValidFormat = format && format in DARA_FORMATS;
+    setSelectedDaraFormat(isValidFormat ? format : null);
     
     // Set content metadata from input
     setContentMetadata({
@@ -1032,7 +1033,7 @@ export default function ReelBuilder() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="min-w-[140px]">
-                  {selectedDaraFormat ? (
+                  {selectedDaraFormat && DARA_FORMATS[selectedDaraFormat] ? (
                     <>
                       {DARA_FORMATS[selectedDaraFormat].emoji} {DARA_FORMATS[selectedDaraFormat].name}
                     </>
