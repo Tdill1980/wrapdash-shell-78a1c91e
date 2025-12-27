@@ -480,6 +480,32 @@ export default function ReelBuilder() {
         return;
       }
 
+      // Build the blueprint payload FIRST so we can log it
+      const blueprintPayload = {
+        blueprint_id: sceneBlueprint.id,
+        blueprint_source: sceneBlueprint.source,
+        scenes: sceneBlueprint.scenes.map((scene, i) => ({
+          order: i + 1,
+          scene_id: scene.sceneId,
+          clip_id: scene.clipId,
+          clip_url: scene.clipUrl,
+          start_time: scene.start,
+          end_time: scene.end,
+          purpose: scene.purpose,
+          label: scene.purpose,
+          text: scene.text,
+          text_position: scene.textPosition,
+          animation: scene.animation,
+          cut_reason: scene.cutReason,
+        })),
+        end_card: sceneBlueprint.endCard,
+        hook: sceneBlueprint.scenes.find(s => s.purpose === 'hook')?.text,
+        cta: sceneBlueprint.endCard?.cta || sceneBlueprint.scenes.find(s => s.purpose === 'cta')?.text,
+      };
+
+      // LOG THE PAYLOAD before insert
+      console.log('[ReelBuilder] 📦 Blueprint payload to save:', JSON.stringify(blueprintPayload, null, 2));
+
       // Create video_edit_queue entry with BLUEPRINT as the authoritative source
       const { data: queueEntry, error: queueError } = await supabase
         .from('video_edit_queue')
@@ -490,32 +516,23 @@ export default function ReelBuilder() {
           text_overlays: allOverlays,
           selected_music_url: audioUrl,
           // AUTHORITY: Scene blueprint IS the edit plan
-          ai_edit_suggestions: {
-            blueprint_id: sceneBlueprint.id,
-            blueprint_source: sceneBlueprint.source,
-            scenes: sceneBlueprint.scenes.map((scene, i) => ({
-              order: i + 1,
-              scene_id: scene.sceneId,
-              clip_id: scene.clipId,
-              clip_url: scene.clipUrl,
-              start_time: scene.start,
-              end_time: scene.end,
-              purpose: scene.purpose,
-              label: scene.purpose,
-              text: scene.text,
-              text_position: scene.textPosition,
-              animation: scene.animation,
-              cut_reason: scene.cutReason,
-            })),
-            end_card: sceneBlueprint.endCard,
-            hook: sceneBlueprint.scenes.find(s => s.purpose === 'hook')?.text,
-            cta: sceneBlueprint.endCard?.cta || sceneBlueprint.scenes.find(s => s.purpose === 'cta')?.text,
-          },
+          ai_edit_suggestions: blueprintPayload,
           render_status: 'pending',
           status: 'ready_for_review',
         })
-        .select('id')
+        .select('id, ai_edit_suggestions')
         .single();
+
+      if (queueError) {
+        console.error('[ReelBuilder] ❌ Failed to create queue entry:', queueError);
+        toast.error('Failed to start render');
+        setIsRenderingReel(false);
+        return;
+      }
+
+      // VERIFY the data was saved correctly
+      console.log('[ReelBuilder] ✅ Queue entry created:', queueEntry.id);
+      console.log('[ReelBuilder] ✅ Saved ai_edit_suggestions:', JSON.stringify(queueEntry.ai_edit_suggestions, null, 2));
 
       if (queueError) {
         console.error('[ReelBuilder] Failed to create queue entry:', queueError);
