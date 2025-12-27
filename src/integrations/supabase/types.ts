@@ -4591,6 +4591,44 @@ export type Database = {
           },
         ]
       }
+      quote_retargeting_log: {
+        Row: {
+          created_at: string | null
+          email_type: string
+          id: string
+          quote_id: string | null
+          resend_id: string | null
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_type: string
+          id?: string
+          quote_id?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_type?: string
+          id?: string
+          quote_id?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_retargeting_log_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_settings: {
         Row: {
           id: string
@@ -4623,6 +4661,7 @@ export type Database = {
           ai_sqft_estimate: number | null
           ai_vehicle_class: string | null
           auto_retarget: boolean | null
+          category: string | null
           click_count: number | null
           conversion_date: string | null
           conversion_revenue: number | null
@@ -4633,6 +4672,7 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           customer_price: number | null
+          dimensions: Json | null
           email_design: string | null
           email_tone: string | null
           engagement_level: string | null
@@ -4662,6 +4702,10 @@ export type Database = {
           total_price: number
           updated_at: string
           utim_score: number | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
           vehicle_details: string | null
           vehicle_make: string | null
           vehicle_model: string | null
@@ -4680,6 +4724,7 @@ export type Database = {
           ai_sqft_estimate?: number | null
           ai_vehicle_class?: string | null
           auto_retarget?: boolean | null
+          category?: string | null
           click_count?: number | null
           conversion_date?: string | null
           conversion_revenue?: number | null
@@ -4690,6 +4735,7 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           customer_price?: number | null
+          dimensions?: Json | null
           email_design?: string | null
           email_tone?: string | null
           engagement_level?: string | null
@@ -4719,6 +4765,10 @@ export type Database = {
           total_price: number
           updated_at?: string
           utim_score?: number | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           vehicle_details?: string | null
           vehicle_make?: string | null
           vehicle_model?: string | null
@@ -4737,6 +4787,7 @@ export type Database = {
           ai_sqft_estimate?: number | null
           ai_vehicle_class?: string | null
           auto_retarget?: boolean | null
+          category?: string | null
           click_count?: number | null
           conversion_date?: string | null
           conversion_revenue?: number | null
@@ -4747,6 +4798,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           customer_price?: number | null
+          dimensions?: Json | null
           email_design?: string | null
           email_tone?: string | null
           engagement_level?: string | null
@@ -4776,6 +4828,10 @@ export type Database = {
           total_price?: number
           updated_at?: string
           utim_score?: number | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
           vehicle_details?: string | null
           vehicle_make?: string | null
           vehicle_model?: string | null

@@ -251,3 +251,12 @@ verify_jwt = false
 
 [functions.proxy-external-attachment]
 verify_jwt = false
+
+[functions.submit-quote]
+verify_jwt = false
+
+[functions.get-quote]
+verify_jwt = false
+
+[functions.run-quote-followups]
+verify_jwt = false
