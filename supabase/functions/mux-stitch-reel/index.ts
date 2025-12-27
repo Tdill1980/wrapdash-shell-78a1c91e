@@ -22,10 +22,70 @@ interface StitchRequest {
   organization_id?: string;
 }
 
+// Check if a Mux asset is ready
+async function checkAssetReady(assetId: string, muxAuth: string): Promise<{ready: boolean, status: string}> {
+  try {
+    const res = await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, {
+      headers: { 'Authorization': `Basic ${muxAuth}` }
+    });
+    
+    if (!res.ok) {
+      return { ready: false, status: 'error' };
+    }
+    
+    const data = await res.json();
+    return { ready: data.data.status === 'ready', status: data.data.status };
+  } catch (e) {
+    return { ready: false, status: 'error' };
+  }
+}
+
+// Wait for stitched asset to be ready
+async function waitForAssetReady(assetId: string, muxAuth: string, maxWaitMs = 180000): Promise<{ready: boolean, asset: any}> {
+  const startTime = Date.now();
+  const pollInterval = 5000; // 5 seconds
+  
+  console.log(`[mux-stitch-reel] Waiting for stitched asset ${assetId} to be ready...`);
+  
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      const res = await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, {
+        headers: { 'Authorization': `Basic ${muxAuth}` }
+      });
+      
+      if (!res.ok) {
+        await new Promise(r => setTimeout(r, pollInterval));
+        continue;
+      }
+      
+      const data = await res.json();
+      const asset = data.data;
+      
+      console.log(`[mux-stitch-reel] Stitched asset status: ${asset.status} (${Math.round((Date.now() - startTime)/1000)}s)`);
+      
+      if (asset.status === 'ready') {
+        return { ready: true, asset };
+      }
+      
+      if (asset.status === 'errored') {
+        return { ready: false, asset };
+      }
+      
+      await new Promise(r => setTimeout(r, pollInterval));
+    } catch (e) {
+      await new Promise(r => setTimeout(r, pollInterval));
+    }
+  }
+  
+  return { ready: false, asset: null };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  console.log("[mux-stitch-reel] ====== FUNCTION INVOKED ======");
 
   try {
     const MUX_TOKEN_ID = Deno.env.get("MUX_TOKEN_ID");
@@ -35,11 +95,16 @@ serve(async (req) => {
       throw new Error("Mux credentials not configured");
     }
 
+    const muxAuth = btoa(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`);
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const body: StitchRequest = await req.json();
+    console.log("[mux-stitch-reel] Request body:", JSON.stringify(body));
+    
     const { 
       clips, 
       music_url, 
@@ -47,25 +112,41 @@ serve(async (req) => {
       output_name,
       video_edit_id,
       organization_id
-    }: StitchRequest = await req.json();
+    } = body;
 
     if (!clips || clips.length === 0) {
       return new Response(
-        JSON.stringify({ error: "At least one clip is required" }),
+        JSON.stringify({ success: false, error: "At least one clip is required" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
     console.log(`[mux-stitch-reel] Stitching ${clips.length} clips into reel`);
+
+    // Verify all source assets are ready before attempting to stitch
+    for (const clip of clips) {
+      const { ready, status } = await checkAssetReady(clip.asset_id, muxAuth);
+      console.log(`[mux-stitch-reel] Clip ${clip.asset_id} status: ${status}`);
+      
+      if (!ready) {
+        console.error(`[mux-stitch-reel] Source asset ${clip.asset_id} is not ready (status: ${status})`);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Source video is still processing. Please wait and try again.`,
+            asset_status: status
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+    }
     
     // Calculate total duration
     const totalDuration = clips.reduce((sum, clip) => sum + (clip.end_time - clip.start_time), 0);
     console.log(`[mux-stitch-reel] Total duration: ${totalDuration}s`);
 
-    const muxAuth = btoa(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`);
-
-    // Build input array for Mux - each clip becomes an input segment
-    const inputArray = clips.map((clip, index) => {
+    // Build input array for Mux
+    const inputArray: any[] = clips.map((clip, index) => {
       console.log(`[mux-stitch-reel] Clip ${index + 1}: ${clip.asset_id} from ${clip.start_time}s to ${clip.end_time}s`);
       return {
         url: `mux://assets/${clip.asset_id}`,
@@ -84,6 +165,9 @@ serve(async (req) => {
       });
     }
 
+    console.log("[mux-stitch-reel] Creating stitched asset via Mux API...");
+    console.log("[mux-stitch-reel] Input array:", JSON.stringify(inputArray));
+
     // Create stitched asset via Mux
     const createAssetResponse = await fetch("https://api.mux.com/video/v1/assets", {
       method: "POST",
@@ -94,7 +178,7 @@ serve(async (req) => {
       body: JSON.stringify({
         input: inputArray,
         playback_policy: ["public"],
-        mp4_support: "standard"
+        mp4_support: "standard" // Enable MP4 downloads
       })
     });
 
@@ -105,10 +189,23 @@ serve(async (req) => {
     }
 
     const assetData = await createAssetResponse.json();
-    const newAsset = assetData.data;
-    const playbackId = newAsset.playback_ids?.[0]?.id;
+    let newAsset = assetData.data;
+    let playbackId = newAsset.playback_ids?.[0]?.id;
     
-    console.log(`[mux-stitch-reel] Created stitched asset: ${newAsset.id}, playback: ${playbackId}`);
+    console.log(`[mux-stitch-reel] Created stitched asset: ${newAsset.id}, status: ${newAsset.status}`);
+
+    // Wait for the stitched asset to be ready
+    if (newAsset.status !== 'ready') {
+      const { ready, asset: readyAsset } = await waitForAssetReady(newAsset.id, muxAuth);
+      
+      if (ready && readyAsset) {
+        newAsset = readyAsset;
+        playbackId = newAsset.playback_ids?.[0]?.id;
+        console.log("[mux-stitch-reel] Stitched asset is now ready!");
+      } else {
+        console.warn("[mux-stitch-reel] Stitched asset not ready after waiting");
+      }
+    }
 
     const result = {
       success: true,
@@ -119,34 +216,47 @@ serve(async (req) => {
       thumbnail_url: playbackId ? `https://image.mux.com/${playbackId}/thumbnail.jpg` : null,
       gif_url: playbackId ? `https://image.mux.com/${playbackId}/animated.gif?width=480` : null,
       status: newAsset.status,
+      ready: newAsset.status === 'ready',
       duration: totalDuration,
       clips_count: clips.length,
       name: output_name || `Reel - ${clips.length} clips`
     };
 
+    console.log("[mux-stitch-reel] Result:", JSON.stringify(result));
+
     // Update video_edit_queue if ID provided
     if (video_edit_id) {
       console.log(`[mux-stitch-reel] Updating video_edit_queue: ${video_edit_id}`);
       
-      await supabase
+      const updateData: any = {
+        final_render_url: result.download_url,
+        render_status: newAsset.status === "ready" ? "complete" : "processing",
+        status: newAsset.status === "ready" ? "complete" : "rendering",
+        shorts_extracted: [{
+          asset_id: newAsset.id,
+          playback_id: playbackId,
+          playback_url: result.playback_url,
+          download_url: result.download_url,
+          thumbnail_url: result.thumbnail_url,
+          duration: totalDuration,
+          clips: clips.map(c => ({ label: c.label, start: c.start_time, end: c.end_time }))
+        }],
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: updateError } = await supabase
         .from("video_edit_queue")
-        .update({
-          final_render_url: result.download_url,
-          render_status: newAsset.status === "ready" ? "complete" : "processing",
-          status: newAsset.status === "ready" ? "complete" : "rendering",
-          shorts_extracted: [{
-            asset_id: newAsset.id,
-            playback_id: playbackId,
-            playback_url: result.playback_url,
-            download_url: result.download_url,
-            thumbnail_url: result.thumbnail_url,
-            duration: totalDuration,
-            clips: clips.map(c => ({ label: c.label, start: c.start_time, end: c.end_time }))
-          }],
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq("id", video_edit_id);
+      
+      if (updateError) {
+        console.error("[mux-stitch-reel] Update error:", updateError);
+      } else {
+        console.log("[mux-stitch-reel] Queue updated successfully");
+      }
     }
+
+    console.log("[mux-stitch-reel] ====== FUNCTION COMPLETE ======");
 
     return new Response(
       JSON.stringify(result),
@@ -156,7 +266,7 @@ serve(async (req) => {
   } catch (err) {
     console.error("[mux-stitch-reel] Error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
+      JSON.stringify({ success: false, error: err instanceof Error ? err.message : "Unknown error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

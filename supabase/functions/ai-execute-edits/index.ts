@@ -74,18 +74,10 @@ serve(async (req) => {
       .eq("id", video_edit_id)
       .single();
 
-    if (fetchError) {
+    if (fetchError || !editItem) {
       console.error("[ai-execute-edits] Fetch error:", fetchError);
       return new Response(
-        JSON.stringify({ success: false, error: `Video edit item not found: ${fetchError.message}` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
-      );
-    }
-    
-    if (!editItem) {
-      console.error("[ai-execute-edits] No edit item found for ID:", video_edit_id);
-      return new Response(
-        JSON.stringify({ success: false, error: "Video edit item not found" }),
+        JSON.stringify({ success: false, error: `Video edit item not found: ${fetchError?.message || 'No data'}` }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
       );
     }
@@ -107,49 +99,30 @@ serve(async (req) => {
 
     const aiSuggestions = editItem.ai_edit_suggestions || {};
     
-    // Get the Mux asset ID from the content file or metadata
+    // Get the Mux asset ID
     let muxAssetId: string | null = null;
     let muxPlaybackId: string | null = null;
     
-    // Try to get from content_files if we have a content_file_id
+    // Try to get from content_files
     if (editItem.content_file_id) {
       console.log("[ai-execute-edits] Looking up content_file:", editItem.content_file_id);
       
-      const { data: contentFile, error: cfError } = await supabase
+      const { data: contentFile } = await supabase
         .from("content_files")
         .select("mux_asset_id, mux_playback_id, file_url")
         .eq("id", editItem.content_file_id)
         .single();
       
-      if (cfError) {
-        console.log("[ai-execute-edits] Content file lookup error:", cfError);
-      } else if (contentFile) {
+      if (contentFile) {
         console.log("[ai-execute-edits] Content file found:", contentFile);
         muxAssetId = contentFile.mux_asset_id;
         muxPlaybackId = contentFile.mux_playback_id;
       }
     }
-    
-    // Fallback: check contentbox_assets
-    if (!muxAssetId && editItem.source_url) {
-      console.log("[ai-execute-edits] Checking contentbox_assets for source URL...");
-      
-      const { data: boxAsset, error: boxError } = await supabase
-        .from("contentbox_assets")
-        .select("id, file_url")
-        .eq("file_url", editItem.source_url)
-        .maybeSingle();
-      
-      if (boxError) {
-        console.log("[ai-execute-edits] Contentbox lookup error:", boxError);
-      } else if (boxAsset) {
-        console.log("[ai-execute-edits] Found contentbox asset:", boxAsset.id);
-      }
-    }
 
-    // If we still don't have a Mux asset ID, we need to upload to Mux first
+    // If no Mux asset yet, upload to Mux (this will wait for it to be ready)
     if (!muxAssetId && editItem.source_url) {
-      console.log("[ai-execute-edits] No Mux asset found, uploading video to Mux...");
+      console.log("[ai-execute-edits] No Mux asset found, uploading to Mux...");
       console.log("[ai-execute-edits] Source URL:", editItem.source_url);
       
       try {
@@ -157,7 +130,8 @@ serve(async (req) => {
           body: { 
             file_url: editItem.source_url,
             content_file_id: editItem.content_file_id,
-            organization_id: editItem.organization_id
+            organization_id: editItem.organization_id,
+            wait_for_ready: true // Wait for asset to be ready before returning
           }
         });
         
@@ -165,104 +139,54 @@ serve(async (req) => {
         
         if (muxUploadRes.error) {
           console.error("[ai-execute-edits] Mux upload error:", muxUploadRes.error);
-          
-          // Update queue with failure
-          await supabase
-            .from("video_edit_queue")
-            .update({ 
-              render_status: "failed", 
-              status: "error",
-              updated_at: new Date().toISOString() 
-            })
-            .eq("id", video_edit_id);
-          
+          await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${muxUploadRes.error.message}`);
           return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: `Mux upload failed: ${muxUploadRes.error.message || 'Unknown error'}` 
-            }),
+            JSON.stringify({ success: false, error: `Mux upload failed: ${muxUploadRes.error.message}` }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
           );
         }
         
-        if (muxUploadRes.data?.asset_id) {
-          muxAssetId = muxUploadRes.data.asset_id;
-          muxPlaybackId = muxUploadRes.data.playback_id;
-          console.log("[ai-execute-edits] Uploaded to Mux successfully:", muxAssetId, muxPlaybackId);
-          
-          // Update content_files if we have one
-          if (editItem.content_file_id) {
-            await supabase
-              .from("content_files")
-              .update({ 
-                mux_asset_id: muxAssetId, 
-                mux_playback_id: muxPlaybackId 
-              })
-              .eq("id", editItem.content_file_id);
-          }
-        } else {
-          console.error("[ai-execute-edits] Mux upload did not return asset_id:", muxUploadRes.data);
-          
-          // Update queue with failure
-          await supabase
-            .from("video_edit_queue")
-            .update({ 
-              render_status: "failed", 
-              status: "error",
-              updated_at: new Date().toISOString() 
-            })
-            .eq("id", video_edit_id);
-          
+        if (!muxUploadRes.data?.asset_id) {
+          console.error("[ai-execute-edits] Mux upload did not return asset_id");
+          await updateQueueFailed(supabase, video_edit_id, "Mux upload completed but no asset_id returned");
           return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: "Mux upload completed but no asset_id returned" 
-            }),
+            JSON.stringify({ success: false, error: "Mux upload completed but no asset_id returned" }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
           );
+        }
+        
+        muxAssetId = muxUploadRes.data.asset_id;
+        muxPlaybackId = muxUploadRes.data.playback_id;
+        
+        // Check if asset is ready
+        if (!muxUploadRes.data.ready) {
+          console.warn("[ai-execute-edits] Asset uploaded but not ready yet - stitch may fail");
+        }
+        
+        console.log("[ai-execute-edits] Mux upload complete:", muxAssetId, "ready:", muxUploadRes.data.ready);
+        
+        // Update content_files if we have one
+        if (editItem.content_file_id) {
+          await supabase
+            .from("content_files")
+            .update({ mux_asset_id: muxAssetId, mux_playback_id: muxPlaybackId })
+            .eq("id", editItem.content_file_id);
         }
       } catch (e) {
         console.error("[ai-execute-edits] Mux upload exception:", e);
-        
-        // Update queue with failure
-        await supabase
-          .from("video_edit_queue")
-          .update({ 
-            render_status: "failed", 
-            status: "error",
-            updated_at: new Date().toISOString() 
-          })
-          .eq("id", video_edit_id);
-        
+        await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown'}`);
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown error'}` 
-          }),
+          JSON.stringify({ success: false, error: `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown'}` }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
         );
       }
     }
 
     if (!muxAssetId) {
-      console.error("[ai-execute-edits] No Mux asset ID available after all attempts");
-      console.error("[ai-execute-edits] source_url:", editItem.source_url);
-      console.error("[ai-execute-edits] content_file_id:", editItem.content_file_id);
-      
-      await supabase
-        .from("video_edit_queue")
-        .update({ 
-          render_status: "failed", 
-          status: "error",
-          updated_at: new Date().toISOString() 
-        })
-        .eq("id", video_edit_id);
-      
+      console.error("[ai-execute-edits] No Mux asset ID available");
+      await updateQueueFailed(supabase, video_edit_id, "No video source URL available");
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "No video source URL available. Cannot upload to Mux." 
-        }),
+        JSON.stringify({ success: false, error: "No video source URL available" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -273,58 +197,44 @@ serve(async (req) => {
     const shortsResults: any[] = [];
     const videoDuration = editItem.duration_seconds || 60;
 
-    // FULL REEL: Create a single stitched video from AI-suggested segments
+    // FULL REEL: Create stitched video
     if (render_type === "full" || render_type === "all") {
-      console.log("[ai-execute-edits] Creating full reel from AI suggestions");
+      console.log("[ai-execute-edits] Creating full reel...");
       
-      // Build clips from AI suggestions or use full video if no suggestions
       const clips: ClipSegment[] = [];
-      
-      // Check for scenes/segments in AI suggestions
       const scenes = aiSuggestions.scenes || aiSuggestions.segments || aiSuggestions.broll_cues || [];
       
       if (scenes.length > 0) {
         console.log("[ai-execute-edits] Using AI-suggested scenes:", scenes.length);
         
-        // Use AI-suggested scenes
-        for (const scene of scenes.slice(0, 8)) { // Max 8 clips
+        for (const scene of scenes.slice(0, 8)) {
           const startTime = parseFloat(scene.start_time || scene.timestamp || scene.start || 0);
           const endTime = parseFloat(scene.end_time || scene.end || (startTime + (scene.duration || 5)));
           
-          if (endTime > startTime) {
+          if (endTime > startTime && startTime < videoDuration) {
             clips.push({
               asset_id: muxAssetId,
               start_time: startTime,
               end_time: Math.min(endTime, videoDuration),
-              label: scene.label || scene.description || scene.suggestion || `Clip ${clips.length + 1}`
+              label: scene.label || scene.description || `Clip ${clips.length + 1}`
             });
           }
         }
       }
       
-      // Fallback: if no AI clips, use the full video or smart segments
+      // Fallback: use full video as a single clip
       if (clips.length === 0) {
-        console.log("[ai-execute-edits] No AI clips, creating default segments");
-        
-        // Create 3-4 clips from the video
-        const segmentDuration = Math.min(15, videoDuration / 4);
-        const offsets = [0, videoDuration * 0.25, videoDuration * 0.5, videoDuration * 0.75];
-        
-        for (const offset of offsets) {
-          if (offset + segmentDuration <= videoDuration) {
-            clips.push({
-              asset_id: muxAssetId,
-              start_time: offset,
-              end_time: offset + segmentDuration,
-              label: `Segment ${clips.length + 1}`
-            });
-          }
-        }
+        console.log("[ai-execute-edits] No AI clips, using full video");
+        clips.push({
+          asset_id: muxAssetId,
+          start_time: 0,
+          end_time: Math.min(videoDuration, 60), // Max 60s for full video
+          label: "Full Video"
+        });
       }
 
       console.log("[ai-execute-edits] Stitching", clips.length, "clips");
 
-      // Call mux-stitch-reel
       try {
         console.log("[ai-execute-edits] Invoking mux-stitch-reel...");
         
@@ -341,18 +251,23 @@ serve(async (req) => {
         console.log("[ai-execute-edits] Stitch result:", JSON.stringify(stitchRes.data));
         
         if (stitchRes.error) {
-          console.error("[ai-execute-edits] Stitch error:", stitchRes.error);
+          console.error("[ai-execute-edits] Stitch function error:", stitchRes.error);
+          renderResult = { success: false, error: stitchRes.error.message };
+        } else if (stitchRes.data?.success === false) {
+          console.error("[ai-execute-edits] Stitch returned failure:", stitchRes.data.error);
+          renderResult = stitchRes.data;
+        } else {
+          renderResult = stitchRes.data;
         }
-        
-        renderResult = stitchRes.data;
       } catch (e) {
         console.error("[ai-execute-edits] Stitch exception:", e);
+        renderResult = { success: false, error: e instanceof Error ? e.message : 'Unknown' };
       }
     }
 
-    // SHORTS: Create individual clips for each suggested short
+    // SHORTS: Extract individual clips
     if (render_type === "shorts" || render_type === "all") {
-      console.log("[ai-execute-edits] Extracting shorts from AI suggestions");
+      console.log("[ai-execute-edits] Extracting shorts...");
       
       const shorts = aiSuggestions.shorts || aiSuggestions.broll_cues || aiSuggestions.viral_moments || [];
       console.log("[ai-execute-edits] Found", shorts.length, "shorts to extract");
@@ -376,8 +291,6 @@ serve(async (req) => {
             }
           });
           
-          console.log("[ai-execute-edits] Short clip result:", clipRes.data);
-          
           if (clipRes.data?.success) {
             shortsResults.push({
               ...clipRes.data,
@@ -387,31 +300,29 @@ serve(async (req) => {
             });
           }
         } catch (e) {
-          console.error("[ai-execute-edits] Short clip exception:", e);
+          console.error("[ai-execute-edits] Short clip error:", e);
         }
       }
     }
 
-    // Update queue with render results
-    console.log("[ai-execute-edits] Updating video_edit_queue with results...");
+    // Update queue with results
+    console.log("[ai-execute-edits] Updating queue with results...");
+    
+    const isSuccess = renderResult?.success || shortsResults.length > 0;
+    const isComplete = renderResult?.ready === true;
     
     const updateData: any = {
-      render_status: renderResult?.success ? "processing" : (shortsResults.length > 0 ? "processing" : "failed"),
+      render_status: isComplete ? "complete" : (isSuccess ? "processing" : "failed"),
+      status: isComplete ? "complete" : (isSuccess ? "rendering" : "error"),
       updated_at: new Date().toISOString()
     };
 
     if (renderResult?.download_url) {
       updateData.final_render_url = renderResult.download_url;
-      updateData.render_status = "complete";
-      updateData.status = "complete";
     }
 
     if (shortsResults.length > 0) {
       updateData.shorts_extracted = shortsResults;
-    }
-
-    if (renderResult?.success || shortsResults.length > 0) {
-      updateData.status = updateData.render_status === "complete" ? "complete" : "rendering";
     }
 
     console.log("[ai-execute-edits] Update data:", JSON.stringify(updateData));
@@ -422,12 +333,14 @@ serve(async (req) => {
       .eq("id", video_edit_id);
 
     const response = {
-      success: true,
+      success: isSuccess,
       video_edit_id,
       mux_asset_id: muxAssetId,
       render_result: renderResult,
       shorts_count: shortsResults.length,
-      shorts: shortsResults
+      shorts: shortsResults,
+      download_url: renderResult?.download_url || null,
+      ready: isComplete
     };
 
     console.log("[ai-execute-edits] ====== FUNCTION COMPLETE ======");
@@ -441,11 +354,20 @@ serve(async (req) => {
   } catch (err) {
     console.error("[ai-execute-edits] FATAL ERROR:", err);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: err instanceof Error ? err.message : "Unknown error" 
-      }),
+      JSON.stringify({ success: false, error: err instanceof Error ? err.message : "Unknown error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });
+
+// Helper to update queue with failure
+async function updateQueueFailed(supabase: any, videoEditId: string, error: string) {
+  await supabase
+    .from("video_edit_queue")
+    .update({ 
+      render_status: "failed", 
+      status: "error",
+      updated_at: new Date().toISOString() 
+    })
+    .eq("id", videoEditId);
+}
