@@ -399,8 +399,20 @@ async function executeVideoContent(
   // If we have a specific video URL, use single video mode
   const videoUrl = context.video_urls?.[0];
 
-  // Step 1: Generate platform-aware blueprint
+  // Step 1: Generate platform-aware blueprint with creative context
   console.log("[execute-delegated-task] Generating platform-aware video blueprint...");
+  
+  // Build creative context from task + calendar (THE MISSING LINK)
+  const creativeContext = {
+    task_title: task.title,
+    task_description: task.description,
+    calendar_title: calendarItem?.title,
+    calendar_caption: calendarItem?.caption,
+    platform: calendarItem?.platform || platform,
+    brand: calendarItem?.brand || brandTone,
+  };
+  
+  console.log("[execute-delegated-task] Creative context:", creativeContext);
   
   const { data: blueprint, error: blueprintError } = await supabase.functions.invoke("ai-generate-video-blueprint", {
     body: {
@@ -410,7 +422,8 @@ async function executeVideoContent(
       available_clips: assets.videos,
       organization_id: context.organization_id,
       content_calendar_id: context.content_calendar_id,
-      task_id: task.id
+      task_id: task.id,
+      creative_context: creativeContext, // ✅ PASS INTENT
     }
   });
 
