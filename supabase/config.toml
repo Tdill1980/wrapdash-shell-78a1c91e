@@ -260,3 +260,9 @@ verify_jwt = false
 
 [functions.run-quote-followups]
 verify_jwt = false
+
+[functions.execute-delegated-task]
+verify_jwt = false
+
+[functions.ai-generate-video-blueprint]
+verify_jwt = false
