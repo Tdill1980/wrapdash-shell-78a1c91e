@@ -720,6 +720,30 @@ export type Database = {
           },
         ]
       }
+      agent_conversations: {
+        Row: {
+          agent_name: string
+          conversation_id: string
+          id: string
+          messages: Json
+          updated_at: string
+        }
+        Insert: {
+          agent_name: string
+          conversation_id: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+        }
+        Update: {
+          agent_name?: string
+          conversation_id?: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_actions: {
         Row: {
           action_payload: Json | null
