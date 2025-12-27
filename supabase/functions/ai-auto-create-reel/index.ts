@@ -651,33 +651,37 @@ Return JSON ONLY:
 
     console.log(`Scoring complete: ${scored.length} videos qualify (threshold: ${SCORE_THRESHOLD})`);
 
-    // FAIL-LOUD: Not enough qualifying clips
+    // ═══════════════════════════════════════════════════════════════
+    // FALLBACK MODE: If not enough qualifying clips, use best available
+    // This ensures content is ALWAYS created (bootstrap mode)
+    // ═══════════════════════════════════════════════════════════════
+    let finalCandidates = scored;
+    let confidence: "high" | "medium" | "low" = "high";
+    
     if (scored.length < 3) {
-      console.warn(`FAIL-LOUD: Only ${scored.length} videos qualify for this topic.`);
-      return new Response(JSON.stringify({
-        error: "INSUFFICIENT_QUALIFYING_CLIPS",
-        message: `Only ${scored.length} videos qualify for this topic.`,
-        suggestion: "Run Analyze Library to tag more videos.",
-        diagnostics: {
-          intent,
-          threshold: SCORE_THRESHOLD,
-          total_videos: videos.length,
-          raw_videos: rawVideos.length,
-          qualifying_videos: scored.length,
-          scored_top10: scored.slice(0, 10).map(v => ({
-            id: v.id,
-            score: v.score,
-            tags: v.visual_tags
-          }))
-        }
-      }), {
-        status: 422,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      console.warn(`FALLBACK MODE: Only ${scored.length} videos qualify, using best available vehicle clips`);
+      confidence = "low";
+      
+      // Fallback 1: Use any videos with vehicles, sorted by quality
+      const vehicleVideos = rawVideos
+        .filter(v => v.visual_tags?.has_vehicle)
+        .sort((a, b) => (b.visual_tags?.quality_score ?? 0) - (a.visual_tags?.quality_score ?? 0));
+      
+      if (vehicleVideos.length >= 3) {
+        finalCandidates = vehicleVideos.slice(0, 10).map(v => ({ ...v, score: v.visual_tags?.quality_score ?? 50 }));
+        console.log(`Fallback 1: Using ${finalCandidates.length} vehicle clips by quality`);
+      } else {
+        // Fallback 2: Use any raw videos sorted by recency
+        finalCandidates = rawVideos.slice(0, 10).map(v => ({ ...v, score: 25 }));
+        console.log(`Fallback 2: Using ${finalCandidates.length} most recent raw clips`);
+        confidence = "low";
+      }
+    } else if (scored.length < 10) {
+      confidence = "medium";
     }
 
     // Diversify the top clips for variety
-    const selectedForAI = diversifyTop(scored, Math.min(20, scored.length));
+    const selectedForAI = diversifyTop(finalCandidates, Math.min(20, finalCandidates.length));
 
     const videoSummary = selectedForAI.map(v => ({
       id: v.id,
@@ -802,12 +806,16 @@ Return JSON ONLY:
       extracted_style: extractedStyle,
       // Caption text from library (deterministic selection)
       caption_text,
+      // Confidence level based on scoring results
+      confidence,
       // Diagnostics for debugging
       diagnostics: {
         intent,
         threshold: SCORE_THRESHOLD,
         total_videos: videos.length,
+        raw_videos: rawVideos.length,
         qualifying_videos: scored.length,
+        used_fallback: confidence !== "high",
         caption_source: caption_text ? "library" : "none",
       }
     }), {
