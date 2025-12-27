@@ -419,6 +419,21 @@ export default function ReelBuilder() {
         });
       }
 
+      // ============ AUTO-GENERATE CAPTIONS ============
+      const totalDuration = newClips.reduce((sum, clip) => sum + (clip.trimEnd - clip.trimStart), 0);
+      captionsEngine.generateCaptions("", captionsEngine.settings.style, {
+        duration: totalDuration,
+        concept: result.reel_concept,
+        hook: result.suggested_hook,
+        cta: result.suggested_cta,
+      }).then((captions) => {
+        if (captions.length > 0) {
+          toast.success(`Auto-generated ${captions.length} captions`, {
+            description: "Adjust timing in the Captions tab",
+          });
+        }
+      });
+
       const formatInfo = useFormat ? DARA_FORMATS[useFormat] : null;
       toast.success(`AI created reel with ${newClips.length} clips + blueprint!`, {
         description: `${result.reel_concept}${formatInfo ? ` • ${formatInfo.emoji} ${formatInfo.name}` : ''}${result.extracted_style ? ' • Style matched!' : ''}`,
