@@ -233,7 +233,8 @@ serve(async (req) => {
       const overlays: { text: string; start: number; end: number; position?: string }[] = [];
       
       let cursor = 0;
-      for (const scene of scenes.slice(0, 8)) {
+      for (let i = 0; i < scenes.slice(0, 8).length; i++) {
+        const scene = scenes[i];
         const startTime = Number(scene.start_time);
         const endTime = Number(scene.end_time);
         
@@ -244,7 +245,8 @@ serve(async (req) => {
         
         if (endTime > startTime) {
           // Use the clip_url from blueprint, falling back to source_url
-          const clipUrl = scene.clip_url || editItem.source_url;
+          const clipUrl = scene.clip_url || scene.file_url || editItem.source_url;
+          const duration = endTime - startTime;
           
           clips.push({
             url: clipUrl,
@@ -252,18 +254,18 @@ serve(async (req) => {
             trimEnd: Math.min(endTime, videoDuration),
           });
           
-          // Add text overlay if present
-          if (scene.text) {
-            const duration = endTime - startTime;
+          // ✅ FIX: Use text_overlay from blueprint (intent-aware), fallback to scene.text
+          const overlayText = scene.text_overlay || scene.text;
+          if (overlayText) {
             overlays.push({
-              text: scene.text,
+              text: overlayText,
               start: cursor,
               end: cursor + Math.min(duration, 3), // overlay max 3s
               position: scene.text_position || 'center',
             });
           }
           
-          cursor += (endTime - startTime);
+          cursor += duration;
         }
       }
       

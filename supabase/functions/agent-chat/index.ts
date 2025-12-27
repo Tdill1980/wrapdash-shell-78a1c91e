@@ -277,6 +277,9 @@ MAY DECIDE (within your authority):
 - Overlay timing within ±2 seconds tolerance
 - Hook phrasing within the brand voice guidelines
 
+TEXT OVERLAY RULE (CRITICAL):
+When generating text overlays, you MUST prioritize the original task title, task description, and content calendar caption VERBATIM before inventing new copy. The client's words come first.
+
 MUST ASK (clarification required):
 - If content_type is unclear (reel vs story vs ad)
 - If platform is not specified

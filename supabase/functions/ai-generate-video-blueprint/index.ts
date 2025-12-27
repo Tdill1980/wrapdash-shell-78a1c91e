@@ -60,6 +60,52 @@ interface AvailableClip {
   thumbnail_url?: string;
 }
 
+// Creative context from task/calendar (THE INTENT)
+interface CreativeContext {
+  task_title?: string;
+  task_description?: string;
+  calendar_title?: string;
+  calendar_caption?: string;
+  platform?: string;
+  brand?: string;
+}
+
+/**
+ * Resolve overlay text from creative context
+ * Priority: calendar_caption > task_title/description > platform default
+ */
+function resolveOverlayText(sceneIndex: number, context: CreativeContext): string | null {
+  // 1️⃣ Highest priority — explicit calendar caption (split by line/sentence)
+  if (context.calendar_caption) {
+    const lines = context.calendar_caption
+      .split(/[\n\.]/)
+      .map(l => l.trim())
+      .filter(Boolean);
+    return lines[sceneIndex] ?? lines[0] ?? null;
+  }
+
+  // 2️⃣ Task title / description
+  if (context.task_title || context.task_description) {
+    if (sceneIndex === 0 && context.task_title) {
+      return context.task_title;
+    }
+    if (context.task_description) {
+      const phrases = context.task_description
+        .split(/[\n\.]/)
+        .map(l => l.trim())
+        .filter(Boolean);
+      return phrases[sceneIndex - 1] ?? phrases[0] ?? null;
+    }
+  }
+
+  // 3️⃣ Fallback (platform generic)
+  if (context.platform === "instagram") return "Tap to see the difference";
+  if (context.platform === "tiktok") return "Watch closely";
+  if (context.platform === "youtube") return "Watch this transformation";
+
+  return null;
+}
+
 // Platform-specific rules
 const PLATFORM_RULES: Record<string, string> = {
   instagram: `IF platform = "Instagram Reels":
@@ -201,14 +247,18 @@ serve(async (req) => {
       available_clips,
       organization_id,
       content_calendar_id,
-      task_id
+      task_id,
+      creative_context = {} as CreativeContext, // ✅ ACCEPT INTENT
     } = await req.json();
 
     console.log("[ai-generate-video-blueprint] Inputs:", {
       platform, goal, brand_tone, 
       clips_count: available_clips?.length || 0,
-      organization_id, content_calendar_id, task_id
+      organization_id, content_calendar_id, task_id,
+      has_creative_context: !!creative_context.task_title || !!creative_context.calendar_caption
     });
+    
+    console.log("[ai-generate-video-blueprint] Creative context:", creative_context);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -328,14 +378,21 @@ Return ONLY valid JSON matching the schema. No explanations.`;
       duration: blueprint.total_duration_seconds
     });
 
-    // Enrich scenes with actual clip URLs
-    const enrichedScenes = (blueprint.scenes || []).map((scene: any) => {
+    // Enrich scenes with actual clip URLs AND apply intent-aware overlays
+    const enrichedScenes = (blueprint.scenes || []).map((scene: any, index: number) => {
       const clip = clips.find(c => c.id === scene.source_reference);
+      
+      // ✅ APPLY INTENT-AWARE OVERLAY TEXT (prioritize creative context)
+      const intentOverlay = resolveOverlayText(index, creative_context);
+      
       return {
         ...scene,
         file_url: clip?.file_url || null,
         thumbnail_url: clip?.thumbnail_url || null,
-        original_filename: clip?.filename || null
+        original_filename: clip?.filename || null,
+        // Use intent overlay if available, otherwise keep AI-generated
+        text_overlay: intentOverlay || scene.text_overlay || null,
+        text: intentOverlay || scene.text_overlay || null, // Also set 'text' for compatibility
       };
     });
 
@@ -343,6 +400,7 @@ Return ONLY valid JSON matching the schema. No explanations.`;
       ...blueprint,
       scenes: enrichedScenes,
       clips_available: clips.length,
+      creative_context, // ✅ PRESERVE INTENT IN OUTPUT
       generated_at: new Date().toISOString()
     };
 
