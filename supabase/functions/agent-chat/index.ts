@@ -887,8 +887,8 @@ EMIT THE BLOCK NOW.
         },
       });
 
-      // Update chat status if confirmed
-      if (confirmed && chat?.status === "clarifying") {
+      // Update chat status if confirmed (allow from any status, not just "clarifying")
+      if (confirmed && chat?.status !== "confirmed") {
         await supabase
           .from("agent_chats")
           .update({ status: "confirmed", updated_at: new Date().toISOString() })
