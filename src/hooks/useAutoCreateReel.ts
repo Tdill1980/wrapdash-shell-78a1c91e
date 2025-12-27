@@ -103,7 +103,7 @@ export function useAutoCreateReel() {
         },
       });
 
-      // Handle edge function errors
+      // Handle edge function errors - note: 422 responses include data with error details
       if (fnError) {
         // Check for rate limit / payment errors from the invoke wrapper
         const errMsg = fnError.message?.toLowerCase() || "";
@@ -125,7 +125,12 @@ export function useAutoCreateReel() {
           toast.error(paymentError.message);
           return null;
         }
-        throw new Error(fnError.message);
+        
+        // For 422 errors, the data contains the structured error - don't throw, let it fall through
+        // to the data?.error handling below
+        if (!data?.error) {
+          throw new Error(fnError.message);
+        }
       }
 
       // Handle 422 fail-loud errors from the function
