@@ -241,12 +241,12 @@ export default function ReelBuilder() {
   // NO auto-create runs, NO AI re-selection - clips and overlays are exactly as specified
   useEffect(() => {
     if (hasLoadedProducerJob.current) return;
-    
+
     if (producerJobState?.skipAutoCreate && producerJobState?.producerJob?.lock) {
       const job = producerJobState.producerJob;
       console.log('[ReelBuilder] 🔒 Loading LOCKED ProducerJob from agent:', job);
       hasLoadedProducerJob.current = true;
-      
+
       // Convert ProducerJob clips to ReelBuilder clips
       const newClips: Clip[] = job.clips.map((clip, index) => ({
         id: clip.id,
@@ -260,40 +260,88 @@ export default function ReelBuilder() {
         suggestedOverlay: clip.suggestedOverlay,
         reason: clip.reason,
       }));
-      
+
+      // Authoritative state
       setClips(newClips);
       setSuggestedHook(job.hook || null);
       setSuggestedCta(job.cta || null);
       setReelConcept(job.hook || 'Agent-created reel');
-      
-      // Apply overlays to the overlay engine
-      if (job.overlays && job.overlays.length > 0) {
-        job.overlays.forEach((overlay) => {
+
+      // ✅ Music: only a URL is renderable. (Style is a hint, not executable.)
+      setAudioUrl(job.musicUrl || null);
+
+      // Reset any previous overlays so we don't accidentally render a giant paragraph blob
+      overlaysEngine.clearOverlays();
+
+      // Build a blueprint that uses ProducerJob overlays (NOT clip.suggestedOverlay)
+      const timelineOverlays = Array.isArray(job.overlays) ? job.overlays : [];
+
+      let cursor = 0;
+      const scenes: SceneBlueprintScene[] = newClips.map((clip, index) => {
+        const clipDuration = Math.max(0, (clip.trimEnd ?? 0) - (clip.trimStart ?? 0));
+        const sceneStart = cursor;
+        const sceneEnd = cursor + clipDuration;
+        cursor = sceneEnd;
+
+        const purpose: SceneBlueprintScene['purpose'] =
+          index === 0 ? 'hook' : index === newClips.length - 1 ? 'cta' : 'b_roll';
+
+        const overlay = timelineOverlays.find(o => o.start >= sceneStart && o.start < sceneEnd);
+
+        // Also keep overlays in the overlay engine for UI visibility/editing
+        if (overlay) {
           overlaysEngine.addOverlay({
             text: overlay.text,
             style: 'modern',
-            position: overlay.position === 'top' ? 'top-center' : 
-                     overlay.position === 'bottom' ? 'bottom-center' : 'center',
+            position:
+              overlay.position === 'top'
+                ? 'top-center'
+                : overlay.position === 'bottom'
+                  ? 'bottom-center'
+                  : 'center',
             start: overlay.start,
             end: overlay.start + overlay.duration,
             color: '#E1306C',
           });
-        });
-      }
-      
-      // Build the blueprint from the job
-      const blueprint = buildBlueprintFromAutoCreate(newClips, {
-        suggested_cta: job.cta,
-        reel_concept: job.hook,
-      }, job.platform);
-      
+        }
+
+        return {
+          sceneId: `producer_${index + 1}`,
+          clipId: clip.id,
+          clipUrl: clip.url,
+          start: clip.trimStart,
+          end: clip.trimEnd,
+          purpose,
+          text: overlay?.text,
+          textPosition: overlay?.position || 'center',
+          animation: 'pop',
+          cutReason: clip.reason || 'ProducerJob locked clip',
+        };
+      });
+
+      const totalDuration = scenes.reduce((sum, s) => sum + (s.end - s.start), 0);
+
+      const blueprint: SceneBlueprint = {
+        id: `bp_producer_${Date.now()}`,
+        platform: job.platform,
+        totalDuration,
+        scenes,
+        endCard: {
+          duration: 3,
+          text: job.cta || 'Follow for more',
+          cta: job.cta || 'Follow for more',
+        },
+        createdAt: new Date().toISOString(),
+        source: 'manual',
+      };
+
       setSceneBlueprint(blueprint);
-      
-      toast.success(`Loaded ${newClips.length} clips with ${job.overlays?.length || 0} overlays`, {
-        description: 'Ready to render - no AI re-thinking',
+
+      toast.success(`Loaded ${newClips.length} clips (locked)`, {
+        description: `${timelineOverlays.length} timed overlays • ${job.musicUrl ? 'music attached' : 'no music URL'}`,
       });
     }
-  }, [producerJobState, buildBlueprintFromAutoCreate, overlaysEngine]);
+  }, [producerJobState, overlaysEngine]);
 
   // Generate test blueprint from clips (for verification)
   const handleCreateTestBlueprint = useCallback(() => {
