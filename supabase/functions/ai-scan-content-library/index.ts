@@ -166,7 +166,7 @@ Return JSON array only:
         console.error(`Text overlay generation failed for ${video.id}:`, e);
       }
 
-      // Insert or update queue item
+      // Insert queue item (skip if already exists for this source_url)
       const queueItem = {
         organization_id: video.organization_id,
         content_file_id: video.id,
@@ -180,16 +180,58 @@ Return JSON array only:
         status: "ready_for_review"
       };
 
-      const { data: inserted, error: insertError } = await supabase
+      // Check if already exists by source_url
+      const { data: existingByUrl } = await supabase
         .from("video_edit_queue")
-        .upsert(queueItem, { onConflict: "content_file_id" })
-        .select()
-        .single();
+        .select("id")
+        .eq("source_url", video.file_url)
+        .maybeSingle();
+
+      if (existingByUrl && !scan_all) {
+        console.log(`Video ${video.id} already in queue by URL, skipping`);
+        continue;
+      }
+
+      // Insert new or update existing
+      const { data: inserted, error: insertError } = existingByUrl
+        ? await supabase
+            .from("video_edit_queue")
+            .update(queueItem)
+            .eq("id", existingByUrl.id)
+            .select()
+            .single()
+        : await supabase
+            .from("video_edit_queue")
+            .insert(queueItem)
+            .select()
+            .single();
 
       if (insertError) {
-        console.error(`Failed to insert queue item for ${video.id}:`, insertError);
+        console.error(`Failed to insert/update queue item for ${video.id}:`, insertError);
       } else {
         results.push(inserted);
+      }
+      
+      // Auto-upload to Mux if video doesn't have a Mux asset ID
+      if (!video.mux_asset_id && video.file_url) {
+        console.log(`Auto-uploading ${video.id} to Mux...`);
+        try {
+          const muxRes = await supabase.functions.invoke("mux-upload", {
+            body: {
+              file_url: video.file_url,
+              content_file_id: video.id,
+              organization_id: video.organization_id,
+              wait_for_ready: false // Don't wait during scan, just queue it
+            }
+          });
+          if (muxRes.error) {
+            console.error(`Mux upload failed for ${video.id}:`, muxRes.error);
+          } else {
+            console.log(`Mux upload started for ${video.id}:`, muxRes.data?.asset_id);
+          }
+        } catch (muxErr) {
+          console.error(`Mux upload exception for ${video.id}:`, muxErr);
+        }
       }
     }
 
