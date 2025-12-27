@@ -946,6 +946,26 @@ EMIT THE BLOCK NOW.
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const assignedToUuid = typeof assigned_to === "string" && uuidRegex.test(assigned_to) ? assigned_to : null;
 
+      // Extract content type from context or description
+      const contentTypeFromContext = (ctx.content_type as string | undefined) || 
+        (ctx.task_content_type as string | undefined);
+      const inferredContentType = inferContentTypeFromText(safeDescription);
+      const finalContentType = contentTypeFromContext || inferredContentType;
+
+      // Extract video/image URLs from context for execution
+      const videoUrls = (ctx.video_urls as string[] | undefined) || [];
+      const imageUrls = (ctx.image_urls as string[] | undefined) || [];
+      const attachments = (ctx.attachments as Array<{url: string; type?: string}> | undefined) || [];
+      
+      // Parse attachments into video/image URLs
+      attachments.forEach((att) => {
+        if (att.type?.startsWith("video/") || att.url?.match(/\.(mp4|mov|webm)$/i)) {
+          videoUrls.push(att.url);
+        } else if (att.type?.startsWith("image/") || att.url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          imageUrls.push(att.url);
+        }
+      });
+
       // Create task (linked to the exact conversation when available)
       const { data: task, error: taskError } = await supabase
         .from("tasks")
@@ -960,6 +980,8 @@ EMIT THE BLOCK NOW.
           contact_id: contactId || null,
           customer: subject || null,
           assigned_to: assignedToUuid,
+          content_type: finalContentType || null,
+          channel: channel || null,
         })
         .select()
         .single();
@@ -980,11 +1002,52 @@ EMIT THE BLOCK NOW.
         .update({ status: "delegated", updated_at: new Date().toISOString() })
         .eq("id", chat_id);
 
+      // ═══════════════════════════════════════════════════════════════
+      // AUTO-EXECUTE: Invoke the task executor immediately
+      // ═══════════════════════════════════════════════════════════════
+      console.log("[agent-chat] Auto-executing delegated task:", task.id);
+      
+      let executionResult = null;
+      let executionError = null;
+      
+      try {
+        const { data: execData, error: execError } = await supabase.functions.invoke("execute-delegated-task", {
+          body: {
+            task_id: task.id,
+            context: {
+              video_urls: videoUrls,
+              image_urls: imageUrls,
+              content_type: finalContentType,
+              chat_context: {
+                agent_id: chat.agent_id,
+                chat_id: chat_id,
+                organization_id: chat.organization_id,
+              }
+            }
+          }
+        });
+        
+        if (execError) {
+          console.error("[agent-chat] Execution error:", execError);
+          executionError = execError.message;
+        } else {
+          console.log("[agent-chat] Execution result:", JSON.stringify(execData));
+          executionResult = execData;
+        }
+      } catch (e) {
+        console.error("[agent-chat] Execution exception:", e);
+        executionError = e instanceof Error ? e.message : "Unknown error";
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
           task_id: task.id,
-          message: "Task delegated successfully",
+          message: executionResult?.success 
+            ? "Task delegated and execution started"
+            : "Task delegated (execution pending)",
+          execution: executionResult,
+          execution_error: executionError,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -1138,5 +1201,22 @@ function extractSuggestedTask(message: string): { type: string; description: str
       description: match[1].trim(),
     };
   }
+  return null;
+}
+
+// Helper to infer content type from task text
+function inferContentTypeFromText(text: string): string | null {
+  const lowerText = text.toLowerCase();
+  
+  if (lowerText.includes("reel")) return "ig_reel";
+  if (lowerText.includes("story") && lowerText.includes("instagram")) return "ig_story";
+  if (lowerText.includes("story")) return "ig_story";
+  if (lowerText.includes("youtube short") || lowerText.includes("yt short")) return "youtube_short";
+  if (lowerText.includes("youtube") || lowerText.includes("video")) return "youtube_video";
+  if (lowerText.includes("meta ad") || lowerText.includes("facebook ad") || lowerText.includes("ig ad")) return "meta_ad";
+  if (lowerText.includes("static ad") || lowerText.includes("static")) return "static_ad";
+  if (lowerText.includes("ad") || lowerText.includes("advertisement")) return "meta_ad";
+  if (lowerText.includes("post") || lowerText.includes("content")) return "ig_reel";
+  
   return null;
 }
