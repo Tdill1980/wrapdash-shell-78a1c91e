@@ -24,6 +24,10 @@ export interface SceneBlueprint {
   createdAt?: string;
   source?: 'ai' | 'manual' | 'hardcoded' | 'smart_assist';
   
+  // ============ BRAND CONTEXT ============
+  // Which brand/channel this content is for
+  brand?: string;
+  
   // ============ TARGET LOCK (Select Format) ============
   // These define the render contract - what Creatomate will produce
   format?: 'reel' | 'story' | 'short';
