@@ -189,6 +189,27 @@ export function useContentBox() {
         .single();
 
       if (error) throw error;
+
+      // Auto-analyze on upload (non-blocking, async)
+      // Only runs if not already analyzed and not manually overridden
+      if (data && !data.visual_analyzed_at) {
+        const visualTags = data.visual_tags as Record<string, unknown> | null;
+        const manualOverride = visualTags?.meta && (visualTags.meta as Record<string, unknown>)?.manual_override;
+        
+        if (!manualOverride) {
+          // Fire and forget - don't block upload
+          if (fileType === 'video') {
+            supabase.functions.invoke('ai-analyze-video-frame', {
+              body: { file_id: data.id, file_url: publicUrl }
+            }).catch(err => console.error('Auto-analyze video failed:', err));
+          } else if (fileType === 'image') {
+            supabase.functions.invoke('ai-analyze-image', {
+              body: { file_id: data.id, file_url: publicUrl }
+            }).catch(err => console.error('Auto-analyze image failed:', err));
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
