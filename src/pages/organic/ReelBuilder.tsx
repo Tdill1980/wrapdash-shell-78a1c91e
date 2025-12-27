@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   ArrowLeft,
   Plus,
@@ -28,7 +29,10 @@ import {
   Upload,
   Video,
   Settings,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
+import { SceneBlueprint, validateBlueprint, createTestBlueprint } from "@/types/SceneBlueprint";
 import { cn } from "@/lib/utils";
 import { useReelBeatSync } from "@/hooks/useReelBeatSync";
 import { useReelCaptions, CaptionStyle } from "@/hooks/useReelCaptions";
@@ -120,6 +124,13 @@ export default function ReelBuilder() {
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [contentMetadata, setContentMetadata] = useContentMetadata("wpw");
+  
+  // ============ SCENE BLUEPRINT AUTHORITY ============
+  // This is the ONLY object that controls rendering.
+  // If this is null, NOTHING renders. Period.
+  const [sceneBlueprint, setSceneBlueprint] = useState<SceneBlueprint | null>(null);
+  const [blueprintValidation, setBlueprintValidation] = useState<{ valid: boolean; errors: string[] }>({ valid: false, errors: ['No blueprint created yet'] });
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const uploadVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -131,6 +142,32 @@ export default function ReelBuilder() {
   const { executeEdits, renderProgress, isExecuting, stopPolling } = useMightyEdit();
   const [isRenderingReel, setIsRenderingReel] = useState(false);
   const autoCreateReel = useAutoCreateReel();
+
+  // Validate blueprint whenever it changes
+  useEffect(() => {
+    const validation = validateBlueprint(sceneBlueprint);
+    setBlueprintValidation(validation);
+    if (sceneBlueprint) {
+      console.log('[ReelBuilder] Blueprint updated:', sceneBlueprint);
+      console.log('[ReelBuilder] Blueprint validation:', validation);
+    }
+  }, [sceneBlueprint]);
+
+  // Generate test blueprint from clips (for verification)
+  const handleCreateTestBlueprint = useCallback(() => {
+    if (clips.length === 0) {
+      toast.error('Add clips first to create a test blueprint');
+      return;
+    }
+    
+    const testBlueprint = createTestBlueprint(
+      clips.map(c => ({ id: c.id, url: c.url, duration: c.duration }))
+    );
+    setSceneBlueprint(testBlueprint);
+    toast.success('Test blueprint created!', {
+      description: `${testBlueprint.scenes.length} scenes, ${testBlueprint.totalDuration.toFixed(1)}s total`,
+    });
+  }, [clips]);
 
   // Single video upload handler - uploads video, then AI analyzes and finds best scenes
   const handleVideoUpload = useCallback(async (acceptedFiles: File[]) => {
@@ -366,8 +403,29 @@ export default function ReelBuilder() {
     saveRenderedVideo();
   }, [renderProgress?.status, renderProgress?.outputUrl, contentMetadata]);
 
-  // Handle render reel - uses MightyEdit Mux pipeline directly
+  // Handle render reel - REQUIRES SCENE BLUEPRINT (Authority enforced)
   const handleRenderReel = async () => {
+    // ============ AUTHORITY CHECK ============
+    // If no blueprint exists, REFUSE TO RENDER
+    if (!sceneBlueprint) {
+      toast.error('Cannot render without Scene Blueprint', {
+        description: 'Create a blueprint first using "Create Test Blueprint" or AI generation.',
+      });
+      console.error('[ReelBuilder] BLOCKED: Render attempted without blueprint');
+      return;
+    }
+
+    const validation = validateBlueprint(sceneBlueprint);
+    if (!validation.valid) {
+      toast.error('Blueprint validation failed', {
+        description: validation.errors.join(', '),
+      });
+      console.error('[ReelBuilder] BLOCKED: Invalid blueprint', validation.errors);
+      return;
+    }
+
+    console.log('[ReelBuilder] ✅ Rendering with AUTHORITATIVE BLUEPRINT:', sceneBlueprint);
+
     if (clips.length === 0) {
       toast.error('Add clips first');
       return;
@@ -376,23 +434,31 @@ export default function ReelBuilder() {
     setIsRenderingReel(true);
 
     try {
-      // Collect all clip URLs
-      const clipUrls = clips.map(c => c.url).filter(Boolean);
+      // Collect all clip URLs from BLUEPRINT (not from clips state)
+      const clipUrls = sceneBlueprint.scenes.map(s => s.clipUrl).filter(Boolean);
       if (clipUrls.length === 0) {
-        toast.error('No video URLs available');
+        toast.error('No video URLs in blueprint');
         setIsRenderingReel(false);
         return;
       }
 
-      // Build overlays from AI suggestions + engine overlays
-      const allOverlays = [
-        ...clips.filter(c => c.suggestedOverlay).map((c, idx) => ({
-          text: c.suggestedOverlay!,
-          timestamp: `${clips.slice(0, idx).reduce((acc, cl) => acc + (cl.trimEnd - cl.trimStart), 0)}s`,
-          style: 'bold' as const,
-          duration: 2,
-        })),
-      ];
+      // Build overlays FROM BLUEPRINT (not from clips state)
+      const allOverlays = sceneBlueprint.scenes
+        .filter(scene => scene.text)
+        .map((scene, idx) => {
+          // Calculate timestamp based on scene order
+          const timestamp = sceneBlueprint.scenes
+            .slice(0, idx)
+            .reduce((acc, s) => acc + (s.end - s.start), 0);
+          return {
+            text: scene.text!,
+            timestamp: `${timestamp}s`,
+            style: 'bold' as const,
+            duration: 2,
+            position: scene.textPosition || 'center',
+            animation: scene.animation || 'pop',
+          };
+        });
 
       // First create a content_files entry for the primary clip
       const primaryClipUrl = clipUrls[0];
@@ -414,7 +480,7 @@ export default function ReelBuilder() {
         return;
       }
 
-      // Create video_edit_queue entry
+      // Create video_edit_queue entry with BLUEPRINT as the authoritative source
       const { data: queueEntry, error: queueError } = await supabase
         .from('video_edit_queue')
         .insert({
@@ -423,16 +489,27 @@ export default function ReelBuilder() {
           title: reelConcept || 'Reel Builder Export',
           text_overlays: allOverlays,
           selected_music_url: audioUrl,
+          // AUTHORITY: Scene blueprint IS the edit plan
           ai_edit_suggestions: {
-            scenes: clips.map((c, i) => ({
+            blueprint_id: sceneBlueprint.id,
+            blueprint_source: sceneBlueprint.source,
+            scenes: sceneBlueprint.scenes.map((scene, i) => ({
               order: i + 1,
-              start_time: c.trimStart,
-              end_time: c.trimEnd,
-              label: c.name,
-              speed: c.speed || 1,
+              scene_id: scene.sceneId,
+              clip_id: scene.clipId,
+              clip_url: scene.clipUrl,
+              start_time: scene.start,
+              end_time: scene.end,
+              purpose: scene.purpose,
+              label: scene.purpose,
+              text: scene.text,
+              text_position: scene.textPosition,
+              animation: scene.animation,
+              cut_reason: scene.cutReason,
             })),
-            hook: suggestedHook || autoCreateState?.suggestedHook,
-            cta: suggestedCta || autoCreateState?.suggestedCta,
+            end_card: sceneBlueprint.endCard,
+            hook: sceneBlueprint.scenes.find(s => s.purpose === 'hook')?.text,
+            cta: sceneBlueprint.endCard?.cta || sceneBlueprint.scenes.find(s => s.purpose === 'cta')?.text,
           },
           render_status: 'pending',
           status: 'ready_for_review',
@@ -447,8 +524,8 @@ export default function ReelBuilder() {
         return;
       }
 
-      console.log('[ReelBuilder] Created queue entry:', queueEntry.id);
-      toast.success('Render started!', { description: 'Processing with Mux...' });
+      console.log('[ReelBuilder] ✅ Created queue entry with BLUEPRINT:', queueEntry.id, sceneBlueprint.id);
+      toast.success('Render started!', { description: `Blueprint: ${sceneBlueprint.id}` });
 
       // Call executeEdits with the queue ID
       await executeEdits(queueEntry.id, 'full');
@@ -760,11 +837,34 @@ export default function ReelBuilder() {
               )}
               AI Sequence
             </Button>
+            
+            {/* Test Blueprint Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCreateTestBlueprint}
+              disabled={clips.length === 0}
+              className={sceneBlueprint ? "border-green-500/50 bg-green-500/10" : ""}
+            >
+              {sceneBlueprint ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-1.5 text-green-500" />
+                  Blueprint Ready
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-4 h-4 mr-1.5 text-amber-500" />
+                  Create Test Blueprint
+                </>
+              )}
+            </Button>
+            
             <Button
               size="sm"
               className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
-              disabled={clips.length === 0 || isRenderingReel || isExecuting}
+              disabled={clips.length === 0 || isRenderingReel || isExecuting || !sceneBlueprint}
               onClick={handleRenderReel}
+              title={!sceneBlueprint ? "Create a blueprint first" : "Render with blueprint"}
             >
               {isRenderingReel || isExecuting ? (
                 <>
@@ -788,6 +888,44 @@ export default function ReelBuilder() {
           />
         </div>
       )}
+
+      {/* SCENE BLUEPRINT STATUS PANEL */}
+      <div className="max-w-7xl mx-auto px-4 py-2">
+        <Alert variant={blueprintValidation.valid ? "default" : "destructive"} className="border-l-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {blueprintValidation.valid ? (
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+              ) : (
+                <AlertTriangle className="w-5 h-5" />
+              )}
+              <div>
+                <AlertTitle className="text-sm font-semibold">
+                  {blueprintValidation.valid ? 'Blueprint Ready' : 'No Blueprint - Cannot Render'}
+                </AlertTitle>
+                <AlertDescription className="text-xs">
+                  {blueprintValidation.valid 
+                    ? `${sceneBlueprint?.scenes.length} scenes • ${sceneBlueprint?.totalDuration.toFixed(1)}s • Source: ${sceneBlueprint?.source}`
+                    : blueprintValidation.errors.join(' • ')
+                  }
+                </AlertDescription>
+              </div>
+            </div>
+            {sceneBlueprint && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  console.log('[ReelBuilder] Current Blueprint:', JSON.stringify(sceneBlueprint, null, 2));
+                  toast.info('Blueprint logged to console');
+                }}
+              >
+                View JSON
+              </Button>
+            )}
+          </div>
+        </Alert>
+      </div>
 
       <div className="max-w-7xl mx-auto p-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
