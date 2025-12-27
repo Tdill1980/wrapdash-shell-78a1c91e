@@ -199,6 +199,50 @@ export default function ReelBuilder() {
         cta: creative.cta || 'Follow for more',
       },
       createdAt: new Date().toISOString(),
+      source: 'smart_assist',
+    };
+  }, []);
+
+  // ============ BUILD BLUEPRINT FROM AUTO-CREATE ============
+  // Converts AutoCreateResult + Clips into authoritative SceneBlueprint
+  const buildBlueprintFromAutoCreate = useCallback((
+    sourceClips: Clip[],
+    autoResult: { suggested_cta?: string; reel_concept?: string },
+    platform: 'instagram' | 'tiktok' | 'youtube' | 'facebook' = 'instagram'
+  ): SceneBlueprint => {
+    const scenes: SceneBlueprintScene[] = sourceClips.map((clip, index) => {
+      const purpose: SceneBlueprintScene['purpose'] = 
+        index === 0 ? 'hook' : 
+        index === sourceClips.length - 1 ? 'cta' : 
+        'b_roll';
+      
+      return {
+        sceneId: `auto_${index + 1}`,
+        clipId: clip.id,
+        clipUrl: clip.url,
+        start: clip.trimStart,
+        end: clip.trimEnd,
+        purpose,
+        text: clip.suggestedOverlay,
+        textPosition: 'center',
+        animation: 'pop',
+        cutReason: clip.reason || `AI selected clip ${index + 1}`,
+      };
+    });
+
+    const totalDuration = scenes.reduce((sum, s) => sum + (s.end - s.start), 0);
+
+    return {
+      id: `bp_auto_${Date.now()}`,
+      platform,
+      totalDuration,
+      scenes,
+      endCard: {
+        duration: 3,
+        text: autoResult.suggested_cta || 'Follow for more',
+        cta: autoResult.suggested_cta || 'Follow for more',
+      },
+      createdAt: new Date().toISOString(),
       source: 'ai',
     };
   }, []);
@@ -358,6 +402,11 @@ export default function ReelBuilder() {
         console.log("Using inspo style:", result.extracted_style);
       }
 
+      // ============ AUTO-CREATE BLUEPRINT FROM AI-SELECTED CLIPS ============
+      const blueprint = buildBlueprintFromAutoCreate(newClips, result, 'instagram');
+      setSceneBlueprint(blueprint);
+      console.log("Blueprint created from AI auto-create:", blueprint.id);
+
       // Apply the suggested hook as overlay with inspo colors
       if (result.suggested_hook) {
         overlaysEngine.addOverlay({
@@ -371,7 +420,7 @@ export default function ReelBuilder() {
       }
 
       const formatInfo = useFormat ? DARA_FORMATS[useFormat] : null;
-      toast.success(`AI created reel with ${newClips.length} clips!`, {
+      toast.success(`AI created reel with ${newClips.length} clips + blueprint!`, {
         description: `${result.reel_concept}${formatInfo ? ` • ${formatInfo.emoji} ${formatInfo.name}` : ''}${result.extracted_style ? ' • Style matched!' : ''}`,
       });
     }

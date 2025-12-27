@@ -331,11 +331,23 @@ Look at: font family used, text weight, colors, shadows, positioning, any boxes 
 
               if (visionRes.ok) {
                 const visionJson = await visionRes.json();
-                const styleContent = visionJson.choices?.[0]?.message?.content || "{}";
+                let styleContent = visionJson.choices?.[0]?.message?.content || "{}";
+                
+                // Strip markdown code fences if present
+                styleContent = styleContent.trim();
+                if (styleContent.startsWith('```')) {
+                  styleContent = styleContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+                }
+                
+                // Extract JSON object from response
                 const jsonMatch = styleContent.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
-                  extractedStyle = JSON.parse(jsonMatch[0]);
-                  console.log("Extracted inspo style:", extractedStyle);
+                  try {
+                    extractedStyle = JSON.parse(jsonMatch[0]);
+                    console.log("Extracted inspo style:", extractedStyle);
+                  } catch (parseErr) {
+                    console.warn("JSON parse failed for style:", parseErr);
+                  }
                 }
               }
             } catch (visionErr) {
