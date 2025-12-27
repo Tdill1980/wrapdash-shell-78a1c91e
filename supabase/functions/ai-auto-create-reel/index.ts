@@ -506,11 +506,86 @@ Return JSON ONLY:
   "format_used": "${dara_format || 'auto'}"
 }`;
 
-    // Step 3: Fetch videos from media library
+    // ═══════════════════════════════════════════════════════════════
+    // VISUAL TAG SCORING + FAIL-LOUD SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+
+    // Determine intent from topic/format
+    function getIntent(topic = "", contentType = "") {
+      const t = (topic + " " + contentType).toLowerCase();
+
+      if (t.includes("before") || t.includes("after") || t.includes("transform") || t.includes("reveal"))
+        return { want_finished: true, want_install: true, want_peel: false, want_logo: true };
+
+      if (t.includes("install") || t.includes("process") || t.includes("how"))
+        return { want_finished: false, want_install: true, want_peel: false, want_logo: false };
+
+      if (t.includes("peel") || t.includes("satisfying"))
+        return { want_finished: false, want_install: false, want_peel: true, want_logo: false };
+
+      return { want_finished: true, want_install: true, want_peel: false, want_logo: false };
+    }
+
+    // Score video based on visual tags + intent
+    function scoreVideoForTopic(v: any, intent: any) {
+      const tags = v.visual_tags || {};
+      let score = 0;
+
+      // Hard disqualifiers
+      if (!tags.has_vehicle) return -999;
+      if ((tags.quality_score ?? 50) < 35) return -999;
+
+      // Intent-based scoring
+      if (intent.want_install && tags.has_wrap_install) score += 35;
+      if (intent.want_finished && tags.has_finished_result) score += 30;
+      if (intent.want_peel && tags.has_peel) score += 30;
+      if (intent.want_logo && tags.has_logo) score += 15;
+
+      // Motion bonuses
+      if (tags.dominant_motion === "hand_install" || tags.dominant_motion === "peel_motion") score += 10;
+      if (tags.environment === "shop") score += 5;
+
+      // Quality bonus
+      score += Math.floor((tags.quality_score || 50) / 10);
+
+      return score;
+    }
+
+    // Diversify top clips across categories
+    function diversifyTop(videos: any[], count: number) {
+      const buckets = { finished: [] as any[], install: [] as any[], peel: [] as any[], other: [] as any[] };
+
+      for (const v of videos) {
+        const t = v.visual_tags || {};
+        if (t.has_finished_result) buckets.finished.push(v);
+        else if (t.has_wrap_install) buckets.install.push(v);
+        else if (t.has_peel) buckets.peel.push(v);
+        else buckets.other.push(v);
+      }
+
+      const out: any[] = [];
+      const order = ["finished", "install", "peel", "other"] as const;
+      let idx = 0;
+      
+      while (out.length < count) {
+        const bucket = buckets[order[idx % 4]];
+        if (bucket.length > 0) {
+          out.push(bucket.shift()!);
+        }
+        idx++;
+        // Safety: if all buckets empty, break
+        if (order.every(k => buckets[k].length === 0)) break;
+      }
+      
+      return out;
+    }
+
+    // Step 3: Fetch videos from media library (with visual_tags, excluding inspo)
     let query = supabase
       .from("content_files")
-      .select("id, file_url, original_filename, duration_seconds, tags, content_category, thumbnail_url, created_at")
+      .select("id, file_url, original_filename, duration_seconds, tags, content_category, thumbnail_url, created_at, visual_tags")
       .eq("file_type", "video")
+      .neq("content_category", "inspo_reference")
       .order("created_at", { ascending: false })
       .limit(max_videos || 50);
 
@@ -538,7 +613,7 @@ Return JSON ONLY:
       });
     }
 
-    console.log(`Found ${videos.length} videos, analyzing with AI${inspoContext ? " + inspo style" : ""}...`);
+    console.log(`Found ${videos.length} videos, applying visual tag scoring...`);
 
     // Filter out already-edited content
     const rawVideos = videos.filter(v => {
@@ -550,12 +625,55 @@ Return JSON ONLY:
              !filename.includes("render");
     });
 
-    const videoSummary = (rawVideos.length > 0 ? rawVideos : videos).map(v => ({
+    // ═══════════════════════════════════════════════════════════════
+    // SCORE + FILTER + FAIL-LOUD
+    // ═══════════════════════════════════════════════════════════════
+    const intent = getIntent(dara_format || "", filter_category || "");
+    const SCORE_THRESHOLD = 10;
+
+    const scored = (rawVideos.length > 0 ? rawVideos : videos)
+      .map(v => ({ ...v, score: scoreVideoForTopic(v, intent) }))
+      .filter(v => v.score > SCORE_THRESHOLD)
+      .sort((a, b) => b.score - a.score);
+
+    console.log(`Scoring complete: ${scored.length} videos qualify (threshold: ${SCORE_THRESHOLD})`);
+
+    // FAIL-LOUD: Not enough qualifying clips
+    if (scored.length < 3) {
+      console.warn(`FAIL-LOUD: Only ${scored.length} videos qualify for this topic.`);
+      return new Response(JSON.stringify({
+        error: "INSUFFICIENT_QUALIFYING_CLIPS",
+        message: `Only ${scored.length} videos qualify for this topic.`,
+        suggestion: "Run Analyze Library to tag more videos.",
+        diagnostics: {
+          intent,
+          threshold: SCORE_THRESHOLD,
+          total_videos: videos.length,
+          raw_videos: rawVideos.length,
+          qualifying_videos: scored.length,
+          scored_top10: scored.slice(0, 10).map(v => ({
+            id: v.id,
+            score: v.score,
+            tags: v.visual_tags
+          }))
+        }
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // Diversify the top clips for variety
+    const selectedForAI = diversifyTop(scored, Math.min(20, scored.length));
+
+    const videoSummary = selectedForAI.map(v => ({
       id: v.id,
       filename: v.original_filename || "Untitled",
       duration: v.duration_seconds || 10,
       tags: v.tags || [],
       category: v.content_category || "raw",
+      score: v.score,
+      visual_tags: v.visual_tags || {},
     }));
 
     // Step 4: Call AI to select best videos with inspo context
@@ -571,7 +689,7 @@ Return JSON ONLY:
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Analyze these videos and select the best ones for a viral reel:\n\n${JSON.stringify(videoSummary, null, 2)}`
+            content: `Analyze these PRE-SCORED videos (higher score = better match for this topic) and select the best ones for a viral reel:\n\n${JSON.stringify(videoSummary, null, 2)}`
           }
         ],
       }),
@@ -615,6 +733,7 @@ Return JSON ONLY:
         thumbnail_url: original?.thumbnail_url,
         original_filename: original?.original_filename,
         duration_seconds: original?.duration_seconds,
+        visual_tags: original?.visual_tags,
       };
     });
 
@@ -625,6 +744,13 @@ Return JSON ONLY:
       inspo_files_used: inspoContext ? true : false,
       // Include extracted style for render function to use
       extracted_style: extractedStyle,
+      // Diagnostics for debugging
+      diagnostics: {
+        intent,
+        threshold: SCORE_THRESHOLD,
+        total_videos: videos.length,
+        qualifying_videos: scored.length,
+      }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
