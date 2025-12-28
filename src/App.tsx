@@ -84,6 +84,7 @@ import OperationsSOP from "./pages/OperationsSOP";
 import RevenueHealth from "./pages/RevenueHealth";
 import AIApprovals from "./pages/AIApprovals";
 import BulkVariationReview from "./pages/BulkVariationReview";
+import QuoteStatsDashboard from "./pages/QuoteStatsDashboard";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -127,6 +128,7 @@ const App = () => (
             <Route path="/email-campaigns" element={<MightyMail />} />
             <Route path="/admin/mightymail" element={<MightyMailAdmin />} />
             <Route path="/admin/mightymail/quotes" element={<MightyMailQuotes />} />
+            <Route path="/admin/mightymail/stats" element={<QuoteStatsDashboard />} />
             <Route path="/admin/mightymail/performance" element={<MightyMailPerformance />} />
             <Route path="/mightymail-ai" element={<MightyMailAI />} />
             <Route path="/mightymail/winback" element={<MightyMailWinback />} />

@@ -6206,6 +6206,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_quote_stats: {
+        Args: { end_date?: string; start_date?: string }
+        Returns: Json
+      }
       get_user_organization_id: { Args: never; Returns: string }
       has_role: {
         Args: {
