@@ -278,3 +278,6 @@ verify_jwt = false
 
 [functions.creatomate-webhook]
 verify_jwt = false
+
+[functions.vehicle-sqft]
+verify_jwt = false

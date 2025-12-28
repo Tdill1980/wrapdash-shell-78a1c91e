@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getVehicleSqFt } from "../_shared/mighty-vehicle-sqft.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,10 +190,28 @@ serve(async (req: Request): Promise<Response> => {
     // Generate quote number
     const quoteNumber = generateQuoteNumber();
 
-    // Calculate pricing
-    const sqft = payload.dimensions?.sqft || 0;
+    // Get authoritative sqft from MightyCommandAI engine (server-side validation)
+    let sqft = payload.dimensions?.sqft || 0;
+    let sqftSource = 'provided';
+    
+    // If sqft is missing or zero, lookup from authoritative source
+    if (!sqft && payload.vehicle?.year && payload.vehicle?.make && payload.vehicle?.model) {
+      console.log("[submit-quote] No sqft provided, looking up from MightyCommandAI...");
+      const sqftResult = await getVehicleSqFt(
+        supabase,
+        payload.vehicle.year,
+        payload.vehicle.make,
+        payload.vehicle.model,
+        payload.category
+      );
+      sqft = sqftResult.sqft;
+      sqftSource = sqftResult.source;
+      console.log(`[submit-quote] MightyCommandAI sqft: ${sqft} (source: ${sqftSource})`);
+    }
+
+    // Calculate pricing with authoritative sqft
     const pricing = calculateQuickQuote(sqft, payload.material || 'Avery');
-    const estimatedPrice = payload.estimated_price || pricing.materialCost;
+    const estimatedPrice = sqft > 0 ? pricing.materialCost : (payload.estimated_price || 0);
 
     // Prepare quote data
     const quoteData = {
@@ -313,7 +332,12 @@ serve(async (req: Request): Promise<Response> => {
         success: true,
         quote_id: quote.id,
         quote_number: quoteNumber,
+        sqft: sqft,
+        sqft_source: sqftSource,
+        price: estimatedPrice,
+        price_per_sqft: pricing.pricePerSqft,
         estimated_price: estimatedPrice,
+        emailSent: !!emailResult,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
