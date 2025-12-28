@@ -366,64 +366,72 @@ function renderEmailTemplate(
         </style>
       </head>
       <body>
-        <div class="container">
-          <div class="header">
-            <div class="header-brand">WePrintWraps.com</div>
-            <div class="header-tagline">Print-Only Wholesale Wrap Pricing</div>
+        <div class="container" style="max-width: 600px; margin: 0 auto; background-color: ${styles.containerColor};">
+          <div class="header" style="background: ${styles.headerGradient}; padding: 32px 20px; text-align: center;">
+            <div class="header-brand" style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Poppins', Arial, sans-serif; letter-spacing: -0.5px;">
+              WePrintWraps.com
+            </div>
+            <div class="header-tagline" style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 8px; font-weight: 400;">
+              Print-Only Wholesale Wrap Pricing
+            </div>
           </div>
           
-          <div class="content">
-            <div class="section-title">Your Wrap Quote</div>
-            ${data.quote_number ? `<div class="quote-number">Quote #: ${data.quote_number}</div>` : ''}
+          <div class="content" style="padding: 32px 24px; color: ${styles.textColor};">
+            <div class="section-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 22px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 8px 0;">Your Wrap Quote</div>
+            ${data.quote_number ? `<div class="quote-number" style="color: ${styles.bodyColor}; font-size: 14px; margin-bottom: 24px;">Quote #: ${data.quote_number}</div>` : ''}
             
-            <table class="quote-table">
-              ${vehicleDisplay ? `<tr><td class="label">Vehicle</td><td class="value">${vehicleDisplay}</td></tr>` : ''}
-              <tr><td class="label">Coverage</td><td class="value">Full Wrap</td></tr>
-              ${data.product_name ? `<tr><td class="label">Material</td><td class="value">${data.product_name}</td></tr>` : ''}
-              ${data.sqft ? `<tr><td class="label">Square Footage</td><td class="value">${data.sqft} sq ft</td></tr>` : ''}
+            <table class="quote-table" style="width: 100%; background-color: ${styles.cardColor}; border-radius: 8px; border-collapse: collapse; margin: 20px 0;">
+              ${vehicleDisplay ? `<tr><td class="label" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Vehicle</td><td class="value" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">${vehicleDisplay}</td></tr>` : ''}
+              <tr><td class="label" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Coverage</td><td class="value" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">Full Wrap</td></tr>
+              ${data.product_name ? `<tr><td class="label" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Material</td><td class="value" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">${data.product_name}</td></tr>` : ''}
+              ${data.sqft ? `<tr><td class="label" style="padding: 12px 16px; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Square Footage</td><td class="value" style="padding: 12px 16px; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">${data.sqft} sq ft</td></tr>` : ''}
             </table>
             
-            <div class="price-box">
-              <div class="price-label">Print-Only Total</div>
-              <div class="price-amount">$${Number(data.quote_total).toFixed(2)}</div>
-              <div class="price-note">Installation not included</div>
+            <div class="price-box" style="background: ${styles.priceBoxGradient || 'linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)'}; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+              <div class="price-label" style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Print-Only Total</div>
+              <div class="price-amount" style="color: #ffffff; font-size: 42px; font-weight: 700; font-family: 'Poppins', Arial, sans-serif;">$${Number(data.quote_total).toFixed(2)}</div>
+              <div class="price-note" style="color: rgba(255,255,255,0.8); font-size: 12px; margin-top: 8px;">Installation not included</div>
             </div>
             
-            <a href="${orderLink}" class="cta-button">ORDER NOW</a>
-            
-            <div class="benefits-box">
-              <div class="benefits-title">Why WePrintWraps?</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Premium Wrap Guarantee – color accuracy & print quality</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Fast 1–2 Day Production</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Free Shipping on orders $750+</div>
+            <div style="text-align:center;">
+              <a href="${orderLink}" class="cta-button" style="display: inline-block; width: 100%; max-width: 280px; margin: 24px auto; padding: 16px 32px; background: ${tonePreset.buttonColor}; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; text-align: center; font-family: 'Poppins', Arial, sans-serif;">
+                ORDER NOW
+              </a>
             </div>
             
-            <div class="commercial-box">
-              <div class="commercial-title">Need a bulk or fleet order?</div>
-              <div class="commercial-text">Volume discounts available for multiple vehicles or repeat production.</div>
-              <a href="${commercialLink}" class="commercial-link">View CommercialPro →</a>
+            <div class="benefits-box" style="background-color: ${styles.cardColor}; border-radius: 8px; padding: 20px 24px; margin: 24px 0;">
+              <div class="benefits-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 16px 0;">Why WePrintWraps?</div>
+              <div class="benefit-item" style="margin-bottom: 12px; font-size: 14px; color: ${styles.bodyColor};">✓ <strong>Premium Wrap Guarantee</strong> – color accuracy & print quality</div>
+              <div class="benefit-item" style="margin-bottom: 12px; font-size: 14px; color: ${styles.bodyColor};">✓ <strong>Fast 1–2 Day Production</strong></div>
+              <div class="benefit-item" style="margin-bottom: 0; font-size: 14px; color: ${styles.bodyColor};">✓ <strong>Free Shipping</strong> on orders $750+</div>
             </div>
             
-            <div class="faq-section">
-              <div class="faq-title">FAQs</div>
-              <div class="faq-item">
-                <div class="faq-question">Is installation included?</div>
-                <div class="faq-answer">No — WePrintWraps.com provides print-only wholesale wrap material.</div>
+            <div class="commercial-box" style="background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(184,134,11,0.1) 100%); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 20px 24px; margin: 24px 0; text-align: center;">
+              <div class="commercial-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 8px 0;">Need a bulk or fleet order?</div>
+              <div class="commercial-text" style="font-size: 14px; color: ${styles.bodyColor}; margin-bottom: 12px;">Volume discounts available for multiple vehicles or repeat production.</div>
+              <a href="${commercialLink}" class="commercial-link" style="color: #D4AF37; font-weight: 600; text-decoration: none;">View CommercialPro →</a>
+            </div>
+            
+            <div class="faq-section" style="margin: 32px 0 24px 0;">
+              <div class="faq-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 18px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 16px 0;">FAQs</div>
+              <div class="faq-item" style="margin-bottom: 16px;">
+                <div class="faq-question" style="font-size: 14px; font-weight: 600; color: ${styles.headingColor}; margin-bottom: 4px;">Is installation included?</div>
+                <div class="faq-answer" style="font-size: 13px; color: ${styles.bodyColor}; line-height: 1.5;">No — WePrintWraps.com provides print-only wholesale wrap material.</div>
               </div>
-              <div class="faq-item">
-                <div class="faq-question">How fast is production?</div>
-                <div class="faq-answer">Most orders ship within 1–2 business days.</div>
+              <div class="faq-item" style="margin-bottom: 16px;">
+                <div class="faq-question" style="font-size: 14px; font-weight: 600; color: ${styles.headingColor}; margin-bottom: 4px;">How fast is production?</div>
+                <div class="faq-answer" style="font-size: 13px; color: ${styles.bodyColor}; line-height: 1.5;">Most orders ship within 1–2 business days.</div>
               </div>
-              <div class="faq-item">
-                <div class="faq-question">Can I reorder this wrap?</div>
-                <div class="faq-answer">Yes — your quote number allows easy reorders.</div>
+              <div class="faq-item" style="margin-bottom: 0;">
+                <div class="faq-question" style="font-size: 14px; font-weight: 600; color: ${styles.headingColor}; margin-bottom: 4px;">Can I reorder this wrap?</div>
+                <div class="faq-answer" style="font-size: 13px; color: ${styles.bodyColor}; line-height: 1.5;">Yes — your quote number allows easy reorders.</div>
               </div>
             </div>
           </div>
           
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} WePrintWraps.com - Premium Vehicle Wrap Printing</p>
-            ${data.footer_text ? `<p>${data.footer_text}</p>` : ''}
+          <div class="footer" style="padding: 24px; text-align: center; color: ${styles.footerColor}; font-size: 12px; border-top: 1px solid ${styles.borderColor};">
+            <p style="margin: 0 0 8px;">© ${new Date().getFullYear()} WePrintWraps.com - Premium Vehicle Wrap Printing</p>
+            ${data.footer_text ? `<p style="margin: 0;">${data.footer_text}</p>` : ''}
           </div>
         </div>
       </body>
