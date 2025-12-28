@@ -684,7 +684,17 @@ IMPORTANT: You have full visibility into this conversation. Reference specific d
         ? agentConfig.conversationalPrompt! 
         : agentConfig.systemPrompt;
       
-      console.log(`[agent-chat] Using ${useConversationalMode ? 'conversational' : 'operator'} mode for ${agentConfig.name}`);
+      // Detect feedback/coaching messages (should NOT trigger tasks/delegation)
+      const feedbackPatterns = [
+        "when someone", "when people", "next time", "in that chat", "in chat",
+        "clarify earlier", "should have", "you should", "try to", "make sure to",
+        "going forward", "from now on", "don't forget", "remember to",
+        "good catch", "that was", "you missed", "you forgot", "be more", "be less"
+      ];
+      const messageLower = message.toLowerCase();
+      const isFeedback = useConversationalMode && feedbackPatterns.some(p => messageLower.includes(p));
+      
+      console.log(`[agent-chat] Using ${useConversationalMode ? 'conversational' : 'operator'} mode for ${agentConfig.name}${isFeedback ? ' (FEEDBACK DETECTED)' : ''}`);
       
       // Load related chat context for conversational mode (e.g., reviewing specific chats)
       let relatedChatsContext = "";
@@ -879,12 +889,14 @@ When they give content creation instructions, emit the CREATE_CONTENT block with
       }
         
       // AUTO-PROCEED for content creation - either with video OR for content tasks from MightyTask
+      // BUT skip all this if we're in feedback/coaching mode
       const msgLower = body.message?.toLowerCase() || '';
       const contentKeywords = ['create', 'make', 'story', 'reel', 'video', 'post', 'instagram', 'content', 'promo', 'sale', 'discount', 'christmas', 'holiday', 'execute', 'task'];
       const isContentRequest = contentKeywords.some(kw => msgLower.includes(kw));
       
       // Force CREATE_CONTENT for Noah when: (1) has video AND content request, OR (2) is content task from MightyTask
-      if (chat?.agent_id === 'noah_bennett' && (isContentRequest || isContentTask)) {
+      // NEVER trigger content creation during feedback/coaching
+      if (!isFeedback && chat?.agent_id === 'noah_bennett' && (isContentRequest || isContentTask)) {
         const hasVideo = allVideoAttachments.length > 0;
         const mostRecentVideo = hasVideo ? allVideoAttachments[0] : null;
         
