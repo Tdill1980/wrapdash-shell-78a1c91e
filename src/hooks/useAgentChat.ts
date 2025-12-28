@@ -45,8 +45,10 @@ interface UseAgentChatReturn {
   suggestedTask: { type: string; description: string } | null;
   recentChats: RecentChat[];
   loadingRecent: boolean;
-  startChat: (agentId: string, context?: Record<string, unknown>) => Promise<void>;
-  sendMessage: (message: string, attachments?: Array<{ url: string; type?: string; name?: string }>) => Promise<void>;
+  chatMode: "operator" | "conversational";
+  setChatMode: (mode: "operator" | "conversational") => void;
+  startChat: (agentId: string, context?: Record<string, unknown>, mode?: "operator" | "conversational") => Promise<void>;
+  sendMessage: (message: string, attachments?: Array<{ url: string; type?: string; name?: string }>, relatedChatIds?: string[]) => Promise<void>;
   delegateTask: (description: string) => Promise<{ success: boolean; taskId?: string }>;
   closeChat: () => void;
   loadRecentChats: (agentId?: string) => Promise<void>;
@@ -63,6 +65,7 @@ export function useAgentChat(): UseAgentChatReturn {
   const [suggestedTask, setSuggestedTask] = useState<{ type: string; description: string } | null>(null);
   const [recentChats, setRecentChats] = useState<RecentChat[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
+  const [chatMode, setChatMode] = useState<"operator" | "conversational">("operator");
 
   const loadRecentChats = useCallback(async (agentId?: string) => {
     setLoadingRecent(true);
@@ -130,11 +133,16 @@ export function useAgentChat(): UseAgentChatReturn {
     }
   }, []);
 
-  const startChat = useCallback(async (agentId: string, context?: Record<string, unknown>) => {
+  const startChat = useCallback(async (agentId: string, context?: Record<string, unknown>, mode?: "operator" | "conversational") => {
     setLoading(true);
     setMessages([]);
     setConfirmed(false);
     setSuggestedTask(null);
+    
+    // Set chat mode if provided
+    if (mode) {
+      setChatMode(mode);
+    }
 
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -159,6 +167,7 @@ export function useAgentChat(): UseAgentChatReturn {
           organization_id: orgMember?.organization_id,
           user_id: userId,
           context,
+          chatMode: mode || chatMode,
         },
       });
 
@@ -221,9 +230,9 @@ export function useAgentChat(): UseAgentChatReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [chatMode]);
 
-  const sendMessage = useCallback(async (message: string, attachments?: Array<{ url: string; type?: string; name?: string }>) => {
+  const sendMessage = useCallback(async (message: string, attachments?: Array<{ url: string; type?: string; name?: string }>, relatedChatIds?: string[]) => {
     if (!chatId || !message.trim()) return;
 
     setSending(true);
@@ -245,6 +254,8 @@ export function useAgentChat(): UseAgentChatReturn {
           chat_id: chatId,
           message,
           attachments,
+          chatMode,
+          relatedChatIds,
         },
       });
 
@@ -276,7 +287,7 @@ export function useAgentChat(): UseAgentChatReturn {
     } finally {
       setSending(false);
     }
-  }, [chatId]);
+  }, [chatId, chatMode]);
 
   const delegateTask = useCallback(async (description: string, contextOverrides?: Record<string, unknown>): Promise<{ 
     success: boolean; 
@@ -342,6 +353,7 @@ export function useAgentChat(): UseAgentChatReturn {
     setMessages([]);
     setConfirmed(false);
     setSuggestedTask(null);
+    setChatMode("operator"); // Reset to default mode
   }, []);
 
   return {
@@ -354,6 +366,8 @@ export function useAgentChat(): UseAgentChatReturn {
     suggestedTask,
     recentChats,
     loadingRecent,
+    chatMode,
+    setChatMode,
     startChat,
     sendMessage,
     delegateTask,

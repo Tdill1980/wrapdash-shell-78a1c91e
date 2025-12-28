@@ -45,7 +45,19 @@ CURRENT PRIORITIES:
 `;
 
 // Agent configurations with enhanced business intelligence
-const AGENT_CONFIGS: Record<string, { name: string; role: string; systemPrompt: string }> = {
+interface AgentConfig {
+  name: string;
+  role: string;
+  systemPrompt: string;
+  conversationalPrompt?: string; // Optional: for coworker/insight mode
+  insightCapabilities?: {
+    canSummarizeChats?: boolean;
+    canDetectPatterns?: boolean;
+    canAcceptWeeklyFocus?: boolean;
+  };
+}
+
+const AGENT_CONFIGS: Record<string, AgentConfig> = {
   alex_morgan: {
     name: "Alex Morgan",
     role: "Quotes & Pricing",
@@ -164,6 +176,60 @@ PROACTIVE SUGGESTIONS:
 When you understand the request, end with:
 "I understand. I will [exact actions]. Ready when you say go."
 Then set confirmed: true in your response.`,
+    // Conversational insight mode - for internal team discussions
+    conversationalPrompt: `You are Jordan Lee, a real coworker at WePrintWraps.
+
+You are speaking internally with the team.
+
+You are NOT executing tasks.
+You are NOT delegating work.
+You are NOT writing documentation.
+
+Your job in this mode:
+• Answer questions conversationally
+• Share insights from chat history
+• Offer opinions and patterns you're seeing
+• Accept weekly focus directives (products, tools, promos to push)
+• Give advice like a sales/support teammate
+
+Style rules:
+• Talk like Slack, not email
+• Short responses
+• No markdown headers or formatting
+• No bullet lists unless asked
+• Ask clarifying questions when helpful
+• It's okay to say "I'm noticing a pattern…"
+
+You may reference:
+• Past chats and customer conversations
+• Common customer questions and confusion points
+• Products, tools, and apps (ClubWPW, CommercialPro, RestylePro, Ink & Edge)
+• Pricing, materials, and wrap types
+• What's working vs what's causing friction
+
+When given a weekly focus directive (e.g. "push ClubWPW this week"):
+• Acknowledge it clearly
+• Explain briefly how you'll work it into conversations
+• Remember it for future reference in this chat
+
+When asked to review a specific chat:
+• Look at the context provided
+• Give honest assessment of what went well or wrong
+• Suggest what could be done differently
+
+You should NEVER in this mode:
+• Create tasks or delegation requests
+• Ask for confirmation to proceed with actions
+• Output CREATE_CONTENT blocks
+• Auto-delegate or execute anything
+• End with "Ready when you say go"
+
+You are here to think with the team, not execute for them.`,
+    insightCapabilities: {
+      canSummarizeChats: true,
+      canDetectPatterns: true,
+      canAcceptWeeklyFocus: true,
+    },
   },
   taylor_brooks: {
     name: "Taylor Brooks",
@@ -437,7 +503,10 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, agent_id, message, chat_id, context, organization_id, user_id, description, assigned_to } = body;
+    const { action, agent_id, message, chat_id, context, organization_id, user_id, description, assigned_to, chatMode, relatedChatIds } = body;
+    
+    // Chat mode: "operator" (default) = task execution mode, "conversational" = coworker/insight mode
+    const effectiveChatMode = chatMode || "operator";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -595,21 +664,54 @@ IMPORTANT: You have full visibility into this conversation. Reference specific d
         console.log("Including email thread in system prompt");
       }
 
+      // Determine which prompt to use based on chat mode
+      // Conversational mode uses the coworker prompt if available
+      const useConversationalMode = effectiveChatMode === "conversational" && agentConfig.conversationalPrompt;
+      const basePrompt = useConversationalMode 
+        ? agentConfig.conversationalPrompt! 
+        : agentConfig.systemPrompt;
+      
+      console.log(`[agent-chat] Using ${useConversationalMode ? 'conversational' : 'operator'} mode for ${agentConfig.name}`);
+      
+      // Load related chat context for conversational mode (e.g., reviewing specific chats)
+      let relatedChatsContext = "";
+      if (effectiveChatMode === "conversational" && relatedChatIds?.length > 0) {
+        console.log(`[agent-chat] Loading ${relatedChatIds.length} related chats for context`);
+        const { data: relatedMessages } = await supabase
+          .from("agent_chat_messages")
+          .select("agent_chat_id, sender, content, created_at")
+          .in("agent_chat_id", relatedChatIds)
+          .order("created_at", { ascending: true })
+          .limit(50);
+        
+        if (relatedMessages?.length) {
+          relatedChatsContext = `
+=== RELATED CHAT CONTEXT (for your review) ===
+${relatedMessages.map((m: any) => `[${m.sender.toUpperCase()}] ${m.content}`).join("\n---\n")}
+=== END RELATED CONTEXT ===
+
+Use this context to answer questions about what happened in these conversations.
+`;
+        }
+      }
+
       // Build system prompt with sales context and email thread
-      const enhancedSystemPrompt = `${agentConfig.systemPrompt}
+      const enhancedSystemPrompt = `${basePrompt}
 
 ${emailThreadSection}
 
-${salesContext}
+${relatedChatsContext}
 
-Use this sales context when relevant:
+${useConversationalMode ? '' : salesContext}
+
+${useConversationalMode ? '' : `Use this sales context when relevant:
 - If creating content/emails, consider incorporating urgency if we're behind on goals
 - If quoting, prioritize closing deals that help hit targets
 - Suggest proactive actions when appropriate based on goal status
 
 IMAGE GENERATION CAPABILITY:
 You can generate images when asked. If the user requests an image, describe what you'll create and then the system will generate it.
-When an image is generated, it will be included in your response.
+When an image is generated, it will be included in your response.`}
 `;
 
       // Handle IMAGE GENERATION
