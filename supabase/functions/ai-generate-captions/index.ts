@@ -39,7 +39,31 @@ serve(async (req) => {
   }
 
   try {
-    const { video_url, style = "sabri", duration = 15, concept, hook, cta } = await req.json();
+    const { video_url, style = "sabri", duration = 15, concept, hook, cta, prompt } = await req.json();
+    
+    // Use prompt OR concept as the main content anchor
+    const userPrompt = (prompt || concept || "").trim();
+    
+    console.log("[ai-generate-captions] Input:", {
+      style,
+      duration,
+      promptLen: userPrompt.length,
+      hasHook: !!hook,
+      hasCta: !!cta,
+    });
+
+    // Enforce minimum prompt length for quality output
+    if (userPrompt.length < 3) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing prompt. Enter a real concept (e.g., 'Inside Ghost Industries Shop').",
+          captions: [],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
 
     if (!apiKey) {
@@ -49,8 +73,7 @@ serve(async (req) => {
     const stylePrompt = STYLE_PROMPTS[style as keyof typeof STYLE_PROMPTS] || STYLE_PROMPTS.sabri;
 
     // Build context from AI-provided data
-    let contextInfo = "";
-    if (concept) contextInfo += `\nReel Concept: ${concept}`;
+    let contextInfo = `\nReel Concept: ${userPrompt}`;
     if (hook) contextInfo += `\nSuggested Hook: ${hook}`;
     if (cta) contextInfo += `\nSuggested CTA: ${cta}`;
 

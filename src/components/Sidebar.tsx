@@ -42,7 +42,7 @@ const navigationItems: NavigationItem[] = [
     name: "AI Approvals", 
     path: "/ai-approvals", 
     icon: ClipboardCheck,
-    roles: ["admin"],
+    roles: ["admin", "beta_shop"],
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">AI </span>

@@ -75,6 +75,34 @@ async function creatomateFetch(path: string, init: RequestInit) {
   });
 }
 
+// ============ NORMALIZE BLUEPRINT (handle field name variations) ============
+function normalizeBlueprint(bp: any): SceneBlueprint {
+  const scenes = (bp?.scenes || []).map((s: any, i: number) => {
+    const start = Number(s.start ?? s.start_time ?? 0);
+    const endRaw = Number(s.end ?? s.end_time ?? (start + 3));
+    const end = endRaw > start ? endRaw : (start + 3);
+    const clipUrl = s.clipUrl || s.clip_url || s.file_url || s.assetUrl || s.url || "";
+
+    return {
+      ...s,
+      sceneId: s.sceneId || s.scene_id || `scene_${i + 1}`,
+      clipId: s.clipId || s.clip_id || s.sceneId || `clip_${i + 1}`,
+      clipUrl,
+      start,
+      end,
+      purpose: s.purpose || "content",
+    };
+  }).filter((s: any) => !!s.clipUrl && s.end > s.start);
+
+  return {
+    ...bp,
+    scenes,
+    format: bp.format || "reel",
+    aspectRatio: bp.aspectRatio || bp.aspect_ratio || "9:16",
+    templateId: bp.templateId || bp.template_id || "dynamic",
+  } as SceneBlueprint;
+}
+
 // ============ PREFLIGHT VALIDATION ============
 function assertRenderable(bp: SceneBlueprint | null | undefined): asserts bp is SceneBlueprint {
   const errors: string[] = [];
@@ -83,16 +111,13 @@ function assertRenderable(bp: SceneBlueprint | null | undefined): asserts bp is 
     throw new Error("No blueprint provided");
   }
 
-  if (!bp.format) errors.push("Missing format");
-  if (!bp.aspectRatio) errors.push("Missing aspect ratio");
-  if (!bp.templateId) errors.push("Missing template ID");
-  if (!bp.scenes?.length) errors.push("No scenes defined");
+  if (!bp.scenes?.length) errors.push("No valid scenes (all scenes may have missing clipUrl or invalid timing)");
 
   bp.scenes?.forEach((scene, i) => {
     if (!scene.clipUrl) errors.push(`Scene ${i + 1}: missing clip URL`);
     if (scene.start === undefined) errors.push(`Scene ${i + 1}: missing start time`);
     if (scene.end === undefined) errors.push(`Scene ${i + 1}: missing end time`);
-    if (scene.end <= scene.start) errors.push(`Scene ${i + 1}: invalid timing`);
+    if (scene.end <= scene.start) errors.push(`Scene ${i + 1}: invalid timing (end <= start)`);
   });
 
   if (errors.length > 0) {
@@ -289,9 +314,17 @@ serve(async (req) => {
       return json({ ok: false, error: "Missing job_id" }, 400);
     }
 
+    // NORMALIZE: Handle field name variations before validation
+    const normalizedBlueprint = normalizeBlueprint(body.blueprint);
+    console.log("[render-reel] Normalized blueprint:", {
+      scenes: normalizedBlueprint.scenes.length,
+      format: normalizedBlueprint.format,
+      aspectRatio: normalizedBlueprint.aspectRatio,
+    });
+
     // PREFLIGHT: Fail fast if blueprint is incomplete
     try {
-      assertRenderable(body.blueprint);
+      assertRenderable(normalizedBlueprint);
       console.log("[render-reel] ✓ Blueprint passed preflight validation");
     } catch (e) {
       console.error("[render-reel] ✗ Preflight failed:", e);
@@ -299,7 +332,7 @@ serve(async (req) => {
     }
 
     // ============ MAP BLUEPRINT → CREATOMATE ============
-    const timeline = mapBlueprintToCreatomate(body.blueprint, body.music_url, body.captions);
+    const timeline = mapBlueprintToCreatomate(normalizedBlueprint, body.music_url, body.captions);
     console.log("[render-reel] Timeline mapped:", JSON.stringify({
       duration: timeline.duration,
       elements_count: timeline.elements.length,
