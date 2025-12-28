@@ -529,19 +529,30 @@ RULES:
       }
     }
 
-    // 8. Save outbound message (with status based on mode)
+    // 8. Save outbound message with PENDING status (NOT "sent" until Meta confirms!)
+    let savedMessageId: string | null = null;
     if (conversation && aiReply) {
-      await supabase.from("messages").insert({
+      const { data: insertedMsg, error: insertMsgErr } = await supabase.from("messages").insert({
         conversation_id: conversation.id,
         direction: "outbound",
         channel: body.platform,
         content: aiReply,
         metadata: {
           ai_mode: aiMode,
-          status: aiMode === 'manual' ? 'pending_approval' : 'sent',
-          generated_at: new Date().toISOString()
+          status: aiMode === 'manual' ? 'pending_approval' : 'pending_delivery',
+          generated_at: new Date().toISOString(),
+          generated_by: body.platform === 'instagram' ? 'casey_ramirez' : 'alex_morgan'
         }
-      });
+      })
+      .select('id')
+      .single();
+      
+      if (insertMsgErr) {
+        console.error("❌ Failed to insert outbound message:", insertMsgErr);
+      } else {
+        savedMessageId = insertedMsg?.id || null;
+        console.log("📝 Outbound message saved with id:", savedMessageId, "status: pending_delivery");
+      }
       
       // Create ai_action for manual approval if in MANUAL mode
       if (aiMode === 'manual') {
@@ -574,21 +585,12 @@ RULES:
     }
 
     // 9. Send reply back via Instagram (ONLY in LIVE mode)
-    if (body.platform === "instagram" && shouldSendReply && aiReply) {
-      // First, get the message ID we just saved so we can update it with delivery status
-      let savedMessageId: string | null = null;
-      if (conversation) {
-        const { data: savedMsg } = await supabase
-          .from("messages")
-          .select("id")
-          .eq("conversation_id", conversation.id)
-          .eq("direction", "outbound")
-          .eq("content", aiReply)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-        savedMessageId = savedMsg?.id;
-      }
+    if (body.platform === "instagram" && shouldSendReply && aiReply && savedMessageId) {
+      console.log("🚀 INVOKING send-instagram-reply", {
+        recipient: body.sender_id,
+        message_id: savedMessageId,
+        aiReply_length: aiReply?.length
+      });
       
       try {
         const sendResult = await fetch(`${SUPABASE_URL}/functions/v1/send-instagram-reply`, {
@@ -610,29 +612,33 @@ RULES:
           console.log("✅ Instagram reply sent (LIVE mode)");
           console.log("✅ Meta message_id:", sendResponse.result?.message_id);
           
-          // Update the saved message to mark as actually sent to Instagram
-          if (conversation && savedMessageId) {
-            const { error: updateError } = await supabase
-              .from("messages")
-              .update({
-                metadata: {
-                  ai_mode: aiMode,
-                  status: 'sent',
-                  instagram_sent: true,
-                  instagram_message_id: sendResponse.result?.message_id,
-                  sent_at: new Date().toISOString(),
-                  generated_at: new Date().toISOString(),
-                  generated_by: 'casey_ramirez',
-                  delivery_latency_ms: sendResponse.delivery_result?.latency_ms
-                }
-              })
-              .eq("id", savedMessageId);
-            
-            if (updateError) {
-              console.error("Failed to update message status:", updateError);
-            } else {
-              console.log("✅ Message", savedMessageId, "marked as instagram_sent: true");
-            }
+          // Get existing metadata and MERGE with delivery results
+          const { data: existingMsg } = await supabase
+            .from("messages")
+            .select("metadata")
+            .eq("id", savedMessageId)
+            .single();
+          
+          const existingMeta = (existingMsg?.metadata as Record<string, unknown>) || {};
+          
+          const { error: updateError } = await supabase
+            .from("messages")
+            .update({
+              metadata: {
+                ...existingMeta,
+                status: 'sent',
+                instagram_sent: true,
+                instagram_message_id: sendResponse.result?.message_id,
+                sent_at: new Date().toISOString(),
+                delivery_latency_ms: sendResponse.delivery_result?.latency_ms
+              }
+            })
+            .eq("id", savedMessageId);
+          
+          if (updateError) {
+            console.error("Failed to update message status:", updateError);
+          } else {
+            console.log("✅ Message", savedMessageId, "marked as instagram_sent: true");
           }
         } else {
           // Capture delivery failure details
@@ -642,78 +648,63 @@ RULES:
           console.error("❌ Instagram reply failed:", errorMessage);
           console.error("❌ Error code:", errorCode);
           
-          // Update message with failure status
-          if (savedMessageId) {
-            await supabase
-              .from("messages")
-              .update({
-                metadata: {
-                  ai_mode: aiMode,
-                  status: 'failed',
-                  instagram_sent: false,
-                  instagram_error: true,
-                  instagram_error_code: errorCode,
-                  instagram_error_message: errorMessage,
-                  delivery_attempted_at: new Date().toISOString(),
-                  generated_at: new Date().toISOString(),
-                  generated_by: 'casey_ramirez'
-                }
-              })
-              .eq("id", savedMessageId);
-            console.log("⚠️ Message", savedMessageId, "marked as failed");
-          }
-        }
-      } catch (replyErr) {
-        console.error("Instagram reply error:", replyErr);
-        
-        // Mark message as failed on exception
-        if (savedMessageId) {
+          // Get existing metadata and MERGE with failure status
+          const { data: failedMsg } = await supabase
+            .from("messages")
+            .select("metadata")
+            .eq("id", savedMessageId)
+            .single();
+          
+          const failedMeta = (failedMsg?.metadata as Record<string, unknown>) || {};
+          
           await supabase
             .from("messages")
             .update({
               metadata: {
-                ai_mode: aiMode,
+                ...failedMeta,
+                status: 'failed',
+                instagram_sent: false,
+                instagram_error: true,
+                instagram_error_code: errorCode,
+                instagram_error_message: errorMessage,
+                delivery_attempted_at: new Date().toISOString()
+              }
+            })
+            .eq("id", savedMessageId);
+          console.log("⚠️ Message", savedMessageId, "marked as failed");
+        }
+      } catch (replyErr) {
+        console.error("❌ Instagram reply EXCEPTION:", replyErr);
+        
+        // Get existing metadata and MERGE with exception status
+        if (savedMessageId) {
+          const { data: exceptionMsg } = await supabase
+            .from("messages")
+            .select("metadata")
+            .eq("id", savedMessageId)
+            .single();
+          
+          const exceptionMeta = (exceptionMsg?.metadata as Record<string, unknown>) || {};
+          
+          await supabase
+            .from("messages")
+            .update({
+              metadata: {
+                ...exceptionMeta,
                 status: 'failed',
                 instagram_sent: false,
                 instagram_error: true,
                 instagram_error_message: String(replyErr),
-                delivery_attempted_at: new Date().toISOString(),
-                generated_at: new Date().toISOString(),
-                generated_by: 'casey_ramirez'
+                delivery_attempted_at: new Date().toISOString()
               }
             })
             .eq("id", savedMessageId);
+          console.log("⚠️ Message", savedMessageId, "marked as failed due to exception");
         }
       }
-    } else if (aiMode !== 'live' && aiReply) {
-      console.log(`📝 Message drafted but NOT sent (mode: ${aiMode})`);
-      
-      // Also tag drafted messages with the agent
-      if (conversation) {
-        const { data: draftMsg } = await supabase
-          .from("messages")
-          .select("id")
-          .eq("conversation_id", conversation.id)
-          .eq("direction", "outbound")
-          .eq("content", aiReply)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (draftMsg?.id) {
-          await supabase
-            .from("messages")
-            .update({
-              metadata: {
-                ai_mode: aiMode,
-                status: 'pending_approval',
-                generated_at: new Date().toISOString(),
-                generated_by: body.platform === 'instagram' ? 'casey_ramirez' : 'alex_morgan'
-              }
-            })
-            .eq("id", draftMsg.id);
-        }
-      }
+    } else if (aiMode !== 'live' && aiReply && savedMessageId) {
+      console.log(`📝 Message drafted but NOT sent (mode: ${aiMode}), message_id: ${savedMessageId}`);
+      // No extra update needed - message was already saved with pending_approval status
     }
 
     return new Response(JSON.stringify({ 
