@@ -107,6 +107,70 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
     return File;
   };
 
+  // Generate thumbnail from video file before upload (avoids CORS issues)
+  const generateVideoThumbnail = (videoFile: File): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const video = document.createElement("video");
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      video.preload = "metadata";
+      video.muted = true;
+      video.playsInline = true;
+
+      const cleanup = () => {
+        URL.revokeObjectURL(video.src);
+        video.remove();
+        canvas.remove();
+      };
+
+      video.onloadeddata = () => {
+        // Seek to 1 second or 10% of duration, whichever is smaller
+        const seekTime = Math.min(1, video.duration * 0.1);
+        video.currentTime = seekTime;
+      };
+
+      video.onseeked = () => {
+        try {
+          // Set canvas size to video dimensions (max 640px width for thumbnail)
+          const scale = Math.min(1, 640 / video.videoWidth);
+          canvas.width = video.videoWidth * scale;
+          canvas.height = video.videoHeight * scale;
+
+          ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          canvas.toBlob(
+            (blob) => {
+              cleanup();
+              resolve(blob);
+            },
+            "image/jpeg",
+            0.8
+          );
+        } catch (error) {
+          console.error("Error generating thumbnail:", error);
+          cleanup();
+          resolve(null);
+        }
+      };
+
+      video.onerror = () => {
+        console.error("Error loading video for thumbnail");
+        cleanup();
+        resolve(null);
+      };
+
+      // Set timeout in case video never loads
+      setTimeout(() => {
+        cleanup();
+        resolve(null);
+      }, 10000);
+
+      video.src = URL.createObjectURL(videoFile);
+      video.load();
+    });
+  };
+
   const uploadFiles = async () => {
     if (files.length === 0) return;
 
@@ -126,6 +190,25 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
         const fileType = getFileType(uploadFile.file);
         const fileName = `${Date.now()}-${uploadFile.file.name}`;
         const filePath = `uploads/${fileName}`;
+
+        // Generate thumbnail for videos before upload
+        let thumbnailUrl: string | null = null;
+        if (fileType === "video") {
+          const thumbnailBlob = await generateVideoThumbnail(uploadFile.file);
+          if (thumbnailBlob) {
+            const thumbnailPath = `thumbnails/${Date.now()}-${uploadFile.file.name.replace(/\.[^/.]+$/, "")}.jpg`;
+            const { error: thumbUploadError } = await supabase.storage
+              .from("media-library")
+              .upload(thumbnailPath, thumbnailBlob, { contentType: "image/jpeg" });
+
+            if (!thumbUploadError) {
+              const { data: thumbUrlData } = supabase.storage
+                .from("media-library")
+                .getPublicUrl(thumbnailPath);
+              thumbnailUrl = thumbUrlData.publicUrl;
+            }
+          }
+        }
 
         const { error: uploadError } = await supabase.storage
           .from("media-library")
@@ -154,6 +237,7 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
             source: "upload",
             brand: brand,
             content_category: contentCategory,
+            thumbnail_url: thumbnailUrl,
           });
 
         if (insertError) throw insertError;
