@@ -575,6 +575,21 @@ RULES:
 
     // 9. Send reply back via Instagram (ONLY in LIVE mode)
     if (body.platform === "instagram" && shouldSendReply && aiReply) {
+      // First, get the message ID we just saved so we can update it with delivery status
+      let savedMessageId: string | null = null;
+      if (conversation) {
+        const { data: savedMsg } = await supabase
+          .from("messages")
+          .select("id")
+          .eq("conversation_id", conversation.id)
+          .eq("direction", "outbound")
+          .eq("content", aiReply)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        savedMessageId = savedMsg?.id;
+      }
+      
       try {
         const sendResult = await fetch(`${SUPABASE_URL}/functions/v1/send-instagram-reply`, {
           method: "POST",
@@ -585,14 +600,18 @@ RULES:
           body: JSON.stringify({
             recipient: body.sender_id,
             message: aiReply,
+            message_id: savedMessageId // Pass message ID for delivery tracking
           }),
         });
         
-        if (sendResult.ok) {
+        const sendResponse = await sendResult.json();
+        
+        if (sendResult.ok && sendResponse.success) {
           console.log("✅ Instagram reply sent (LIVE mode)");
+          console.log("✅ Meta message_id:", sendResponse.result?.message_id);
           
           // Update the saved message to mark as actually sent to Instagram
-          if (conversation) {
+          if (conversation && savedMessageId) {
             const { error: updateError } = await supabase
               .from("messages")
               .update({
@@ -600,30 +619,101 @@ RULES:
                   ai_mode: aiMode,
                   status: 'sent',
                   instagram_sent: true,
+                  instagram_message_id: sendResponse.result?.message_id,
                   sent_at: new Date().toISOString(),
-                  generated_at: new Date().toISOString()
+                  generated_at: new Date().toISOString(),
+                  generated_by: 'casey_ramirez',
+                  delivery_latency_ms: sendResponse.delivery_result?.latency_ms
                 }
               })
-              .eq("conversation_id", conversation.id)
-              .eq("direction", "outbound")
-              .eq("content", aiReply)
-              .order("created_at", { ascending: false })
-              .limit(1);
+              .eq("id", savedMessageId);
             
             if (updateError) {
               console.error("Failed to update message status:", updateError);
             } else {
-              console.log("✅ Message marked as instagram_sent: true");
+              console.log("✅ Message", savedMessageId, "marked as instagram_sent: true");
             }
           }
         } else {
-          console.error("Instagram reply failed:", await sendResult.text());
+          // Capture delivery failure details
+          const errorCode = sendResponse.error_code || sendResponse.delivery_result?.error_code;
+          const errorMessage = sendResponse.error_summary || sendResponse.delivery_result?.error_message;
+          
+          console.error("❌ Instagram reply failed:", errorMessage);
+          console.error("❌ Error code:", errorCode);
+          
+          // Update message with failure status
+          if (savedMessageId) {
+            await supabase
+              .from("messages")
+              .update({
+                metadata: {
+                  ai_mode: aiMode,
+                  status: 'failed',
+                  instagram_sent: false,
+                  instagram_error: true,
+                  instagram_error_code: errorCode,
+                  instagram_error_message: errorMessage,
+                  delivery_attempted_at: new Date().toISOString(),
+                  generated_at: new Date().toISOString(),
+                  generated_by: 'casey_ramirez'
+                }
+              })
+              .eq("id", savedMessageId);
+            console.log("⚠️ Message", savedMessageId, "marked as failed");
+          }
         }
       } catch (replyErr) {
         console.error("Instagram reply error:", replyErr);
+        
+        // Mark message as failed on exception
+        if (savedMessageId) {
+          await supabase
+            .from("messages")
+            .update({
+              metadata: {
+                ai_mode: aiMode,
+                status: 'failed',
+                instagram_sent: false,
+                instagram_error: true,
+                instagram_error_message: String(replyErr),
+                delivery_attempted_at: new Date().toISOString(),
+                generated_at: new Date().toISOString(),
+                generated_by: 'casey_ramirez'
+              }
+            })
+            .eq("id", savedMessageId);
+        }
       }
     } else if (aiMode !== 'live' && aiReply) {
       console.log(`📝 Message drafted but NOT sent (mode: ${aiMode})`);
+      
+      // Also tag drafted messages with the agent
+      if (conversation) {
+        const { data: draftMsg } = await supabase
+          .from("messages")
+          .select("id")
+          .eq("conversation_id", conversation.id)
+          .eq("direction", "outbound")
+          .eq("content", aiReply)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (draftMsg?.id) {
+          await supabase
+            .from("messages")
+            .update({
+              metadata: {
+                ai_mode: aiMode,
+                status: 'pending_approval',
+                generated_at: new Date().toISOString(),
+                generated_by: body.platform === 'instagram' ? 'casey_ramirez' : 'alex_morgan'
+              }
+            })
+            .eq("id", draftMsg.id);
+        }
+      }
     }
 
     return new Response(JSON.stringify({ 
