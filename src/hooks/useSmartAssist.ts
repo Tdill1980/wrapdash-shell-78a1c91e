@@ -23,7 +23,10 @@ export function useSmartAssist() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const runSmartAssist = useCallback(async (clips: SmartAssistClip[]): Promise<SmartAssistResult | null> => {
+  const runSmartAssist = useCallback(async (
+    clips: SmartAssistClip[], 
+    userPrompt?: string
+  ): Promise<SmartAssistResult | null> => {
     if (clips.length === 0) {
       toast.error("No clips to analyze");
       return null;
@@ -64,12 +67,13 @@ export function useSmartAssist() {
 
       setAnalysis(analysisResult);
 
-      // Step 2: Assemble creative plan
+      // Step 2: Assemble creative plan with user prompt for context
       const creativePlan = assembleCreative({
         analysis: analysisResult,
         platform: "instagram",
         mode: "smart_assist",
         targetDuration: Math.min(30, analysisResult.duration_seconds || 15),
+        userPrompt, // Pass user's prompt for relevant hooks/captions
       });
 
       setCreative(creativePlan);

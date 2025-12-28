@@ -339,18 +339,30 @@ serve(async (req) => {
         // render-reel expects: { job_id, blueprint: SceneBlueprint, music_url }
         
         // Map clips back to SceneBlueprint.scenes format
-        const blueprintScenes = scenes.slice(0, 8).map((scene: any, i: number) => ({
-          sceneId: scene.scene_id || `scene_${i + 1}`,
-          clipId: scene.clip_id || `clip_${i + 1}`,
-          clipUrl: scene.clip_url || scene.file_url || editItem.source_url,
-          start: Number(scene.start_time) || 0,
-          end: Number(scene.end_time) || 0,
-          purpose: scene.purpose || scene.label || 'content',
-          text: scene.text_overlay || scene.text || undefined,
-          textPosition: scene.text_position || 'center',
-          animation: scene.animation || 'pop',
-          cutReason: scene.cut_reason || undefined,
-        })).filter((s: any) => s.end > s.start); // Only valid scenes
+        // The source video URL is used for ALL scenes since we're trimming from the same source
+        const sourceVideoUrl = editItem.source_url;
+        
+        const blueprintScenes = scenes.slice(0, 8).map((scene: any, i: number) => {
+          const startTime = Number(scene.start_time) || 0;
+          const endTime = Number(scene.end_time) || Number(scene.start_time) + 3;
+          
+          return {
+            sceneId: scene.scene_id || `scene_${i + 1}`,
+            clipId: scene.clip_id || `clip_${i + 1}`,
+            // CRITICAL: Use the source video URL - scenes are time-based trims from the same source
+            clipUrl: scene.clip_url || scene.file_url || sourceVideoUrl,
+            start: startTime,
+            end: endTime > startTime ? endTime : startTime + 3, // Ensure valid timing
+            purpose: scene.purpose || scene.label || 'content',
+            text: scene.text_overlay || scene.text || undefined,
+            textPosition: scene.text_position || 'center',
+            animation: scene.animation || 'pop',
+            cutReason: scene.cut_reason || undefined,
+          };
+        }).filter((s: any) => s.clipUrl && s.end > s.start); // Only valid scenes with URLs
+        
+        console.log("[ai-execute-edits] Blueprint scenes built:", blueprintScenes.length, 
+          "from source:", sourceVideoUrl?.substring(0, 50) + "...");
         
         // Build the full SceneBlueprint object
         const blueprint = {

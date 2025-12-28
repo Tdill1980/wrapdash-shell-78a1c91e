@@ -1033,8 +1033,9 @@ export default function ReelBuilder() {
       });
 
       // Step 2: Run Smart Assist to analyze and create creative plan
+      // Pass the reel concept as userPrompt for relevant captions/hooks
       if (autoCreateState.autoRunSmartAssist && newClips.length > 0) {
-        const result = await smartAssist.runSmartAssist(newClips);
+        const result = await smartAssist.runSmartAssist(newClips, autoCreateState.reelConcept);
 
         // Step 3: Auto-apply the AI plan
         if (result?.creative?.sequence) {
@@ -1227,7 +1228,8 @@ export default function ReelBuilder() {
   };
 
   const handleRunSmartAssist = async () => {
-    await smartAssist.runSmartAssist(clips);
+    // Pass reelConcept as userPrompt for context-aware captions/hooks
+    await smartAssist.runSmartAssist(clips, reelConcept || undefined);
   };
 
   const handleApplyAIPlan = () => {
