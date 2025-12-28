@@ -334,6 +334,18 @@ const navigationItems: NavigationItem[] = [
       </span>
     )
   },
+  { 
+    name: "Quote Stats", 
+    path: "/admin/mightymail/stats", 
+    icon: BarChart3,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Quote </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Stats</span>
+      </span>
+    )
+  },
   { name: "Product Admin", path: "/admin/products", icon: Settings },
   { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
   { name: "Vehicle Admin", path: "/admin/vehicles", icon: Car },
