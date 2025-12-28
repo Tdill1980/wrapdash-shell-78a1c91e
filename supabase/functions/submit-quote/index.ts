@@ -71,10 +71,23 @@ interface SubmitQuotePayload {
   notes?: string;
 }
 
-async function sendConfirmationEmail(resend: Resend, email: string, quoteNumber: string, price: number, vehicle?: any) {
-  const vehicleText = vehicle?.year && vehicle?.make && vehicle?.model 
-    ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` 
-    : 'Your Vehicle';
+async function sendConfirmationEmail(
+  resend: Resend, 
+  email: string, 
+  quoteNumber: string, 
+  price: number, 
+  sqft: number,
+  material: string,
+  vehicle?: any
+) {
+  // Map variables with safe fallbacks
+  const year = vehicle?.year?.toString() ?? '—';
+  const make = vehicle?.make ?? '—';
+  const model = vehicle?.model ?? '—';
+  const sqftDisplay = sqft?.toString() ?? '—';
+  const priceDisplay = price?.toFixed(2) ?? '0.00';
+  const materialDisplay = material ?? 'Avery Dennison';
+  const orderLink = `https://weprintwraps.com/?quote=${quoteNumber}`;
 
   const html = `
 <!DOCTYPE html>
@@ -82,59 +95,116 @@ async function sendConfirmationEmail(resend: Resend, email: string, quoteNumber:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Montserrat:wght@600;700&display=swap');
+    body { font-family: 'Montserrat', 'Poppins', Arial, sans-serif; }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0A0A0A; font-family: Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0A0A0A; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; background-color: #f7f7f7; font-family: 'Montserrat', 'Poppins', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f7f7f7; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1A1A1A; border-radius: 12px; overflow: hidden;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #00AFFF 0%, #4EEAFF 100%); padding: 30px; text-align: center;">
-              <h1 style="color: #000; margin: 0; font-size: 28px; font-weight: bold;">Quote Received!</h1>
+            <td style="background: linear-gradient(135deg, #00AFFF 0%, #0066CC 100%); padding: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;">WePrintWraps.com</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">Print-Only Wholesale Wrap Pricing</p>
             </td>
           </tr>
+          
+          <!-- Main Content -->
           <tr>
             <td style="padding: 40px 30px;">
-              <p style="color: #FFFFFF; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Thanks for requesting a quote from WePrintWraps! We've received your request and are ready to get you wrapped.
-              </p>
+              <h2 style="color: #1a1a1a; margin: 0 0 10px; font-size: 24px; font-weight: 700;">Your Wrap Quote</h2>
+              <p style="color: #666; margin: 0 0 30px; font-size: 14px;">Quote #: <strong style="color: #00AFFF;">${quoteNumber}</strong></p>
               
-              <table width="100%" style="background-color: #252525; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <tr>
-                  <td style="color: #888; font-size: 14px;">Quote Number</td>
-                  <td style="color: #00AFFF; font-size: 16px; font-weight: bold; text-align: right;">${quoteNumber}</td>
+              <!-- Quote Details -->
+              <table width="100%" style="background-color: #f8f9fa; border-radius: 8px; margin: 0 0 25px;" cellpadding="15" cellspacing="0">
+                <tr style="border-bottom: 1px solid #e9ecef;">
+                  <td style="color: #666; font-size: 14px; padding: 15px;">Vehicle</td>
+                  <td style="color: #1a1a1a; font-size: 16px; font-weight: 600; text-align: right; padding: 15px;">${year} ${make} ${model}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e9ecef;">
+                  <td style="color: #666; font-size: 14px; padding: 15px;">Coverage</td>
+                  <td style="color: #1a1a1a; font-size: 16px; text-align: right; padding: 15px;">Full Wrap</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e9ecef;">
+                  <td style="color: #666; font-size: 14px; padding: 15px;">Material</td>
+                  <td style="color: #1a1a1a; font-size: 16px; text-align: right; padding: 15px;">${materialDisplay}</td>
                 </tr>
                 <tr>
-                  <td style="color: #888; font-size: 14px; padding-top: 10px;">Vehicle</td>
-                  <td style="color: #FFF; font-size: 16px; text-align: right; padding-top: 10px;">${vehicleText}</td>
-                </tr>
-                <tr>
-                  <td style="color: #888; font-size: 14px; padding-top: 10px;">Estimated Price</td>
-                  <td style="color: #4EEAFF; font-size: 20px; font-weight: bold; text-align: right; padding-top: 10px;">$${price.toFixed(2)}</td>
+                  <td style="color: #666; font-size: 14px; padding: 15px;">Square Footage</td>
+                  <td style="color: #1a1a1a; font-size: 16px; text-align: right; padding: 15px;">${sqftDisplay} sq ft</td>
                 </tr>
               </table>
               
-              <p style="color: #FFFFFF; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                Ready to move forward? Reply to this email or call us at <strong style="color: #00AFFF;">(555) 123-4567</strong>.
-              </p>
-              
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 30px;">
+              <!-- Price Box -->
+              <table width="100%" style="background: linear-gradient(135deg, #00AFFF 0%, #0066CC 100%); border-radius: 12px; margin: 0 0 25px;" cellpadding="25" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <a href="https://weprintwraps.com" style="display: inline-block; background: linear-gradient(135deg, #00AFFF 0%, #4EEAFF 100%); color: #000; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-weight: bold; font-size: 16px;">
-                      View Our Work
-                    </a>
+                    <p style="color: rgba(255,255,255,0.9); margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">PRINT-ONLY TOTAL</p>
+                    <p style="color: #ffffff; margin: 0; font-size: 42px; font-weight: 700;">$${priceDisplay}</p>
+                    <p style="color: rgba(255,255,255,0.8); margin: 8px 0 0; font-size: 12px;">Installation not included</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Order Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 30px;">
+                <tr>
+                  <td align="center">
+                    <a href="${orderLink}" style="display: inline-block; background-color: #1a1a1a; color: #ffffff; text-decoration: none; padding: 16px 50px; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 1px;">ORDER NOW</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Benefits -->
+              <table width="100%" style="background-color: #f0fdf4; border-radius: 8px; margin: 0 0 25px;" cellpadding="20" cellspacing="0">
+                <tr>
+                  <td>
+                    <h3 style="color: #1a1a1a; margin: 0 0 15px; font-size: 16px; font-weight: 700;">Why WePrintWraps?</h3>
+                    <p style="color: #333; margin: 0 0 8px; font-size: 14px;">✓ <strong>Premium Wrap Guarantee</strong> – color accuracy & print quality</p>
+                    <p style="color: #333; margin: 0 0 8px; font-size: 14px;">✓ <strong>Fast 1–2 Day Production</strong></p>
+                    <p style="color: #333; margin: 0; font-size: 14px;">✓ <strong>Free Shipping</strong> on orders $750+</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CommercialPro Upsell -->
+              <table width="100%" style="background-color: #fef3c7; border-radius: 8px; margin: 0 0 25px;" cellpadding="20" cellspacing="0">
+                <tr>
+                  <td>
+                    <p style="color: #92400e; margin: 0 0 5px; font-size: 14px; font-weight: 700;">Need a bulk or fleet order?</p>
+                    <p style="color: #92400e; margin: 0 0 10px; font-size: 13px;">Volume discounts available for multiple vehicles or repeat production.</p>
+                    <a href="https://weprintwraps.com/commercial-pro" style="color: #92400e; font-size: 13px; font-weight: 700;">View CommercialPro →</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- FAQs -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <h3 style="color: #1a1a1a; margin: 0 0 15px; font-size: 16px; font-weight: 700;">FAQs</h3>
+                    <p style="color: #1a1a1a; margin: 0 0 5px; font-size: 14px; font-weight: 600;">Is installation included?</p>
+                    <p style="color: #666; margin: 0 0 15px; font-size: 13px;">No — WePrintWraps.com provides print-only wholesale wrap material.</p>
+                    <p style="color: #1a1a1a; margin: 0 0 5px; font-size: 14px; font-weight: 600;">How fast is production?</p>
+                    <p style="color: #666; margin: 0 0 15px; font-size: 13px;">Most orders ship within 1–2 business days.</p>
+                    <p style="color: #1a1a1a; margin: 0 0 5px; font-size: 14px; font-weight: 600;">Can I reorder this wrap?</p>
+                    <p style="color: #666; margin: 0; font-size: 13px;">Yes — your quote number allows easy reorders.</p>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
+          
+          <!-- Footer -->
           <tr>
-            <td style="background-color: #0F0F0F; padding: 20px 30px; text-align: center;">
-              <p style="color: #666; font-size: 12px; margin: 0;">
-                © 2025 WePrintWraps. All rights reserved.<br>
-                <a href="https://weprintwraps.com" style="color: #00AFFF; text-decoration: none;">weprintwraps.com</a>
-              </p>
+            <td style="background-color: #1a1a1a; padding: 25px 30px; text-align: center;">
+              <p style="color: #888; font-size: 12px; margin: 0 0 5px;">© 2025 WePrintWraps. All rights reserved.</p>
+              <a href="https://weprintwraps.com" style="color: #00AFFF; text-decoration: none; font-size: 12px;">weprintwraps.com</a>
             </td>
           </tr>
         </table>
@@ -147,7 +217,7 @@ async function sendConfirmationEmail(resend: Resend, email: string, quoteNumber:
   return await resend.emails.send({
     from: "WePrintWraps <hello@weprintwraps.com>",
     to: [email],
-    subject: `Quote ${quoteNumber} - Your Wrap Estimate is Ready!`,
+    subject: `Quote ${quoteNumber} – Your Print-Only Wrap Estimate`,
     html,
   });
 }
@@ -265,7 +335,7 @@ serve(async (req: Request): Promise<Response> => {
     if (resendApiKey) {
       const resend = new Resend(resendApiKey);
       try {
-        emailResult = await sendConfirmationEmail(resend, payload.email, quoteNumber, estimatedPrice, payload.vehicle);
+        emailResult = await sendConfirmationEmail(resend, payload.email, quoteNumber, estimatedPrice, sqft, payload.material || 'Avery Dennison', payload.vehicle);
         console.log("Confirmation email sent:", emailResult);
 
         // Log to quote_retargeting_log
