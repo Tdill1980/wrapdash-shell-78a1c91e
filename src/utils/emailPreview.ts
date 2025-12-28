@@ -116,17 +116,19 @@ const designStyles: Record<string, {
   cardColor: string;
   borderColor: string;
   footerColor: string;
+  priceBoxGradient?: string;
 }> = {
   clean: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#F7F7F7",
     containerColor: "#FFFFFF",
-    headerGradient: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+    headerGradient: "linear-gradient(135deg, #1A1A2E 0%, #16213E 100%)",
     textColor: "#111827",
     headingColor: "#111827",
     bodyColor: "#6B7280",
     cardColor: "#F9FAFB",
     borderColor: "#E5E7EB",
     footerColor: "#6B7280",
+    priceBoxGradient: "linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)",
   },
   luxury: {
     backgroundColor: "#0A0A0F",
@@ -136,19 +138,21 @@ const designStyles: Record<string, {
     headingColor: "#FFFFFF",
     bodyColor: "#B8B8C7",
     cardColor: "#1A1A1F",
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.08)",
     footerColor: "#6B7280",
+    priceBoxGradient: "linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)",
   },
   performance: {
     backgroundColor: "#0A0A0F",
     containerColor: "#16161E",
-    headerGradient: "linear-gradient(135deg, #00AFFF 0%, #008CFF 50%, #4EEAFF 100%)",
+    headerGradient: "linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)",
     textColor: "#E7E7EF",
     headingColor: "#FFFFFF",
     bodyColor: "#B8B8C7",
     cardColor: "#101016",
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.08)",
     footerColor: "#6B7280",
+    priceBoxGradient: "linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)",
   },
 };
 
@@ -169,10 +173,15 @@ export function generateEmailPreview({
   design = "performance",
   offersInstallation = false, // WPW is print-only by default
 }: EmailPreviewData): string {
-  const tonePresets = getTonePresets(offersInstallation);
-  const tonePreset = tonePresets[tone] || tonePresets.installer;
   const styles = designStyles[design] || designStyles.performance;
-  const body = tonePreset.bodyParagraphs.join("<br><br>");
+  const tonePreset = getTonePreset(tone);
+  
+  const vehicleDisplay = [quoteData.vehicle_year, quoteData.vehicle_make, quoteData.vehicle_model]
+    .filter(Boolean)
+    .join(' ');
+
+  const orderLink = quoteData.portal_url || 'https://weprintwraps.com';
+  const commercialLink = 'https://weprintwraps.com/pages/commercialpro';
 
   return `
     <!DOCTYPE html>
@@ -180,12 +189,14 @@ export function generateEmailPreview({
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
         <style>
           body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            font-family: 'Montserrat', 'Poppins', Arial, sans-serif; 
             margin: 0; 
             padding: 0; 
             background-color: ${styles.backgroundColor}; 
+            -webkit-font-smoothing: antialiased;
           }
           .container { 
             max-width: 600px; 
@@ -194,57 +205,180 @@ export function generateEmailPreview({
           }
           .header { 
             background: ${styles.headerGradient}; 
-            padding: 40px 20px; 
+            padding: 32px 20px; 
             text-align: center; 
           }
-          .header h1 { 
+          .header-brand { 
             color: white; 
             margin: 0; 
             font-size: 28px; 
+            font-weight: 700;
+            font-family: 'Poppins', Arial, sans-serif;
+            letter-spacing: -0.5px;
+          }
+          .header-tagline {
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            margin-top: 8px;
+            font-weight: 400;
           }
           .content { 
-            padding: 40px 20px; 
+            padding: 32px 24px; 
             color: ${styles.textColor}; 
           }
-          .content h2 { 
-            color: ${styles.headingColor}; 
-            margin-top: 0; 
+          .section-title {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: ${styles.headingColor};
+            margin: 0 0 8px 0;
           }
-          .content p { 
-            line-height: 1.6; 
-            color: ${styles.bodyColor}; 
+          .quote-number {
+            color: ${styles.bodyColor};
+            font-size: 14px;
+            margin-bottom: 24px;
           }
-          .quote-details {
+          .quote-table {
+            width: 100%;
             background-color: ${styles.cardColor};
-            padding: 20px;
             border-radius: 8px;
+            border-collapse: collapse;
             margin: 20px 0;
-            border-left: 4px solid ${tonePreset.accentColor};
           }
-          .quote-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
+          .quote-table td {
+            padding: 12px 16px;
             border-bottom: 1px solid ${styles.borderColor};
+            font-size: 14px;
           }
-          .quote-row:last-child {
+          .quote-table tr:last-child td {
             border-bottom: none;
-            font-weight: 600;
-            font-size: 18px;
-            padding-top: 12px;
           }
-          .button { 
-            display: inline-block; 
-            padding: 12px 32px; 
+          .quote-table .label {
+            color: ${styles.bodyColor};
+            font-weight: 500;
+          }
+          .quote-table .value {
+            color: ${styles.headingColor};
+            font-weight: 600;
+            text-align: right;
+          }
+          .price-box {
+            background: ${styles.priceBoxGradient || 'linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)'};
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin: 24px 0;
+          }
+          .price-label {
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+          }
+          .price-amount {
+            color: white;
+            font-size: 42px;
+            font-weight: 700;
+            font-family: 'Poppins', Arial, sans-serif;
+          }
+          .price-note {
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+            margin-top: 8px;
+          }
+          .cta-button { 
+            display: block;
+            width: 100%;
+            max-width: 280px;
+            margin: 24px auto;
+            padding: 16px 32px; 
             background: ${tonePreset.buttonColor}; 
-            color: white; 
+            color: white !important; 
             text-decoration: none; 
             border-radius: 8px; 
-            margin: 20px 0; 
-            font-weight: 600; 
+            font-weight: 700; 
+            font-size: 16px;
+            text-align: center;
+            font-family: 'Poppins', Arial, sans-serif;
+          }
+          .benefits-box {
+            background-color: ${styles.cardColor};
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 24px 0;
+          }
+          .benefits-title {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: ${styles.headingColor};
+            margin: 0 0 16px 0;
+          }
+          .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: ${styles.bodyColor};
+          }
+          .benefit-check {
+            color: #10B981;
+            margin-right: 10px;
+            font-weight: bold;
+          }
+          .commercial-box {
+            background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(184,134,11,0.1) 100%);
+            border: 1px solid rgba(212,175,55,0.3);
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 24px 0;
+            text-align: center;
+          }
+          .commercial-title {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: ${styles.headingColor};
+            margin: 0 0 8px 0;
+          }
+          .commercial-text {
+            font-size: 14px;
+            color: ${styles.bodyColor};
+            margin-bottom: 12px;
+          }
+          .commercial-link {
+            color: #D4AF37;
+            font-weight: 600;
+            text-decoration: none;
+          }
+          .faq-section {
+            margin: 32px 0 24px 0;
+          }
+          .faq-title {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: ${styles.headingColor};
+            margin: 0 0 16px 0;
+          }
+          .faq-item {
+            margin-bottom: 16px;
+          }
+          .faq-question {
+            font-size: 14px;
+            font-weight: 600;
+            color: ${styles.headingColor};
+            margin-bottom: 4px;
+          }
+          .faq-answer {
+            font-size: 13px;
+            color: ${styles.bodyColor};
+            line-height: 1.5;
           }
           .footer { 
-            padding: 20px; 
+            padding: 24px; 
             text-align: center; 
             color: ${styles.footerColor}; 
             font-size: 12px; 
@@ -255,26 +389,58 @@ export function generateEmailPreview({
       <body>
         <div class="container">
           <div class="header">
-            <h1>WePrintWraps</h1>
+            <div class="header-brand">WePrintWraps.com</div>
+            <div class="header-tagline">Print-Only Wholesale Wrap Pricing</div>
           </div>
+          
           <div class="content">
-            <h2>Hi ${customerName || "there"},</h2>
-            <p>${body}</p>
+            <div class="section-title">Your Wrap Quote</div>
             
-            <div class="quote-details">
-              <h3 style="margin-top: 0; color: ${styles.headingColor};">Quote Summary</h3>
-              ${quoteData.vehicle_make ? `<div class="quote-row"><span>Vehicle</span><span>${quoteData.vehicle_year || ""} ${quoteData.vehicle_make} ${quoteData.vehicle_model || ""}</span></div>` : ""}
-              ${quoteData.product_name ? `<div class="quote-row"><span>Product</span><span>${quoteData.product_name}</span></div>` : ""}
-              ${quoteData.sqft ? `<div class="quote-row"><span>Coverage</span><span>${quoteData.sqft} sq ft</span></div>` : ""}
-              ${quoteData.material_cost ? `<div class="quote-row"><span>Material Cost</span><span>$${Number(quoteData.material_cost).toFixed(2)}</span></div>` : ""}
-              ${quoteData.labor_cost ? `<div class="quote-row"><span>Labor Cost</span><span>$${Number(quoteData.labor_cost).toFixed(2)}</span></div>` : ""}
-              <div class="quote-row"><span>Total</span><span>$${Number(quoteData.quote_total).toFixed(2)}</span></div>
+            <table class="quote-table">
+              ${vehicleDisplay ? `<tr><td class="label">Vehicle</td><td class="value">${vehicleDisplay}</td></tr>` : ''}
+              <tr><td class="label">Coverage</td><td class="value">Full Wrap</td></tr>
+              ${quoteData.product_name ? `<tr><td class="label">Material</td><td class="value">${quoteData.product_name}</td></tr>` : ''}
+              ${quoteData.sqft ? `<tr><td class="label">Square Footage</td><td class="value">${quoteData.sqft} sq ft</td></tr>` : ''}
+            </table>
+            
+            <div class="price-box">
+              <div class="price-label">Print-Only Total</div>
+              <div class="price-amount">$${Number(quoteData.quote_total).toFixed(2)}</div>
+              <div class="price-note">Installation not included</div>
             </div>
             
-            ${quoteData.portal_url ? `<a href="${quoteData.portal_url}" class="button">View Full Quote</a>` : ""}
+            <a href="${orderLink}" class="cta-button">ORDER NOW</a>
             
-            <p style="margin-top: 30px;">${tonePreset.closing}</p>
+            <div class="benefits-box">
+              <div class="benefits-title">Why WePrintWraps?</div>
+              <div class="benefit-item"><span class="benefit-check">✓</span> Premium Wrap Guarantee – color accuracy & print quality</div>
+              <div class="benefit-item"><span class="benefit-check">✓</span> Fast 1–2 Day Production</div>
+              <div class="benefit-item"><span class="benefit-check">✓</span> Free Shipping on orders $750+</div>
+            </div>
+            
+            <div class="commercial-box">
+              <div class="commercial-title">Need a bulk or fleet order?</div>
+              <div class="commercial-text">Volume discounts available for multiple vehicles or repeat production.</div>
+              <a href="${commercialLink}" class="commercial-link">View CommercialPro →</a>
+            </div>
+            
+            <div class="faq-section">
+              <div class="faq-title">FAQs</div>
+              <div class="faq-item">
+                <div class="faq-question">Is installation included?</div>
+                <div class="faq-answer">No — WePrintWraps.com provides print-only wholesale wrap material.</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-question">How fast is production?</div>
+                <div class="faq-answer">Most orders ship within 1–2 business days.</div>
+              </div>
+              <div class="faq-item">
+                <div class="faq-question">Can I reorder this wrap?</div>
+                <div class="faq-answer">Yes — your quote number allows easy reorders.</div>
+              </div>
+            </div>
           </div>
+          
           <div class="footer">
             <p>© ${new Date().getFullYear()} WePrintWraps.com - Premium Vehicle Wrap Printing</p>
           </div>
@@ -282,6 +448,15 @@ export function generateEmailPreview({
       </body>
     </html>
   `;
+}
+
+function getTonePreset(tone: string) {
+  const presets: Record<string, { buttonColor: string; accentColor: string }> = {
+    installer: { buttonColor: "#00AFFF", accentColor: "#60A5FA" },
+    luxury: { buttonColor: "#D4AF37", accentColor: "#F59E0B" },
+    hype: { buttonColor: "#00AFFF", accentColor: "#4EEAFF" },
+  };
+  return presets[tone] || presets.installer;
 }
 
 export const EMAIL_TONES = [
