@@ -60,6 +60,7 @@ import { MediaFile } from "@/components/media/MediaLibrary";
 import { DARA_FORMATS, DaraFormat } from "@/lib/dara-denney-formats";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeForJson } from "@/lib/sanitizeForJson";
+import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, SourceType } from "@/lib/creativeVault";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -815,6 +816,46 @@ export default function ReelBuilder() {
     setIsRenderingReel(true);
 
     try {
+      // ============ DETERMINE SOURCE TYPE ============
+      let sourceType: SourceType = 'manual';
+      let sourceId: string | null = null;
+      
+      if (producerJobState?.producerJob?.taskId) {
+        sourceType = 'mighty_task';
+        sourceId = producerJobState.producerJob.taskId;
+      } else if (autoCreateState?.autoCreateInput?.taskId) {
+        sourceType = 'mighty_task';
+        sourceId = autoCreateState.autoCreateInput.taskId;
+      } else if (autoCreateState?.autoCreateInput?.calendarId) {
+        sourceType = 'content_calendar';
+        sourceId = autoCreateState.autoCreateInput.calendarId;
+      }
+
+      // ============ CREATE AI_CREATIVE RECORD ============
+      const creative = await createCreativeWithTags({
+        title: reelConcept || 'Reel Builder Export',
+        description: `Created from ${sceneBlueprint.scenes.length} scenes`,
+        sourceType,
+        sourceId,
+        toolSlug: 'multi_clip_reel',
+        formatSlug: sceneBlueprint.format === 'story' ? 'story' : sceneBlueprint.format === 'short' ? 'short' : 'reel',
+        brand: sceneBlueprint.brand || contentMetadata.brand,
+        channel: contentMetadata.channel,
+        platform: contentMetadata.platform,
+        createdBy: 'user',
+        metadata: {
+          overlayPack: sceneBlueprint.overlayPack,
+          font: sceneBlueprint.font,
+          aspectRatio: sceneBlueprint.aspectRatio,
+        },
+      });
+
+      console.log('[ReelBuilder] ✅ Created ai_creative:', creative.id);
+
+      // ============ SAVE BLUEPRINT SNAPSHOT ============
+      await saveBlueprintSnapshot(creative.id, sceneBlueprint as unknown as Record<string, never>);
+      console.log('[ReelBuilder] ✅ Saved blueprint snapshot');
+
       // Collect primary clip URL from BLUEPRINT
       const primaryClipUrl = sceneBlueprint.scenes[0]?.clipUrl;
       if (!primaryClipUrl) {
@@ -842,7 +883,7 @@ export default function ReelBuilder() {
         return;
       }
 
-      // Create video_edit_queue entry
+      // Create video_edit_queue entry with creative link
       const { data: queueEntry, error: queueError } = await supabase
         .from('video_edit_queue')
         .insert({
@@ -852,6 +893,7 @@ export default function ReelBuilder() {
           selected_music_url: audioUrl,
           render_status: 'pending',
           status: 'ready_for_review',
+          ai_creative_id: creative.id,
         })
         .select('id')
         .single();
@@ -866,6 +908,12 @@ export default function ReelBuilder() {
       console.log('[ReelBuilder] ✅ Queue entry created:', queueEntry.id);
       setLastQueueId(queueEntry.id);
 
+      // ============ UPDATE CREATIVE STATUS TO RENDERING ============
+      await updateCreative(creative.id, { 
+        status: 'rendering',
+        latest_render_job_id: queueEntry.id,
+      });
+
       // ============ CALL RENDER-REEL WITH BLUEPRINT ============
       // This is the new blueprint-based render API
       const { data, error } = await supabase.functions.invoke('render-reel', {
@@ -873,24 +921,35 @@ export default function ReelBuilder() {
           job_id: queueEntry.id,
           blueprint: sceneBlueprint,
           music_url: audioUrl,
+          creative_id: creative.id,
         },
       });
 
       if (error) {
         console.error('[ReelBuilder] Render function error:', error);
+        await updateCreative(creative.id, { status: 'failed' });
         toast.error('Render failed', { description: error.message });
         return;
       }
 
       if (!data?.ok) {
         console.error('[ReelBuilder] Render failed:', data?.error);
+        await updateCreative(creative.id, { status: 'failed' });
         toast.error('Render failed', { description: data?.error || 'Unknown error' });
         return;
       }
 
       console.log('[ReelBuilder] ✅ Render complete:', data);
+
+      // ============ UPDATE CREATIVE WITH OUTPUT ============
+      await updateCreative(creative.id, {
+        status: 'complete',
+        output_url: data.final_url,
+        thumbnail_url: data.thumbnail_url,
+      });
+
       toast.success('Render complete!', { 
-        description: `Blueprint: ${sceneBlueprint.id}` 
+        description: `Creative: ${creative.id}` 
       });
 
       // Update UI with the final URL
