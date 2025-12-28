@@ -382,13 +382,17 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
             <Label>Brand</Label>
             <div className="flex flex-wrap gap-2">
               {[
-                { id: "wpw", label: "WePrintWraps" },
-                { id: "ghost", label: "Ghost Industries" },
-                { id: "wraptv", label: "WrapTV" },
-                { id: "inkandedge", label: "Ink & Edge" },
-                { id: "snap", label: "Snap Thats a Wrap" },
-                { id: "vinylvixen", label: "VinylVixenWraps" },
-                { id: "rjthewrapper", label: "RJ The Wrapper" },
+{ id: "wpw", label: "WePrintWraps" },
+{ id: "ghost", label: "Ghost Industries" },
+{ id: "wraptv", label: "WrapTV" },
+{ id: "inkandedge", label: "Ink & Edge" },
+{ id: "snap", label: "Snap Thats a Wrap" },
+{ id: "vinylvixen", label: "VinylVixenWraps" },
+{ id: "rjthewrapper", label: "RJ The Wrapper" },
+{ id: "bapewrap", label: "BapeWrap" },
+{ id: "fadewrap", label: "FadeWrap" },
+{ id: "commercialwrap", label: "Commercial Wrap" },
+{ id: "restylewrap", label: "Restyle Wrap" },
               ].map((b) => (
                 <Button
                   key={b.id}
