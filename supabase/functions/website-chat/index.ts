@@ -12,6 +12,7 @@ import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
 import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
 import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
 import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
+import { getApprovedLinksForPrompt, LINK_AWARE_RULES } from "../_shared/wpw-links.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,6 +109,10 @@ WPW GROUND TRUTH:
 - FREE shipping over $750
 - All wraps include lamination
 - Quality guarantee: 100% - we reprint at no cost
+
+${getApprovedLinksForPrompt()}
+
+${LINK_AWARE_RULES}
 
 ${WPW_CONSTITUTION.humanConfirmation}`;
 }
