@@ -832,6 +832,81 @@ export type Database = {
           },
         ]
       }
+      ai_creatives: {
+        Row: {
+          blueprint: Json
+          blueprint_id: string | null
+          created_at: string
+          created_by: string | null
+          created_by_agent: string | null
+          description: string | null
+          id: string
+          latest_render_job_id: string | null
+          metadata: Json | null
+          organization_id: string | null
+          output_url: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          blueprint?: Json
+          blueprint_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_agent?: string | null
+          description?: string | null
+          id?: string
+          latest_render_job_id?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          output_url?: string | null
+          source_id?: string | null
+          source_type: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blueprint?: Json
+          blueprint_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_agent?: string | null
+          description?: string | null
+          id?: string
+          latest_render_job_id?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          output_url?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_creatives_latest_render_job_id_fkey"
+            columns: ["latest_render_job_id"]
+            isOneToOne: false
+            referencedRelation: "video_edit_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_creatives_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_status_settings: {
         Row: {
           id: string
@@ -5678,6 +5753,7 @@ export type Database = {
       }
       video_edit_queue: {
         Row: {
+          ai_creative_id: string | null
           ai_edit_suggestions: Json
           chapters: Json | null
           content_file_id: string | null
@@ -5703,6 +5779,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_creative_id?: string | null
           ai_edit_suggestions?: Json
           chapters?: Json | null
           content_file_id?: string | null
@@ -5728,6 +5805,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_creative_id?: string | null
           ai_edit_suggestions?: Json
           chapters?: Json | null
           content_file_id?: string | null
@@ -5753,6 +5831,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "video_edit_queue_ai_creative_id_fkey"
+            columns: ["ai_creative_id"]
+            isOneToOne: false
+            referencedRelation: "ai_creatives"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "video_edit_queue_content_file_id_fkey"
             columns: ["content_file_id"]
