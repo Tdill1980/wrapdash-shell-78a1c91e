@@ -29,6 +29,7 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
   const [tagInput, setTagInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [contentCategory, setContentCategory] = useState<string>("raw");
+  const [brand, setBrand] = useState<string>("wpw");
   const isMobile = useIsMobile();
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -151,7 +152,7 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
             file_size_bytes: uploadFile.file.size,
             tags: tags.length > 0 ? tags : null,
             source: "upload",
-            brand: "wpw",
+            brand: brand,
             content_category: contentCategory,
           });
 
@@ -291,6 +292,29 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
               })}
             </div>
           )}
+
+          {/* Brand Selector */}
+          <div className="space-y-2">
+            <Label>Brand</Label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "wpw", label: "WePrintWraps" },
+                { id: "ghost", label: "Ghost Industries" },
+                { id: "wraptv", label: "WrapTV" },
+                { id: "inkandedge", label: "Ink & Edge" },
+              ].map((b) => (
+                <Button
+                  key={b.id}
+                  type="button"
+                  variant={brand === b.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setBrand(b.id)}
+                >
+                  {b.label}
+                </Button>
+              ))}
+            </div>
+          </div>
 
           {/* Category Selector */}
           <div className="space-y-2">
