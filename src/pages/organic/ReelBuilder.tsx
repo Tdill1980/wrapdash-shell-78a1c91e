@@ -34,6 +34,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { SceneBlueprint, SceneBlueprintScene, validateBlueprint, createTestBlueprint, FORMAT_TEMPLATE_MAP, OVERLAY_PACK_MAP } from "@/types/SceneBlueprint";
+import { assertRenderable, checkRenderable, BlueprintNotRenderableError } from "@/lib/assertRenderable";
 import { AutoCreateInput, AutoCreateNavigationState } from "@/types/AutoCreateInput";
 import { ProducerJob, hasLockedProducerJob } from "@/types/ProducerJob";
 import { CreativeAssembly } from "@/lib/editor-brain/creativeAssembler";
@@ -793,70 +794,43 @@ export default function ReelBuilder() {
 
   // Handle render reel - REQUIRES SCENE BLUEPRINT (Authority enforced)
   const handleRenderReel = async () => {
-    // ============ AUTHORITY CHECK ============
-    // If no blueprint exists, REFUSE TO RENDER
-    if (!sceneBlueprint) {
-      toast.error('Cannot render without Scene Blueprint', {
-        description: 'Create a blueprint first using "Create Test Blueprint" or AI generation.',
-      });
-      console.error('[ReelBuilder] BLOCKED: Render attempted without blueprint');
+    // ============ PREFLIGHT: FAIL FAST ============
+    try {
+      assertRenderable(sceneBlueprint);
+      console.log('[ReelBuilder] ✅ Blueprint passed preflight validation');
+    } catch (e) {
+      if (e instanceof BlueprintNotRenderableError) {
+        toast.error('Blueprint not ready to render', {
+          description: e.errors.map(err => err.message).join(', '),
+        });
+        console.error('[ReelBuilder] BLOCKED: Preflight failed', e.errors);
+      } else {
+        toast.error('Cannot render', { description: String(e) });
+      }
       return;
     }
 
-    const validation = validateBlueprint(sceneBlueprint);
-    if (!validation.valid) {
-      toast.error('Blueprint validation failed', {
-        description: validation.errors.join(', '),
-      });
-      console.error('[ReelBuilder] BLOCKED: Invalid blueprint', validation.errors);
-      return;
-    }
-
-    console.log('[ReelBuilder] ✅ Rendering with AUTHORITATIVE BLUEPRINT:', sceneBlueprint);
-
-    if (clips.length === 0) {
-      toast.error('Add clips first');
-      return;
-    }
+    console.log('[ReelBuilder] ✅ Rendering with AUTHORITATIVE BLUEPRINT:', sceneBlueprint.id);
 
     setIsRenderingReel(true);
 
     try {
-      // Collect all clip URLs from BLUEPRINT (not from clips state)
-      const clipUrls = sceneBlueprint.scenes.map(s => s.clipUrl).filter(Boolean);
-      if (clipUrls.length === 0) {
+      // Collect primary clip URL from BLUEPRINT
+      const primaryClipUrl = sceneBlueprint.scenes[0]?.clipUrl;
+      if (!primaryClipUrl) {
         toast.error('No video URLs in blueprint');
         setIsRenderingReel(false);
         return;
       }
 
-      // Build overlays FROM BLUEPRINT (not from clips state)
-      const allOverlays = sceneBlueprint.scenes
-        .filter(scene => scene.text)
-        .map((scene, idx) => {
-          // Calculate timestamp based on scene order
-          const timestamp = sceneBlueprint.scenes
-            .slice(0, idx)
-            .reduce((acc, s) => acc + (s.end - s.start), 0);
-          return {
-            text: scene.text!,
-            timestamp: `${timestamp}s`,
-            style: 'bold' as const,
-            duration: 2,
-            position: scene.textPosition || 'center',
-            animation: scene.animation || 'pop',
-          };
-        });
-
-      // First create a content_files entry for the primary clip
-      const primaryClipUrl = clipUrls[0];
+      // Create a content_files entry for tracking
       const { data: contentFile, error: cfError } = await supabase
         .from('content_files')
         .insert({
           file_url: primaryClipUrl,
           file_type: 'video',
           source: 'reel_builder',
-          original_filename: 'ReelBuilder Upload',
+          original_filename: 'ReelBuilder Export',
         })
         .select('id')
         .single();
@@ -868,60 +842,18 @@ export default function ReelBuilder() {
         return;
       }
 
-      // Build the blueprint payload FIRST so we can log it
-      // CRITICAL: sanitizeForJson removes undefined values that cause Supabase to silently drop keys
-      const blueprintPayload = sanitizeForJson({
-        blueprint_id: sceneBlueprint.id,
-        blueprint_source: sceneBlueprint.source,
-        // ============ NEW: Format lock fields ============
-        format: sceneBlueprint.format,
-        aspect_ratio: sceneBlueprint.aspectRatio,
-        template_id: sceneBlueprint.templateId,
-        // ============ NEW: Style binding fields ============
-        overlay_pack: sceneBlueprint.overlayPack,
-        font: sceneBlueprint.font,
-        text_style: sceneBlueprint.textStyle,
-        // ============ NEW: Caption ============
-        caption: sceneBlueprint.caption,
-        // Scenes array
-        scenes: sceneBlueprint.scenes.map((scene, i) => ({
-          order: i + 1,
-          scene_id: scene.sceneId,
-          clip_id: scene.clipId,
-          clip_url: scene.clipUrl,
-          start_time: scene.start,
-          end_time: scene.end,
-          purpose: scene.purpose,
-          label: scene.purpose,
-          text: scene.text,
-          text_overlay: scene.text, // Alias for render compatibility
-          text_position: scene.textPosition,
-          animation: scene.animation,
-          cut_reason: scene.cutReason,
-        })),
-        end_card: sceneBlueprint.endCard,
-        hook: sceneBlueprint.scenes.find(s => s.purpose === 'hook')?.text,
-        cta: sceneBlueprint.endCard?.cta || sceneBlueprint.scenes.find(s => s.purpose === 'cta')?.text,
-      });
-
-      // LOG THE PAYLOAD before insert
-      console.log('[ReelBuilder] 📦 Blueprint payload to save:', JSON.stringify(blueprintPayload, null, 2));
-
-      // Create video_edit_queue entry with BLUEPRINT as the authoritative source
+      // Create video_edit_queue entry
       const { data: queueEntry, error: queueError } = await supabase
         .from('video_edit_queue')
         .insert({
           content_file_id: contentFile.id,
           source_url: primaryClipUrl,
           title: reelConcept || 'Reel Builder Export',
-          text_overlays: allOverlays,
           selected_music_url: audioUrl,
-          // AUTHORITY: Scene blueprint IS the edit plan
-          ai_edit_suggestions: blueprintPayload,
           render_status: 'pending',
           status: 'ready_for_review',
         })
-        .select('id, ai_edit_suggestions')
+        .select('id')
         .single();
 
       if (queueError) {
@@ -931,22 +863,41 @@ export default function ReelBuilder() {
         return;
       }
 
-      // VERIFY the data was saved correctly
       console.log('[ReelBuilder] ✅ Queue entry created:', queueEntry.id);
-      console.log('[ReelBuilder] ✅ Saved ai_edit_suggestions:', JSON.stringify(queueEntry.ai_edit_suggestions, null, 2));
+      setLastQueueId(queueEntry.id);
 
-      if (queueError) {
-        console.error('[ReelBuilder] Failed to create queue entry:', queueError);
-        toast.error('Failed to start render');
-        setIsRenderingReel(false);
+      // ============ CALL RENDER-REEL WITH BLUEPRINT ============
+      // This is the new blueprint-based render API
+      const { data, error } = await supabase.functions.invoke('render-reel', {
+        body: {
+          job_id: queueEntry.id,
+          blueprint: sceneBlueprint,
+          music_url: audioUrl,
+        },
+      });
+
+      if (error) {
+        console.error('[ReelBuilder] Render function error:', error);
+        toast.error('Render failed', { description: error.message });
         return;
       }
 
-      console.log('[ReelBuilder] ✅ Created queue entry with BLUEPRINT:', queueEntry.id, sceneBlueprint.id);
-      toast.success('Render started!', { description: `Blueprint: ${sceneBlueprint.id}` });
+      if (!data?.ok) {
+        console.error('[ReelBuilder] Render failed:', data?.error);
+        toast.error('Render failed', { description: data?.error || 'Unknown error' });
+        return;
+      }
 
-      // Call executeEdits with the queue ID
-      await executeEdits(queueEntry.id, 'full');
+      console.log('[ReelBuilder] ✅ Render complete:', data);
+      toast.success('Render complete!', { 
+        description: `Blueprint: ${sceneBlueprint.id}` 
+      });
+
+      // Update UI with the final URL
+      if (data.final_url) {
+        setSavedVideoUrl(data.final_url);
+        setShowPostRenderModal(true);
+      }
       
     } catch (err) {
       console.error('[ReelBuilder] Render failed:', err);
