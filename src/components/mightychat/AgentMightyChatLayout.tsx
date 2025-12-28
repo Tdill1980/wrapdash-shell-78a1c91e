@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Send, ArrowLeft, RefreshCw, Trash2, Clock, CheckCheck, Check, Loader2 } from "lucide-react";
+import { Send, ArrowLeft, RefreshCw, Trash2, Clock, CheckCheck, Check, Loader2, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChannelBadge, ChannelIcon } from "@/components/mightychat/ChannelBadge";
 import { WorkStreamsSidebar, type WorkStream, mapStreamToInbox } from "@/components/mightychat/WorkStreamsSidebar";
@@ -72,6 +72,22 @@ const formatThreadText = (raw: string): string => {
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean)
     .join("\n");
+};
+
+// Map agent IDs to display names
+const getAgentDisplayName = (agentId: string): string => {
+  const agentNames: Record<string, string> = {
+    casey_ramirez: "Casey Ramirez",
+    alex_morgan: "Alex Morgan",
+    grant_miller: "Grant Miller",
+    jordan_lee: "Jordan Lee",
+    taylor_brooks: "Taylor Brooks",
+    evan_porter: "Evan Porter",
+    emily_carter: "Emily Carter",
+    noah_bennett: "Noah Bennett",
+    ryan_mitchell: "Ryan Mitchell"
+  };
+  return agentNames[agentId] || agentId;
 };
 
 // Component for rendering links with proxy support for blocked domains
@@ -851,6 +867,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                               {msg.sender_name}
                             </div>
                           )}
+                          {/* Show AI agent label for outbound messages */}
+                          {msg.direction === "outbound" && (msg.metadata as any)?.generated_by && (
+                            <div className="text-[10px] md:text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                🤖 {getAgentDisplayName((msg.metadata as any).generated_by)}
+                              </span>
+                            </div>
+                          )}
                           <div className="relative inline-block group">
                             <div
                               className={cn(
@@ -881,34 +905,51 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                           </div>
                           <div className="text-[10px] md:text-xs text-muted-foreground mt-1 flex items-center gap-1 justify-end">
                             {formatTime(msg.created_at)}
-                            {msg.direction === "outbound" && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="inline-flex items-center">
-                                      {msg.metadata?.status === 'pending_approval' ? (
-                                        <Clock className="w-3 h-3 text-amber-500" />
-                                      ) : msg.metadata?.instagram_sent || msg.metadata?.status === 'sent' ? (
-                                        <CheckCheck className="w-3 h-3 text-green-500" />
+                            {msg.direction === "outbound" && (() => {
+                              const meta = msg.metadata as any;
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex items-center gap-1">
+                                        {meta?.status === 'pending_approval' ? (
+                                          <Clock className="w-3 h-3 text-amber-500" />
+                                        ) : meta?.status === 'failed' || meta?.instagram_error ? (
+                                          <AlertCircle className="w-3 h-3 text-destructive" />
+                                        ) : meta?.instagram_sent || meta?.status === 'sent' ? (
+                                          <CheckCheck className="w-3 h-3 text-green-500" />
+                                        ) : (
+                                          <Check className="w-3 h-3 text-muted-foreground" />
+                                        )}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="text-xs max-w-[250px]">
+                                      {meta?.status === 'pending_approval' ? (
+                                        <span className="text-amber-500">⏳ Pending approval - not sent yet</span>
+                                      ) : meta?.status === 'failed' || meta?.instagram_error ? (
+                                        <div className="text-destructive">
+                                          <div>❌ Failed to send</div>
+                                          {meta?.instagram_error_code && (
+                                            <div className="text-[10px] mt-1">Error {meta.instagram_error_code}: {meta.instagram_error_message}</div>
+                                          )}
+                                        </div>
+                                      ) : meta?.instagram_sent ? (
+                                        <div className="text-green-500">
+                                          <div>✓ Sent to Instagram</div>
+                                          {meta?.delivery_latency_ms && (
+                                            <div className="text-[10px] text-muted-foreground">{meta.delivery_latency_ms}ms latency</div>
+                                          )}
+                                        </div>
+                                      ) : meta?.status === 'sent' ? (
+                                        <span className="text-green-500">✓ Sent</span>
                                       ) : (
-                                        <Check className="w-3 h-3 text-muted-foreground" />
+                                        <span>Saved</span>
                                       )}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="left" className="text-xs">
-                                    {msg.metadata?.status === 'pending_approval' ? (
-                                      <span className="text-amber-500">⏳ Pending approval - not sent yet</span>
-                                    ) : msg.metadata?.instagram_sent ? (
-                                      <span className="text-green-500">✓ Sent to Instagram</span>
-                                    ) : msg.metadata?.status === 'sent' ? (
-                                      <span className="text-green-500">✓ Sent</span>
-                                    ) : (
-                                      <span>Saved</span>
-                                    )}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
