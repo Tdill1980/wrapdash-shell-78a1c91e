@@ -21,10 +21,11 @@ Deno.serve(async (req: Request) => {
   try {
     const url = new URL(req.url);
     const type = url.searchParams.get('type');
+    const year = url.searchParams.get('year');
     const make = url.searchParams.get('make');
     const model = url.searchParams.get('model');
 
-    console.log(`[vehicle-list] Request: type=${type}, make=${make}, model=${model}`);
+    console.log(`[vehicle-list] Request: type=${type}, year=${year}, make=${make}, model=${model}`);
 
     if (!type) {
       return new Response(
@@ -37,9 +38,19 @@ Deno.serve(async (req: Request) => {
 
     switch (type) {
       case 'makes': {
+        const yearNum = Number(year);
+        if (!year || !yearNum) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required parameter: year' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         const { data, error } = await supabase
           .from('vehicle_dimensions')
           .select('make')
+          .lte('year_start', yearNum)
+          .gte('year_end', yearNum)
           .order('make');
 
         if (error) {
@@ -49,7 +60,7 @@ Deno.serve(async (req: Request) => {
 
         // Get unique makes
         const uniqueMakes = [...new Set(data?.map(d => d.make))].filter(Boolean).sort();
-        console.log(`[vehicle-list] Found ${uniqueMakes.length} unique makes`);
+        console.log(`[vehicle-list] Found ${uniqueMakes.length} makes for year ${yearNum}`);
 
         return new Response(
           JSON.stringify({ makes: uniqueMakes }),
@@ -58,6 +69,13 @@ Deno.serve(async (req: Request) => {
       }
 
       case 'models': {
+        const yearNum = Number(year);
+        if (!year || !yearNum) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required parameter: year' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         if (!make) {
           return new Response(
             JSON.stringify({ error: 'Missing required parameter: make' }),
@@ -69,6 +87,8 @@ Deno.serve(async (req: Request) => {
           .from('vehicle_dimensions')
           .select('model')
           .ilike('make', make)
+          .lte('year_start', yearNum)
+          .gte('year_end', yearNum)
           .order('model');
 
         if (error) {
@@ -78,7 +98,7 @@ Deno.serve(async (req: Request) => {
 
         // Get unique models
         const uniqueModels = [...new Set(data?.map(d => d.model))].filter(Boolean).sort();
-        console.log(`[vehicle-list] Found ${uniqueModels.length} models for make: ${make}`);
+        console.log(`[vehicle-list] Found ${uniqueModels.length} models for ${yearNum} ${make}`);
 
         return new Response(
           JSON.stringify({ models: uniqueModels }),
