@@ -367,7 +367,7 @@ function renderEmailTemplate(
       </head>
       <body>
         <div class="container" style="max-width: 600px; margin: 0 auto; background-color: ${styles.containerColor};">
-          <div class="header" style="background: ${styles.headerGradient}; padding: 32px 20px; text-align: center;">
+          <div class="header" style="background-color: #0f172a; padding: 32px 20px; text-align: center;">
             <div class="header-brand" style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Poppins', Arial, sans-serif; letter-spacing: -0.5px;">
               WePrintWraps.com
             </div>
