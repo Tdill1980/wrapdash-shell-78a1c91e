@@ -836,58 +836,73 @@ export type Database = {
         Row: {
           blueprint: Json
           blueprint_id: string | null
+          brand: string | null
+          channel: string | null
           created_at: string
           created_by: string | null
           created_by_agent: string | null
           description: string | null
+          format_slug: string | null
           id: string
           latest_render_job_id: string | null
           metadata: Json | null
           organization_id: string | null
           output_url: string | null
+          platform: string | null
           source_id: string | null
           source_type: string
           status: string
           thumbnail_url: string | null
           title: string | null
+          tool_slug: string | null
           updated_at: string
         }
         Insert: {
           blueprint?: Json
           blueprint_id?: string | null
+          brand?: string | null
+          channel?: string | null
           created_at?: string
           created_by?: string | null
           created_by_agent?: string | null
           description?: string | null
+          format_slug?: string | null
           id?: string
           latest_render_job_id?: string | null
           metadata?: Json | null
           organization_id?: string | null
           output_url?: string | null
+          platform?: string | null
           source_id?: string | null
           source_type: string
           status?: string
           thumbnail_url?: string | null
           title?: string | null
+          tool_slug?: string | null
           updated_at?: string
         }
         Update: {
           blueprint?: Json
           blueprint_id?: string | null
+          brand?: string | null
+          channel?: string | null
           created_at?: string
           created_by?: string | null
           created_by_agent?: string | null
           description?: string | null
+          format_slug?: string | null
           id?: string
           latest_render_job_id?: string | null
           metadata?: Json | null
           organization_id?: string | null
           output_url?: string | null
+          platform?: string | null
           source_id?: string | null
           source_type?: string
           status?: string
           thumbnail_url?: string | null
           title?: string | null
+          tool_slug?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2416,6 +2431,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      creative_tag_map: {
+        Row: {
+          created_at: string | null
+          creative_id: string
+          tag_slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          creative_id: string
+          tag_slug: string
+        }
+        Update: {
+          created_at?: string | null
+          creative_id?: string
+          tag_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_tag_map_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "ai_creatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_tag_map_tag_slug_fkey"
+            columns: ["tag_slug"]
+            isOneToOne: false
+            referencedRelation: "creative_tags"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      creative_tags: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          slug: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          slug: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          slug?: string
+        }
+        Relationships: []
       }
       customer_voice_profiles: {
         Row: {
