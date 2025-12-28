@@ -14,6 +14,9 @@ const WPW_PRICING = {
   threeMPrintedWrap: { pricePerSqft: 6.00, name: "3M IJ180cV3 Printed Wrap" },
 };
 
+// CommercialPro keywords for routing bulk/fleet to Jackson
+const COMMERCIAL_PRO_KEYWORDS = ['fleet', 'bulk', 'volume', 'franchise', 'multiple', 'wall wrap', 'trailer', 'box truck', 'bus', 'van fleet'];
+
 function calculateQuickQuote(sqft: number, material: string = 'Avery') {
   const productKey = material.toLowerCase().includes('3m') ? 'threeMPrintedWrap' : 'averyPrintedWrap';
   const product = WPW_PRICING[productKey];
@@ -22,6 +25,22 @@ function calculateQuickQuote(sqft: number, material: string = 'Avery') {
     pricePerSqft: product.pricePerSqft,
     productName: product.name,
   };
+}
+
+function isCommercialProLead(payload: SubmitQuotePayload): boolean {
+  const notes = (payload.notes || '').toLowerCase();
+  const category = (payload.category || '').toLowerCase();
+  const sqft = payload.dimensions?.sqft || 0;
+  
+  // Check for keywords
+  const hasKeyword = COMMERCIAL_PRO_KEYWORDS.some(kw => 
+    notes.includes(kw) || category.includes(kw)
+  );
+  
+  // Large sqft (over 260 = likely fleet/commercial)
+  const isLargeSqft = sqft > 260;
+  
+  return hasKeyword || isLargeSqft;
 }
 
 function generateQuoteNumber(): string {
@@ -48,6 +67,7 @@ interface SubmitQuotePayload {
   utm_campaign?: string;
   utm_content?: string;
   source?: string;
+  notes?: string;
 }
 
 async function sendConfirmationEmail(resend: Resend, email: string, quoteNumber: string, price: number, vehicle?: any) {
@@ -240,21 +260,52 @@ serve(async (req: Request): Promise<Response> => {
         console.error("Error sending confirmation email:", emailError);
         // Don't fail the whole request if email fails
       }
+      
+      // CommercialPro routing: Notify Jackson for bulk/fleet leads
+      if (isCommercialProLead(payload)) {
+        console.log("CommercialPro lead detected, notifying Jackson...");
+        try {
+          await resend.emails.send({
+            from: "WePrintWraps <hello@weprintwraps.com>",
+            to: ["jackson@weprintwraps.com"],
+            subject: `🔥 CommercialPro Lead: ${payload.vehicle?.make || payload.category || 'New Quote'}`,
+            html: `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <h2 style="color: #FF1493; margin-bottom: 16px;">New CommercialPro Lead</h2>
+  <p><strong>Quote #:</strong> ${quoteNumber}</p>
+  <p><strong>Customer:</strong> ${payload.name || 'Not provided'} (${payload.email})</p>
+  <p><strong>Phone:</strong> ${payload.phone || 'Not provided'}</p>
+  <p><strong>Category:</strong> ${payload.category || 'Not specified'}</p>
+  <p><strong>Vehicle:</strong> ${payload.vehicle?.year || ''} ${payload.vehicle?.make || ''} ${payload.vehicle?.model || ''}</p>
+  <p><strong>Sq Ft:</strong> ${sqft || 'Not specified'}</p>
+  <p><strong>Estimated Price:</strong> $${estimatedPrice.toFixed(2)}</p>
+  <p><strong>Notes:</strong> ${payload.notes || 'None'}</p>
+  <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+  <p style="font-size: 12px; color: #666;">This lead was flagged as CommercialPro due to bulk/fleet keywords or large sqft.</p>
+</div>`,
+          });
+          console.log("CommercialPro notification sent to Jackson");
+        } catch (notifyErr) {
+          console.error("Failed to notify Jackson:", notifyErr);
+        }
+      }
     } else {
       console.warn("RESEND_API_KEY not configured, skipping confirmation email");
     }
 
     // Log to ai_actions for MCP visibility
+    const isCommercial = isCommercialProLead(payload);
     await supabase.from('ai_actions').insert({
-      action_type: 'external_quote_submitted',
+      action_type: isCommercial ? 'commercial_pro_quote_submitted' : 'external_quote_submitted',
       action_payload: {
         quote_id: quote.id,
         quote_number: quoteNumber,
         email: payload.email,
         source: payload.source,
         estimated_price: estimatedPrice,
+        is_commercial_pro: isCommercial,
       },
-      priority: 'normal',
+      priority: isCommercial ? 'high' : 'normal',
     });
 
     return new Response(
