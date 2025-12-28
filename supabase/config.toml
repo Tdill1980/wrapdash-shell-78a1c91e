@@ -281,3 +281,6 @@ verify_jwt = false
 
 [functions.vehicle-sqft]
 verify_jwt = false
+
+[functions.vehicle-list]
+verify_jwt = false
