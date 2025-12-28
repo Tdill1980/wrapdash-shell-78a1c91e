@@ -11,6 +11,13 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 )
 
+// Normalize Creatomate status to our system statuses
+function normalizeStatus(status: string): "rendering" | "complete" | "failed" {
+  if (status === "succeeded" || status === "completed") return "complete"
+  if (status === "failed") return "failed"
+  return "rendering"
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -19,98 +26,127 @@ serve(async (req) => {
 
   try {
     const payload = await req.json()
-    console.log("Creatomate webhook received:", JSON.stringify(payload))
+    console.log("[creatomate-webhook] Received:", JSON.stringify(payload))
 
     // Creatomate payload fields
     const providerRenderId = payload?.id
-    const status = payload?.status
+    const rawStatus = payload?.status
     const outputUrl = payload?.url || payload?.output_url
     const thumbnailUrl = payload?.snapshot_url || payload?.thumbnail_url
+    const errorMessage = payload?.error_message || payload?.error || null
 
     if (!providerRenderId) {
-      console.error("Missing render id in webhook payload")
+      console.error("[creatomate-webhook] Missing render id")
       return new Response(
         JSON.stringify({ ok: false, error: "Missing render id" }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Find render job by provider_render_id
-    const { data: job, error: jobErr } = await supabase
-      .from("video_edit_queue")
-      .select("id, ai_creative_id")
-      .eq("creatomate_render_id", providerRenderId)
-      .single()
+    // Normalize status (handles queued, rendering, succeeded, failed, etc.)
+    const finalStatus = normalizeStatus(rawStatus)
+    console.log(`[creatomate-webhook] Provider ID: ${providerRenderId}, Raw: ${rawStatus}, Normalized: ${finalStatus}`)
 
-    if (jobErr || !job) {
-      console.error("Render job not found for provider id:", providerRenderId, jobErr)
+    // Find render job by creatomate_render_id in debug_payload
+    // Since we don't have a dedicated column, we match via JSONB
+    const { data: jobs, error: queryErr } = await supabase
+      .from("video_edit_queue")
+      .select("id, ai_creative_id, debug_payload")
+      .filter("debug_payload->creatomate_render_id", "eq", providerRenderId)
+      .limit(1)
+
+    if (queryErr) {
+      console.error("[creatomate-webhook] Query error:", queryErr)
       return new Response(
-        JSON.stringify({ ok: false, error: "Render job not found" }), 
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ ok: false, error: "Database query failed" }), 
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Determine final status
-    let finalStatus: string
-    if (status === "succeeded" || status === "completed") {
-      finalStatus = "complete"
-    } else if (status === "failed") {
-      finalStatus = "failed"
-    } else {
-      finalStatus = "rendering"
+    if (!jobs || jobs.length === 0) {
+      console.warn("[creatomate-webhook] No matching job for render id:", providerRenderId)
+      // Return 200 to prevent Creatomate retries for orphan callbacks
+      return new Response(
+        JSON.stringify({ ok: true, warning: "No matching job found, skipping" }), 
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    console.log(`Updating render job ${job.id} to status: ${finalStatus}`)
+    const job = jobs[0]
+    console.log(`[creatomate-webhook] Found job: ${job.id}, creative: ${job.ai_creative_id}`)
 
-    // Update video_edit_queue
-    await supabase
+    // ============ UPDATE RENDER JOB (video_edit_queue) ============
+    const { error: updateJobErr } = await supabase
       .from("video_edit_queue")
       .update({
-        status: finalStatus,
-        output_url: outputUrl ?? null,
-        thumbnail_url: thumbnailUrl ?? null,
-        completed_at: finalStatus === "complete" ? new Date().toISOString() : null,
-        error_message: finalStatus === "failed" ? (payload?.error_message || "Render failed") : null
+        render_status: finalStatus,
+        final_render_url: finalStatus === "complete" ? outputUrl : null,
+        error_message: finalStatus === "failed" ? (errorMessage || "Render failed") : null,
+        updated_at: new Date().toISOString()
       })
       .eq("id", job.id)
 
-    // Update ai_creatives if linked
+    if (updateJobErr) {
+      console.error("[creatomate-webhook] Failed to update job:", updateJobErr)
+    }
+
+    // ============ UPDATE AI CREATIVE (if linked) ============
     if (job.ai_creative_id) {
-      console.log(`Updating ai_creative ${job.ai_creative_id} to status: ${finalStatus}`)
+      console.log(`[creatomate-webhook] Updating creative: ${job.ai_creative_id}`)
       
-      await supabase
+      const { error: updateCreativeErr } = await supabase
         .from("ai_creatives")
         .update({
           status: finalStatus,
-          output_url: outputUrl ?? null,
-          thumbnail_url: thumbnailUrl ?? null,
+          output_url: finalStatus === "complete" ? outputUrl : null,
+          thumbnail_url: thumbnailUrl || null,
           updated_at: new Date().toISOString()
         })
         .eq("id", job.ai_creative_id)
 
-      // Update status tag
-      if (finalStatus === "complete" || finalStatus === "failed") {
-        // Remove old status tags
-        await supabase
-          .from("creative_tag_map")
-          .delete()
-          .eq("creative_id", job.ai_creative_id)
-          .like("tag_slug", "status:%")
-
-        // Add new status tag
-        await supabase
-          .from("creative_tag_map")
-          .insert({ creative_id: job.ai_creative_id, tag_slug: `status:${finalStatus}` })
+      if (updateCreativeErr) {
+        console.error("[creatomate-webhook] Failed to update creative:", updateCreativeErr)
       }
+
+      // ============ UPDATE STATUS TAGS (ALWAYS, not just on complete/failed) ============
+      // Remove old status tags
+      const { error: deleteTagErr } = await supabase
+        .from("creative_tag_map")
+        .delete()
+        .eq("creative_id", job.ai_creative_id)
+        .like("tag_slug", "status:%")
+
+      if (deleteTagErr) {
+        console.warn("[creatomate-webhook] Failed to delete old tags:", deleteTagErr)
+      }
+
+      // Add new status tag
+      const { error: insertTagErr } = await supabase
+        .from("creative_tag_map")
+        .insert({ 
+          creative_id: job.ai_creative_id, 
+          tag_slug: `status:${finalStatus}` 
+        })
+
+      if (insertTagErr) {
+        console.warn("[creatomate-webhook] Failed to insert new tag:", insertTagErr)
+      }
+
+      console.log(`[creatomate-webhook] Status tag updated to: status:${finalStatus}`)
     }
 
-    console.log("Webhook processed successfully")
+    console.log("[creatomate-webhook] ✓ Webhook processed successfully")
     return new Response(
-      JSON.stringify({ ok: true, status: finalStatus }), 
+      JSON.stringify({ 
+        ok: true, 
+        status: finalStatus,
+        job_id: job.id,
+        creative_id: job.ai_creative_id 
+      }), 
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error("Webhook error:", err)
+    console.error("[creatomate-webhook] Fatal error:", err)
     return new Response(
       JSON.stringify({ ok: false, error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
