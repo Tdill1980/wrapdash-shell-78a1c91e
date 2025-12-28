@@ -93,7 +93,14 @@ export default function ReelBuilder() {
   const navigate = useNavigate();
   const location = useLocation();
   const autoCreateState = location.state as AutoCreateNavigationState | undefined;
-  const producerJobState = location.state as { producerJob?: ProducerJob; skipAutoCreate?: boolean } | undefined;
+  const producerJobState = location.state as { 
+    producerJob?: ProducerJob; 
+    skipAutoCreate?: boolean;
+    content_calendar_id?: string;  // 🔧 FIX: Accept calendar ID from agent flow
+  } | undefined;
+  
+  // Extract content_calendar_id for linking render results back to calendar
+  const contentCalendarId = producerJobState?.content_calendar_id;
   
   // ============ DETERMINISTIC AUTO-CREATE FLAG ============
   // Prevents double-execution when coming from MightyTask/Calendar
@@ -739,6 +746,19 @@ export default function ReelBuilder() {
     const saveRenderedVideo = async () => {
       if (renderProgress?.status === 'complete' && renderProgress.outputUrl) {
         try {
+          // 🔧 FIX: Use correct sources for hook/cta - prioritize producerJob, then suggestedHook state, then autoCreateState
+          const effectiveHook = suggestedHook 
+            ?? producerJobState?.producerJob?.hook 
+            ?? autoCreateState?.suggestedHook 
+            ?? reelConcept;
+          const effectiveCta = suggestedCta 
+            ?? producerJobState?.producerJob?.cta 
+            ?? autoCreateState?.suggestedCta;
+          const effectiveCaption = producerJobState?.producerJob?.caption 
+            ?? effectiveHook 
+            ?? reelConcept;
+          const effectiveHashtags = producerJobState?.producerJob?.hashtags ?? [];
+
           // Save to content_files (Media Library)
           const { data: fileData, error: fileError } = await supabase
             .from('content_files')
@@ -752,8 +772,8 @@ export default function ReelBuilder() {
               ai_labels: {
                 concept: reelConcept,
                 clips_used: clips.length,
-                hook: autoCreateState?.suggestedHook,
-                cta: autoCreateState?.suggestedCta,
+                hook: effectiveHook,
+                cta: effectiveCta,
               },
             })
             .select()
@@ -768,7 +788,8 @@ export default function ReelBuilder() {
               content_type: 'reel',
               status: 'draft',
               output_url: renderProgress.outputUrl,
-              caption: autoCreateState?.suggestedHook || reelConcept,
+              caption: effectiveCaption,
+              hashtags: effectiveHashtags,
               brand: contentMetadata.brand,
               channel: contentMetadata.channel,
               content_purpose: contentMetadata.contentPurpose,
@@ -778,11 +799,37 @@ export default function ReelBuilder() {
                 concept: reelConcept,
                 clips_used: clips.map(c => c.id),
                 generated_at: new Date().toISOString(),
+                source: contentCalendarId ? 'agent_flow' : 'manual',
               },
               mode: 'auto',
             });
 
           if (queueError) throw queueError;
+
+          // 🔧 FIX: Update linked content_calendar entry if we have one
+          if (contentCalendarId) {
+            try {
+              const { error: calError } = await supabase
+                .from('content_calendar')
+                .update({
+                  caption: effectiveCaption,
+                  hashtags: effectiveHashtags,
+                  title: effectiveHook,
+                  status: 'draft',
+                  // Store render URL in engagement_stats for reference
+                  engagement_stats: { render_url: renderProgress.outputUrl },
+                })
+                .eq('id', contentCalendarId);
+
+              if (calError) {
+                console.error('[ReelBuilder] Failed to update calendar entry:', calError);
+              } else {
+                console.log('[ReelBuilder] ✅ Updated calendar entry with render result');
+              }
+            } catch (calErr) {
+              console.error('[ReelBuilder] Calendar update exception:', calErr);
+            }
+          }
 
           setSavedVideoUrl(renderProgress.outputUrl);
           setShowPostRenderModal(true);
@@ -795,7 +842,7 @@ export default function ReelBuilder() {
     };
 
     saveRenderedVideo();
-  }, [renderProgress?.status, renderProgress?.outputUrl, contentMetadata]);
+  }, [renderProgress?.status, renderProgress?.outputUrl, contentMetadata, suggestedHook, suggestedCta, producerJobState, contentCalendarId]);
 
   // Handle render reel - REQUIRES SCENE BLUEPRINT (Authority enforced)
   const handleRenderReel = async () => {
