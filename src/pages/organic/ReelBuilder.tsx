@@ -60,7 +60,7 @@ import { MediaFile } from "@/components/media/MediaLibrary";
 import { DARA_FORMATS, DaraFormat } from "@/lib/dara-denney-formats";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeForJson } from "@/lib/sanitizeForJson";
-import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, SourceType } from "@/lib/creativeVault";
+import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, replaceStatusTag, SourceType } from "@/lib/creativeVault";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -913,6 +913,7 @@ export default function ReelBuilder() {
         status: 'rendering',
         latest_render_job_id: queueEntry.id,
       });
+      await replaceStatusTag(creative.id, 'rendering');
 
       // ============ CALL RENDER-REEL WITH BLUEPRINT ============
       // This is the new blueprint-based render API
@@ -928,6 +929,7 @@ export default function ReelBuilder() {
       if (error) {
         console.error('[ReelBuilder] Render function error:', error);
         await updateCreative(creative.id, { status: 'failed' });
+        await replaceStatusTag(creative.id, 'failed');
         toast.error('Render failed', { description: error.message });
         return;
       }
@@ -935,6 +937,7 @@ export default function ReelBuilder() {
       if (!data?.ok) {
         console.error('[ReelBuilder] Render failed:', data?.error);
         await updateCreative(creative.id, { status: 'failed' });
+        await replaceStatusTag(creative.id, 'failed');
         toast.error('Render failed', { description: data?.error || 'Unknown error' });
         return;
       }
@@ -947,6 +950,7 @@ export default function ReelBuilder() {
         output_url: data.final_url,
         thumbnail_url: data.thumbnail_url,
       });
+      await replaceStatusTag(creative.id, 'complete');
 
       toast.success('Render complete!', { 
         description: `Creative: ${creative.id}` 
