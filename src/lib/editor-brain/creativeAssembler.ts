@@ -62,6 +62,8 @@ export interface AssemblerOptions {
   };
   targetDuration?: number;
   includeHashtags?: boolean;
+  /** User-provided prompt/topic for the content - used for relevant hooks/captions */
+  userPrompt?: string;
 }
 
 /**
@@ -75,13 +77,14 @@ export function assembleCreative(options: AssemblerOptions): CreativeAssembly {
     voiceProfile,
     targetDuration = 15,
     includeHashtags = true,
+    userPrompt,
   } = options;
 
-  // Choose best hook
-  const hook = generateHook(analysis, voiceProfile);
+  // Choose best hook - now uses userPrompt for context
+  const hook = generateHook(analysis, voiceProfile, userPrompt);
   
-  // Build caption
-  const caption = generateCaption(analysis, voiceProfile);
+  // Build caption - now uses userPrompt for context
+  const caption = generateCaption(analysis, voiceProfile, userPrompt);
   
   // Choose CTA
   const cta = generateCTA(analysis, voiceProfile);
@@ -120,7 +123,22 @@ export function assembleCreative(options: AssemblerOptions): CreativeAssembly {
 /**
  * Generate hook text
  */
-function generateHook(analysis: VideoAnalysis, voiceProfile?: AssemblerOptions["voiceProfile"]): string {
+function generateHook(
+  analysis: VideoAnalysis, 
+  voiceProfile?: AssemblerOptions["voiceProfile"],
+  userPrompt?: string
+): string {
+  // If user provided a prompt, use it directly as the hook context
+  if (userPrompt && userPrompt.trim()) {
+    const cleanPrompt = userPrompt.trim();
+    // Use the prompt as the hook - this is what the user wants to say
+    if (cleanPrompt.length <= 50) {
+      return cleanPrompt;
+    }
+    // For longer prompts, create a hook from it
+    return `${cleanPrompt.substring(0, 40)}...`;
+  }
+  
   const vehicle = analysis.detected_vehicle || "this ride";
   const color = analysis.wrap_color || "stunning finish";
   
@@ -155,7 +173,17 @@ function generateHook(analysis: VideoAnalysis, voiceProfile?: AssemblerOptions["
 /**
  * Generate caption
  */
-function generateCaption(analysis: VideoAnalysis, voiceProfile?: AssemblerOptions["voiceProfile"]): string {
+function generateCaption(
+  analysis: VideoAnalysis, 
+  voiceProfile?: AssemblerOptions["voiceProfile"],
+  userPrompt?: string
+): string {
+  // If user provided a prompt, incorporate it into the caption
+  if (userPrompt && userPrompt.trim()) {
+    const brand = voiceProfile?.brand_name || "us";
+    return `${userPrompt.trim()}. Follow for more content like this. DM ${brand} for inquiries.`;
+  }
+  
   const vehicle = analysis.detected_vehicle || "this vehicle";
   const color = analysis.wrap_color || "a custom wrap";
   const brand = voiceProfile?.brand_name || "our shop";
