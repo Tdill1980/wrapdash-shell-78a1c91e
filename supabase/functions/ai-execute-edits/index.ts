@@ -335,34 +335,53 @@ serve(async (req) => {
       console.log("[ai-execute-edits] Calling render-reel with", clips.length, "clips");
 
       try {
-        // ============ Determine dimensions from aspect ratio ============
-        let width = 1080;
-        let height = 1920;
-        if (aspectRatio === '1:1') {
-          width = 1080;
-          height = 1080;
-        } else if (aspectRatio === '16:9') {
-          width = 1920;
-          height = 1080;
-        }
+        // ============ BUILD PROPER SCENEBLUEPRINT FOR RENDER-REEL ============
+        // render-reel expects: { job_id, blueprint: SceneBlueprint, music_url }
+        
+        // Map clips back to SceneBlueprint.scenes format
+        const blueprintScenes = scenes.slice(0, 8).map((scene: any, i: number) => ({
+          sceneId: scene.scene_id || `scene_${i + 1}`,
+          clipId: scene.clip_id || `clip_${i + 1}`,
+          clipUrl: scene.clip_url || scene.file_url || editItem.source_url,
+          start: Number(scene.start_time) || 0,
+          end: Number(scene.end_time) || 0,
+          purpose: scene.purpose || scene.label || 'content',
+          text: scene.text_overlay || scene.text || undefined,
+          textPosition: scene.text_position || 'center',
+          animation: scene.animation || 'pop',
+          cutReason: scene.cut_reason || undefined,
+        })).filter((s: any) => s.end > s.start); // Only valid scenes
+        
+        // Build the full SceneBlueprint object
+        const blueprint = {
+          id: blueprintId || `bp_${video_edit_id}`,
+          platform: 'instagram',
+          totalDuration: cursor,
+          scenes: blueprintScenes,
+          endCard: aiSuggestions.end_card || undefined,
+          brand: editItem.brand || 'wpw',
+          format,
+          aspectRatio,
+          templateId,
+          overlayPack,
+          font,
+          textStyle,
+          caption,
+        };
+        
+        console.log("[ai-execute-edits] Built SceneBlueprint:", JSON.stringify({
+          id: blueprint.id,
+          scenes_count: blueprint.scenes.length,
+          format: blueprint.format,
+          aspectRatio: blueprint.aspectRatio,
+          templateId: blueprint.templateId,
+        }));
         
         const renderRes = await supabase.functions.invoke("render-reel", {
           body: {
             job_id: video_edit_id,
-            clips,
-            overlays,
+            blueprint,
             music_url: editItem.selected_music_url,
-            width,
-            height,
-            fps: 30,
-            // ============ NEW: Pass format lock fields ============
-            format,
-            aspect_ratio: aspectRatio,
-            template_id: templateId,
-            overlay_pack: overlayPack,
-            font,
-            text_style: textStyle,
-            caption,
           }
         });
         
