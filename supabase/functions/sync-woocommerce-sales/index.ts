@@ -76,21 +76,32 @@ serve(async (req) => {
     const lastYearEnd = new Date(now.getTime());
     lastYearEnd.setFullYear(lastYearEnd.getFullYear() - 1);
 
-    // Helper to fetch with retry logic for transient errors
-    async function fetchWithRetry(url: string, retries = 3, delay = 1000): Promise<Response> {
+// Helper to fetch with retry logic - reduced retries to prevent timeout
+    async function fetchWithRetry(url: string, retries = 2, delay = 500): Promise<Response> {
       for (let attempt = 1; attempt <= retries; attempt++) {
-        const response = await fetch(url);
-        if (response.ok) {
-          return response;
-        }
-        // On 5xx errors, retry with exponential backoff
-        if (response.status >= 500 && attempt < retries) {
-          console.log(`[sync-woocommerce-sales] Retry ${attempt}/${retries} after ${response.status} error, waiting ${delay}ms...`);
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout per request
+          
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            return response;
+          }
+          // On 5xx errors, retry with shorter backoff
+          if (response.status >= 500 && attempt < retries) {
+            console.log(`[sync-woocommerce-sales] Retry ${attempt}/${retries} after ${response.status} error`);
+            await new Promise(r => setTimeout(r, delay));
+            delay *= 1.5;
+            continue;
+          }
+          throw new Error(`WooCommerce API error: ${response.status}`);
+        } catch (e) {
+          if (attempt === retries) throw e;
+          console.log(`[sync-woocommerce-sales] Request failed, retry ${attempt}/${retries}`);
           await new Promise(r => setTimeout(r, delay));
-          delay *= 2; // Exponential backoff
-          continue;
         }
-        throw new Error(`WooCommerce API error: ${response.status}`);
       }
       throw new Error("WooCommerce API: max retries exceeded");
     }
