@@ -110,12 +110,12 @@ export async function addTags(creativeId: string, tags: string[]): Promise<void>
 
 /**
  * Save a blueprint snapshot and link it to the creative
+ * Stores blueprint in ai_creatives.blueprint column (JSONB)
  */
 export async function saveBlueprintSnapshot(
   creativeId: string,
   blueprint: Json
 ): Promise<void> {
-  // Store blueprint directly on ai_creatives (already has blueprint JSONB column)
   const { error } = await supabase
     .from("ai_creatives")
     .update({
@@ -125,6 +125,33 @@ export async function saveBlueprintSnapshot(
     .eq("id", creativeId);
 
   if (error) throw error;
+}
+
+/**
+ * Replace status tag on a creative (GAP 2 FIX)
+ * Removes old status:* tags and adds new one
+ */
+export async function replaceStatusTag(
+  creativeId: string,
+  newStatus: CreativeStatus
+): Promise<void> {
+  // Remove old status tags
+  const { data: existingTags } = await supabase
+    .from("creative_tag_map")
+    .select("tag_slug")
+    .eq("creative_id", creativeId)
+    .like("tag_slug", "status:%");
+
+  if (existingTags && existingTags.length > 0) {
+    await supabase
+      .from("creative_tag_map")
+      .delete()
+      .eq("creative_id", creativeId)
+      .like("tag_slug", "status:%");
+  }
+
+  // Add new status tag
+  await addTags(creativeId, [`status:${newStatus}`]);
 }
 
 /**
