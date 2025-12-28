@@ -697,18 +697,22 @@ export default function ReelBuilder() {
 
       // ============ AUTO-GENERATE CAPTIONS ============
       const totalDuration = newClips.reduce((sum, clip) => sum + (clip.trimEnd - clip.trimStart), 0);
-      captionsEngine.generateCaptions("", captionsEngine.settings.style, {
-        duration: totalDuration,
-        concept: result.reel_concept,
-        hook: result.suggested_hook,
-        cta: result.suggested_cta,
-      }).then((captions) => {
-        if (captions.length > 0) {
-          toast.success(`Auto-generated ${captions.length} captions`, {
-            description: "Adjust timing in the Captions tab",
-          });
-        }
-      });
+      const captionsVideoUrl = blueprint.scenes?.[0]?.clipUrl || newClips[0]?.url || "";
+
+      captionsEngine
+        .generateCaptions(captionsVideoUrl, captionsEngine.settings.style, {
+          duration: totalDuration,
+          concept: result.reel_concept,
+          hook: result.suggested_hook,
+          cta: result.suggested_cta,
+        })
+        .then((captions) => {
+          if (captions.length > 0) {
+            toast.success(`Auto-generated ${captions.length} captions`, {
+              description: "Adjust timing in the Captions tab",
+            });
+          }
+        });
 
       const formatInfo = useFormat ? DARA_FORMATS[useFormat] : null;
       toast.success(`AI created reel with ${newClips.length} clips + blueprint!`, {
@@ -923,6 +927,7 @@ export default function ReelBuilder() {
           blueprint: sceneBlueprint,
           music_url: audioUrl,
           creative_id: creative.id,
+          captions: captionsEngine.exportForCreatomate(),
         },
       });
 
@@ -1296,20 +1301,23 @@ export default function ReelBuilder() {
   };
 
   const handleGenerateCaptions = async (style: CaptionStyle) => {
-    const captions = await captionsEngine.generateCaptions("", style);
+    const duration = clips.reduce((sum, clip) => sum + (clip.trimEnd - clip.trimStart), 0);
+    const videoUrl =
+      sceneBlueprint?.scenes?.[0]?.clipUrl || clips[0]?.url || uploadedVideoUrl || "";
+
+    const captions = await captionsEngine.generateCaptions(videoUrl, style, {
+      duration: duration || 15,
+      concept: reelConcept || sceneBlueprint?.caption,
+      hook: suggestedHook || undefined,
+      cta: suggestedCta || undefined,
+    });
+
     if (captions.length > 0) {
-      // ✅ WIRE TO BLUEPRINT: Set caption and scene text
-      if (sceneBlueprint) {
-        setSceneBlueprint(prev => prev ? {
-          ...prev,
-          caption: captions.map(c => c.text).join(' '),
-          scenes: prev.scenes.map((scene, i) => ({
-            ...scene,
-            text: captions[i]?.text || scene.text,
-          })),
-        } : prev);
-      }
       toast.success(`Generated ${captions.length} captions`);
+    } else {
+      toast.error("No captions generated", {
+        description: "Try a different style or make sure a clip is loaded.",
+      });
     }
   };
 

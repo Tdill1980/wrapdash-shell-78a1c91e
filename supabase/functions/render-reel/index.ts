@@ -36,16 +36,29 @@ interface SceneBlueprint {
   caption?: string;
 }
 
+interface CaptionInput {
+  text: string;
+  time: number;
+  duration: number;
+  style?: string;
+  animation?: 'none' | 'fade' | 'pop' | 'slide';
+  position?: 'top' | 'center' | 'bottom';
+  fontSize?: 'small' | 'medium' | 'large';
+}
+
 interface RenderRequest {
   job_id: string;
   blueprint: SceneBlueprint;
   music_url?: string | null;
+  captions?: CaptionInput[];
 }
 
 // ============ HELPERS ============
-const json = (obj: unknown, status = 200) =>
+const json = (obj: unknown, _status = 200) =>
   new Response(JSON.stringify(obj), {
-    status,
+    // Always return 200 so the client can display the structured error payload
+    // instead of failing with "Edge Function returned a non-2xx status code".
+    status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
@@ -125,7 +138,11 @@ function getFontFamily(font?: string, overlayPack?: string): string {
   }
 }
 
-function mapBlueprintToCreatomate(bp: SceneBlueprint, musicUrl?: string | null) {
+function mapBlueprintToCreatomate(
+  bp: SceneBlueprint,
+  musicUrl?: string | null,
+  captions?: CaptionInput[]
+) {
   const { width, height } = getDimensions(bp.aspectRatio);
   const fontFamily = getFontFamily(bp.font, bp.overlayPack);
   const elements: any[] = [];
@@ -145,7 +162,7 @@ function mapBlueprintToCreatomate(bp: SceneBlueprint, musicUrl?: string | null) 
       trim_duration: clipDuration,
     });
 
-    // Text overlay (if present)
+    // Scene text overlay (if present)
     if (scene.text?.trim()) {
       const { x, y } = mapPositionToXY(scene.textPosition);
       elements.push({
@@ -174,6 +191,38 @@ function mapBlueprintToCreatomate(bp: SceneBlueprint, musicUrl?: string | null) 
   }
 
   const totalDuration = timelineCursor;
+
+  // Add captions as timed text elements
+  if (Array.isArray(captions) && captions.length > 0) {
+    const sizeToVh = (s?: string) => (s === 'small' ? '4.5 vh' : s === 'medium' ? '6 vh' : '7 vh');
+
+    for (const cap of captions) {
+      const pos = cap.position || 'center';
+      const { x, y } = mapPositionToXY(pos);
+      const enter = cap.animation && cap.animation !== 'none' ? mapAnimation(cap.animation) : undefined;
+
+      elements.push({
+        type: 'text',
+        text: cap.text,
+        time: Math.max(0, cap.time),
+        duration: Math.max(0.1, cap.duration),
+        x,
+        y,
+        width: '92%',
+        x_alignment: '50%',
+        y_alignment: '50%',
+        font_family: fontFamily,
+        font_weight: cap.style === 'sabri' ? '800' : '700',
+        font_size: sizeToVh(cap.fontSize),
+        fill_color: '#ffffff',
+        stroke_color: '#000000',
+        stroke_width: '1.35 vh',
+        text_transform: cap.style === 'clean' ? 'none' : 'uppercase',
+        ...(enter ? { enter } : {}),
+        exit: { type: 'fade', duration: '0.2 s' },
+      });
+    }
+  }
 
   // End card
   if (bp.endCard) {
