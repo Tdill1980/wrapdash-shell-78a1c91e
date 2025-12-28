@@ -284,3 +284,12 @@ verify_jwt = false
 
 [functions.vehicle-list]
 verify_jwt = false
+
+[functions.vehicle-years]
+verify_jwt = false
+
+[functions.vehicle-makes]
+verify_jwt = false
+
+[functions.vehicle-models]
+verify_jwt = false
