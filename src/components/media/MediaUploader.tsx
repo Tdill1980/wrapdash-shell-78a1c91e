@@ -302,6 +302,9 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
                 { id: "ghost", label: "Ghost Industries" },
                 { id: "wraptv", label: "WrapTV" },
                 { id: "inkandedge", label: "Ink & Edge" },
+                { id: "snap", label: "Snap Thats a Wrap" },
+                { id: "vinylvixen", label: "VinylVixenWraps" },
+                { id: "rjthewrapper", label: "RJ The Wrapper" },
               ].map((b) => (
                 <Button
                   key={b.id}
