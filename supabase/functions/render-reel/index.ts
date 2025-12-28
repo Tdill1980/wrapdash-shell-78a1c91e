@@ -299,7 +299,7 @@ serve(async (req) => {
     }
 
     // ============ MAP BLUEPRINT → CREATOMATE ============
-    const timeline = mapBlueprintToCreatomate(body.blueprint, body.music_url);
+    const timeline = mapBlueprintToCreatomate(body.blueprint, body.music_url, body.captions);
     console.log("[render-reel] Timeline mapped:", JSON.stringify({
       duration: timeline.duration,
       elements_count: timeline.elements.length,
