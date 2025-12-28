@@ -10,6 +10,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Overall function timeout - return early if we're running too long
+  const functionStartTime = Date.now();
+  const MAX_FUNCTION_TIME = 25000; // 25 seconds max
+
+  function shouldAbort() {
+    return Date.now() - functionStartTime > MAX_FUNCTION_TIME;
+  }
+
   try {
     const wooUrl = Deno.env.get("VITE_WOO_URL") || "https://weprintwraps.com";
     const consumerKey = Deno.env.get("WOO_CONSUMER_KEY");
@@ -76,59 +84,61 @@ serve(async (req) => {
     const lastYearEnd = new Date(now.getTime());
     lastYearEnd.setFullYear(lastYearEnd.getFullYear() - 1);
 
-// Helper to fetch with retry logic - reduced retries to prevent timeout
-    async function fetchWithRetry(url: string, retries = 2, delay = 500): Promise<Response> {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout per request
-          
-          const response = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
-          
-          if (response.ok) {
-            return response;
-          }
-          // On 5xx errors, retry with shorter backoff
-          if (response.status >= 500 && attempt < retries) {
-            console.log(`[sync-woocommerce-sales] Retry ${attempt}/${retries} after ${response.status} error`);
-            await new Promise(r => setTimeout(r, delay));
-            delay *= 1.5;
-            continue;
-          }
-          throw new Error(`WooCommerce API error: ${response.status}`);
-        } catch (e) {
-          if (attempt === retries) throw e;
-          console.log(`[sync-woocommerce-sales] Request failed, retry ${attempt}/${retries}`);
-          await new Promise(r => setTimeout(r, delay));
+    // Single fetch with timeout - no retries to prevent CPU overuse
+    async function fetchWithTimeout(url: string, timeoutMs = 6000): Promise<Response | null> {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          return response;
         }
+        console.log(`[sync-woocommerce-sales] API returned ${response.status}`);
+        return null;
+      } catch (e) {
+        console.log(`[sync-woocommerce-sales] Fetch failed: ${e instanceof Error ? e.message : 'Unknown'}`);
+        return null;
       }
-      throw new Error("WooCommerce API: max retries exceeded");
     }
 
-    // Helper to fetch orders and calculate totals incrementally (no storage)
+    // Lightweight order fetch - max 2 pages to prevent timeout
     async function fetchOrderTotals(
       afterDate: Date,
       beforeDate: Date,
-      todayStartDate?: Date
-    ): Promise<{ revenue: number; count: number; todayRevenue: number }> {
+      todayStartDate?: Date,
+      maxPages = 2
+    ): Promise<{ revenue: number; count: number; todayRevenue: number; partial: boolean }> {
       let revenue = 0;
       let count = 0;
       let todayRevenue = 0;
       let page = 1;
       let hasMore = true;
+      let partial = false;
 
-      // Only fetch the fields we need to reduce payload size
       const baseUrl = `${wooUrl}/wp-json/wc/v3/orders?after=${afterDate.toISOString()}&before=${beforeDate.toISOString()}&per_page=100&status=completed,processing&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
 
-      while (hasMore) {
-        const response = await fetchWithRetry(`${baseUrl}&page=${page}`);
+      while (hasMore && page <= maxPages) {
+        // Check if we should abort early
+        if (shouldAbort()) {
+          console.log("[sync-woocommerce-sales] Aborting due to time limit");
+          partial = true;
+          break;
+        }
+
+        const response = await fetchWithTimeout(`${baseUrl}&page=${page}`);
+        
+        if (!response) {
+          partial = true;
+          break;
+        }
         
         const orders = await response.json();
         if (orders.length === 0) {
           hasMore = false;
         } else {
-          // Process immediately, don't store
           for (const order of orders) {
             const total = parseFloat(order.total || 0);
             revenue += total;
@@ -144,40 +154,46 @@ serve(async (req) => {
           }
           page++;
           if (orders.length < 100) hasMore = false;
+          if (page > maxPages) partial = true;
         }
       }
 
-      return { revenue, count, todayRevenue };
+      return { revenue, count, todayRevenue, partial };
     }
 
     let currentRevenue = 0;
     let orderCount = 0;
     let todayRevenue = 0;
     let currentFetchError: string | null = null;
+    let isPartialData = false;
 
+    // Fetch current month (priority) - allow up to 5 pages
     try {
       console.log("[sync-woocommerce-sales] Fetching current month orders...");
-      const current = await fetchOrderTotals(monthStart, monthEnd, todayStart);
+      const current = await fetchOrderTotals(monthStart, monthEnd, todayStart, 5);
       currentRevenue = current.revenue;
       orderCount = current.count;
       todayRevenue = current.todayRevenue;
+      isPartialData = current.partial;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
       currentFetchError = msg;
       console.error("[sync-woocommerce-sales] Current month fetch failed:", e);
     }
 
-    // Last year fetch - best effort, don't fail if it errors
+    // Last year fetch - only if we have time left, max 2 pages
     let lastYearRevenue: number | null = null;
     let lastYearOrderCount: number | null = null;
 
-    try {
-      console.log("[sync-woocommerce-sales] Fetching last year orders...");
-      const lastYear = await fetchOrderTotals(lastYearStart, lastYearEnd);
-      lastYearRevenue = lastYear.revenue;
-      lastYearOrderCount = lastYear.count;
-    } catch (e) {
-      console.error("[sync-woocommerce-sales] Last year fetch failed:", e);
+    if (!shouldAbort() && !currentFetchError) {
+      try {
+        console.log("[sync-woocommerce-sales] Fetching last year orders...");
+        const lastYear = await fetchOrderTotals(lastYearStart, lastYearEnd, undefined, 2);
+        lastYearRevenue = lastYear.revenue;
+        lastYearOrderCount = lastYear.count;
+      } catch (e) {
+        console.error("[sync-woocommerce-sales] Last year fetch failed:", e);
+      }
     }
 
     // Calculate metrics
@@ -244,13 +260,13 @@ serve(async (req) => {
       yoyPercentChange,
       suggestions,
       dataSource: "woocommerce",
+      isPartialData,
       lastUpdated: new Date().toISOString(),
       ...(currentFetchError ? { error: "woocommerce_unavailable", message: currentFetchError } : {}),
     };
 
-    console.log("[sync-woocommerce-sales] Done:", result.currentRevenue, "revenue,", result.orderCount, "orders");
+    console.log("[sync-woocommerce-sales] Done:", result.currentRevenue, "revenue,", result.orderCount, "orders", isPartialData ? "(partial)" : "");
 
-    // IMPORTANT: return 200 even when WooCommerce is flaky, so the UI can render a fallback state.
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
