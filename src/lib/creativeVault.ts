@@ -109,8 +109,12 @@ export async function addTags(creativeId: string, tags: string[]): Promise<void>
 }
 
 /**
- * Save a blueprint snapshot and link it to the creative
- * Stores blueprint in ai_creatives.blueprint column (JSONB)
+ * Save a blueprint snapshot.
+ *
+ * NOTE:
+ * - Currently stored on ai_creatives.blueprint (JSONB)
+ * - This will later be migrated to scene_blueprints once Supabase types are updated
+ * - For now, blueprint_id is not used
  */
 export async function saveBlueprintSnapshot(
   creativeId: string,
