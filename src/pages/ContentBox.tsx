@@ -26,7 +26,8 @@ import {
   Repeat,
   Link2,
   Zap,
-  Lightbulb
+  Lightbulb,
+  FolderOpen
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +44,7 @@ import { InspirationAIPanel } from "@/components/contentbox/InspirationAIPanel";
 import { ContentRequestPanel } from "@/components/contentbox/ContentRequestPanel";
 import { BulkVariationGenerator } from "@/components/content/BulkVariationGenerator";
 import { ContentToolsNav } from "@/components/content/ContentToolsNav";
+import { AssetGrid } from "@/components/assets/AssetGrid";
 
 const BRANDS = [
   { value: 'all', label: 'All Brands' },
@@ -561,6 +563,10 @@ export default function ContentBox() {
             <Grid className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Library</span>
           </TabsTrigger>
+          <TabsTrigger value="assets" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4">
+            <FolderOpen className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Assets</span>
+          </TabsTrigger>
           <TabsTrigger value="inspiration" className="flex-shrink-0 min-w-[44px] sm:min-w-fit px-3 sm:px-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 data-[state=active]:from-purple-500/20 data-[state=active]:to-pink-500/20">
             <Lightbulb className="w-4 h-4 sm:mr-2 text-purple-400" />
             <span className="hidden sm:inline">Inspiration AI</span>
@@ -612,6 +618,17 @@ export default function ContentBox() {
               }
             }}
           />
+        </TabsContent>
+
+        {/* Assets Tab - Video grid with manual tagging */}
+        <TabsContent value="assets" className="space-y-4">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Uploaded Assets</h2>
+            <p className="text-sm text-muted-foreground">
+              View and tag your uploaded videos. Tags are used by Smart Assist, Reel Builder, and Ads/Organic logic.
+            </p>
+          </div>
+          <AssetGrid />
         </TabsContent>
 
         {/* Inspiration AI Tab */}
