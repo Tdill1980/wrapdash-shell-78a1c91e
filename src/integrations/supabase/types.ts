@@ -720,6 +720,30 @@ export type Database = {
           },
         ]
       }
+      agent_coaching_memory: {
+        Row: {
+          active: boolean | null
+          agent_id: string
+          created_at: string | null
+          id: string
+          note: string
+        }
+        Insert: {
+          active?: boolean | null
+          agent_id: string
+          created_at?: string | null
+          id?: string
+          note: string
+        }
+        Update: {
+          active?: boolean | null
+          agent_id?: string
+          created_at?: string | null
+          id?: string
+          note?: string
+        }
+        Relationships: []
+      }
       agent_conversations: {
         Row: {
           agent_name: string
@@ -741,6 +765,33 @@ export type Database = {
           id?: string
           messages?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      agent_weekly_directives: {
+        Row: {
+          active: boolean | null
+          agent_id: string
+          created_at: string | null
+          directive: string
+          id: string
+          week_of: string
+        }
+        Insert: {
+          active?: boolean | null
+          agent_id: string
+          created_at?: string | null
+          directive: string
+          id?: string
+          week_of: string
+        }
+        Update: {
+          active?: boolean | null
+          agent_id?: string
+          created_at?: string | null
+          directive?: string
+          id?: string
+          week_of?: string
         }
         Relationships: []
       }

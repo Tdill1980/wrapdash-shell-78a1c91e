@@ -694,7 +694,114 @@ IMPORTANT: You have full visibility into this conversation. Reference specific d
       const messageLower = message.toLowerCase();
       const isFeedback = useConversationalMode && feedbackPatterns.some(p => messageLower.includes(p));
       
-      console.log(`[agent-chat] Using ${useConversationalMode ? 'conversational' : 'operator'} mode for ${agentConfig.name}${isFeedback ? ' (FEEDBACK DETECTED)' : ''}`);
+      // Detect insight requests (asking about patterns, common questions, etc.)
+      const insightPatterns = [
+        "what are people asking", "what questions", "patterns", "common questions",
+        "what's confusing", "what keeps coming up", "trending", "what are customers",
+        "what issues", "recurring", "frequently asked"
+      ];
+      const isInsightRequest = useConversationalMode && insightPatterns.some(p => messageLower.includes(p));
+      
+      console.log(`[agent-chat] Using ${useConversationalMode ? 'conversational' : 'operator'} mode for ${agentConfig.name}${isFeedback ? ' (FEEDBACK DETECTED)' : ''}${isInsightRequest ? ' (INSIGHT REQUEST)' : ''}`);
+      
+      // === COACHING MEMORY: Save feedback as persistent coaching note ===
+      if (isFeedback && chat?.agent_id) {
+        try {
+          await supabase.from("agent_coaching_memory").insert({
+            agent_id: chat.agent_id,
+            note: message
+          });
+          console.log(`[agent-chat] Saved coaching note for ${chat.agent_id}`);
+        } catch (coachingError) {
+          console.error("[agent-chat] Failed to save coaching note:", coachingError);
+        }
+      }
+      
+      // === COACHING MEMORY: Load recent coaching notes for context ===
+      let coachingContext = "";
+      if (useConversationalMode && chat?.agent_id) {
+        const { data: coachingNotes } = await supabase
+          .from("agent_coaching_memory")
+          .select("note")
+          .eq("agent_id", chat.agent_id)
+          .eq("active", true)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        
+        if (coachingNotes?.length) {
+          coachingContext = `
+=== COACHING CONTEXT (apply these learnings going forward) ===
+${coachingNotes.map((n: any) => `• ${n.note}`).join("\n")}
+=== END COACHING CONTEXT ===
+`;
+          console.log(`[agent-chat] Loaded ${coachingNotes.length} coaching notes for ${chat.agent_id}`);
+        }
+      }
+      
+      // === WEEKLY DIRECTIVE: Load active weekly focus ===
+      let weeklyDirectiveContext = "";
+      if (chat?.agent_id) {
+        // Calculate Monday of current week
+        const now = new Date();
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - now.getDay() + 1);
+        monday.setHours(0, 0, 0, 0);
+        const weekOfDate = monday.toISOString().slice(0, 10);
+        
+        const { data: weeklyDirective } = await supabase
+          .from("agent_weekly_directives")
+          .select("directive")
+          .eq("agent_id", chat.agent_id)
+          .eq("week_of", weekOfDate)
+          .eq("active", true)
+          .limit(1)
+          .maybeSingle();
+        
+        if (weeklyDirective?.directive) {
+          weeklyDirectiveContext = `
+=== WEEKLY FOCUS FROM THE TEAM ===
+${weeklyDirective.directive}
+=== END WEEKLY FOCUS ===
+Apply this focus when relevant in your conversations.
+`;
+          console.log(`[agent-chat] Loaded weekly directive for ${chat.agent_id}`);
+        }
+      }
+      
+      // === INSIGHT REQUEST: Load recent customer conversations for pattern analysis ===
+      let insightContext = "";
+      if (isInsightRequest) {
+        console.log("[agent-chat] Loading recent conversations for insight analysis");
+        const { data: recentConversations } = await supabase
+          .from("conversations")
+          .select("id, subject, channel, created_at")
+          .order("created_at", { ascending: false })
+          .limit(30);
+        
+        // Also get recent agent chat messages for pattern detection
+        const { data: recentAgentChats } = await supabase
+          .from("agent_chat_messages")
+          .select("content, sender, created_at")
+          .eq("sender", "user")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        
+        if (recentConversations?.length || recentAgentChats?.length) {
+          insightContext = `
+=== RECENT ACTIVITY FOR INSIGHT ANALYSIS ===
+Recent customer conversations (${recentConversations?.length || 0} total):
+${recentConversations?.slice(0, 15).map((c: any) => `- [${c.channel}] ${c.subject || 'No subject'}`).join("\n") || "None available"}
+
+Recent user messages in agent chats (${recentAgentChats?.length || 0} total):
+${recentAgentChats?.slice(0, 20).map((m: any) => `- "${m.content?.substring(0, 100)}..."`).join("\n") || "None available"}
+=== END INSIGHT DATA ===
+
+Analyze this data to identify patterns, common questions, and recurring themes.
+Provide actionable insights, not just raw data.
+`;
+          console.log(`[agent-chat] Loaded insight context: ${recentConversations?.length || 0} conversations, ${recentAgentChats?.length || 0} messages`);
+        }
+      }
       
       // Load related chat context for conversational mode (e.g., reviewing specific chats)
       let relatedChatsContext = "";
@@ -718,10 +825,16 @@ Use this context to answer questions about what happened in these conversations.
         }
       }
 
-      // Build system prompt with sales context and email thread
+      // Build system prompt with sales context, coaching, weekly focus, and insights
       const enhancedSystemPrompt = `${basePrompt}
 
 ${emailThreadSection}
+
+${coachingContext}
+
+${weeklyDirectiveContext}
+
+${insightContext}
 
 ${relatedChatsContext}
 
