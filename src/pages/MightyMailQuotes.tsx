@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Mail, RefreshCw, Search, Pencil, MessageSquare, Instagram } from "lucide-react";
+import { Eye, Mail, RefreshCw, Search, Pencil, MessageSquare, Instagram, Zap } from "lucide-react";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { QuoteEditDialog } from "@/components/mightymail/QuoteEditDialog";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -58,7 +58,33 @@ export default function MightyMailQuotes() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [runningRetargeting, setRunningRetargeting] = useState(false);
   const { toast } = useToast();
+
+  async function runRetargeting() {
+    setRunningRetargeting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("run-quote-followups");
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Retargeting Complete",
+        description: `Processed ${data?.processed || 0} quotes, sent ${data?.emailsSent || 0} follow-up emails`,
+      });
+      
+      fetchQuotes(); // Refresh to see updated follow-up counts
+    } catch (error: any) {
+      console.error("Error running retargeting:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to run retargeting",
+        variant: "destructive",
+      });
+    } finally {
+      setRunningRetargeting(false);
+    }
+  }
 
   useEffect(() => {
     fetchQuotes();
@@ -301,6 +327,14 @@ export default function MightyMailQuotes() {
         <Button onClick={fetchQuotes} variant="outline">
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
+        </Button>
+        <Button 
+          onClick={runRetargeting} 
+          disabled={runningRetargeting}
+          className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] hover:opacity-90"
+        >
+          <Zap className="w-4 h-4 mr-2" />
+          {runningRetargeting ? "Running..." : "Run Retargeting"}
         </Button>
       </div>
 

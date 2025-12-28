@@ -323,9 +323,16 @@ const navigationItems: NavigationItem[] = [
     )
   },
   { 
-    name: "MM Quotes", 
+    name: "Quotes & Retargeting", 
     path: "/admin/mightymail/quotes", 
-    icon: Mail
+    icon: Mail,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Quotes & </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Retargeting</span>
+      </span>
+    )
   },
   { name: "Product Admin", path: "/admin/products", icon: Settings },
   { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
