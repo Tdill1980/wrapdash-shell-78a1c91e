@@ -354,6 +354,13 @@ serve(async (req) => {
 
       console.error("[render-reel]", msg);
       
+      // Get the job to find linked creative
+      const { data: failedJob } = await supabase
+        .from("video_edit_queue")
+        .select("ai_creative_id")
+        .eq("id", body.job_id)
+        .single();
+
       await supabase
         .from("video_edit_queue")
         .update({
@@ -368,6 +375,27 @@ serve(async (req) => {
           },
         })
         .eq("id", body.job_id);
+
+      // Update linked creative to failed status
+      if (failedJob?.ai_creative_id) {
+        await supabase
+          .from("ai_creatives")
+          .update({
+            status: "failed",
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", failedJob.ai_creative_id);
+
+        await supabase
+          .from("creative_tag_map")
+          .delete()
+          .eq("creative_id", failedJob.ai_creative_id)
+          .like("tag_slug", "status:%");
+
+        await supabase
+          .from("creative_tag_map")
+          .insert({ creative_id: failedJob.ai_creative_id, tag_slug: "status:failed" });
+      }
 
       return json({ ok: false, error: msg, render_id: renderId }, 500);
     }
@@ -389,7 +417,7 @@ serve(async (req) => {
         },
       })
       .eq("id", body.job_id)
-      .select("id, final_render_url, render_status");
+      .select("id, final_render_url, render_status, ai_creative_id");
 
     if (saveError || !saved?.length) {
       console.error("[render-reel] SAVE FAILED!", saveError, "job_id:", body.job_id);
@@ -402,6 +430,35 @@ serve(async (req) => {
       }, 500);
     }
 
+    // ============ UPDATE LINKED AI_CREATIVE ============
+    const aiCreativeId = saved[0]?.ai_creative_id;
+    if (aiCreativeId) {
+      console.log("[render-reel] Updating ai_creative:", aiCreativeId);
+      
+      // Update creative status and output
+      await supabase
+        .from("ai_creatives")
+        .update({
+          status: "complete",
+          output_url: finalUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", aiCreativeId);
+
+      // Update status tags
+      await supabase
+        .from("creative_tag_map")
+        .delete()
+        .eq("creative_id", aiCreativeId)
+        .like("tag_slug", "status:%");
+
+      await supabase
+        .from("creative_tag_map")
+        .insert({ creative_id: aiCreativeId, tag_slug: "status:complete" });
+      
+      console.log("[render-reel] ✓ ai_creative updated with status:complete");
+    }
+
     console.log("[render-reel] DB save verified:", JSON.stringify(saved));
     console.log("[render-reel] ====== RENDER COMPLETE ======");
     
@@ -411,7 +468,8 @@ serve(async (req) => {
       final_url: finalUrl,
       blueprint_id: body.blueprint.id,
       db_verified: true,
-      saved_row: saved[0]
+      saved_row: saved[0],
+      creative_updated: !!aiCreativeId
     });
 
   } catch (err) {
