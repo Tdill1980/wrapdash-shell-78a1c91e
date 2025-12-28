@@ -21,6 +21,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ProducerJob, ProducerJobClip, ProducerJobOverlay } from "@/types/ProducerJob";
+import { 
+  parseCreateContent, 
+  stripInternalBlocksForDisplay, 
+  validateCreateContent,
+  type ParsedCreateContent 
+} from "@/lib/createContentBlocks";
+
 interface AgentChatPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -43,121 +50,61 @@ interface ContentFactoryPreset {
   attached_assets?: Array<{ url: string; type: string; name: string }>;
   hook: string;
   cta: string;
-  overlays?: Array<{ text: string; start: number; duration: number }>;
+  overlays?: Array<{ text: string; start: number; duration: number; position?: string; style?: string }>;
   caption: string;
-  hashtags: string;
+  hashtags: string[];
 }
 
-// Parse CREATE_CONTENT block from agent message
-function parseCreateContent(message: string): ContentFactoryPreset | null {
-  if (!message.includes("===CREATE_CONTENT===")) return null;
-  
-  try {
-    const blockMatch = message.match(/===CREATE_CONTENT===([\s\S]*?)===END_CREATE_CONTENT===/);
-    if (!blockMatch) return null;
-    
-    const content = blockMatch[1];
-    
-    // Parse key-value pairs from the block
-    const getField = (name: string): string => {
-      const match = content.match(new RegExp(`${name}:\\s*(.+?)(?:\\n|$)`, 'i'));
-      return match ? match[1].trim() : '';
-    };
-    
-    // Parse asset_query block
-    const assetQueryMatch = content.match(/asset_query:\s*\n((?:\s+\w+:.*\n?)+)/i);
-    let asset_query: ContentFactoryPreset['asset_query'] | undefined;
-    if (assetQueryMatch) {
-      const queryBlock = assetQueryMatch[1];
-      const tagsMatch = queryBlock.match(/tags:\s*\[([^\]]+)\]/i);
-      const typeMatch = queryBlock.match(/type:\s*(\w+)/i);
-      const limitMatch = queryBlock.match(/limit:\s*(\d+)/i);
-      
-      asset_query = {
-        tags: tagsMatch ? tagsMatch[1].split(',').map(t => t.trim()) : undefined,
-        type: typeMatch ? typeMatch[1] : undefined,
-        limit: limitMatch ? parseInt(limitMatch[1], 10) : undefined,
-      };
-    }
-    
-    // Parse overlays block - handle multi-line YAML format
-    // AI outputs overlays like:
-    // overlays:
-    //   - text: 3M Price Drop!
-    //     start: 0
-    //     duration: 3
-    const overlaysMatch = content.match(/overlays:\s*\n([\s\S]*?)(?=\n[a-zA-Z_]+:|\n===|$)/i);
-    let overlays: ContentFactoryPreset['overlays'] | undefined;
-    
-    console.log('[parseCreateContent] Looking for overlays in block');
-    console.log('[parseCreateContent] overlaysMatch:', overlaysMatch ? 'found' : 'not found');
-    
-    if (overlaysMatch) {
-      const overlaysBlock = overlaysMatch[1];
-      console.log('[parseCreateContent] overlaysBlock:', overlaysBlock);
-      
-      // Split by "- text:" to get individual overlay blocks
-      const overlayParts = overlaysBlock.split(/\n\s*-\s*text:\s*/i).filter(Boolean);
-      console.log('[parseCreateContent] overlayParts count:', overlayParts.length);
-      
-      if (overlayParts.length > 0) {
-        overlays = overlayParts.map((chunk, idx) => {
-          // First line contains the text value (after "- text:" was stripped)
-          const lines = chunk.split('\n').map(l => l.trim()).filter(Boolean);
-          const textValue = lines[0]?.replace(/^["']|["']$/g, '') ?? '';
-          
-          // Look for start and duration in the entire block
-          const startMatch = chunk.match(/start:\s*(\d+)/i);
-          const durationMatch = chunk.match(/duration:\s*(\d+)/i);
-          
-          const overlay = {
-            text: textValue,
-            start: startMatch ? parseInt(startMatch[1], 10) : 0,
-            duration: durationMatch ? parseInt(durationMatch[1], 10) : 3,
-          };
-          
-          console.log(`[parseCreateContent] Overlay ${idx}:`, overlay);
-          return overlay;
-        }).filter(o => o.text.length > 0); // Only keep overlays with actual text
-        
-        console.log('[parseCreateContent] Final overlays:', overlays);
-      }
-    }
-    
-    // Parse attached_assets block
-    const attachedAssetsMatch = content.match(/attached_assets:\s*\n((?:\s+-.*\n?)+)/i);
-    let attached_assets: ContentFactoryPreset['attached_assets'] | undefined;
-    if (attachedAssetsMatch) {
-      const assetBlocks = attachedAssetsMatch[1].split(/\n\s*-/).filter(Boolean);
-      attached_assets = assetBlocks.map(block => {
-        const urlMatch = block.match(/url:\s*(.+?)(?:\n|$)/i);
-        const typeMatch = block.match(/type:\s*(\w+)/i);
-        const nameMatch = block.match(/name:\s*(.+?)(?:\n|$)/i);
-        return {
-          url: urlMatch ? urlMatch[1].trim() : '',
-          type: typeMatch ? typeMatch[1].trim() : 'video',
-          name: nameMatch ? nameMatch[1].trim() : 'Attached Asset',
-        };
-      }).filter(a => a.url); // Only keep assets with valid URLs
-    }
-    
-    return {
-      action: getField('action') || 'create_content',
-      content_type: getField('content_type') || 'reel',
-      platform: getField('platform') || 'instagram',
-      asset_source: getField('asset_source') || 'contentbox',
-      asset_query,
-      attached_assets,
-      hook: getField('hook'),
-      cta: getField('cta'),
-      overlays,
-      caption: getField('caption'),
-      hashtags: getField('hashtags'),
-    };
-  } catch (e) {
-    console.error('[parseCreateContent] Failed to parse:', e);
-    return null;
-  }
+// Convert ParsedCreateContent to ContentFactoryPreset format
+function toContentFactoryPreset(parsed: ParsedCreateContent): ContentFactoryPreset {
+  return {
+    action: parsed.action || 'create_content',
+    content_type: parsed.content_type || 'reel',
+    platform: parsed.platform || 'instagram',
+    asset_source: parsed.asset_source || 'contentbox',
+    asset_query: parsed.asset_query,
+    attached_assets: parsed.attached_assets,
+    hook: parsed.hook || '',
+    cta: parsed.cta || '',
+    overlays: parsed.overlays,
+    caption: parsed.caption || '',
+    hashtags: parsed.hashtags || [],
+  };
+}
+
+// Create a content_calendar draft entry
+async function createCalendarDraftFromPreset(args: {
+  brand?: string;
+  platform?: string;
+  content_type?: string;
+  hook?: string;
+  caption?: string;
+  hashtags?: string[];
+}): Promise<string> {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  const scheduled_date = `${yyyy}-${mm}-${dd}`;
+
+  const { data, error } = await supabase
+    .from("content_calendar")
+    .insert({
+      brand: args.brand ?? "wpw",
+      platform: args.platform ?? "instagram",
+      content_type: args.content_type ?? "reel",
+      scheduled_date,
+      scheduled_time: "12:00",
+      title: args.hook ?? null,
+      caption: args.caption ?? null,
+      hashtags: args.hashtags ?? [],
+      status: "draft",
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id as string;
 }
 
 export function AgentChatPanel({ open, onOpenChange, agentId, context, initialChatId }: AgentChatPanelProps) {
@@ -293,7 +240,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
   const agentConfig = AVAILABLE_AGENTS.find((a) => a.id === agentId);
 
   // Check if any agent produced CREATE_CONTENT block - for Content Factory / MightyEdit
-  const contentFactoryPreset = useMemo(() => {
+  const contentFactoryPreset = useMemo((): ContentFactoryPreset | null => {
     console.log("[AgentChatPanel] Scanning", messages.length, "messages for CREATE_CONTENT");
     
     // Scan all agent messages for CREATE_CONTENT - new Content Factory format
@@ -303,7 +250,8 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
         const parsed = parseCreateContent(msg.content);
         if (parsed) {
           console.log("[AgentChatPanel] Found CREATE_CONTENT in message:", msg.id, parsed);
-          return parsed;
+          // Convert to ContentFactoryPreset format
+          return toContentFactoryPreset(parsed);
         }
       }
     }
@@ -585,20 +533,41 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                             hook: contentFactoryPreset.hook,
                             cta: contentFactoryPreset.cta,
                             caption: contentFactoryPreset.caption,
-                            hashtags: contentFactoryPreset.hashtags?.split(/[,\s]+/).filter(Boolean),
+                            hashtags: Array.isArray(contentFactoryPreset.hashtags) 
+                              ? contentFactoryPreset.hashtags 
+                              : (contentFactoryPreset.hashtags as unknown as string)?.split(/[,\s]+/).filter(Boolean),
                             musicStyle: 'upbeat',
                             lock: true, // 🔒 CRITICAL: No auto-create will run
                             createdAt: new Date().toISOString(),
                           };
                           
                           console.log('[AgentChatPanel] ProducerJob created:', producerJob);
+                          
+                          // 5. Create content_calendar draft entry
+                          let content_calendar_id: string | undefined;
+                          try {
+                            content_calendar_id = await createCalendarDraftFromPreset({
+                              brand: 'wpw',
+                              platform: contentFactoryPreset.platform,
+                              content_type: contentFactoryPreset.content_type,
+                              hook: contentFactoryPreset.hook,
+                              caption: contentFactoryPreset.caption,
+                              hashtags: contentFactoryPreset.hashtags,
+                            });
+                            console.log('[AgentChatPanel] Created calendar draft:', content_calendar_id);
+                          } catch (calErr) {
+                            console.error('[AgentChatPanel] Failed to create calendar entry:', calErr);
+                            // Continue anyway - calendar entry is optional
+                          }
+                          
                           toast.success(`Loaded ${clips.length} clips with ${overlays.length} overlays`);
                           
-                          // 5. Navigate to ReelBuilder with the locked job
+                          // 6. Navigate to ReelBuilder with the locked job + calendar ID
                           navigate('/organic/reel-builder', {
                             state: {
                               producerJob,
                               skipAutoCreate: true,
+                              content_calendar_id,
                             },
                           });
                         }}
@@ -799,6 +768,11 @@ function MessageBubble({ message, agentName }: { message: AgentChatMessage; agen
   const imageUrl = message.metadata?.image_url as string | undefined;
   const userAttachments = message.metadata?.attachments;
 
+  // 🔧 FIX: Strip internal blocks from agent messages so users see natural language
+  const displayContent = isUser 
+    ? message.content 
+    : stripInternalBlocksForDisplay(message.content);
+
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
@@ -814,7 +788,7 @@ function MessageBubble({ message, agentName }: { message: AgentChatMessage; agen
             {agentName || "Agent"}
           </div>
         )}
-        <div className="whitespace-pre-wrap">{message.content}</div>
+        <div className="whitespace-pre-wrap">{displayContent}</div>
         
         {/* Display user attachments */}
         {isUser && userAttachments && userAttachments.length > 0 && (
