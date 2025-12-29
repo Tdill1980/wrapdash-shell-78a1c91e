@@ -23,8 +23,8 @@ import {
   ExternalLink
 } from "lucide-react";
 import { ContentFile, VideoProcessResult } from "@/hooks/useContentBox";
-import { useVideoRender } from "@/hooks/useVideoRender";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useNavigate } from "react-router-dom";
 import { useHybridGenerate } from "@/hooks/useHybridGenerate";
 import { EditorModeProvider, useEditorMode } from "@/contexts/EditorModeContext";
 import { EditorModeTabs, EditorToolSidebar } from "@/components/editor";
@@ -64,14 +64,8 @@ function AIVideoEditorContent({ selectedFile, onProcess, processing }: AIVideoEd
   const [assets, setAssets] = useState("");
   
   const { organizationId } = useOrganization();
-  const { 
-    status: renderStatus, 
-    progress: renderProgress, 
-    outputUrl, 
-    isRendering, 
-    startRender, 
-    reset: resetRender 
-  } = useVideoRender();
+  const navigate = useNavigate();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   const {
     generate: generateHybrid,
@@ -108,13 +102,20 @@ function AIVideoEditorContent({ selectedFile, onProcess, processing }: AIVideoEd
       return;
     }
 
-    await startRender({
+    // Store preset data for MightyEdit and redirect
+    setIsRedirecting(true);
+    const mightyEditPreset = {
       videoUrl: selectedFile.file_url,
       headline: headline || undefined,
       subtext: subtext || undefined,
       organizationId: organizationId || undefined,
       musicUrl: selectedMusicUrl || undefined,
-    });
+      videoScript,
+      source: "ai_video_editor",
+    };
+    sessionStorage.setItem("mightyedit_preset", JSON.stringify(mightyEditPreset));
+    toast.success("Redirecting to MightyEdit for rendering...");
+    navigate("/mighty-edit");
   };
 
   const handleGenerateHybrid = async () => {
@@ -467,87 +468,37 @@ function AIVideoEditorContent({ selectedFile, onProcess, processing }: AIVideoEd
                 onSelect={setSelectedMusicUrl}
               />
 
-              {/* Render Progress */}
-              {isRendering && (
+              {/* Redirect Progress */}
+              {isRedirecting && (
                 <div className="space-y-2 p-4 rounded-lg bg-background/50 border border-border/50">
                   <div className="flex items-center justify-between text-sm">
                     <span className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      Rendering video...
+                      Redirecting to MightyEdit...
                     </span>
-                    <span className="text-muted-foreground">{renderProgress}%</span>
                   </div>
-                  <Progress value={renderProgress} className="h-2" />
-                  <p className="text-xs text-muted-foreground">
-                    This may take 1-2 minutes depending on video length
-                  </p>
-                </div>
-              )}
-
-              {/* Render Complete */}
-              {renderStatus === 'succeeded' && outputUrl && (
-                <div className="space-y-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
-                  <div className="flex items-center gap-2 text-green-500">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-medium">Render Complete!</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1 bg-gradient-to-r from-[hsl(var(--instagram-blue))] to-[hsl(var(--instagram-pink))]"
-                      asChild
-                    >
-                      <a href={outputUrl} target="_blank" rel="noopener noreferrer">
-                        <Download className="w-4 h-4 mr-2" />
-                        Download MP4
-                      </a>
-                    </Button>
-                    <Button variant="outline" asChild>
-                      <a href={outputUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Render Failed */}
-              {renderStatus === 'failed' && (
-                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-                  <p className="text-sm text-destructive">
-                    Render failed. Please try again or check your video file.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-2"
-                    onClick={resetRender}
-                  >
-                    Try Again
-                  </Button>
                 </div>
               )}
 
               {/* Render Button */}
-              {renderStatus !== 'succeeded' && (
-                <Button
-                  className="w-full bg-gradient-to-r from-[hsl(var(--instagram-blue))] via-[hsl(var(--instagram-purple))] to-[hsl(var(--instagram-pink))] hover:opacity-90"
-                  size="lg"
-                  disabled={isRendering || !selectedFile}
-                  onClick={handleRenderReel}
-                >
-                  {isRendering ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Rendering...
-                    </>
-                  ) : (
-                    <>
-                      <Video className="w-5 h-5 mr-2" />
-                      Render Reel
-                    </>
-                  )}
-                </Button>
-              )}
+              <Button
+                className="w-full bg-gradient-to-r from-[hsl(var(--instagram-blue))] via-[hsl(var(--instagram-purple))] to-[hsl(var(--instagram-pink))] hover:opacity-90"
+                size="lg"
+                disabled={isRedirecting || !selectedFile}
+                onClick={handleRenderReel}
+              >
+                {isRedirecting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Redirecting...
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-5 h-5 mr-2" />
+                    Render in MightyEdit
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
         );
