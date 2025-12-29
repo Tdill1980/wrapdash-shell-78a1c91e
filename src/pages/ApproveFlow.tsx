@@ -288,8 +288,8 @@ export default function ApproveFlow() {
 
       if (urlProjectId) {
         const renderUrls: Record<string, string> = {
-          hero: data.imageUrl,
-          angle: data.angle || 'hero'
+          hero: data.imageUrl
+          // Only store actual image URLs - angle metadata not needed in render_urls
         };
 
         await save3DRendersToApproveFlow(

@@ -17,14 +17,26 @@ const ANGLE_LABELS: Record<string, string> = {
   rear: "Rear",
 };
 
+// Helper to check if a value is a valid image URL
+const isValidImageUrl = (value: string): boolean => {
+  return value?.startsWith('https://') || value?.startsWith('http://') || value?.startsWith('data:image/');
+};
+
 export function ProofSideBySide({ designProofUrl, renderUrls }: ProofSideBySideProps) {
-  const angleKeys = renderUrls ? Object.keys(renderUrls) : [];
+  // Filter renderUrls to only include valid image URLs (excludes metadata like "angle": "hero")
+  const validRenderUrls = renderUrls
+    ? Object.fromEntries(
+        Object.entries(renderUrls).filter(([_, url]) => isValidImageUrl(url))
+      )
+    : {};
+  
+  const angleKeys = Object.keys(validRenderUrls);
   const [selectedAngle, setSelectedAngle] = useState<string>(
-    angleKeys.includes("front_34") ? "front_34" : angleKeys[0] || "hero"
+    angleKeys.includes("hero") ? "hero" : angleKeys.includes("front_34") ? "front_34" : angleKeys[0] || "hero"
   );
 
-  const currentRenderUrl = renderUrls?.[selectedAngle];
-  const has3DRenders = renderUrls && Object.keys(renderUrls).length > 0;
+  const currentRenderUrl = validRenderUrls[selectedAngle];
+  const has3DRenders = angleKeys.length > 0 && currentRenderUrl;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
@@ -114,7 +126,7 @@ export function ProofSideBySide({ designProofUrl, renderUrls }: ProofSideBySideP
                     }`}
                   >
                     <img
-                      src={renderUrls[angle]}
+                      src={validRenderUrls[angle]}
                       alt={ANGLE_LABELS[angle] || angle}
                       className="w-full h-full object-cover"
                     />
