@@ -109,8 +109,8 @@ async function sendConfirmationEmail(
           <!-- Header -->
           <tr>
             <td style="background-color: #0f172a; padding: 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;">WePrintWraps.com</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">Print-Only Wholesale Wrap Pricing</p>
+              <h1 style="color: #00AFFF; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;"><span style="color: #FF1493;">WePrint</span><span style="color: #00AFFF;">Wraps</span><span style="color: #ffffff;">.com</span></h1>
+              <p style="color: #00AFFF; margin: 8px 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Print-Only Wholesale Wrap Pricing</p>
             </td>
           </tr>
           
