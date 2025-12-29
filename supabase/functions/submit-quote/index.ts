@@ -261,12 +261,13 @@ serve(async (req: Request): Promise<Response> => {
     const quoteNumber = generateQuoteNumber();
 
     // Get authoritative sqft from MightyCommandAI engine (server-side validation)
-    let sqft = payload.dimensions?.sqft || 0;
-    let sqftSource = 'provided';
+    // CRITICAL: ALWAYS use database lookup - NEVER trust frontend-provided sqft
+    let sqft = 0;
+    let sqftSource = 'none';
     
-    // If sqft is missing or zero, lookup from authoritative source
-    if (!sqft && payload.vehicle?.year && payload.vehicle?.make && payload.vehicle?.model) {
-      console.log("[submit-quote] No sqft provided, looking up from MightyCommandAI...");
+    // Always lookup from authoritative source when vehicle info is available
+    if (payload.vehicle?.year && payload.vehicle?.make && payload.vehicle?.model) {
+      console.log("[submit-quote] Looking up sqft from MightyCommandAI (ignoring any frontend-provided value)...");
       const sqftResult = await getVehicleSqFt(
         supabase,
         payload.vehicle.year,
@@ -281,6 +282,7 @@ serve(async (req: Request): Promise<Response> => {
           source: payload.source || 'homepage',
           vehicle: payload.vehicle,
           category: payload.category,
+          frontendSqft: payload.dimensions?.sqft, // Log what frontend tried to send
           reason: 'Vehicle not found in database or quick_ref'
         });
         
@@ -299,6 +301,18 @@ serve(async (req: Request): Promise<Response> => {
       sqft = sqftResult.sqft;
       sqftSource = sqftResult.source;
       console.log(`[submit-quote] MightyCommandAI sqft: ${sqft} (source: ${sqftSource})`);
+    } else {
+      // No vehicle info provided - cannot price
+      console.warn('[PRICING BLOCKED - submit-quote] No vehicle info provided');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          needs_review: true,
+          message: 'Vehicle information required for accurate pricing.',
+          email: payload.email
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     // Calculate pricing with authoritative sqft
