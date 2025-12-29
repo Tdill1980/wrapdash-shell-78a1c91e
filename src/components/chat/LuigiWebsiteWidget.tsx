@@ -191,13 +191,13 @@ export function LuigiWebsiteWidget() {
         "fixed bottom-6 right-6 z-50",
         "w-[400px] max-w-[calc(100vw-48px)]",
         "h-[600px] max-h-[calc(100vh-100px)]",
-        "bg-card/95 backdrop-blur-xl",
-        "border border-border rounded-2xl",
+        "bg-white backdrop-blur-xl",
+        "border border-slate-200 rounded-2xl",
         "shadow-2xl flex flex-col overflow-hidden",
         "animate-in slide-in-from-bottom-5 duration-300"
       )}
       style={{
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 60px hsl(var(--primary) / 0.15)"
+        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 60px rgba(131, 58, 180, 0.1)"
       }}
     >
       {/* Header */}
@@ -232,7 +232,7 @@ export function LuigiWebsiteWidget() {
 
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/10">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 scrollbar-thin scrollbar-thumb-slate-300">
         {messages.map((message, index) => (
           <div 
             key={message.id}
@@ -244,8 +244,8 @@ export function LuigiWebsiteWidget() {
                 "max-w-[85%] px-4 py-3 rounded-2xl text-sm",
                 "transition-all duration-200",
                 message.role === "user"
-                  ? "bg-gradient-to-r from-primary to-[hsl(var(--gradient-dark))] text-primary-foreground ml-auto rounded-br-sm shadow-lg"
-                  : "bg-secondary border border-border text-foreground rounded-bl-sm"
+                  ? "bg-gradient-to-r from-[#405DE6] to-[#833AB4] text-white ml-auto rounded-br-sm shadow-lg"
+                  : "bg-slate-100 border border-slate-200 text-slate-800 rounded-bl-sm"
               )}
             >
               {message.content}
@@ -264,9 +264,9 @@ export function LuigiWebsiteWidget() {
                   onClick={() => handleSend(question)}
                   className={cn(
                     "px-3 py-2 text-xs rounded-full",
-                    "bg-secondary border border-border",
-                    "hover:bg-primary/10 hover:border-primary/30",
-                    "text-foreground transition-all duration-200"
+                    "bg-white border border-slate-200",
+                    "hover:bg-slate-50 hover:border-[#833AB4]/30",
+                    "text-slate-700 transition-all duration-200"
                   )}
                 >
                   "{question}"
@@ -283,11 +283,11 @@ export function LuigiWebsiteWidget() {
                   onClick={() => handleSend(action.message)}
                   className={cn(
                     "w-full flex items-center justify-center gap-2 p-3",
-                    "bg-gradient-to-r from-primary to-[hsl(var(--gradient-dark))]",
+                    "bg-gradient-to-r from-[#833AB4] to-[#E1306C]",
                     "hover:opacity-90 hover:scale-[1.02]",
                     "rounded-xl text-sm font-semibold",
-                    "text-primary-foreground transition-all duration-200",
-                    "shadow-lg shadow-primary/20"
+                    "text-white transition-all duration-200",
+                    "shadow-lg shadow-[#833AB4]/20"
                   )}
                 >
                   <action.icon className="w-5 h-5" />
@@ -303,11 +303,11 @@ export function LuigiWebsiteWidget() {
                     onClick={() => handleSend(action.message)}
                     className={cn(
                       "flex items-center gap-2 p-3",
-                      "bg-secondary hover:bg-primary/10",
+                      "bg-white hover:bg-slate-50",
                       "rounded-xl text-xs font-medium",
-                      "border border-border hover:border-primary/30",
+                      "border border-slate-200 hover:border-[#833AB4]/30",
                       "transition-all duration-200",
-                      "text-foreground/80 hover:text-primary"
+                      "text-slate-700 hover:text-[#833AB4]"
                     )}
                   >
                     <action.icon className="w-4 h-4" />
@@ -322,10 +322,10 @@ export function LuigiWebsiteWidget() {
         {/* Typing indicator */}
         {isLoading && (
           <div className="flex items-center gap-2 py-2 animate-in fade-in duration-200">
-            <div className="flex gap-1 px-4 py-3 bg-secondary rounded-2xl rounded-bl-sm border border-border">
-              <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="flex gap-1 px-4 py-3 bg-slate-100 rounded-2xl rounded-bl-sm border border-slate-200">
+              <span className="w-2 h-2 rounded-full bg-[#833AB4]/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2 h-2 rounded-full bg-[#833AB4]/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2 h-2 rounded-full bg-[#833AB4]/60 animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}
@@ -334,7 +334,7 @@ export function LuigiWebsiteWidget() {
       </div>
 
       {/* Input area */}
-      <div className="p-3 border-t border-border bg-card/80">
+      <div className="p-3 border-t border-slate-200 bg-white">
         <div className="flex gap-2">
           <input
             type="text"
@@ -344,9 +344,9 @@ export function LuigiWebsiteWidget() {
             placeholder="Type a message..."
             disabled={isLoading}
             className={cn(
-              "flex-1 bg-secondary border border-border rounded-full",
-              "px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
-              "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50",
+              "flex-1 bg-white border border-slate-300 rounded-full",
+              "px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400",
+              "focus:outline-none focus:ring-2 focus:ring-[#833AB4]/50 focus:border-[#833AB4]/50",
               "transition-all duration-200"
             )}
           />

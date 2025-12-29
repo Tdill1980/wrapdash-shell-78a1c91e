@@ -72,13 +72,13 @@
       right: 0;
       width: 380px;
       height: 500px;
-      background: #1a1a2e;
+      background: #ffffff;
       border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
       display: none;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid #e2e8f0;
     }
     .wcai-chat-window.open {
       display: flex;
@@ -128,6 +128,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      background: #f8fafc;
     }
     .wcai-message {
       max-width: 85%;
@@ -144,12 +145,13 @@
     }
     .wcai-message.agent {
       align-self: flex-start;
-      background: rgba(255,255,255,0.1);
-      color: #e0e0e0;
+      background: #f1f5f9;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
       border-bottom-left-radius: 4px;
     }
     .wcai-message.typing {
-      background: rgba(255,255,255,0.05);
+      background: #f1f5f9;
     }
     .wcai-typing-dots {
       display: flex;
@@ -158,7 +160,7 @@
     .wcai-typing-dots span {
       width: 8px;
       height: 8px;
-      background: #888;
+      background: #833AB4;
       border-radius: 50%;
       animation: wcai-bounce 1.4s infinite ease-in-out;
     }
@@ -171,22 +173,23 @@
     }
     .wcai-chat-input-area {
       padding: 16px;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      border-top: 1px solid #e2e8f0;
+      background: #ffffff;
       display: flex;
       gap: 10px;
     }
     .wcai-chat-input {
       flex: 1;
       padding: 12px 16px;
-      border: 1px solid rgba(255,255,255,0.2);
+      border: 1px solid #cbd5e1;
       border-radius: 24px;
-      background: rgba(255,255,255,0.05);
-      color: white;
+      background: #ffffff;
+      color: #0f172a;
       font-size: 14px;
       outline: none;
     }
     .wcai-chat-input::placeholder {
-      color: rgba(255,255,255,0.5);
+      color: #94a3b8;
     }
     .wcai-chat-input:focus {
       border-color: #833AB4;
@@ -248,16 +251,16 @@
   container.innerHTML = `
     <div class="wcai-chat-window" id="wcai-window">
       <div class="wcai-chat-header">
-        <div class="wcai-chat-header-avatar">🧑‍🍳</div>
+        <div class="wcai-chat-header-avatar">J</div>
         <div class="wcai-chat-header-info">
-          <h3>Luigi</h3>
-          <p>WPW Ordering Concierge • Online</p>
+          <h3>Jordan</h3>
+          <p>WPW Live Chat Agent • Online</p>
         </div>
         <button class="wcai-chat-close" id="wcai-close">&times;</button>
       </div>
       <div class="wcai-chat-messages" id="wcai-messages">
         <div class="wcai-message agent">
-          👋 Hi! I'm Luigi, your WPW Ordering Concierge. I can help you understand pricing, choose materials (including specialty films), and place your order step by step. What can I help you with today?
+          Hey! I'm Jordan with WePrintWraps.com. What can I help you with today?
         </div>
       </div>
       <div class="wcai-chat-input-area">
