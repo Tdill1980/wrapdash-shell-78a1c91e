@@ -121,15 +121,18 @@ export default function ChatWidgetDemo() {
       <div className="fixed bottom-5 right-5 z-[9999] font-sans">
         {/* Chat Window */}
         {isOpen && (
-          <div className="absolute bottom-20 right-0 w-[380px] h-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] px-5 py-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#405DE6] to-[#E1306C] flex items-center justify-center text-lg font-bold text-white">
+          <div className="absolute bottom-20 right-0 w-[380px] h-[520px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+            {/* Header - Enhanced blue to purple gradient */}
+            <div className="bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7] px-5 py-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3B82F6] via-[#8B5CF6] to-[#A855F7] flex items-center justify-center text-lg font-bold text-white shadow-lg">
                 J
               </div>
               <div className="flex-1">
                 <h3 className="text-white font-semibold text-base">Jordan</h3>
-                <p className="text-white/80 text-xs">WPW Live Chat Agent • Online</p>
+                <p className="text-white/80 text-xs flex items-center gap-1">
+                  <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                  WPW Live Chat Agent • Online
+                </p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -174,12 +177,18 @@ export default function ChatWidgetDemo() {
               />
               <button
                 onClick={sendDemo}
-                className="w-11 h-11 rounded-full bg-gradient-to-r from-[#405DE6] to-[#E1306C] text-white flex items-center justify-center hover:scale-105 transition-transform"
+                className="w-11 h-11 rounded-full bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7] text-white flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
               </button>
+            </div>
+            
+            {/* WePrintWraps.com branding */}
+            <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-center">
+              <span className="text-xs text-slate-400">Powered by </span>
+              <span className="text-xs font-medium text-[#7C3AED]">weprintwraps.com</span>
             </div>
           </div>
         )}
@@ -187,7 +196,7 @@ export default function ChatWidgetDemo() {
         {/* Bubble */}
         <div
           onClick={() => setIsOpen(!isOpen)}
-          className="w-[60px] h-[60px] rounded-full bg-gradient-to-br from-[#405DE6] via-[#833AB4] to-[#E1306C] cursor-pointer flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+          className="w-[60px] h-[60px] rounded-full bg-gradient-to-br from-[#2563EB] via-[#7C3AED] to-[#A855F7] cursor-pointer flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
         >
           <svg width="28" height="28" fill="white" viewBox="0 0 24 24">
             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
