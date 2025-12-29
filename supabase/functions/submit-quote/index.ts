@@ -106,11 +106,11 @@ async function sendConfirmationEmail(
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           
-          <!-- Header -->
+          <!-- Header - Single text node to prevent email client auto-linking -->
           <tr>
-            <td style="background-color: #0f172a; padding: 30px; text-align: center;">
-              <h1 style="color: #00AFFF; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px;"><span style="color: #FF1493;">WePrint</span><span style="color: #00AFFF;">Wraps</span><span style="color: #ffffff;">.com</span></h1>
-              <p style="color: #00AFFF; margin: 8px 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Print-Only Wholesale Wrap Pricing</p>
+            <td style="background-color: #0f172a; padding: 26px 16px; text-align: center;">
+              <div style="font-family: Arial, Helvetica, sans-serif; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; line-height: 1.2;">WePrintWraps.com</div>
+              <div style="margin-top: 6px; font-family: Arial, Helvetica, sans-serif; font-size: 12px; letter-spacing: 2px; color: #38bdf8;">PRINT-ONLY WHOLESALE WRAP PRICING</div>
             </td>
           </tr>
           
