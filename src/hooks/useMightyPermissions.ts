@@ -50,36 +50,57 @@ const ROLE_PERMISSIONS: Record<UserRole, {
   }
 };
 
-// Map email/user to role - in production this would come from database
-const USER_ROLE_MAP: Record<string, UserRole> = {
-  'trish@weprintwraps.com': 'admin',
-  'jackson@weprintwraps.com': 'orchestrator',
-  'manny@weprintwraps.com': 'designer',
-  'grant@weprintwraps.com': 'agent',
-  'alex@weprintwraps.com': 'agent',
-  'lance@weprintwraps.com': 'designer'
+// Role type mapping from database app_role enum
+const DB_ROLE_TO_UI_ROLE: Record<string, UserRole> = {
+  'admin': 'admin',
+  'moderator': 'orchestrator',
+  'user': 'agent'
 };
 
 export function useMightyPermissions(): MightyPermissions {
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [role, setRole] = useState<UserRole>('agent');
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserEmail(user?.email || null);
-      setUserId(user?.id || null);
-      setLoading(false);
+    const fetchUserAndRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        setUserEmail(user.email || null);
+        setUserId(user.id);
+
+        // Fetch role from database user_roles table
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (roleData?.role) {
+          // Map database role to UI role
+          const dbRole = roleData.role as string;
+          setRole(DB_ROLE_TO_UI_ROLE[dbRole] || 'agent');
+        } else {
+          // Default to agent if no role found
+          setRole('agent');
+        }
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+        setRole('agent');
+      } finally {
+        setLoading(false);
+      }
     };
     
-    getUser();
+    fetchUserAndRole();
   }, []);
-
-  const role = useMemo((): UserRole => {
-    if (!userEmail) return 'orchestrator'; // Default to orchestrator for demo
-    return USER_ROLE_MAP[userEmail.toLowerCase()] || 'orchestrator';
-  }, [userEmail]);
 
   const permissions = ROLE_PERMISSIONS[role];
 
