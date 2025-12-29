@@ -11,7 +11,6 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Target,
   Zap,
   Instagram,
   Mail,
@@ -20,9 +19,7 @@ import {
   Check,
   X,
   Clock,
-  AlertTriangle,
   Loader2,
-  RefreshCw,
   Play,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay, isToday } from "date-fns";
@@ -39,14 +36,6 @@ interface Task {
   created_at: string;
   task_type?: string;
   auto_generated?: boolean;
-}
-
-interface SalesData {
-  todayRevenue: number;
-  dailyTarget: number;
-  status: string;
-  percentComplete: number;
-  dailyPaceRequired: number;
 }
 
 const CONTENT_TYPE_ICONS: Record<string, React.ElementType> = {
@@ -153,42 +142,6 @@ export function DailyFlywheel() {
     enabled: true,
   });
 
-  // Fetch today's sales data
-  const { data: salesData, isLoading: salesLoading, refetch: refetchSales } = useQuery({
-    queryKey: ["daily-sales-check"],
-    queryFn: async (): Promise<SalesData> => {
-      const { data, error } = await supabase.functions.invoke("sync-woocommerce-sales");
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-      return data as SalesData;
-    },
-    refetchInterval: 300000, // 5 minutes
-  });
-
-  // Trigger autopilot check
-  const autopilotMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("sales-goal-autopilot", {
-        body: { organization_id: organizationId },
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["flywheel-tasks"] });
-      if (data.tasksCreated > 0) {
-        toast.success(`AI created ${data.tasksCreated} content tasks for review`, {
-          description: "Approve them in the task list below",
-        });
-      } else {
-        toast.info("Sales on track - no additional content needed");
-      }
-    },
-    onError: (error) => {
-      toast.error("Failed to run autopilot", { description: error.message });
-    },
-  });
-
   // Approve task
   const approveMutation = useMutation({
     mutationFn: async (taskId: string) => {
@@ -228,63 +181,10 @@ export function DailyFlywheel() {
     return tasks.filter((task) => task.due_date && isSameDay(new Date(task.due_date), date));
   };
 
-  const todayTasks = getTasksForDay(new Date());
   const pendingApprovalTasks = tasks.filter((t) => t.status === "pending_review");
-  const todayBehind = salesData ? salesData.todayRevenue < salesData.dailyTarget : false;
 
   return (
     <div className="space-y-6">
-      {/* Sales Status Banner */}
-      <Card className={`border-2 ${todayBehind ? "border-red-500/50 bg-red-500/5" : "border-green-500/50 bg-green-500/5"}`}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-full ${todayBehind ? "bg-red-500/20" : "bg-green-500/20"}`}>
-                <Target className={`w-6 h-6 ${todayBehind ? "text-red-400" : "text-green-400"}`} />
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Today's Sales</div>
-                <div className="text-2xl font-bold">
-                  ${salesData?.todayRevenue?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || "..."} 
-                  <span className="text-sm font-normal text-muted-foreground"> / $10,000 goal</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetchSales()}
-                disabled={salesLoading}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${salesLoading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-              <Button
-                onClick={() => autopilotMutation.mutate()}
-                disabled={autopilotMutation.isPending}
-                className={todayBehind ? "bg-red-500 hover:bg-red-600" : ""}
-              >
-                {autopilotMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Zap className="w-4 h-4 mr-2" />
-                )}
-                Run AI Autopilot
-              </Button>
-            </div>
-          </div>
-          {todayBehind && salesData && (
-            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm">
-              <AlertTriangle className="w-4 h-4" />
-              <span>
-                ${(salesData.dailyTarget - salesData.todayRevenue).toLocaleString(undefined, { maximumFractionDigits: 0 })} behind daily goal — AI can create content to boost sales
-              </span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Pending Approvals */}
       {pendingApprovalTasks.length > 0 && (
         <Card className="border-amber-500/50 bg-amber-500/5">
@@ -425,7 +325,6 @@ export function DailyFlywheel() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p>No tasks scheduled</p>
-                  <p className="text-xs">Run AI Autopilot to generate content tasks</p>
                 </div>
               ) : (
                 <div className="space-y-2">
