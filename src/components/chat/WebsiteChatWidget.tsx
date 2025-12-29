@@ -11,10 +11,10 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { icon: Car, label: "Get a Quote", message: "I want a wrap quote for my vehicle" },
-  { icon: Palette, label: "Specialty Films", message: "Tell me about specialty films" },
-  { icon: Package, label: "How to Order", message: "How do I place an order?" },
-  { icon: Search, label: "Track Order", message: "I want to track my order" },
+  { icon: Car, label: "How much does a wrap cost?", message: "How much does a wrap cost?" },
+  { icon: Package, label: "How do I order?", message: "How do I place an order?" },
+  { icon: Palette, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
+  { icon: Search, label: "Order status", message: "I want to check my order status" },
 ];
 
 export function WebsiteChatWidget() {
@@ -33,7 +33,7 @@ export function WebsiteChatWidget() {
         {
           id: "welcome",
           role: "assistant",
-          content: "👋 Hey there! I'm Jordan. I can help you with pricing, ordering, or bulk wrap questions. What can I help you with?",
+          content: "Hey! I'm Jordan with WePrintWraps.com. What can I help you with today?",
         },
       ]);
     }
@@ -149,14 +149,14 @@ export function WebsiteChatWidget() {
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30 text-xl">
-              👋
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#405DE6] to-[#E1306C] flex items-center justify-center ring-2 ring-white/30 text-lg font-bold text-white">
+              J
             </div>
             <div>
-              <span className="font-bold text-white block text-lg tracking-tight">Jordan Lee</span>
+              <span className="font-bold text-white block text-lg tracking-tight">Jordan</span>
               <span className="text-white/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                Ordering Concierge
+                WPW Live Chat Agent • Online
               </span>
             </div>
           </div>
