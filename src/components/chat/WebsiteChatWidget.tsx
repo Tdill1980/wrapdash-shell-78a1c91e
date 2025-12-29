@@ -152,16 +152,16 @@ export function WebsiteChatWidget() {
         onClick={() => setIsOpen(true)}
         className={cn(
           "fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full",
-          "bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C]",
+          "bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
           "text-white shadow-2xl flex items-center justify-center",
           "transition-all duration-300 ease-out",
-          "hover:scale-110 hover:shadow-[0_0_30px_rgba(131,58,180,0.5)]",
+          "hover:scale-110 hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]",
           "before:absolute before:inset-0 before:rounded-full",
-          "before:bg-gradient-to-r before:from-[#405DE6] before:via-[#833AB4] before:to-[#E1306C]",
+          "before:bg-gradient-to-r before:from-[#2563EB] before:via-[#7C3AED] before:to-[#A855F7]",
           "before:animate-ping before:opacity-30"
         )}
         style={{
-          boxShadow: "0 4px 20px rgba(131, 58, 180, 0.4), 0 0 40px rgba(64, 93, 230, 0.2)"
+          boxShadow: "0 4px 20px rgba(124, 58, 237, 0.4), 0 0 40px rgba(37, 99, 235, 0.2)"
         }}
       >
         <MessageCircle className="w-7 h-7 relative z-10" />
@@ -184,12 +184,12 @@ export function WebsiteChatWidget() {
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 60px rgba(131, 58, 180, 0.1)"
       }}
     >
-      {/* Header with gradient */}
-      <div className="relative bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] px-4 py-4">
+      {/* Header with enhanced blue-purple gradient */}
+      <div className="relative bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7] px-4 py-4">
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#405DE6] to-[#E1306C] flex items-center justify-center ring-2 ring-white/30 text-lg font-bold text-white">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#3B82F6] via-[#8B5CF6] to-[#A855F7] flex items-center justify-center ring-2 ring-white/30 text-lg font-bold text-white shadow-lg">
               J
             </div>
             <div>
@@ -292,7 +292,7 @@ export function WebsiteChatWidget() {
             disabled={isLoading || !input.trim()}
             className={cn(
               "shrink-0 rounded-full w-10 h-10",
-              "bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C]",
+              "bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
               "hover:opacity-90 hover:scale-105",
               "transition-all duration-200",
               "disabled:opacity-50 disabled:hover:scale-100"
@@ -300,6 +300,11 @@ export function WebsiteChatWidget() {
           >
             <Send className="w-4 h-4" />
           </Button>
+        </div>
+        {/* WePrintWraps.com branding */}
+        <div className="mt-2 text-center">
+          <span className="text-xs text-slate-400">Powered by </span>
+          <span className="text-xs font-medium text-[#7C3AED]">weprintwraps.com</span>
         </div>
       </div>
     </div>
