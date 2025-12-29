@@ -33,7 +33,7 @@ export function WebsiteChatWidget() {
         {
           id: "welcome",
           role: "assistant",
-          content: "👋 Hi! I'm Luigi, your WPW Ordering Concierge. I can help you understand pricing, choose materials (including specialty films), and place your order step by step. What can I help you with today?",
+          content: "👋 Hey there! I'm Jordan. I can help you with pricing, ordering, or bulk wrap questions. What can I help you with?",
         },
       ]);
     }
@@ -150,13 +150,13 @@ export function WebsiteChatWidget() {
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30 text-xl">
-              🧑‍🍳
+              👋
             </div>
             <div>
-              <span className="font-bold text-white block text-lg tracking-tight">Luigi</span>
+              <span className="font-bold text-white block text-lg tracking-tight">Jordan Lee</span>
               <span className="text-white/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                WPW Ordering Concierge
+                Ordering Concierge
               </span>
             </div>
           </div>
