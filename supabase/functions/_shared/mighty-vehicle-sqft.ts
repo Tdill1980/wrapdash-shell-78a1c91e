@@ -113,14 +113,8 @@ function getQuickRefSqft(make: string, model: string): VehicleSqFtResult | null 
   return null;
 }
 
-function getCategoryEstimate(category?: string): VehicleSqFtResult {
-  const cat = category?.toLowerCase() || 'car';
-  const sqft = CATEGORY_ESTIMATES[cat] || 220;
-  return {
-    sqft,
-    source: 'category_estimate',
-  };
-}
+// REMOVED: Category estimate fallback - was causing incorrect pricing
+// function getCategoryEstimate is no longer used
 
 /**
  * Get vehicle square footage from the authoritative database.
@@ -139,7 +133,7 @@ export async function getVehicleSqFt(
   make: string,
   model: string,
   category?: string
-): Promise<VehicleSqFtResult> {
+): Promise<VehicleSqFtResult | null> {
   const yearNum = typeof year === 'string' ? parseInt(year, 10) : year;
   
   // 1. Try database lookup (authoritative source)
@@ -178,10 +172,13 @@ export async function getVehicleSqFt(
     return quickRef;
   }
   
-  // 3. Fallback to category estimate
-  const estimate = getCategoryEstimate(category);
-  console.log(`[MightySqFt] Category estimate: ${year} ${make} ${model} = ${estimate.sqft} sqft (category: ${category || 'default'})`);
-  return estimate;
+  // 3. NO MATCH - Return null instead of silent fallback
+  console.warn(`[MightySqFt] NO MATCH - Vehicle not in database or quick_ref`, {
+    vehicle: { year, make, model },
+    category,
+    action: 'Returning null - caller must handle'
+  });
+  return null;
 }
 
 /**

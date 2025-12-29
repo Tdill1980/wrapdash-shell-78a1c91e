@@ -63,6 +63,27 @@ serve(async (req: Request): Promise<Response> => {
     // Get authoritative sqft from MightyCommandAI engine
     const result = await getVehicleSqFt(supabase, year, make, model, category);
 
+    // Handle null response (vehicle not in database)
+    if (!result) {
+      console.warn(`[vehicle-sqft] NO MATCH for ${year} ${make} ${model} - returning needs_review`);
+      return new Response(
+        JSON.stringify({
+          year: typeof year === 'string' ? parseInt(year, 10) : year,
+          make,
+          model,
+          sqft: null,
+          panels: null,
+          source: 'no_match',
+          needs_review: true,
+          message: 'Vehicle not found in pricing database'
+        }),
+        { 
+          status: 200, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+
     console.log(`[vehicle-sqft] ${year} ${make} ${model} → ${result.sqft} sqft (source: ${result.source})`);
 
     // Return result
