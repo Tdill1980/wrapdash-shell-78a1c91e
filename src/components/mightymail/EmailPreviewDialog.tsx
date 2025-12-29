@@ -45,7 +45,7 @@ export function EmailPreviewDialog({ open, onOpenChange, quoteData, tone: initia
     if (open && quoteData) {
       generatePreview();
     }
-  }, [open, tone, design, quoteData]);
+  }, [open, tone, design, quoteData, logoUrl]);
 
   function generatePreview() {
     setLoading(true);
@@ -59,7 +59,7 @@ export function EmailPreviewDialog({ open, onOpenChange, quoteData, tone: initia
         sqft: quoteData.sqft,
         material_cost: quoteData.materialCost,
         labor_cost: quoteData.laborCost,
-        quote_total: quoteData.total,
+        quote_total: typeof quoteData.total === "number" ? quoteData.total : Number(quoteData.total || 0),
         portal_url: quoteData.portalUrl || "#",
         footer_text: "Professional vehicle wrap solutions.",
         logo_url: logoUrl,
@@ -67,6 +67,7 @@ export function EmailPreviewDialog({ open, onOpenChange, quoteData, tone: initia
       setPreviewHTML(html);
     } catch (error) {
       console.error("Error generating preview:", error);
+      setPreviewHTML(`<!doctype html><html><body style="font-family: system-ui; padding: 16px;"><h3>Email preview failed to render</h3><pre style="white-space: pre-wrap;">${String(error)}</pre></body></html>`);
     } finally {
       setLoading(false);
     }
