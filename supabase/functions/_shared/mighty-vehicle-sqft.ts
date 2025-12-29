@@ -16,6 +16,7 @@ export interface VehicleSqFtResult {
 }
 
 // TOP 25 MOST QUOTED VEHICLES - QUICK REFERENCE (fallback)
+// Keys are normalized: lowercase, spaces/hyphens → underscores
 const VEHICLE_QUICK_REF: Record<string, { sqft: number; category: string }> = {
   // CARS
   'honda_civic': { sqft: 200, category: 'car' },
@@ -31,23 +32,26 @@ const VEHICLE_QUICK_REF: Record<string, { sqft: number; category: string }> = {
   'tesla_model_s': { sqft: 230, category: 'car' },
   'tesla_model_x': { sqft: 250, category: 'suv' },
   
-  // TRUCKS
-  'ford_f-150': { sqft: 250, category: 'truck' },
-  'ford_f150': { sqft: 250, category: 'truck' },
+  // TRUCKS - F-series with all normalized variants (all use underscores now)
+  'ford_f_150': { sqft: 341, category: 'truck' },   // Matches "F-150", "F 150", "F150"
+  'ford_f_250': { sqft: 280, category: 'truck' },
+  'ford_f_350': { sqft: 300, category: 'truck' },
   'chevy_silverado': { sqft: 260, category: 'truck' },
   'chevrolet_silverado': { sqft: 260, category: 'truck' },
+  'chevy_silverado_1500': { sqft: 260, category: 'truck' },
+  'chevrolet_silverado_1500': { sqft: 260, category: 'truck' },
   'ram_1500': { sqft: 255, category: 'truck' },
   'toyota_tacoma': { sqft: 220, category: 'truck' },
   'toyota_tundra': { sqft: 260, category: 'truck' },
-  'ford_f-250': { sqft: 280, category: 'truck' },
-  'ford_f250': { sqft: 280, category: 'truck' },
-  'ford_f-350': { sqft: 300, category: 'truck' },
-  'ford_f350': { sqft: 300, category: 'truck' },
   'gmc_sierra': { sqft: 260, category: 'truck' },
+  'gmc_sierra_1500': { sqft: 260, category: 'truck' },
   
   // VANS
   'ford_transit': { sqft: 250, category: 'van' },
+  'ford_transit_low': { sqft: 220, category: 'van' },
+  'ford_transit_high': { sqft: 280, category: 'van' },
   'mercedes_sprinter': { sqft: 260, category: 'van' },
+  'mercedes_benz_sprinter': { sqft: 260, category: 'van' },
   'nissan_nv200': { sqft: 180, category: 'van' },
   'ram_promaster': { sqft: 260, category: 'van' },
   'chevy_express': { sqft: 280, category: 'van' },
@@ -57,6 +61,7 @@ const VEHICLE_QUICK_REF: Record<string, { sqft: number; category: string }> = {
   'chevy_tahoe': { sqft: 240, category: 'suv' },
   'chevrolet_tahoe': { sqft: 240, category: 'suv' },
   'ford_explorer': { sqft: 220, category: 'suv' },
+  'ford_expedition': { sqft: 260, category: 'suv' },
   'jeep_grand_cherokee': { sqft: 200, category: 'suv' },
   'jeep_wrangler': { sqft: 180, category: 'suv' },
   'ford_bronco': { sqft: 200, category: 'suv' },
@@ -64,7 +69,7 @@ const VEHICLE_QUICK_REF: Record<string, { sqft: number; category: string }> = {
   'chevrolet_suburban': { sqft: 280, category: 'suv' },
   'gmc_yukon': { sqft: 250, category: 'suv' },
   'cadillac_escalade': { sqft: 280, category: 'suv' },
-  'honda_cr-v': { sqft: 200, category: 'suv' },
+  'honda_cr_v': { sqft: 200, category: 'suv' },
   'honda_crv': { sqft: 200, category: 'suv' },
   'toyota_4runner': { sqft: 220, category: 'suv' },
   'acura_mdx': { sqft: 220, category: 'suv' },
@@ -83,26 +88,58 @@ const CATEGORY_ESTIMATES: Record<string, number> = {
   'luxury': 230,
 };
 
+/**
+ * Normalize a string for key matching
+ * Converts to lowercase, trims, replaces spaces/hyphens with underscores
+ */
 function normalizeString(str: string): string {
-  return str.toLowerCase().trim().replace(/\s+/g, '_').replace(/-/g, '_');
+  return str.toLowerCase().trim().replace(/[\s-]+/g, '_');
+}
+
+/**
+ * Generate model variants for F-series and similar patterns
+ * "F 150" → ["F 150", "F-150", "F150"]
+ */
+function getModelSearchVariants(model: string): string[] {
+  const trimmed = model.trim();
+  const variants = new Set<string>();
+  
+  variants.add(trimmed);
+  
+  // F-series pattern: F 150, F-150, F150
+  const fMatch = trimmed.match(/^f[\s\-]?(\d{3})$/i);
+  if (fMatch) {
+    const num = fMatch[1];
+    variants.add(`F-${num}`);    // F-150 (database format)
+    variants.add(`F ${num}`);    // F 150
+    variants.add(`F${num}`);     // F150
+  }
+  
+  // General: swap spaces ↔ hyphens
+  variants.add(trimmed.replace(/\s+/g, '-'));
+  variants.add(trimmed.replace(/-/g, ' '));
+  
+  return Array.from(variants);
 }
 
 function getQuickRefSqft(make: string, model: string): VehicleSqFtResult | null {
   const normalizedMake = normalizeString(make);
   const normalizedModel = normalizeString(model);
   
-  // Try exact match
+  // Try exact match with fully normalized key
   const key = `${normalizedMake}_${normalizedModel}`;
   if (VEHICLE_QUICK_REF[key]) {
+    console.log(`[MightySqFt] Quick ref exact: ${key} → ${VEHICLE_QUICK_REF[key].sqft} sqft`);
     return {
       sqft: VEHICLE_QUICK_REF[key].sqft,
       source: 'quick_ref',
     };
   }
   
-  // Try model only (for common vehicles)
+  // Try partial match (model contains)
   for (const [refKey, data] of Object.entries(VEHICLE_QUICK_REF)) {
-    if (refKey.includes(normalizedModel) || refKey.endsWith(`_${normalizedModel}`)) {
+    if (refKey.startsWith(`${normalizedMake}_`) && refKey.includes(normalizedModel)) {
+      console.log(`[MightySqFt] Quick ref partial: ${refKey} → ${data.sqft} sqft`);
       return {
         sqft: data.sqft,
         source: 'quick_ref',
@@ -110,6 +147,7 @@ function getQuickRefSqft(make: string, model: string): VehicleSqFtResult | null 
     }
   }
   
+  console.log(`[MightySqFt] Quick ref miss: tried "${key}"`);
   return null;
 }
 
@@ -136,45 +174,52 @@ export async function getVehicleSqFt(
 ): Promise<VehicleSqFtResult | null> {
   const yearNum = typeof year === 'string' ? parseInt(year, 10) : year;
   
-  // 1. Try database lookup (authoritative source)
-  try {
-    const { data, error } = await supabase
-      .from('vehicle_dimensions')
-      .select('corrected_sqft, side_sqft, back_sqft, hood_sqft, roof_sqft, year_start, year_end')
-      .ilike('make', make.trim())
-      .ilike('model', model.trim())
-      .lte('year_start', yearNum)
-      .gte('year_end', yearNum)
-      .limit(1)
-      .single();
-    
-    if (data && !error && data.corrected_sqft) {
-      console.log(`[MightySqFt] Database hit: ${year} ${make} ${model} = ${data.corrected_sqft} sqft`);
-      return {
-        sqft: data.corrected_sqft,
-        panels: {
-          sides: data.side_sqft || 0,
-          back: data.back_sqft || 0,
-          hood: data.hood_sqft || 0,
-          roof: data.roof_sqft || 0,
-        },
-        source: 'database',
-      };
+  console.log(`[MightySqFt] Looking up: ${yearNum} ${make} ${model}`);
+  
+  // Generate model variants to try (handles "F 150" → "F-150" etc)
+  const modelVariants = getModelSearchVariants(model);
+  console.log(`[MightySqFt] Model variants: ${modelVariants.join(', ')}`);
+  
+  // 1. Try database lookup with each variant (authoritative source)
+  for (const modelVariant of modelVariants) {
+    try {
+      const { data, error } = await supabase
+        .from('vehicle_dimensions')
+        .select('corrected_sqft, side_sqft, back_sqft, hood_sqft, roof_sqft, year_start, year_end, make, model')
+        .ilike('make', make.trim())
+        .ilike('model', modelVariant)
+        .lte('year_start', yearNum)
+        .gte('year_end', yearNum)
+        .limit(1)
+        .maybeSingle();
+      
+      if (data && !error && data.corrected_sqft) {
+        console.log(`[MightySqFt] Database hit: ${data.make} ${data.model} (${data.year_start}-${data.year_end}) = ${data.corrected_sqft} sqft`);
+        return {
+          sqft: data.corrected_sqft,
+          panels: {
+            sides: data.side_sqft || 0,
+            back: data.back_sqft || 0,
+            hood: data.hood_sqft || 0,
+            roof: data.roof_sqft || 0,
+          },
+          source: 'database',
+        };
+      }
+    } catch (err) {
+      console.warn(`[MightySqFt] Database error for "${modelVariant}":`, err);
     }
-  } catch (err) {
-    console.warn(`[MightySqFt] Database lookup error:`, err);
   }
   
-  // 2. Try quick reference (top 25 vehicles)
+  // 2. Try quick reference (top vehicles)
   const quickRef = getQuickRefSqft(make, model);
   if (quickRef) {
-    console.log(`[MightySqFt] Quick ref hit: ${year} ${make} ${model} = ${quickRef.sqft} sqft`);
     return quickRef;
   }
   
   // 3. NO MATCH - Return null instead of silent fallback
-  console.warn(`[MightySqFt] NO MATCH - Vehicle not in database or quick_ref`, {
-    vehicle: { year, make, model },
+  console.warn(`[MightySqFt] NO MATCH for: ${yearNum} ${make} ${model}`, {
+    variants_tried: modelVariants,
     category,
     action: 'Returning null - caller must handle'
   });
