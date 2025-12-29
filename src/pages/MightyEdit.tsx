@@ -54,6 +54,7 @@ export default function MightyEdit() {
     editQueue,
     musicRecommendations,
     renderProgress,
+    lastCreativeId,
     fetchEditQueue,
     scanContentLibrary,
     matchMusic,
@@ -62,6 +63,8 @@ export default function MightyEdit() {
     selectMusic,
     markTaskComplete,
     stopPolling,
+    generateBlueprint,
+    createCreativeRecord,
   } = useMightyEdit();
 
   const [activeTab, setActiveTab] = useState("scanner");
@@ -180,6 +183,7 @@ export default function MightyEdit() {
     console.log('[MightyEdit] Selected video:', selectedVideo);
     console.log('[MightyEdit] Render type:', renderType);
     
+    // Step 1: Ensure video is in the queue
     const queueId = await ensureVideoInQueue(selectedVideo);
     if (!queueId) {
       console.error('[MightyEdit] Could not ensure video in queue');
@@ -188,6 +192,33 @@ export default function MightyEdit() {
     }
     
     console.log('[MightyEdit] Video queue ID:', queueId);
+    
+    // Step 2: Generate blueprint for the video
+    console.log('[MightyEdit] Generating blueprint...');
+    toast.loading('Preparing render...', { id: `render-prep-${queueId}` });
+    
+    const blueprint = await generateBlueprint(selectedVideo);
+    if (!blueprint || !blueprint.scenes?.length) {
+      console.error('[MightyEdit] Blueprint generation failed');
+      toast.error('Failed to generate video blueprint', { id: `render-prep-${queueId}` });
+      return;
+    }
+    
+    console.log('[MightyEdit] Blueprint generated with', blueprint.scenes.length, 'scenes');
+    
+    // Step 3: Create ai_creatives record and link to queue
+    console.log('[MightyEdit] Creating creative record...');
+    const creative = await createCreativeRecord(selectedVideo, blueprint, queueId);
+    
+    if (creative) {
+      console.log('[MightyEdit] Creative record created:', creative.id);
+      toast.success('Creative saved to vault', { id: `render-prep-${queueId}` });
+    } else {
+      console.warn('[MightyEdit] Could not create creative record, proceeding with render anyway');
+      toast.dismiss(`render-prep-${queueId}`);
+    }
+    
+    // Step 4: Execute the render
     console.log('[MightyEdit] Calling executeEdits...');
     
     try {
