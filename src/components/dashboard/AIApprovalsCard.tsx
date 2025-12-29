@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   CheckCircle, XCircle, AlertCircle, Clock, 
   FileText, MessageSquare, DollarSign, RefreshCw,
-  ArrowRight, Sparkles, Send, Eye
+  ArrowRight, Sparkles, Send, Eye, Filter, ListTodo
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,20 @@ interface AIAction {
   priority: string | null;
   created_at: string | null;
   resolved: boolean | null;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
 }
+
+type FilterType = 'all' | 'quotes' | 'file_review' | 'messages' | 'escalations' | 'other';
+
+const FILTER_CONFIG: Record<FilterType, { label: string; actionTypes: string[] | null }> = {
+  all: { label: 'All', actionTypes: null },
+  quotes: { label: 'Quotes', actionTypes: ['auto_quote_generated', 'create_quote', 'quote_generated'] },
+  file_review: { label: 'File Reviews', actionTypes: ['file_review'] },
+  messages: { label: 'Messages', actionTypes: ['approve_message'] },
+  escalations: { label: 'Escalations', actionTypes: ['escalation'] },
+  other: { label: 'Other', actionTypes: ['create_task', 'sales_recovery_content', 'content_request', 'content_draft'] },
+};
 
 const ACTION_TYPE_CONFIG: Record<string, { icon: typeof FileText; label: string; color: string }> = {
   quote_generated: { icon: DollarSign, label: "Quote", color: "text-green-400" },
@@ -57,6 +70,10 @@ const ACTION_TYPE_CONFIG: Record<string, { icon: typeof FileText; label: string;
   content_draft: { icon: FileText, label: "Content", color: "text-blue-400" },
   escalation: { icon: AlertCircle, label: "Escalation", color: "text-yellow-400" },
   file_review: { icon: FileText, label: "File Review", color: "text-purple-400" },
+  approve_message: { icon: MessageSquare, label: "Message", color: "text-blue-400" },
+  create_task: { icon: ListTodo, label: "Task", color: "text-cyan-400" },
+  sales_recovery_content: { icon: DollarSign, label: "Sales Recovery", color: "text-orange-400" },
+  content_request: { icon: FileText, label: "Content Request", color: "text-indigo-400" },
   default: { icon: MessageSquare, label: "Action", color: "text-muted-foreground" },
 };
 
@@ -74,20 +91,28 @@ export function AIApprovalsCard() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<AIAction | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [filterCounts, setFilterCounts] = useState<Record<FilterType, number>>({
+    all: 0, quotes: 0, file_review: 0, messages: 0, escalations: 0, other: 0
+  });
+  const [showHistory, setShowHistory] = useState(false);
 
-  useEffect(() => {
-    fetchPendingActions();
-  }, []);
-
-  const fetchPendingActions = async () => {
+  const fetchPendingActions = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("ai_actions")
         .select("*")
-        .eq("resolved", false)
+        .eq("resolved", showHistory)
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(25);
 
+      // Apply filter if not "all"
+      const filterConfig = FILTER_CONFIG[filterType];
+      if (filterConfig.actionTypes) {
+        query = query.in('action_type', filterConfig.actionTypes);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setActions((data || []) as unknown as AIAction[]);
     } catch (err) {
@@ -95,7 +120,57 @@ export function AIApprovalsCard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterType, showHistory]);
+
+  const fetchFilterCounts = useCallback(async () => {
+    try {
+      // Fetch counts for each filter type
+      const countPromises = Object.entries(FILTER_CONFIG).map(async ([key, config]) => {
+        let query = supabase
+          .from("ai_actions")
+          .select("id", { count: 'exact', head: true })
+          .eq("resolved", showHistory);
+        
+        if (config.actionTypes) {
+          query = query.in('action_type', config.actionTypes);
+        }
+        
+        const { count } = await query;
+        return [key, count || 0] as [FilterType, number];
+      });
+      
+      const results = await Promise.all(countPromises);
+      setFilterCounts(Object.fromEntries(results) as Record<FilterType, number>);
+    } catch (err) {
+      console.error("Error fetching filter counts:", err);
+    }
+  }, [showHistory]);
+
+  useEffect(() => {
+    fetchPendingActions();
+    fetchFilterCounts();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('ai-actions-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ai_actions'
+        },
+        () => {
+          fetchPendingActions();
+          fetchFilterCounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchPendingActions, fetchFilterCounts]);
 
   const isQuoteAction = (actionType: string) => {
     return ['create_quote', 'auto_quote_generated', 'quote_generated'].includes(actionType);
@@ -302,14 +377,14 @@ export function AIApprovalsCard() {
 
   return (
     <Card className="dashboard-card">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="dashboard-card-title flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
             AI Approvals
-            {actions.length > 0 && (
+            {filterCounts.all > 0 && !showHistory && (
               <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary">
-                {actions.length} pending
+                {filterCounts.all}
               </Badge>
             )}
           </CardTitle>
@@ -323,14 +398,67 @@ export function AIApprovalsCard() {
             <ArrowRight className="w-3 h-3 ml-1" />
           </Button>
         </div>
+        
+        {/* Pending / History toggle */}
+        <div className="flex gap-1 mt-2">
+          <Button
+            variant={!showHistory ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setShowHistory(false)}
+            className="h-7 text-xs"
+          >
+            Pending ({filterCounts.all})
+          </Button>
+          <Button
+            variant={showHistory ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setShowHistory(true)}
+            className="h-7 text-xs"
+          >
+            History
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent>
+      
+      <CardContent className="pt-2">
+        {/* Filter bar */}
+        <div className="flex gap-1 flex-wrap mb-3">
+          {(Object.keys(FILTER_CONFIG) as FilterType[]).map((key) => {
+            const config = FILTER_CONFIG[key];
+            const count = filterCounts[key];
+            const isActive = filterType === key;
+            
+            return (
+              <Button
+                key={key}
+                variant={isActive ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setFilterType(key)}
+                className={cn(
+                  "h-6 text-[10px] px-2",
+                  isActive && "bg-primary/20 text-primary"
+                )}
+              >
+                <Filter className="w-3 h-3 mr-1" />
+                {config.label}
+                {count > 0 && (
+                  <span className="ml-1 opacity-70">({count})</span>
+                )}
+              </Button>
+            );
+          })}
+        </div>
+
         {actions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <CheckCircle className="w-10 h-10 text-green-400 mb-3" />
-            <p className="text-sm font-medium text-foreground">All caught up!</p>
+            <p className="text-sm font-medium text-foreground">
+              {showHistory ? "No history yet" : "All caught up!"}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
-              No pending AI actions require your approval.
+              {showHistory 
+                ? "Approved/rejected actions will appear here."
+                : "No pending AI actions require your approval."}
             </p>
           </div>
         ) : (
