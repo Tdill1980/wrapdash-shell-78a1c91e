@@ -62,7 +62,7 @@ serve(async (req) => {
     console.log('WooCommerce webhook received:', webhook);
 
     // Parse WooCommerce order data
-    const orderNumber = webhook.id?.toString() || webhook.order_key;
+    const orderNumber = webhook.number?.toString() || webhook.id?.toString() || webhook.order_key;
     const customerName = `${webhook.billing?.first_name || ''} ${webhook.billing?.last_name || ''}`.trim();
     const orderTotal = parseFloat(webhook.total || '0');
     const customerEmail = webhook.billing?.email;
