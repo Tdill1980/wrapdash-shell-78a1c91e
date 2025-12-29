@@ -97,9 +97,23 @@ serve(async (req) => {
         vehicleMatch = fallbackVehicle;
         console.log('Fallback vehicle match:', fallbackVehicle);
       } else {
-        // Default SQFT for unknown vehicles
-        sqft = 250; // Average vehicle size
-        console.log('No vehicle match, using default SQFT:', sqft);
+        // ❌ NO SILENT FALLBACK - Fail loudly when vehicle cannot be identified
+        console.warn('[PRICING BLOCKED]', {
+          source: source,
+          vehicle: { year, make: vehicleMake, model: vehicleModel },
+          reason: 'No database match found for vehicle'
+        });
+        
+        // Return success but flag for manual review (no price)
+        return new Response(
+          JSON.stringify({
+            success: true,
+            needs_review: true,
+            message: 'Vehicle information insufficient for pricing. Manual review required.',
+            vehicle: { year, make: vehicleMake, model: vehicleModel }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 

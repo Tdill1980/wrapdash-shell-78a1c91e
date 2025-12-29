@@ -68,7 +68,13 @@ function getVehicleSqft(make: string, model: string): number {
   if (/truck|f-?\d{3}|silverado|sierra|ram|tundra/i.test(model)) return 250;
   if (/suv|tahoe|expedition|suburban|yukon/i.test(model)) return 275;
   
-  return 200; // Default mid-size estimate
+  // ❌ NO SILENT FALLBACK
+  console.warn('[PRICING BLOCKED]', {
+    source: 'create-quote-from-chat',
+    vehicle: { make, model },
+    reason: 'No pattern match for vehicle model'
+  });
+  return 0; // Zero = pricing blocked
 }
 
 function generateQuoteNumber(): string {
@@ -112,6 +118,24 @@ serve(async (req) => {
 
     // Calculate SQFT and pricing
     const sqft = getVehicleSqft(vehicle_make || '', vehicle_model || '');
+    
+    // ❌ NO SILENT FALLBACK - Block pricing for unknown vehicles
+    if (sqft === 0) {
+      console.warn('[CreateQuoteFromChat] PRICING BLOCKED - vehicle not recognized', {
+        vehicle_make, vehicle_model, vehicle_year
+      });
+      
+      return new Response(JSON.stringify({ 
+        success: true,
+        needs_review: true,
+        message: 'Vehicle information insufficient for pricing. Manual review required.',
+        vehicle: { year: vehicle_year, make: vehicle_make, model: vehicle_model }
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
     const pricePerSqft = 5.27; // Both Avery and 3M are now $5.27
     const materialCost = Math.round(sqft * pricePerSqft * 100) / 100;
     const quoteNumber = generateQuoteNumber();
