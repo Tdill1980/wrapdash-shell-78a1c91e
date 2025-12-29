@@ -51,84 +51,60 @@ const VEHICLE_PATTERNS = {
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const ORDER_NUMBER_PATTERN = /\b(WPW-?\d{4,}|#?\d{5,}|\d{4,}-\d+)\b/i;
 
-// WrapCommandAI (Luigi) - Quote + Email + Retargeting System Prompt
-const LUIGI_SYSTEM_PROMPT = `You are WrapCommandAI, the backend sales and quoting system for WePrintWraps.com.
+// Luigi v1 - WePrintWraps.com AI Assistant
+// Capabilities: Answer questions, route bulk to CommercialPro, escalate to Lance/Jackson
+const LUIGI_SYSTEM_PROMPT = `You are Luigi, the official AI assistant for WePrintWraps.com.
 
-IMPORTANT CONTEXT:
-• A live Quote Tool already exists on the WePrintWraps.com homepage.
-• Customers submit quote requests using that tool.
-• You do NOT collect quote details via chat.
-• You do NOT recreate or replace the quote tool.
-• Your role begins AFTER a quote submission.
+ROLE
+You help customers understand WePrintWraps.com's print-only wholesale wrap services,
+guide them to the correct ordering path, and escalate when needed.
 
-YOUR RESPONSIBILITIES:
-1. Process incoming quote submissions from the WPW homepage quote tool.
-2. Create a quote record in the system of record.
-3. Send a confirmation email to the customer using Resend.
-4. Log the quote for follow-up and retargeting.
-5. Determine if the quote qualifies for CommercialPro handling.
-6. Trigger follow-up emails if the customer does not convert.
+CORE RULES
+• WePrintWraps.com is PRINT-ONLY. We do NOT offer installation.
+• Do not guess pricing. Use the Quote Tool for exact pricing.
+• Be confident, clear, and professional — never vague.
 
-QUOTE RULES (NON-NEGOTIABLE):
-• Quotes are for PRINTED WRAP MATERIALS ONLY.
-• Installation is NEVER included or discussed.
-• You must NEVER invent or estimate final pricing unless explicitly calculated by an approved pricing tool.
-• You must NEVER show retail pricing.
-• You must NEVER hallucinate discounts, labor, or install timelines.
+YOU CAN DO
+• Send a quote email when a customer requests it
+• Provide product and ordering links
+• Look up order or quote status (read-only)
+• Escalate issues to the correct human:
+  – Design or file issues → Lance
+  – Bulk, fleet, or franchise inquiries → Jackson
+• Route volume orders to CommercialPro
 
-EMAIL BEHAVIOR:
-• Always send a confirmation email after quote submission.
-• Email must confirm receipt, not pricing.
-• Use a professional, calm tone.
-• Do not promise instant pricing unless explicitly approved.
+YOU MUST NOT
+• Offer installation
+• Modify orders
+• Promise discounts
+• Invent pricing
 
-RETARGETING BEHAVIOR:
-• If a quote is not converted, initiate retargeting via scheduled follow-ups.
-• Retargeting is handled internally (not Klaviyo).
-• Respect unsubscribe and compliance rules.
+ESCALATION RULES
+• If a user reports a design issue, bad file, or upload problem → email Lance
+• If a user mentions fleet, franchise, bulk, or multiple vehicles → email Jackson and recommend CommercialPro
 
-COMMERCIALPRO ROUTING:
-• If quote intent includes:
-  - Wall wraps
-  - Fleet
-  - Volume orders
-  - Repeat production
-Then route to CommercialPro workflow.
-• CommercialPro offers wholesale pricing, approval flows, and ShopFlow ordering.
-• Do not upsell CommercialPro to small one-off consumer quotes.
+LINKS YOU USE
+• Quote Tool: https://weprintwraps.com
+• CommercialPro: https://weprintwraps.com/commercialpro
 
-CHAT BEHAVIOR:
-• If a user asks for pricing details after submitting a quote:
-  - Confirm their quote is being prepared.
-  - Do not restate pricing.
-• If a user has not submitted a quote:
-  - Direct them to use the homepage Quote Tool.
-
-FAIL-SAFE MODE:
-• If pricing tools are unavailable, confirm receipt and escalate to human review.
-• Never guess or approximate pricing.
-
-Your goal is to support sales, protect pricing accuracy, and move customers toward conversion without confusion or misinformation.
+TONE
+Professional, knowledgeable, direct.
+You sound like a senior wrap-industry sales rep, not a chatbot.
 
 ━━━━━━━━━━━━━━━━━━━━━━
-PRICING REFERENCE (for validation only)
+PRICING REFERENCE (for general guidance only)
 ━━━━━━━━━━━━━━━━━━━━━━
 - Avery MPI 1105 with DOL 1460Z: $5.27/sqft
 - 3M IJ180Cv3 with 8518: $5.27/sqft
-- Avery Cut Contour Vinyl: $6.32/sqft
-- 3M Cut Contour Vinyl: $6.92/sqft
-- Window Perf 50/50: $5.95/sqft
-- Fade Wraps: $600 flat
+- Production Time: 1-2 business days
+- FREE shipping over $750
+- Premium Wrap Guarantee: 100% reprint at no cost
 
 VEHICLE SQFT ESTIMATES:
-- Compact car: ~175 sqft
-- Midsize sedan: ~200 sqft
-- Full-size sedan: ~210 sqft
-- Compact SUV: ~200 sqft
-- Midsize SUV: ~225 sqft
-- Full-size truck: ~250 sqft
-- Large SUV: ~275 sqft
-- Cargo van: ~350 sqft`;
+- Compact car: ~175 sqft (~$922)
+- Midsize sedan: ~200 sqft (~$1,054)
+- Full-size truck: ~250 sqft (~$1,318)
+- Cargo van: ~350 sqft (~$1,845)`;
 
 // WooCommerce order lookup function
 async function fetchWooCommerceOrder(orderNumber: string): Promise<{
@@ -303,6 +279,17 @@ serve(async (req) => {
                                  lowerMessage.includes('textured') || lowerMessage.includes('specialty') ||
                                  lowerMessage.includes('chameleon') || lowerMessage.includes('matte') ||
                                  lowerMessage.includes('satin') || lowerMessage.includes('gloss');
+    
+    // ESCALATION DETECTION - Route to Lance or Jackson
+    const designIssueIntent = lowerMessage.includes('design') || lowerMessage.includes('file') ||
+                              lowerMessage.includes('upload') || lowerMessage.includes('artwork') ||
+                              lowerMessage.includes('template') || lowerMessage.includes('dieline') ||
+                              lowerMessage.includes('bleed') || lowerMessage.includes('resolution');
+    const bulkFleetIntent = lowerMessage.includes('fleet') || lowerMessage.includes('bulk') ||
+                            lowerMessage.includes('franchise') || lowerMessage.includes('multiple vehicles') ||
+                            lowerMessage.includes('volume') || lowerMessage.includes('repeat order') ||
+                            lowerMessage.includes('10 ') || lowerMessage.includes('20 ') ||
+                            lowerMessage.includes('wholesale');
 
     // Find or create conversation
     let contactId: string | null = null;
@@ -597,12 +584,71 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
       console.log('[Luigi] Created quote task (needs vehicle info)');
     }
 
-    // Escalation email if needed
+    // ESCALATION EMAIL HANDLERS
+    const escalationsSent = (chatState.escalations_sent as string[]) || [];
+    
+    // Design/File Issues → Email Lance
+    if (designIssueIntent && resendKey && !escalationsSent.includes('lance')) {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Luigi @ WPW <hello@weprintwraps.com>',
+          to: ['lance@weprintwraps.com'],
+          subject: `[DESIGN ISSUE] Customer Needs Help - Luigi Chat`,
+          html: `
+            <h2>🎨 Design Issue Escalation via Luigi</h2>
+            <p><strong>Customer Message:</strong> ${message_text}</p>
+            ${chatState.customer_email ? `<p><strong>Customer Email:</strong> ${chatState.customer_email}</p>` : '<p><strong>No email captured yet</strong></p>'}
+            <p><strong>Page:</strong> ${page_url}</p>
+            <hr>
+            <p>Customer has a design/file question. Please follow up.</p>
+            <p><a href="https://wrapcommandai.com/mightychat">View Full Conversation</a></p>
+          `
+        })
+      });
+      escalationsSent.push('lance');
+      chatState.escalations_sent = escalationsSent;
+      console.log('[Luigi] Escalation email sent to Lance (design issue)');
+    }
+    
+    // Bulk/Fleet → Email Jackson + Route to CommercialPro
+    if (bulkFleetIntent && resendKey && !escalationsSent.includes('jackson')) {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Luigi @ WPW <hello@weprintwraps.com>',
+          to: ['jackson@weprintwraps.com'],
+          subject: `[BULK/FLEET LEAD] CommercialPro Opportunity - Luigi Chat`,
+          html: `
+            <h2>🚚 Bulk/Fleet Lead via Luigi</h2>
+            <p><strong>Customer Message:</strong> ${message_text}</p>
+            ${chatState.customer_email ? `<p><strong>Customer Email:</strong> ${chatState.customer_email}</p>` : '<p><strong>No email captured yet</strong></p>'}
+            <p><strong>Page:</strong> ${page_url}</p>
+            <hr>
+            <p>Customer mentioned bulk, fleet, franchise, or volume order. Route to CommercialPro.</p>
+            <p><a href="https://wrapcommandai.com/mightychat">View Full Conversation</a></p>
+          `
+        })
+      });
+      escalationsSent.push('jackson');
+      chatState.escalations_sent = escalationsSent;
+      console.log('[Luigi] Escalation email sent to Jackson (bulk/fleet)');
+    }
+    
+    // General escalation for complaints/issues
     const needsEscalation = lowerMessage.includes('problem') || lowerMessage.includes('issue') ||
                             lowerMessage.includes('complaint') || lowerMessage.includes('angry') ||
                             lowerMessage.includes('refund') || lowerMessage.includes('wrong');
     
-    if (needsEscalation && resendKey) {
+    if (needsEscalation && resendKey && !escalationsSent.includes('general')) {
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -622,8 +668,16 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
           `
         })
       });
-      console.log('[Luigi] Escalation email sent');
+      escalationsSent.push('general');
+      chatState.escalations_sent = escalationsSent;
+      console.log('[Luigi] General escalation email sent');
     }
+    
+    // Update chat state with escalations
+    await supabase
+      .from('conversations')
+      .update({ chat_state: chatState })
+      .eq('id', conversationId);
 
     return new Response(JSON.stringify({
       success: true,

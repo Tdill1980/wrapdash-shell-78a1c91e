@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { 
-  MessageCircle, X, Send, Sparkles, FileCheck, DollarSign, 
-  Palette, Wrench, Package, HelpCircle, Settings, Info, BookOpen
+  MessageCircle, X, Send, DollarSign, 
+  FileCheck, Package, HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,21 +15,19 @@ interface Message {
 
 const QUICK_ACTIONS = [
   { 
-    icon: FileCheck, 
-    label: "WrapGuruAI® Check My File", 
-    message: "I want WrapGuruAI to check my design file",
+    icon: DollarSign, 
+    label: "Get Pricing", 
+    message: "How much does a wrap cost?",
     primary: true 
   },
-  { icon: DollarSign, label: "Price Non-Vehicle", message: "I need pricing for a non-vehicle project" },
-  { icon: Palette, label: "Design Help", message: "I need design help for my wrap project" },
-  { icon: Wrench, label: "Install Help", message: "I have questions about installation" },
-  { icon: Package, label: "Specialty Request", message: "I have a specialty film request" },
-  { icon: HelpCircle, label: "Order Questions", message: "I have questions about my order" },
+  { icon: Package, label: "How to Order", message: "How do I order a printed wrap?" },
+  { icon: FileCheck, label: "Turnaround Time", message: "What's the production turnaround time?" },
+  { icon: HelpCircle, label: "Track Order", message: "I want to check my order status" },
 ];
 
 const SAMPLE_QUESTIONS = [
-  "How much does a wrap cost?",
-  "How do I set a cut contour file?",
+  "What's included with my wrap order?",
+  "Do you offer fleet pricing?",
 ];
 
 export function LuigiWebsiteWidget() {
@@ -37,9 +35,8 @@ export function LuigiWebsiteWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => `website-${crypto.randomUUID()}`);
+  const [sessionId] = useState(() => `luigi-${crypto.randomUUID()}`);
   const [showQuickActions, setShowQuickActions] = useState(true);
-  const [showKnowledgeInfo, setShowKnowledgeInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Add welcome message when chat opens
@@ -49,7 +46,7 @@ export function LuigiWebsiteWidget() {
         {
           id: "welcome",
           role: "assistant",
-          content: "👋 Hey! I'm Luigi — The AI Wrap Squeegee. I'm powered by WrapGuruAI® and trained on everything wrap-related. Ask me anything about pricing, design files, materials, or installation!",
+          content: "Hey! I'm Luigi. I can help you with pricing, ordering, or bulk wrap questions. What can I help you with?",
         },
       ]);
     }
@@ -76,14 +73,12 @@ export function LuigiWebsiteWidget() {
     setShowQuickActions(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("website-chat", {
+      const { data, error } = await supabase.functions.invoke("luigi-ordering-concierge", {
         body: {
-          org: "wpw",
-          agent: "jordan_lee",
-          mode: "live",
           session_id: sessionId,
           message_text: text,
           page_url: window.location.href,
+          mode: "live",
         },
       });
 
@@ -165,28 +160,21 @@ export function LuigiWebsiteWidget() {
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Squeegee mascot avatar */}
+            {/* Luigi avatar */}
             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30 text-2xl">
-              🧽
+              👋
             </div>
             <div>
               <span className="font-bold text-primary-foreground block text-lg tracking-tight">
-                Luigi — The AI Wrap Squeegee
+                Luigi
               </span>
               <span className="text-primary-foreground/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                Online
+                WePrintWraps Assistant
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowKnowledgeInfo(!showKnowledgeInfo)}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-200"
-              title="About Luigi's Knowledge"
-            >
-              <BookOpen className="w-4 h-4 text-primary-foreground" />
-            </button>
             <button
               onClick={() => setIsOpen(false)}
               className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-200"
@@ -195,36 +183,8 @@ export function LuigiWebsiteWidget() {
             </button>
           </div>
         </div>
-
-        {/* WrapGuruAI Badge */}
-        <div className="relative flex items-center gap-2 mt-3">
-          <span className="px-2 py-1 text-xs font-medium rounded-full bg-white/20 text-primary-foreground backdrop-blur flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            Beta of WrapGuruAI®
-          </span>
-          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-500/20 text-green-200 backdrop-blur flex items-center gap-1">
-            <Info className="w-3 h-3" />
-            Knowledge Base Active
-          </span>
-        </div>
       </div>
 
-      {/* Knowledge Info Panel (collapsible) */}
-      {showKnowledgeInfo && (
-        <div className="px-4 py-3 bg-secondary/80 border-b border-border animate-in fade-in slide-in-from-top-2 duration-200">
-          <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-primary" />
-            About Luigi's Knowledge
-          </h4>
-          <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• WrapPhile Pro print/cut specifications</li>
-            <li>• Vehicle wrap material pricing & options</li>
-            <li>• Design file requirements (Adobe, Flexi, etc.)</li>
-            <li>• Installation best practices</li>
-            <li>• Specialty film knowledge (PPF, tint, chrome)</li>
-          </ul>
-        </div>
-      )}
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/10">
