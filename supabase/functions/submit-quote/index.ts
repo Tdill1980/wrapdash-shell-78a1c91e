@@ -274,6 +274,28 @@ serve(async (req: Request): Promise<Response> => {
         payload.vehicle.model,
         payload.category
       );
+      
+      // Handle null response (vehicle not in database)
+      if (!sqftResult) {
+        console.warn('[PRICING BLOCKED - submit-quote]', {
+          source: payload.source || 'homepage',
+          vehicle: payload.vehicle,
+          category: payload.category,
+          reason: 'Vehicle not found in database or quick_ref'
+        });
+        
+        return new Response(
+          JSON.stringify({
+            success: true,
+            needs_review: true,
+            message: 'Vehicle not in pricing database. Quote requires manual review.',
+            vehicle: payload.vehicle,
+            email: payload.email
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
       sqft = sqftResult.sqft;
       sqftSource = sqftResult.source;
       console.log(`[submit-quote] MightyCommandAI sqft: ${sqft} (source: ${sqftSource})`);
