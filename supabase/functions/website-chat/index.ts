@@ -580,7 +580,14 @@ serve(async (req) => {
         } else if (/wrangler|bronco/i.test(vehicleKey)) {
           vehicleSqft = 200;
         } else {
-          vehicleSqft = 200; // Default mid-size estimate
+          // ❌ NO SILENT FALLBACK - Zero means we can't price
+          console.warn('[PRICING BLOCKED]', {
+            source: 'jordan-chat',
+            vehicle: currentVehicle,
+            vehicleKey: `${searchMake} ${searchModel}`.toLowerCase().trim(),
+            reason: 'No pattern match for vehicle model'
+          });
+          vehicleSqft = 0; // Zero = pricing blocked
         }
       }
       
@@ -606,6 +613,12 @@ serve(async (req) => {
       } else {
         contextNotes = `NEED VEHICLE INFO: Customer wants pricing but hasn't provided a vehicle yet. Ask them for their vehicle's YEAR, MAKE, and MODEL so you can calculate a specific price. DO NOT give generic ranges - we calculate exact prices based on vehicle SQFT.`;
       }
+    } else if (pricingIntent && vehicleIsComplete && vehicleSqft === 0) {
+      // Vehicle info is complete but we don't have sqft data - PRICING BLOCKED
+      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
+      contextNotes = `PRICING BLOCKED for ${vehicleStr}: This vehicle isn't in our database and we don't have a reliable sqft estimate. 
+Tell the customer: "I don't have pricing data for that specific ${currentVehicle?.model} in my system. Let me connect you with our team for an accurate quote. What's your email so I can have someone reach out with exact pricing?"
+DO NOT give any price estimate or guess!`;
     } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0) {
       const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
       

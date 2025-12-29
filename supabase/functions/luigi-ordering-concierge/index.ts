@@ -448,10 +448,28 @@ serve(async (req) => {
     let pricingContext = '';
     if (hasVehicle && pricingIntent) {
       const modelKey = (extractedVehicle.model || '').toLowerCase().replace(/[-\s]/g, '');
-      const sqft = VEHICLE_SQFT[modelKey] || VEHICLE_SQFT['midsize'] || 200;
-      const materialCost = Math.round(sqft * 5.27);
+      const sqft = VEHICLE_SQFT[modelKey];
       
-      pricingContext = `
+      if (!sqft) {
+        // ❌ NO SILENT FALLBACK - Block pricing for unknown vehicles
+        console.warn('[PRICING BLOCKED]', {
+          source: 'luigi-chat',
+          vehicle: { year: extractedVehicle.year, make: extractedVehicle.make, model: extractedVehicle.model },
+          modelKey: modelKey,
+          reason: 'Model not in VEHICLE_SQFT lookup table'
+        });
+        
+        pricingContext = `
+PRICING BLOCKED - VEHICLE NOT RECOGNIZED:
+The model "${extractedVehicle.model}" is not in our pricing database.
+DO NOT give a price estimate. Instead, ask the customer to:
+1. Confirm the exact year, make, and model
+2. Or use the quote tool on the homepage for accurate pricing
+Say: "I want to make sure I give you an accurate price. Could you confirm the exact year, make, and model of your vehicle? Or you can use our quote tool at weprintwraps.com for instant pricing!"`;
+      } else {
+        const materialCost = Math.round(sqft * 5.27);
+        
+        pricingContext = `
 CALCULATED PRICING FOR THIS CUSTOMER:
 Vehicle: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''}
 Estimated SQFT: ${sqft}
@@ -460,8 +478,9 @@ Material Cost at $5.27/sqft: $${materialCost}
 TELL THE CUSTOMER THIS EXACT PRICE! Say: "A ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''} is about ${sqft} square feet. At $5.27/sqft, that's around $${materialCost} for the printed wrap material."
 
 🚨 IMPORTANT: After giving this price, IMMEDIATELY ask for their email to send a detailed quote! Say something like: "Want me to email you a detailed quote with all the specs? What's your email?"`;
-      
-      chatState.calculated_price = { sqft, materialCost };
+        
+        chatState.calculated_price = { sqft, materialCost };
+      }
     }
 
     // Build email collection reminder context
