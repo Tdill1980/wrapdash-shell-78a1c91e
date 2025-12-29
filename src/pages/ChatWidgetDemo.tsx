@@ -121,7 +121,7 @@ export default function ChatWidgetDemo() {
       <div className="fixed bottom-5 right-5 z-[9999] font-sans">
         {/* Chat Window */}
         {isOpen && (
-          <div className="absolute bottom-20 right-0 w-[380px] h-[500px] bg-[#1a1a2e] rounded-2xl shadow-2xl border border-white/10 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+          <div className="absolute bottom-20 right-0 w-[380px] h-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
             {/* Header */}
             <div className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] px-5 py-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#405DE6] to-[#E1306C] flex items-center justify-center text-lg font-bold text-white">
@@ -140,37 +140,37 @@ export default function ChatWidgetDemo() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-slate-50">
               {messages.map((m, i) => (
                 <div
                   key={i}
                   className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                     m.role === "user"
                       ? "self-end bg-gradient-to-r from-[#405DE6] to-[#833AB4] text-white rounded-br-sm"
-                      : "self-start bg-white/10 text-gray-200 rounded-bl-sm"
+                      : "self-start bg-slate-100 text-slate-800 border border-slate-200 rounded-bl-sm"
                   }`}
                 >
                   {m.text}
                 </div>
               ))}
               {isTyping && (
-                <div className="self-start bg-white/5 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1">
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <div className="self-start bg-slate-100 border border-slate-200 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1">
+                  <span className="w-2 h-2 bg-[#833AB4] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 bg-[#833AB4] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 bg-[#833AB4] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               )}
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-white/10 flex gap-2">
+            <div className="p-4 border-t border-slate-200 bg-white flex gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendDemo()}
                 placeholder="Type your message..."
-                className="flex-1 px-4 py-3 rounded-full bg-white/5 border border-white/20 text-white text-sm placeholder:text-white/50 focus:outline-none focus:border-[#833AB4]"
+                className="flex-1 px-4 py-3 rounded-full bg-white border border-slate-300 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#833AB4]"
               />
               <button
                 onClick={sendDemo}
