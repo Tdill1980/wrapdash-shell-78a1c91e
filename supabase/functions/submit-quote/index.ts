@@ -69,6 +69,7 @@ interface SubmitQuotePayload {
   utm_content?: string;
   source?: string;
   notes?: string;
+  debug?: boolean;
 }
 
 async function sendConfirmationEmail(
@@ -433,18 +434,37 @@ serve(async (req: Request): Promise<Response> => {
       priority: isCommercial ? 'high' : 'normal',
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        quote_id: quote.id,
-        quote_number: quoteNumber,
-        sqft: sqft,
+    // Build response with debug info
+    const responseData: Record<string, unknown> = {
+      success: true,
+      quote_id: quote.id,
+      quote_number: quoteNumber,
+      sqft: sqft,
+      sqft_source: sqftSource,
+      price: estimatedPrice,
+      price_per_sqft: pricing.pricePerSqft,
+      estimated_price: estimatedPrice,
+      emailSent: !!emailResult,
+    };
+    
+    // Add debug info when requested - helps trace pricing issues
+    if (payload.debug === true) {
+      responseData._debug = {
+        frontend_sent_sqft: payload.dimensions?.sqft ?? 'not provided',
+        backend_looked_up_sqft: sqft,
         sqft_source: sqftSource,
-        price: estimatedPrice,
+        material: payload.material || 'Avery',
         price_per_sqft: pricing.pricePerSqft,
-        estimated_price: estimatedPrice,
-        emailSent: !!emailResult,
-      }),
+        calculated_material_cost: pricing.materialCost,
+        final_price: estimatedPrice,
+        vehicle_received: payload.vehicle,
+        category_received: payload.category,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    
+    return new Response(
+      JSON.stringify(responseData),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
