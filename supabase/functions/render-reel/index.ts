@@ -299,6 +299,12 @@ function mapBlueprintToCreatomate(
 
 // ============ MAIN HANDLER ============
 serve(async (req) => {
+  // ENTRY POINT LOGGING - Always log immediately on invocation
+  console.log("[render-reel] ====== FUNCTION INVOKED ======");
+  console.log("[render-reel] Timestamp:", new Date().toISOString());
+  console.log("[render-reel] Method:", req.method);
+  console.log("[render-reel] CREATOMATE_API_KEY present:", !!Deno.env.get("CREATOMATE_API_KEY"));
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -307,7 +313,12 @@ serve(async (req) => {
 
   try {
     const body = (await req.json()) as RenderRequest;
-    console.log("[render-reel] Job ID:", body.job_id);
+    console.log("[render-reel] Request body received:");
+    console.log("[render-reel] - job_id:", body.job_id);
+    console.log("[render-reel] - blueprint.id:", body.blueprint?.id);
+    console.log("[render-reel] - blueprint.scenes count:", body.blueprint?.scenes?.length ?? 0);
+    console.log("[render-reel] - music_url:", body.music_url ? "present" : "none");
+    console.log("[render-reel] - captions count:", body.captions?.length ?? 0);
 
     // ============ VALIDATION ============
     if (!body.job_id) {

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, type Creative } from "@/lib/creativeVault";
 
 export interface VideoEditItem {
   id: string;
@@ -57,6 +58,7 @@ export function useMightyEdit() {
   const [editQueue, setEditQueue] = useState<VideoEditItem[]>([]);
   const [musicRecommendations, setMusicRecommendations] = useState<MusicTrack[]>([]);
   const [renderProgress, setRenderProgress] = useState<RenderProgress | null>(null);
+  const [lastCreativeId, setLastCreativeId] = useState<string | null>(null);
   
   // Polling refs
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -118,6 +120,132 @@ export function useMightyEdit() {
       setIsScanning(false);
     }
   }, [fetchEditQueue]);
+
+  /**
+   * Generate a scene blueprint for a video - calls AI or creates fallback
+   */
+  const generateBlueprint = useCallback(async (video: VideoEditItem): Promise<any> => {
+    console.log("[useMightyEdit] Generating blueprint for video:", video.id);
+    
+    // If video already has a producer_blueprint, use it
+    if (video.producer_blueprint?.scenes?.length > 0) {
+      console.log("[useMightyEdit] Using existing producer_blueprint");
+      return video.producer_blueprint;
+    }
+    
+    // If video has ai_edit_suggestions with scenes, use those
+    if (video.ai_edit_suggestions?.scenes?.length > 0) {
+      console.log("[useMightyEdit] Using existing ai_edit_suggestions");
+      return video.ai_edit_suggestions;
+    }
+    
+    // Try to call AI blueprint generator
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-generate-video-blueprint", {
+        body: {
+          video_url: video.source_url,
+          duration_seconds: video.duration_seconds,
+          transcript: video.transcript,
+          text_overlays: video.text_overlays,
+          platform: 'instagram',
+          goal: 'engagement',
+        }
+      });
+      
+      if (!error && data?.blueprint) {
+        console.log("[useMightyEdit] AI generated blueprint:", data.blueprint);
+        return data.blueprint;
+      }
+      
+      console.warn("[useMightyEdit] AI blueprint generation failed, using fallback:", error);
+    } catch (err) {
+      console.warn("[useMightyEdit] AI blueprint call failed, using fallback:", err);
+    }
+    
+    // Fallback: Create a simple single-scene blueprint from the source video
+    const duration = video.duration_seconds || 30;
+    const fallbackBlueprint = {
+      blueprint_id: `bp_fallback_${video.id}`,
+      blueprint_source: 'mightyedit_fallback',
+      format: 'reel',
+      aspect_ratio: '9:16',
+      template_id: 'ig_reel_v1',
+      overlay_pack: 'wpw_signature',
+      font: 'Inter Black',
+      text_style: 'bold',
+      scenes: [{
+        scene_id: 'scene_1',
+        clip_id: 'clip_1',
+        start_time: 0,
+        end_time: Math.min(duration, 60), // Max 60 seconds
+        clip_url: video.source_url,
+        purpose: 'content',
+        text_overlay: video.text_overlays?.[0]?.text || null,
+        text_position: 'center',
+        animation: 'pop',
+      }]
+    };
+    
+    console.log("[useMightyEdit] Created fallback blueprint:", fallbackBlueprint);
+    return fallbackBlueprint;
+  }, []);
+
+  /**
+   * Create an ai_creatives record and link it to the video edit queue
+   */
+  const createCreativeRecord = useCallback(async (
+    video: VideoEditItem, 
+    blueprint: any,
+    queueId: string
+  ): Promise<Creative | null> => {
+    console.log("[useMightyEdit] Creating ai_creatives record...");
+    
+    try {
+      // Create the creative record
+      const creative = await createCreativeWithTags({
+        title: video.title || 'MightyEdit Render',
+        description: 'Generated via MightyEdit',
+        sourceType: 'manual',
+        toolSlug: 'mighty_edit',
+        formatSlug: 'reel',
+        platform: 'instagram',
+        createdBy: 'user',
+      });
+      
+      console.log("[useMightyEdit] Created creative:", creative.id);
+      
+      // Save the blueprint to the creative
+      await saveBlueprintSnapshot(creative.id, blueprint);
+      console.log("[useMightyEdit] Saved blueprint to creative");
+      
+      // Update the creative to rendering status
+      await updateCreative(creative.id, {
+        status: 'rendering',
+        latest_render_job_id: queueId,
+      });
+      
+      // Link the creative to the video_edit_queue
+      const { error: linkError } = await supabase
+        .from('video_edit_queue')
+        .update({ 
+          ai_creative_id: creative.id,
+          ai_edit_suggestions: blueprint, // Ensure blueprint is in queue for render-reel
+        })
+        .eq('id', queueId);
+      
+      if (linkError) {
+        console.error("[useMightyEdit] Failed to link creative to queue:", linkError);
+      } else {
+        console.log("[useMightyEdit] Linked creative to video_edit_queue");
+      }
+      
+      setLastCreativeId(creative.id);
+      return creative;
+    } catch (err) {
+      console.error("[useMightyEdit] Failed to create creative record:", err);
+      return null;
+    }
+  }, []);
 
   const matchMusic = useCallback(async (videoEditId: string, transcript?: string, durationSeconds?: number) => {
     setIsMatching(true);
@@ -380,6 +508,7 @@ export function useMightyEdit() {
     editQueue,
     musicRecommendations,
     renderProgress,
+    lastCreativeId,
     fetchEditQueue,
     scanContentLibrary,
     matchMusic,
@@ -387,6 +516,8 @@ export function useMightyEdit() {
     updateEditItem,
     selectMusic,
     markTaskComplete,
-    stopPolling
+    stopPolling,
+    generateBlueprint,
+    createCreativeRecord,
   };
 }
