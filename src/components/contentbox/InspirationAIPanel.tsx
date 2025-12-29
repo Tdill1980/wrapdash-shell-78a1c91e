@@ -26,9 +26,9 @@ import {
 } from "lucide-react";
 import { useInspirationAI, HookItem, AdPackage } from "@/hooks/useInspirationAI";
 import { useInspoLibrary } from "@/hooks/useInspoLibrary";
-import { useVideoRender } from "@/hooks/useVideoRender";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface InspirationAIPanelProps {
   selectedMediaIds?: string[];
@@ -54,7 +54,8 @@ export function InspirationAIPanel({
     generateAd,
   } = useInspirationAI();
 
-  const { isRendering, status: renderStatus, progress, outputUrl, startRender, reset } = useVideoRender();
+  const navigate = useNavigate();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [renderingStatic, setRenderingStatic] = useState(false);
   const [staticOutputUrl, setStaticOutputUrl] = useState<string | null>(null);
 
@@ -109,11 +110,20 @@ export function InspirationAIPanel({
       const headline = adPackage.hooks?.[0]?.text || adPackage.script?.intro || "";
       const subtext = adPackage.script?.cta || "";
 
-      await startRender({
+      // Store preset data for MightyEdit
+      setIsRedirecting(true);
+      const mightyEditPreset = {
         videoUrl: videoMedia.file_url,
         headline,
         subtext,
-      });
+        platform,
+        adPackage,
+        selectedMediaIds,
+        source: "inspiration_ai",
+      };
+      sessionStorage.setItem("mightyedit_preset", JSON.stringify(mightyEditPreset));
+      toast.success("Redirecting to MightyEdit for rendering...");
+      navigate("/mighty-edit");
     } else if (adType === "static") {
       // Find first image in selection or library
       const imageMedia = selectedMedia.find(m => m.file_type === "image") || 
@@ -425,17 +435,14 @@ export function InspirationAIPanel({
                     </Badge>
                   </div>
                   
-                  {(isRendering || renderingStatic) ? (
+                  {(isRedirecting || renderingStatic) ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {renderStatus === "starting" ? "Starting render..." : "Rendering..."}
+                        {isRedirecting ? "Redirecting to MightyEdit..." : "Rendering..."}
                       </div>
-                      {adType === "video" && (
-                        <Progress value={progress} className="h-2" />
-                      )}
                     </div>
-                  ) : outputUrl || staticOutputUrl ? (
+                  ) : staticOutputUrl ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-green-400">
                         <Check className="w-4 h-4" /> Render Complete!
@@ -444,7 +451,7 @@ export function InspirationAIPanel({
                         <Button
                           size="sm"
                           className="flex-1"
-                          onClick={() => window.open(outputUrl || staticOutputUrl || "", "_blank")}
+                          onClick={() => window.open(staticOutputUrl, "_blank")}
                         >
                           <Play className="w-4 h-4 mr-1" /> Preview
                         </Button>
@@ -452,11 +459,10 @@ export function InspirationAIPanel({
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            const url = outputUrl || staticOutputUrl;
-                            if (url) {
+                            if (staticOutputUrl) {
                               const a = document.createElement("a");
-                              a.href = url;
-                              a.download = adType === "video" ? "ad-reel.mp4" : "ad-static.png";
+                              a.href = staticOutputUrl;
+                              a.download = "ad-static.png";
                               a.click();
                             }
                           }}

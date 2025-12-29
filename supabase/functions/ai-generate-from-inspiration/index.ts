@@ -12,6 +12,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log("[ai-generate-from-inspiration] Received request");
+    
     const { 
       action, // "analyze_library" | "generate_hooks" | "generate_ad"
       mediaIds,
@@ -21,8 +23,11 @@ serve(async (req) => {
       organizationId 
     } = await req.json();
 
+    console.log(`[ai-generate-from-inspiration] Action: ${action}, mediaIds: ${mediaIds?.length || 0}, adType: ${adType}, platform: ${platform}`);
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
+      console.error("[ai-generate-from-inspiration] LOVABLE_API_KEY is not configured");
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
@@ -30,7 +35,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`AI Inspiration Generator - Action: ${action}`);
+    console.log(`[ai-generate-from-inspiration] Fetching inspiration files...`);
 
     // Fetch inspiration files from content_files
     let inspirationFiles = [];
@@ -51,7 +56,7 @@ serve(async (req) => {
       inspirationFiles = data || [];
     }
 
-    console.log(`Found ${inspirationFiles.length} inspiration files`);
+    console.log(`[ai-generate-from-inspiration] Found ${inspirationFiles.length} inspiration files`);
 
     // Build context from inspiration files
     const videoFiles = inspirationFiles.filter(f => f.file_type === "video");
@@ -92,6 +97,7 @@ BRAND VOICE:
     let result;
 
     if (action === "analyze_library") {
+      console.log("[ai-generate-from-inspiration] Analyzing library patterns...");
       // Analyze patterns in the inspiration library
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -151,11 +157,25 @@ Return insights about:
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[ai-generate-from-inspiration] AI API error: ${response.status} - ${errorText}`);
+        if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
+        }
+        if (response.status === 402) {
+          throw new Error("AI credits exhausted. Please add funds to your workspace.");
+        }
+        throw new Error(`AI API error: ${response.status}`);
+      }
+      
       const aiData = await response.json();
+      console.log("[ai-generate-from-inspiration] analyze_library AI response received");
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
       result = toolCall?.function?.arguments ? JSON.parse(toolCall.function.arguments) : {};
 
     } else if (action === "generate_hooks") {
+      console.log("[ai-generate-from-inspiration] Generating hooks...");
       // Generate fresh hooks based on inspiration
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -215,11 +235,25 @@ Generate 10 FRESH, ORIGINAL hooks for wrap shop content. These should:
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[ai-generate-from-inspiration] AI API error: ${response.status} - ${errorText}`);
+        if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
+        }
+        if (response.status === 402) {
+          throw new Error("AI credits exhausted. Please add funds to your workspace.");
+        }
+        throw new Error(`AI API error: ${response.status}`);
+      }
+      
       const aiData = await response.json();
+      console.log("[ai-generate-from-inspiration] generate_hooks AI response received");
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
       result = toolCall?.function?.arguments ? JSON.parse(toolCall.function.arguments) : { hooks: [] };
 
     } else if (action === "generate_ad") {
+      console.log("[ai-generate-from-inspiration] Generating ad package...");
       // Generate complete ad content using inspiration + selected media
       const selectedMedia = mediaIds?.length > 0 
         ? inspirationFiles.filter(f => mediaIds.includes(f.id))
@@ -327,12 +361,26 @@ Create a complete ad package with:
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[ai-generate-from-inspiration] AI API error: ${response.status} - ${errorText}`);
+        if (response.status === 429) {
+          throw new Error("Rate limit exceeded. Please try again later.");
+        }
+        if (response.status === 402) {
+          throw new Error("AI credits exhausted. Please add funds to your workspace.");
+        }
+        throw new Error(`AI API error: ${response.status}`);
+      }
+      
       const aiData = await response.json();
+      console.log("[ai-generate-from-inspiration] generate_ad AI response received");
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
       result = toolCall?.function?.arguments ? JSON.parse(toolCall.function.arguments) : {};
       result.selected_media = selectedMedia;
     }
 
+    console.log(`[ai-generate-from-inspiration] Success - returning result for action: ${action}`);
     return new Response(
       JSON.stringify({ success: true, action, ...result }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
