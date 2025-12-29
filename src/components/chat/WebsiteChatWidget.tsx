@@ -8,6 +8,7 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  isTyping?: boolean;
 }
 
 const QUICK_ACTIONS = [
@@ -74,14 +75,23 @@ export function WebsiteChatWidget() {
       if (error) throw error;
 
       if (data?.reply || data?.message) {
+        const fullContent = data.reply || data.message;
+        const messageId = crypto.randomUUID();
+        
+        // Add empty message that will be typed out
         setMessages((prev) => [
           ...prev,
           {
-            id: crypto.randomUUID(),
+            id: messageId,
             role: "assistant",
-            content: data.reply || data.message,
+            content: "",
+            isTyping: true,
           },
         ]);
+        setIsLoading(false);
+        
+        // Type out the message in chunks
+        await typeMessage(messageId, fullContent);
       }
     } catch (err) {
       console.error("Chat error:", err);
@@ -93,9 +103,39 @@ export function WebsiteChatWidget() {
           content: "Sorry, I'm having trouble connecting. Please try again in a moment.",
         },
       ]);
-    } finally {
       setIsLoading(false);
     }
+  };
+
+  // Type message in natural chunks
+  const typeMessage = async (messageId: string, fullContent: string) => {
+    const words = fullContent.split(' ');
+    let currentContent = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      const chunkSize = Math.floor(Math.random() * 3) + 1;
+      const chunk = words.slice(i, i + chunkSize).join(' ');
+      currentContent += (currentContent ? ' ' : '') + chunk;
+      i += chunkSize - 1;
+      
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, content: currentContent }
+            : msg
+        )
+      );
+      
+      await new Promise((r) => setTimeout(r, 20 + Math.random() * 40));
+    }
+    
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, isTyping: false }
+          : msg
+      )
+    );
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

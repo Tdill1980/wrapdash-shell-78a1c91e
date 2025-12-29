@@ -11,6 +11,7 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  isTyping?: boolean;
 }
 
 const QUICK_ACTIONS = [
@@ -86,14 +87,23 @@ export function LuigiWebsiteWidget() {
       if (error) throw error;
 
       if (data?.reply || data?.message) {
+        const fullContent = data.reply || data.message;
+        const messageId = crypto.randomUUID();
+        
+        // Add empty message that will be typed out
         setMessages((prev) => [
           ...prev,
           {
-            id: crypto.randomUUID(),
+            id: messageId,
             role: "assistant",
-            content: data.reply || data.message,
+            content: "",
+            isTyping: true,
           },
         ]);
+        setIsLoading(false);
+        
+        // Type out the message in chunks
+        await typeMessage(messageId, fullContent);
       }
     } catch (err) {
       console.error("Chat error:", err);
@@ -105,9 +115,43 @@ export function LuigiWebsiteWidget() {
           content: "Sorry, I'm having trouble connecting. Please try again in a moment.",
         },
       ]);
-    } finally {
       setIsLoading(false);
     }
+  };
+
+  // Type message in natural chunks
+  const typeMessage = async (messageId: string, fullContent: string) => {
+    // Split into words for natural chunking
+    const words = fullContent.split(' ');
+    let currentContent = '';
+    
+    for (let i = 0; i < words.length; i++) {
+      // Add 1-3 words at a time for natural feel
+      const chunkSize = Math.floor(Math.random() * 3) + 1;
+      const chunk = words.slice(i, i + chunkSize).join(' ');
+      currentContent += (currentContent ? ' ' : '') + chunk;
+      i += chunkSize - 1;
+      
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, content: currentContent }
+            : msg
+        )
+      );
+      
+      // Random delay between 20-60ms per chunk for natural typing feel
+      await new Promise((r) => setTimeout(r, 20 + Math.random() * 40));
+    }
+    
+    // Mark typing as complete
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, isTyping: false }
+          : msg
+      )
+    );
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
