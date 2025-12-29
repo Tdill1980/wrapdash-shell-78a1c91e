@@ -335,6 +335,26 @@ export function LuigiWebsiteWidget() {
 
       {/* Input area */}
       <div className="p-3 border-t border-slate-200 bg-white">
+        {/* Contextual input hints based on last message */}
+        {(() => {
+          const lastAssistantMsg = messages.filter(m => m.role === 'assistant').slice(-1)[0]?.content.toLowerCase() || '';
+          if (lastAssistantMsg.includes('quote number') || lastAssistantMsg.includes('quote #')) {
+            return <div className="text-xs text-slate-400 mb-2 px-1">Example: Q-10432</div>;
+          }
+          if (lastAssistantMsg.includes('order number') || lastAssistantMsg.includes('order #')) {
+            return <div className="text-xs text-slate-400 mb-2 px-1">Example: #18392</div>;
+          }
+          if (lastAssistantMsg.includes('email') && (lastAssistantMsg.includes('send') || lastAssistantMsg.includes('what'))) {
+            return <div className="text-xs text-slate-400 mb-2 px-1">We'll only use this to send your quote.</div>;
+          }
+          if (lastAssistantMsg.includes('name') && lastAssistantMsg.includes('quote')) {
+            return <div className="text-xs text-slate-400 mb-2 px-1">This helps us label your quote correctly.</div>;
+          }
+          if (lastAssistantMsg.includes('company') || lastAssistantMsg.includes('shop name')) {
+            return <div className="text-xs text-slate-400 mb-2 px-1">Optional — but helpful for shop or fleet orders.</div>;
+          }
+          return null;
+        })()}
         <div className="flex gap-2">
           <input
             type="text"
