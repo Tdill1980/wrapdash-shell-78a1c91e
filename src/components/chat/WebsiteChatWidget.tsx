@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, Sparkles, Car, Palette, Package, Search } from "lucide-react";
+import { MessageCircle, X, Send, Car, Palette, Package, Search, Mail, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -12,10 +12,12 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { icon: Car, label: "How much does a wrap cost?", message: "How much does a wrap cost?" },
+  { icon: Car, label: "How much does a wrap cost?", message: "How much does a wrap cost?", primary: true },
   { icon: Package, label: "How do I order?", message: "How do I place an order?" },
+  { icon: Mail, label: "Email my quote", message: "I need my quote emailed to me" },
+  { icon: Search, label: "Order status", message: "I want to check my order or quote status" },
   { icon: Palette, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
-  { icon: Search, label: "Order status", message: "I want to check my order status" },
+  { icon: Clock, label: "Production & Shipping", message: "Tell me about production time and shipping" },
 ];
 
 export function WebsiteChatWidget() {
@@ -233,25 +235,47 @@ export function WebsiteChatWidget() {
 
         {/* Quick Actions */}
         {showQuickActions && messages.length === 1 && !isLoading && (
-          <div className="grid grid-cols-2 gap-2 mt-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
-            {QUICK_ACTIONS.map((action, i) => (
+          <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
+            {/* Primary CTA */}
+            {QUICK_ACTIONS.filter(a => a.primary).map((action) => (
               <button
                 key={action.label}
                 onClick={() => handleSend(action.message)}
                 className={cn(
-                  "flex items-center gap-2 p-3",
-                  "bg-white hover:bg-slate-50",
-                  "rounded-xl text-sm font-medium",
-                  "border border-slate-200 hover:border-[#833AB4]/30",
-                  "transition-all duration-200 hover:scale-[1.02]",
-                  "text-slate-700 hover:text-[#833AB4]"
+                  "w-full flex items-center justify-center gap-2 p-3",
+                  "bg-gradient-to-r from-[#833AB4] to-[#E1306C]",
+                  "hover:opacity-90 hover:scale-[1.02]",
+                  "rounded-xl text-sm font-semibold",
+                  "text-white transition-all duration-200",
+                  "shadow-lg shadow-[#833AB4]/20"
                 )}
-                style={{ animationDelay: `${i * 100}ms` }}
               >
-                <action.icon className="w-4 h-4" />
+                <action.icon className="w-5 h-5" />
                 {action.label}
               </button>
             ))}
+
+            {/* Secondary Actions Grid */}
+            <div className="grid grid-cols-2 gap-2">
+              {QUICK_ACTIONS.filter(a => !a.primary).map((action, i) => (
+                <button
+                  key={action.label}
+                  onClick={() => handleSend(action.message)}
+                  className={cn(
+                    "flex items-center gap-2 p-3",
+                    "bg-white hover:bg-slate-50",
+                    "rounded-xl text-xs font-medium",
+                    "border border-slate-200 hover:border-[#833AB4]/30",
+                    "transition-all duration-200 hover:scale-[1.02]",
+                    "text-slate-700 hover:text-[#833AB4]"
+                  )}
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  <action.icon className="w-4 h-4" />
+                  {action.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { 
   MessageCircle, X, Send, DollarSign, 
-  FileCheck, Package, HelpCircle
+  Package, HelpCircle, Mail, Clock, Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,14 +22,14 @@ const QUICK_ACTIONS = [
     primary: true 
   },
   { icon: Package, label: "How do I order?", message: "How do I place an order?" },
-  { icon: FileCheck, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
-  { icon: HelpCircle, label: "Order status", message: "I want to check my order status" },
+  { icon: Mail, label: "Email my quote", message: "I need my quote emailed to me" },
+  { icon: HelpCircle, label: "Order status", message: "I want to check my order or quote status" },
+  { icon: Palette, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
+  { icon: Clock, label: "Production & Shipping", message: "Tell me about production time and shipping" },
 ];
 
 const SAMPLE_QUESTIONS = [
   "Get an exact quote",
-  "Design / File help",
-  "Production & Shipping",
 ];
 
 export function LuigiWebsiteWidget() {
@@ -37,7 +37,7 @@ export function LuigiWebsiteWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => `luigi-${crypto.randomUUID()}`);
+  const [sessionId] = useState(() => `wpw-${crypto.randomUUID()}`);
   const [showQuickActions, setShowQuickActions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -168,16 +168,16 @@ export function LuigiWebsiteWidget() {
         onClick={() => setIsOpen(true)}
         className={cn(
           "fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full",
-          "bg-gradient-to-br from-primary via-primary to-[hsl(var(--gradient-dark))]",
-          "text-primary-foreground shadow-2xl flex items-center justify-center",
+          "bg-gradient-to-br from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
+          "text-white shadow-2xl flex items-center justify-center",
           "transition-all duration-300 ease-out",
-          "hover:scale-110 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)]",
+          "hover:scale-110 hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]",
           "before:absolute before:inset-0 before:rounded-full",
-          "before:bg-gradient-to-br before:from-primary before:to-[hsl(var(--gradient-dark))]",
+          "before:bg-gradient-to-br before:from-[#2563EB] before:via-[#7C3AED] before:to-[#A855F7]",
           "before:animate-ping before:opacity-30"
         )}
         style={{
-          boxShadow: "0 4px 20px hsl(var(--primary) / 0.4), 0 0 40px hsl(var(--primary) / 0.2)"
+          boxShadow: "0 4px 20px rgba(124, 58, 237, 0.4), 0 0 40px rgba(37, 99, 235, 0.2)"
         }}
       >
         <MessageCircle className="w-7 h-7 relative z-10" />
@@ -201,7 +201,7 @@ export function LuigiWebsiteWidget() {
       }}
     >
       {/* Header */}
-      <div className="relative bg-gradient-to-r from-primary via-primary to-[hsl(var(--gradient-dark))] px-4 py-4">
+      <div className="relative bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7] px-4 py-4">
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -210,10 +210,10 @@ export function LuigiWebsiteWidget() {
               J
             </div>
             <div>
-              <span className="font-bold text-primary-foreground block text-lg tracking-tight">
+              <span className="font-bold text-white block text-lg tracking-tight">
                 Jordan
               </span>
-              <span className="text-primary-foreground/90 text-xs flex items-center gap-1.5">
+              <span className="text-white/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
                 WPW Live Chat Agent • Online
               </span>
@@ -224,7 +224,7 @@ export function LuigiWebsiteWidget() {
               onClick={() => setIsOpen(false)}
               className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-200"
             >
-              <X className="w-4 h-4 text-primary-foreground" />
+              <X className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>
@@ -276,7 +276,7 @@ export function LuigiWebsiteWidget() {
 
             {/* Quick Action Buttons */}
             <div className="space-y-2">
-              {/* Primary CTA - File Check */}
+              {/* Primary CTA */}
               {QUICK_ACTIONS.filter(a => a.primary).map((action) => (
                 <button
                   key={action.label}
@@ -356,7 +356,7 @@ export function LuigiWebsiteWidget() {
             disabled={isLoading || !input.trim()}
             className={cn(
               "shrink-0 rounded-full w-10 h-10",
-              "bg-gradient-to-r from-primary to-[hsl(var(--gradient-dark))]",
+              "bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
               "hover:opacity-90 hover:scale-105",
               "transition-all duration-200",
               "disabled:opacity-50 disabled:hover:scale-100"
@@ -364,6 +364,11 @@ export function LuigiWebsiteWidget() {
           >
             <Send className="w-4 h-4" />
           </Button>
+        </div>
+        {/* WePrintWraps.com branding */}
+        <div className="mt-2 text-center">
+          <span className="text-xs text-slate-400">Powered by </span>
+          <span className="text-xs font-medium text-[#7C3AED]">weprintwraps.com</span>
         </div>
       </div>
     </div>
