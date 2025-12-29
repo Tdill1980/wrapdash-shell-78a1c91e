@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { loadSalesGoalContext, formatSalesContextForPrompt } from "../_shared/sales-goal-loader.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -642,15 +642,8 @@ serve(async (req) => {
         systemPrompt: "You are a helpful assistant in CLARIFICATION MODE. Ask questions to understand before executing.",
       };
 
-      // Load sales goal context to give agents revenue awareness
-      let salesContext = "";
-      try {
-        const salesData = await loadSalesGoalContext(chat?.organization_id);
-        salesContext = formatSalesContextForPrompt(salesData);
-        console.log("Sales context loaded:", salesData.status, salesData.percentComplete.toFixed(1) + "%");
-      } catch (e) {
-        console.error("Failed to load sales context:", e);
-      }
+      // Sales context removed - no longer tracking sales goals
+      const salesContext = "";
 
       // Extract email thread from chat context if available
       const chatContext = (chat?.context || {}) as Record<string, unknown>;
