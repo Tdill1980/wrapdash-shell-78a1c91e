@@ -28,6 +28,9 @@ import { ClipPreview } from "@/components/mighty-edit/ClipPreview";
 import { RenderResult } from "@/components/mighty-edit/RenderResult";
 import { ContentToolsNav } from "@/components/content/ContentToolsNav";
 import { RenderProgressBar } from "@/components/mighty-edit/RenderProgressBar";
+import { RenderInspector } from "@/components/debug/RenderInspector";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface ContentFactoryPreset {
   action?: string;
@@ -873,6 +876,19 @@ export default function MightyEdit() {
             <RenderQueue editQueue={editQueue.filter(v => v.status === "rendering" || v.status === "complete")} />
           </TabsContent>
         </Tabs>
+
+        {/* Debug: Render Inspector */}
+        <Collapsible className="mt-6">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground hover:text-foreground">
+              <span>🔧 Debug: Render Inspector</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <RenderInspector />
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );

@@ -378,6 +378,7 @@ export function useMightyEdit() {
   }, [fetchEditQueue]);
 
   const executeEdits = useCallback(async (videoEditId: string, renderType: "full" | "shorts" | "all" = "full") => {
+    console.log("[useMightyEdit] executeEdits INVOKED", { videoEditId, renderType });
     setIsExecuting(true);
     console.log("[useMightyEdit] ====== EXECUTE EDITS START ======");
     console.log("[useMightyEdit] Video Edit ID:", videoEditId);
