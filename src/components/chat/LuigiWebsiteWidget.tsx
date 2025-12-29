@@ -16,18 +16,19 @@ interface Message {
 const QUICK_ACTIONS = [
   { 
     icon: DollarSign, 
-    label: "Get Pricing", 
+    label: "How much does a wrap cost?", 
     message: "How much does a wrap cost?",
     primary: true 
   },
-  { icon: Package, label: "How to Order", message: "How do I order a printed wrap?" },
-  { icon: FileCheck, label: "Turnaround Time", message: "What's the production turnaround time?" },
-  { icon: HelpCircle, label: "Track Order", message: "I want to check my order status" },
+  { icon: Package, label: "How do I order?", message: "How do I place an order?" },
+  { icon: FileCheck, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
+  { icon: HelpCircle, label: "Order status", message: "I want to check my order status" },
 ];
 
 const SAMPLE_QUESTIONS = [
-  "What's included with my wrap order?",
-  "Do you offer fleet pricing?",
+  "Get an exact quote",
+  "Design / File help",
+  "Production & Shipping",
 ];
 
 export function LuigiWebsiteWidget() {
@@ -46,7 +47,7 @@ export function LuigiWebsiteWidget() {
         {
           id: "welcome",
           role: "assistant",
-          content: "Hey there! I'm Jordan. I can help you with pricing, ordering, or bulk wrap questions. What can I help you with?",
+          content: "Hey! I'm Jordan with WePrintWraps.com. What can I help you with today?",
         },
       ]);
     }
@@ -160,17 +161,17 @@ export function LuigiWebsiteWidget() {
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Jordan avatar */}
-            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center ring-2 ring-white/30 text-2xl">
-              👋
+            {/* Jordan avatar - "J" initial */}
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#405DE6] to-[#E1306C] flex items-center justify-center ring-2 ring-white/30 text-xl font-bold text-white">
+              J
             </div>
             <div>
               <span className="font-bold text-primary-foreground block text-lg tracking-tight">
-                Jordan Lee
+                Jordan
               </span>
               <span className="text-primary-foreground/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                Ordering Concierge
+                WPW Live Chat Agent • Online
               </span>
             </div>
           </div>
