@@ -1396,10 +1396,10 @@ export default function ReelBuilder() {
               <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse" />
               <Loader2 className="w-10 h-10 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
             </div>
-            <div>
+            <div className="max-w-md">
               <h2 className="text-xl font-bold text-foreground">AI Creating Your Reel</h2>
               <p className="text-muted-foreground mt-1">
-                Analyzing clips • Choosing best scenes • Editing timeline
+                {reelConcept || "Analyzing clips • Choosing best scenes • Editing timeline"}
               </p>
             </div>
           </div>
@@ -1798,10 +1798,10 @@ export default function ReelBuilder() {
                           <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse" />
                           <Loader2 className="w-12 h-12 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin" />
                         </div>
-                        <div>
+                        <div className="max-w-xs">
                           <p className="font-bold text-xl text-foreground">AI Creating Your Reel</p>
                           <p className="text-sm text-muted-foreground mt-2">
-                            Scanning your library • Selecting best clips • Learning your style
+                            {reelConcept || "Scanning your library • Selecting best clips • Learning your style"}
                           </p>
                         </div>
                       </div>
