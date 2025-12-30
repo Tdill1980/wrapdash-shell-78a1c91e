@@ -469,17 +469,22 @@ export function AIApprovalsCard() {
               const isProcessing = processingId === action.id;
               const isQuote = isQuoteAction(action.action_type);
               const quoteDetails = getQuoteDetails(action);
+              const payload = action.action_payload;
+              
+              // Extract file URLs for display
+              const fileUrls = (payload?.file_urls as string[]) || [];
+              const hasFiles = fileUrls.length > 0;
+              const originalMessage = (payload?.message as string) || (payload?.original_message as string) || null;
 
               return (
                 <div
                   key={action.id}
-                  onClick={() => isQuote && handleOpenDetail(action)}
+                  onClick={() => handleOpenDetail(action)}
                   className={cn(
-                    "flex flex-col gap-2 p-3 rounded-lg",
+                    "flex flex-col gap-2 p-3 rounded-lg cursor-pointer",
                     "bg-secondary/50 border border-border",
                     "transition-all duration-200 hover:bg-secondary",
-                    isProcessing && "opacity-50 pointer-events-none",
-                    isQuote && "cursor-pointer"
+                    isProcessing && "opacity-50 pointer-events-none"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -500,9 +505,9 @@ export function AIApprovalsCard() {
                             {action.priority}
                           </Badge>
                         )}
-                        {quoteDetails?.source && (
+                        {(quoteDetails?.source || payload?.source) && (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {quoteDetails.source}
+                            {quoteDetails?.source || (payload?.source as string)}
                           </Badge>
                         )}
                         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -513,6 +518,13 @@ export function AIApprovalsCard() {
                       <p className="text-xs text-muted-foreground truncate">
                         {getActionDescription(action)}
                       </p>
+                      
+                      {/* Show original message preview if available */}
+                      {originalMessage && (
+                        <p className="text-xs text-foreground/80 mt-1 line-clamp-2 italic">
+                          "{originalMessage.substring(0, 100)}{originalMessage.length > 100 ? '...' : ''}"
+                        </p>
+                      )}
                       
                       {/* Quote details row */}
                       {isQuote && quoteDetails && (
@@ -526,6 +538,46 @@ export function AIApprovalsCard() {
                             <span className="text-[10px] text-muted-foreground bg-background px-1.5 py-0.5 rounded">
                               #{quoteDetails.quoteNumber}
                             </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Show file attachments preview */}
+                      {hasFiles && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {fileUrls.slice(0, 3).map((url, idx) => {
+                            const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)/i);
+                            const isVideo = url.match(/\.(mp4|mov|webm)/i);
+                            return (
+                              <div key={idx} className="relative">
+                                {isImage && (
+                                  <img 
+                                    src={url} 
+                                    alt={`Attachment ${idx + 1}`}
+                                    className="w-16 h-16 object-cover rounded-lg border border-border"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                    }}
+                                  />
+                                )}
+                                {isVideo && (
+                                  <div className="w-16 h-16 rounded-lg border border-border bg-muted flex items-center justify-center">
+                                    <FileText className="w-6 h-6 text-muted-foreground" />
+                                    <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-black/60 text-white px-1 rounded">MP4</span>
+                                  </div>
+                                )}
+                                {!isImage && !isVideo && (
+                                  <div className="w-16 h-16 rounded-lg border border-border bg-muted flex items-center justify-center">
+                                    <FileText className="w-6 h-6 text-muted-foreground" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {fileUrls.length > 3 && (
+                            <div className="w-16 h-16 rounded-lg border border-border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                              +{fileUrls.length - 3}
+                            </div>
                           )}
                         </div>
                       )}
@@ -565,6 +617,15 @@ export function AIApprovalsCard() {
                         </>
                       ) : (
                         <>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleOpenDetail(action)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                            title="View details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                           <Button
                             size="icon"
                             variant="ghost"
