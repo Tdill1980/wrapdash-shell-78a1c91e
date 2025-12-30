@@ -297,3 +297,6 @@ verify_jwt = false
 
 [functions.woo-proxy]
 verify_jwt = true
+
+[functions.execute-ai-action]
+verify_jwt = false
