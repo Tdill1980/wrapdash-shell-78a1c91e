@@ -221,7 +221,7 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
     },
     ops: {
       title: "Ops Desk",
-      agent: "Manny Chen",
+      agent: "Ops Desk",
       inputs: ["jackson@weprintwraps.com", "Internal routing"],
       reason: "No emails received at jackson@ inbox or no items routed for approval.",
     }
@@ -354,9 +354,9 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       return;
     }
 
-    const sinceIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    // Show threads active in the last 30 days (expanded from 48h)
+    const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Show threads active in the last 48h with contact info
     const { data, error } = await supabase
       .from("conversations")
       .select(`
@@ -365,7 +365,8 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       `)
       .or(`last_message_at.gte.${sinceIso},and(last_message_at.is.null,created_at.gte.${sinceIso})`)
       .order("last_message_at", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500);
 
     if (!error && data) {
       // Map the joined data to flat structure
@@ -822,6 +823,25 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
               />
 
               <ThreadScopeBanner isExternal={isExternal} />
+
+              {/* Instagram Data Status Banner */}
+              {selectedConversation.channel === 'instagram' && (
+                <div className="px-4 py-2 bg-gradient-to-r from-[#405DE6]/10 via-[#833AB4]/10 to-[#E1306C]/10 border-b flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] border-[#833AB4]/50 text-[#833AB4]">
+                      {messages.length} message{messages.length !== 1 ? 's' : ''} stored
+                    </Badge>
+                    {messages.length > 0 && (
+                      <span className="text-muted-foreground">
+                        Last: {formatTime(messages[messages.length - 1]?.created_at)}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-muted-foreground/70 text-[10px]">
+                    Only stored messages shown • Check IG inbox for full history
+                  </span>
+                </div>
+              )}
 
               <CardHeader className="border-b pb-2 md:pb-3 px-3 md:px-6">
                 <div className="flex items-center gap-2">

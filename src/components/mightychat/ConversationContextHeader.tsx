@@ -57,9 +57,9 @@ const AGENT_INFO: Record<AgentInbox, {
     borderColor: 'border-pink-500/30'
   },
   ops_desk: {
-    displayName: 'Manny Chen',
+    displayName: 'Ops Desk',
     shortRole: 'Ops',
-    fullRole: 'Ops Desk Coordinator',
+    fullRole: 'Operations Coordinator',
     icon: <Cog className="w-4 h-4" />,
     color: 'text-amber-600 dark:text-amber-400',
     bgColor: 'bg-amber-500/10',
