@@ -374,21 +374,19 @@ serve(async (req) => {
     // ============ START CREATOMATE RENDER ============
     console.log("[render-reel] Starting Creatomate render...");
     
-    // Creatomate requires either template_id, tags, or source
-    // "source" must be a JSON STRING (not an object) per Creatomate API docs
-    const creatomatePayload = {
-      source: JSON.stringify(timeline),  // MUST be stringified JSON
-    };
-    
-    console.log("[render-reel] Creatomate payload structure:", { 
-      hasSource: !!creatomatePayload.source,
-      sourceType: typeof creatomatePayload.source,
-      timelineKeys: Object.keys(timeline),
+    // Creatomate RenderScript: send the composition JSON directly as the request body
+    // (NOT wrapped in a "source" field - that's only for element sources)
+    // See: https://creatomate.com/docs/api/quick-start/create-a-video-by-render-script
+    console.log("[render-reel] Creatomate payload (RenderScript):", { 
+      output_format: timeline.output_format,
+      dimensions: `${timeline.width}x${timeline.height}`,
+      duration: timeline.duration,
+      elements_count: timeline.elements.length,
     });
     
     const startRes = await creatomateFetch("renders", {
       method: "POST",
-      body: JSON.stringify(creatomatePayload),
+      body: JSON.stringify(timeline),  // Send timeline directly - this IS the RenderScript
     });
 
     const startJson = await startRes.json();
