@@ -9,8 +9,26 @@ export type AlertType =
   | "missing_tracking" 
   | "unhappy_customer" 
   | "bulk_inquiry" 
+  | "bulk_inquiry_with_email"
   | "quality_issue" 
   | "design_file";
+
+// Bulk discount tiers (from uploaded pricing chart)
+export const BULK_DISCOUNT_TIERS = {
+  "500-999": { discount: "5%", code: "BULK5" },
+  "1000-1499": { discount: "10%", code: "BULK10" },
+  "1500-2499": { discount: "15%", code: "BULK15" },
+  "2500+": { discount: "20%", code: "BULK20" },
+};
+
+// Format bulk discount tiers for chat response
+export function formatBulkDiscountTiers(): string {
+  return `📦 **Bulk Discount Tiers:**
+• 500-999 sqft: 5% off
+• 1,000-1,499 sqft: 10% off  
+• 1,500-2,499 sqft: 15% off
+• 2,500+ sqft: 20% off`;
+}
 
 export interface AlertRecipients {
   to: string[];
@@ -80,6 +98,14 @@ const ALERT_CONFIG: Record<AlertType, {
     },
     subjectPrefix: "🚀 Bulk/Fleet Inquiry",
   },
+  bulk_inquiry_with_email: {
+    opsTarget: "jackson",
+    priority: "high",
+    recipients: {
+      to: ["Jackson@WePrintWraps.com"],
+    },
+    subjectPrefix: "🚀 Bulk Order - Coupon Code Needed",
+  },
   quality_issue: {
     opsTarget: "lance",
     priority: "high",
@@ -136,6 +162,25 @@ function getAlertEmailHtml(alertType: AlertType, context: AlertContext): string 
         ${baseInfo}
         ${context.messageExcerpt ? `<p><strong>Customer Message:</strong> "${context.messageExcerpt}"</p>` : ""}
         <p><strong>Action Needed:</strong> Follow up with this lead for potential bulk/fleet pricing.</p>
+        <p><em>This alert was triggered by Jordan Lee detecting commercial intent signals.</em></p>
+      `;
+    case "bulk_inquiry_with_email":
+      return `
+        <h2>🚀 Bulk Order - Coupon Code Needed</h2>
+        <p><strong>Customer is ready for bulk pricing and has provided their email.</strong></p>
+        ${baseInfo}
+        ${context.additionalInfo?.estimatedQuantity ? `<p><strong>Estimated Quantity:</strong> ${context.additionalInfo.estimatedQuantity}</p>` : ""}
+        ${context.additionalInfo?.suggestedTier ? `<p><strong>Suggested Tier:</strong> ${context.additionalInfo.suggestedTier}</p>` : ""}
+        ${context.messageExcerpt ? `<p><strong>Conversation Summary:</strong> "${context.messageExcerpt}"</p>` : ""}
+        <hr>
+        <p><strong>⚡ ACTION NEEDED:</strong> Send this customer the appropriate bulk discount coupon code.</p>
+        <p><strong>Discount Tiers Reference:</strong></p>
+        <ul>
+          <li>500-999 sqft: 5% (code: BULK5)</li>
+          <li>1,000-1,499 sqft: 10% (code: BULK10)</li>
+          <li>1,500-2,499 sqft: 15% (code: BULK15)</li>
+          <li>2,500+ sqft: 20% (code: BULK20)</li>
+        </ul>
         <p><em>This alert was triggered by Jordan Lee detecting commercial intent signals.</em></p>
       `;
     case "quality_issue":
