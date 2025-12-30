@@ -56,7 +56,7 @@ const STREAMS: StreamConfig[] = [
   { 
     id: "ops", 
     label: "Ops Desk", 
-    agentName: "Manny Chen",
+    agentName: "Ops Desk",
     inboxLabel: "Approvals & Routing",
     icon: <Cog className="w-4 h-4" />,
     color: "text-amber-600",

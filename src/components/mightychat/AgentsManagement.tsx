@@ -76,8 +76,8 @@ const AGENT_CONFIGS: AgentConfig[] = [
     enabled: true,
   },
   {
-    id: "manny_chen",
-    name: "Manny Chen",
+    id: "ops_desk",
+    name: "Ops Desk",
     role: "Operations Agent",
     description: "Handles jackson@ inbox, manages internal routing and approvals",
     icon: <Settings className="w-5 h-5" />,
