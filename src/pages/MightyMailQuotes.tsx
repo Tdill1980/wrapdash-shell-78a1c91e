@@ -6,9 +6,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Mail, RefreshCw, Search, Pencil, MessageSquare, Instagram, Zap } from "lucide-react";
+import { Eye, Mail, RefreshCw, Search, Pencil, MessageSquare, Instagram, Zap, ExternalLink } from "lucide-react";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { QuoteEditDialog } from "@/components/mightymail/QuoteEditDialog";
+import { QuoteDetailDialog } from "@/components/mightymail/QuoteDetailDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 
 interface Quote {
@@ -40,6 +41,7 @@ interface Quote {
   click_count?: number;
   source?: string;
   source_message?: string;
+  source_conversation_id?: string;
   ai_message?: string;
 }
 
@@ -56,6 +58,7 @@ export default function MightyMailQuotes() {
   });
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [runningRetargeting, setRunningRetargeting] = useState(false);
@@ -212,6 +215,11 @@ export default function MightyMailQuotes() {
   function handleEditQuote(quote: Quote) {
     setSelectedQuote(quote);
     setEditDialogOpen(true);
+  }
+
+  function handleViewDetails(quote: Quote) {
+    setSelectedQuote(quote);
+    setDetailDialogOpen(true);
   }
 
   function getSourceIcon(source?: string) {
@@ -494,6 +502,15 @@ export default function MightyMailQuotes() {
                           <Button
                             size="sm"
                             variant="ghost"
+                            onClick={() => handleViewDetails(quote)}
+                            className="h-8 w-8 p-0"
+                            title="View Conversation"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
                             onClick={() => handleEditQuote(quote)}
                             className="h-8 w-8 p-0"
                             title="Edit Quote"
@@ -559,6 +576,16 @@ export default function MightyMailQuotes() {
           onOpenChange={setEditDialogOpen}
           quote={selectedQuote}
           onSave={fetchQuotes}
+        />
+      )}
+
+      {/* Quote Detail Dialog with Conversation */}
+      {selectedQuote && (
+        <QuoteDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          quote={selectedQuote}
+          onRefresh={fetchQuotes}
         />
       )}
       </div>
