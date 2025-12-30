@@ -163,6 +163,21 @@ serve(async (req) => {
           .eq("id", body.message_id);
       }
       
+      // Write execution receipt for failure
+      await supabase.from("execution_receipts").insert({
+        conversation_id: body.conversation_id || null,
+        source_table: "messages",
+        source_id: body.message_id || null,
+        channel: "instagram",
+        action_type: "dm_send",
+        status: "failed",
+        provider: "meta",
+        provider_receipt_id: null,
+        payload_snapshot: { recipient: body.recipient, message_preview: body.message?.slice(0, 100) },
+        error: deliveryResult.error_message,
+      });
+      console.log("📝 Execution receipt written (FAILED)");
+      
       return new Response(JSON.stringify({ 
         error: result,
         error_summary: deliveryResult.error_message,
@@ -196,6 +211,21 @@ serve(async (req) => {
         .eq("id", body.message_id);
       console.log("✅ Message", body.message_id, "marked as delivered");
     }
+    
+    // Write execution receipt for success
+    await supabase.from("execution_receipts").insert({
+      conversation_id: body.conversation_id || null,
+      source_table: "messages",
+      source_id: body.message_id || null,
+      channel: "instagram",
+      action_type: "dm_send",
+      status: "sent",
+      provider: "meta",
+      provider_receipt_id: result.message_id,
+      payload_snapshot: { recipient: body.recipient, message_preview: body.message?.slice(0, 100) },
+      error: null,
+    });
+    console.log("📝 Execution receipt written (SENT)");
     
     return new Response(JSON.stringify({ 
       success: true, 

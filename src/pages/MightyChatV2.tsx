@@ -8,10 +8,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, Send, Pause, Play, Shield, Zap, MessageSquare, Mail, Globe, Users } from "lucide-react";
+import { RefreshCw, Send, Pause, Play, Shield, Zap, MessageSquare, Mail, Globe, Users, CheckCircle, XCircle, Download, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ConversationStatusBadge } from "@/components/ConversationStatusBadge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type Channel = "instagram" | "email" | "website" | "internal" | "all";
 
@@ -459,6 +460,10 @@ export default function MightyChatV2() {
                 {messages.map((m) => {
                   const badge = getSenderBadge(m.sender_type, m.direction);
                   const isInbound = m.direction === "inbound";
+                  const metadata = m.metadata as Record<string, unknown> | null;
+                  const attachments = (metadata?.attachments as string[]) || [];
+                  const instagramSent = metadata?.instagram_sent;
+                  const instagramError = metadata?.instagram_error_message as string | undefined;
                   
                   return (
                     <div
@@ -478,6 +483,23 @@ export default function MightyChatV2() {
                         <span className="text-xs text-muted-foreground">
                           {formatTime(m.sent_at || m.created_at)}
                         </span>
+                        {/* Delivery status for outbound messages */}
+                        {m.direction === "outbound" && instagramSent !== undefined && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                {instagramSent === true ? (
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                ) : (
+                                  <XCircle className="h-3 w-3 text-destructive" />
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {instagramSent === true ? "Delivered" : instagramError || "Failed to send"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                       <div
                         className={cn(
@@ -486,6 +508,42 @@ export default function MightyChatV2() {
                         )}
                       >
                         <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                        
+                        {/* Render attachments */}
+                        {attachments.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {attachments.map((url, i) => {
+                              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                              return isImage ? (
+                                <a
+                                  key={i}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block"
+                                >
+                                  <img
+                                    src={url}
+                                    alt={`Attachment ${i + 1}`}
+                                    className="max-w-32 max-h-32 rounded border hover:opacity-80 transition-opacity"
+                                  />
+                                </a>
+                              ) : (
+                                <a
+                                  key={i}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs text-primary-foreground/80 hover:text-primary-foreground underline"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  File {i + 1}
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
