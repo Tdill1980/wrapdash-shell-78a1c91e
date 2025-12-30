@@ -17,11 +17,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MessageViewer } from "@/components/messages/MessageViewer";
 
 interface Message {
   id: string;
   content: string;
   direction: string;
+  channel: string;
   sender_name: string | null;
   created_at: string;
   metadata?: {
@@ -144,13 +146,14 @@ export function AIApprovalGenericModal({
     try {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, content, direction, sender_name, created_at, metadata")
+        .select("id, content, direction, channel, sender_name, created_at, metadata")
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
       if (!error && data) {
         setMessages(data.map(m => ({
           ...m,
+          channel: m.channel || "chat",
           metadata: m.metadata as Message["metadata"]
         })));
       }
@@ -393,31 +396,10 @@ export function AIApprovalGenericModal({
                       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     </div>
                   ) : messages.length > 0 ? (
-                    <div className="space-y-3 p-3 bg-secondary/20 rounded-lg max-h-60 overflow-y-auto">
-                      {messages.slice(-10).map((msg) => {
-                        const isOutbound = msg.direction === "outbound";
-                        return (
-                          <div
-                            key={msg.id}
-                            className={cn(
-                              "flex flex-col gap-1",
-                              isOutbound ? "items-end" : "items-start"
-                            )}
-                          >
-                            <div className={cn(
-                              "max-w-[85%] rounded-xl px-3 py-2 text-sm",
-                              isOutbound 
-                                ? "bg-primary text-primary-foreground" 
-                                : "bg-secondary"
-                            )}>
-                              {msg.content.substring(0, 300)}{msg.content.length > 300 ? '...' : ''}
-                            </div>
-                            <span className="text-[10px] text-muted-foreground">
-                              {msg.sender_name || (isOutbound ? "You" : "Customer")}
-                            </span>
-                          </div>
-                        );
-                      })}
+                    <div className="space-y-3 p-3 bg-secondary/20 rounded-lg max-h-[400px] overflow-y-auto">
+                      {messages.slice(-15).map((msg) => (
+                        <MessageViewer key={msg.id} message={msg} />
+                      ))}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">

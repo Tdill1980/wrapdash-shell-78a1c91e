@@ -1,6 +1,7 @@
 import { EnrichedOpsTask } from "@/hooks/useOpsTaskEnrichment";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { MessageViewer } from "@/components/messages/MessageViewer";
 import { 
   CheckCircle, 
   XCircle, 
@@ -67,12 +68,18 @@ export function OpsTaskDetailCard({ task, onApprove, onReject, onReroute }: OpsT
         </span>
       </div>
 
-      {/* Original Message */}
+      {/* Original Message - Use MessageViewer for proper rendering */}
       {task.original_message && (
-        <div className="p-3 bg-muted/50 rounded-lg">
-          <p className="text-sm font-medium mb-1 text-muted-foreground">Original Message:</p>
-          <p className="text-sm whitespace-pre-wrap">{task.original_message}</p>
-        </div>
+        <MessageViewer
+          message={{
+            id: task.id,
+            content: task.original_message,
+            direction: "inbound",
+            channel: task.channel || "chat",
+            created_at: task.created_at,
+            sender_name: task.customer_name,
+          }}
+        />
       )}
 
       {/* File Previews */}

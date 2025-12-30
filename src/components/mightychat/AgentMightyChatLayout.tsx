@@ -17,6 +17,7 @@ import { ConversationActionsBar } from "@/components/mightychat/ConversationActi
 import { AgentBadge, QuoteStatusBadge } from "@/components/mightychat/InboxFilters";
 import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
 import { AgentChatPanel } from "@/components/mightychat/AgentChatPanel";
+import { MessageViewer } from "@/components/messages/MessageViewer";
 import { useMightyPermissions, isExternalConversation, getExternalHandler } from "@/hooks/useMightyPermissions";
 import { useProxyAttachment, needsProxy } from "@/hooks/useProxyAttachment";
 import { toast } from "sonner";
@@ -869,109 +870,111 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                 <ScrollArea className="flex-1 min-h-0 p-2 md:p-4">
                   <div className="flex flex-col justify-end min-h-full">
                     {messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`mb-3 md:mb-4 flex group ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
-                      >
-                        {msg.direction === "inbound" && (
-                          <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
-                            <AvatarImage src={getMessageAvatar(msg) || undefined} />
-                            <AvatarFallback className="text-[10px] md:text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
-                              {getMessageInitials(msg)}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div className={`max-w-[85%] md:max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
-                          {msg.sender_name && msg.direction === "inbound" && (
-                            <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
-                              {msg.sender_name}
-                            </div>
-                          )}
-                          {/* Show AI agent label for outbound messages */}
-                          {msg.direction === "outbound" && (msg.metadata as any)?.generated_by && (
-                            <div className="text-[10px] md:text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                                🤖 {getAgentDisplayName((msg.metadata as any).generated_by)}
-                              </span>
-                            </div>
-                          )}
-                          <div className="relative inline-block group">
-                            <div
-                              className={cn(
-                                "p-2 md:p-3 rounded-lg",
-                                msg.direction === "outbound" ? "bg-primary text-primary-foreground" : "bg-muted"
+                      <div key={msg.id} className="mb-3 md:mb-4 relative group">
+                        {/* Use unified MessageViewer for email, use existing style for DMs/chat */}
+                        {msg.channel === "email" ? (
+                          <MessageViewer message={msg} />
+                        ) : (
+                          <div className={`flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                            {msg.direction === "inbound" && (
+                              <Avatar className="w-7 h-7 md:w-8 md:h-8 mr-2 flex-shrink-0">
+                                <AvatarImage src={getMessageAvatar(msg) || undefined} />
+                                <AvatarFallback className="text-[10px] md:text-xs bg-gradient-to-br from-[#405DE6] to-[#E1306C] text-white">
+                                  {getMessageInitials(msg)}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <div className={`max-w-[85%] md:max-w-[70%] ${msg.direction === "outbound" ? "text-right" : ""}`}>
+                              {msg.sender_name && msg.direction === "inbound" && (
+                                <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
+                                  {msg.sender_name}
+                                </div>
                               )}
-                            >
-                              <p className="text-xs md:text-sm whitespace-pre-wrap break-all">
-                                <LinkifiedText
-                                  text={formatThreadText(
-                                    msg.channel === "email" ? stripHtmlTags(msg.content) : msg.content
+                              {/* Show AI agent label for outbound messages */}
+                              {msg.direction === "outbound" && (msg.metadata as any)?.generated_by && (
+                                <div className="text-[10px] md:text-xs text-muted-foreground mb-1 flex items-center justify-end gap-1">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                    🤖 {getAgentDisplayName((msg.metadata as any).generated_by)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="relative inline-block">
+                                <div
+                                  className={cn(
+                                    "p-2 md:p-3 rounded-lg",
+                                    msg.direction === "outbound" ? "bg-primary text-primary-foreground" : "bg-muted"
                                   )}
-                                  proxyAndOpen={proxyAndOpen}
-                                  loading={proxyLoading}
-                                />
-                              </p>
+                                >
+                                  <p className="text-xs md:text-sm whitespace-pre-wrap break-all">
+                                    <LinkifiedText
+                                      text={formatThreadText(msg.content)}
+                                      proxyAndOpen={proxyAndOpen}
+                                      loading={proxyLoading}
+                                    />
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  className={cn(
+                                    "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20",
+                                    msg.direction === "outbound" ? "-left-6" : "-right-6"
+                                  )}
+                                  title="Delete message"
+                                >
+                                  <Trash2 className="w-3 h-3 text-destructive" />
+                                </button>
+                              </div>
+                              <div className="text-[10px] md:text-xs text-muted-foreground mt-1 flex items-center gap-1 justify-end">
+                                {formatTime(msg.created_at)}
+                                {msg.direction === "outbound" && (() => {
+                                  const meta = msg.metadata as any;
+                                  return (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="inline-flex items-center gap-1">
+                                            {meta?.status === 'pending_approval' ? (
+                                              <Clock className="w-3 h-3 text-amber-500" />
+                                            ) : meta?.status === 'failed' || meta?.instagram_error ? (
+                                              <AlertCircle className="w-3 h-3 text-destructive" />
+                                            ) : meta?.instagram_sent || meta?.status === 'sent' ? (
+                                              <CheckCheck className="w-3 h-3 text-green-500" />
+                                            ) : (
+                                              <Check className="w-3 h-3 text-muted-foreground" />
+                                            )}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs max-w-[250px]">
+                                          {meta?.status === 'pending_approval' ? (
+                                            <span className="text-amber-500">⏳ Pending approval - not sent yet</span>
+                                          ) : meta?.status === 'failed' || meta?.instagram_error ? (
+                                            <div className="text-destructive">
+                                              <div>❌ Failed to send</div>
+                                              {meta?.instagram_error_code && (
+                                                <div className="text-[10px] mt-1">Error {meta.instagram_error_code}: {meta.instagram_error_message}</div>
+                                              )}
+                                            </div>
+                                          ) : meta?.instagram_sent ? (
+                                            <div className="text-green-500">
+                                              <div>✓ Sent to Instagram</div>
+                                              {meta?.delivery_latency_ms && (
+                                                <div className="text-[10px] text-muted-foreground">{meta.delivery_latency_ms}ms latency</div>
+                                              )}
+                                            </div>
+                                          ) : meta?.status === 'sent' ? (
+                                            <span className="text-green-500">✓ Sent</span>
+                                          ) : (
+                                            <span>Saved</span>
+                                          )}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
+                              </div>
                             </div>
-                            <button
-                              onClick={() => handleDeleteMessage(msg.id)}
-                              className={cn(
-                                "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/20",
-                                msg.direction === "outbound" ? "-left-6" : "-right-6"
-                              )}
-                              title="Delete message"
-                            >
-                              <Trash2 className="w-3 h-3 text-destructive" />
-                            </button>
                           </div>
-                          <div className="text-[10px] md:text-xs text-muted-foreground mt-1 flex items-center gap-1 justify-end">
-                            {formatTime(msg.created_at)}
-                            {msg.direction === "outbound" && (() => {
-                              const meta = msg.metadata as any;
-                              return (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-1">
-                                        {meta?.status === 'pending_approval' ? (
-                                          <Clock className="w-3 h-3 text-amber-500" />
-                                        ) : meta?.status === 'failed' || meta?.instagram_error ? (
-                                          <AlertCircle className="w-3 h-3 text-destructive" />
-                                        ) : meta?.instagram_sent || meta?.status === 'sent' ? (
-                                          <CheckCheck className="w-3 h-3 text-green-500" />
-                                        ) : (
-                                          <Check className="w-3 h-3 text-muted-foreground" />
-                                        )}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left" className="text-xs max-w-[250px]">
-                                      {meta?.status === 'pending_approval' ? (
-                                        <span className="text-amber-500">⏳ Pending approval - not sent yet</span>
-                                      ) : meta?.status === 'failed' || meta?.instagram_error ? (
-                                        <div className="text-destructive">
-                                          <div>❌ Failed to send</div>
-                                          {meta?.instagram_error_code && (
-                                            <div className="text-[10px] mt-1">Error {meta.instagram_error_code}: {meta.instagram_error_message}</div>
-                                          )}
-                                        </div>
-                                      ) : meta?.instagram_sent ? (
-                                        <div className="text-green-500">
-                                          <div>✓ Sent to Instagram</div>
-                                          {meta?.delivery_latency_ms && (
-                                            <div className="text-[10px] text-muted-foreground">{meta.delivery_latency_ms}ms latency</div>
-                                          )}
-                                        </div>
-                                      ) : meta?.status === 'sent' ? (
-                                        <span className="text-green-500">✓ Sent</span>
-                                      ) : (
-                                        <span>Saved</span>
-                                      )}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              );
-                            })()}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     ))}
                     <div ref={messagesEndRef} />
