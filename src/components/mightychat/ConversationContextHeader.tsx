@@ -67,13 +67,23 @@ const AGENT_INFO: Record<AgentInbox, {
   }
 };
 
+const DEFAULT_AGENT_INFO = {
+  displayName: 'Agent',
+  shortRole: 'Support',
+  fullRole: 'Support Agent',
+  icon: <Cog className="w-4 h-4" />,
+  color: 'text-gray-600 dark:text-gray-400',
+  bgColor: 'bg-gray-500/10',
+  borderColor: 'border-gray-500/30'
+};
+
 export function ConversationContextHeader({
   agentId,
   channel,
   recipientInbox,
   isExternal
 }: ConversationContextHeaderProps) {
-  const agentInfo = AGENT_INFO[agentId];
+  const agentInfo = AGENT_INFO[agentId] ?? DEFAULT_AGENT_INFO;
   
   const getInboxLabel = () => {
     if (channel === 'email' && recipientInbox) {
