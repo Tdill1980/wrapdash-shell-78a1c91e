@@ -213,9 +213,11 @@ Deno.serve(async (req) => {
           errorMessage = "Instagram not connected: missing page_access_token/page_id";
           console.error(`[execute-ai-action] ${errorMessage}`);
         } else {
-          console.log(`[execute-ai-action] Sending IG DM to ${recipientId} via page ${pageId}`);
+          console.log(`[execute-ai-action] Sending IG DM to ${recipientId} via /me/messages`);
 
-          const graphUrl = `https://graph.facebook.com/v19.0/${pageId}/messages?access_token=${encodeURIComponent(
+          // CRITICAL: Use /me/messages, NOT /{pageId}/messages
+          // The Page Access Token automatically scopes to the correct page
+          const graphUrl = `https://graph.facebook.com/v19.0/me/messages?access_token=${encodeURIComponent(
             pageAccessToken
           )}`;
 

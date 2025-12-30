@@ -135,8 +135,35 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
     // 3. Find or create contact and conversation
     const WPW_ORG_ID = '51aa96db-c06d-41ae-b3cb-25b045c75caf';
     
-    // IMPORTANT: For Instagram, the webhook already creates contact and conversation
-    // We should use the conversation_id passed from the webhook to avoid duplicates
+    // ============================================================
+    // CRITICAL GUARD: Instagram must use webhook-provided IDs
+    // The webhook is the ONLY creator of IG contacts/conversations
+    // ============================================================
+    if (body.platform === 'instagram') {
+      if (!body.conversation_id) {
+        console.error("❌ BLOCKED: Instagram ingest requires conversation_id from webhook");
+        return new Response(JSON.stringify({ 
+          error: "Instagram ingest requires conversation_id from webhook",
+          blocked: true 
+        }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      if (!body.contact_id) {
+        console.error("❌ BLOCKED: Instagram ingest requires contact_id from webhook");
+        return new Response(JSON.stringify({ 
+          error: "Instagram ingest requires contact_id from webhook",
+          blocked: true 
+        }), { 
+          status: 400, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      console.log("✅ Instagram using webhook IDs - conversation:", body.conversation_id, "contact:", body.contact_id);
+    }
+    
+    // Use IDs from webhook if provided (Instagram always provides these)
     let conversation = body.conversation_id 
       ? { id: body.conversation_id } 
       : null;
@@ -153,36 +180,24 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       contact = existingContact;
     }
     
-    // For non-Instagram platforms or if webhook didn't pass IDs, find/create
-    if (!contact && body.sender_id) {
-      // Use consistent lookup - check for instagram_sender_id (used by webhook)
+    // For non-Instagram platforms ONLY: find/create if needed
+    if (!contact && body.sender_id && body.platform !== 'instagram') {
+      // Use consistent lookup - check for sender_id patterns
       const { data: foundContact } = await supabase
         .from("contacts")
         .select("*")
         .eq("source", body.platform)
-        .contains("metadata", { instagram_sender_id: body.sender_id })
+        .or(`metadata->>sender_id.eq.${body.sender_id},metadata->>instagram_id.eq.${body.sender_id}`)
         .maybeSingle();
       
       if (foundContact) {
         contact = foundContact;
-      } else {
-        // Also try the legacy sender_id pattern
-        const { data: legacyContact } = await supabase
-          .from("contacts")
-          .select("*")
-          .eq("source", body.platform)
-          .or(`metadata->>sender_id.eq.${body.sender_id},metadata->>instagram_id.eq.${body.sender_id}`)
-          .maybeSingle();
-        
-        if (legacyContact) {
-          contact = legacyContact;
-        }
       }
     }
     
-    // Only create new contact if we truly don't have one
+    // Only create new contact for NON-INSTAGRAM platforms
     if (!contact && body.platform !== 'instagram') {
-      // For Instagram, the webhook handles contact creation - don't duplicate
+      console.log("👤 Creating new contact for platform:", body.platform);
       const { data: newContact, error: contactErr } = await supabase
         .from("contacts")
         .insert({
@@ -216,40 +231,24 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       console.log("📧 Updated contact with real email:", parsed.customer_email);
     }
 
-    // Find existing conversation if not passed from webhook
-    if (!conversation) {
-      // For Instagram, find by contact_id (same as webhook)
-      if (body.platform === 'instagram' && contact) {
-        const { data: foundConv } = await supabase
-          .from("conversations")
-          .select("*")
-          .eq("contact_id", contact.id)
-          .eq("channel", "instagram")
-          .maybeSingle();
-        
-        if (foundConv) {
-          conversation = foundConv;
-        }
-      }
-      
+    // Find existing conversation if not passed from webhook (for non-Instagram only)
+    if (!conversation && body.platform !== 'instagram') {
       // Fallback: search by subject pattern
-      if (!conversation) {
-        const { data: subjectConv } = await supabase
-          .from("conversations")
-          .select("*")
-          .eq("channel", body.platform)
-          .ilike("subject", `%${body.sender_id}%`)
-          .maybeSingle();
-        
-        if (subjectConv) {
-          conversation = subjectConv;
-        }
+      const { data: subjectConv } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("channel", body.platform)
+        .ilike("subject", `%${body.sender_id}%`)
+        .maybeSingle();
+      
+      if (subjectConv) {
+        conversation = subjectConv;
       }
     }
 
-    // Only create new conversation if we truly don't have one AND it's not Instagram
+    // Only create new conversation for NON-INSTAGRAM platforms
     if (!conversation && body.platform !== 'instagram') {
-      // For Instagram, the webhook handles conversation creation - don't duplicate
+      console.log("💬 Creating new conversation for platform:", body.platform);
       const { data: newConv, error: convError } = await supabase
         .from("conversations")
         .insert({
