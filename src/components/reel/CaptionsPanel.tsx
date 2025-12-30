@@ -350,23 +350,26 @@ export function CaptionsPanel({
                 Regenerate All
               </Button>
 
-              <Button
-                size="sm"
-                variant={allApproved ? "secondary" : "default"}
-                disabled={approving || allApproved || scenesWithText.length === 0 || !jobId}
-                onClick={handleApproveAllOverlays}
-                className="h-7 text-xs"
-                title={!jobId ? "Start a render first to approve overlays" : undefined}
-              >
-                {approving ? (
-                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                ) : allApproved ? (
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                ) : (
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                )}
-                {!jobId ? "Approve (render first)" : allApproved ? "All Approved" : `Approve All (${scenesWithText.length})`}
-              </Button>
+              {jobId ? (
+                <Button
+                  size="sm"
+                  variant={allApproved ? "secondary" : "default"}
+                  disabled={approving || allApproved || scenesWithText.length === 0}
+                  onClick={handleApproveAllOverlays}
+                  className="h-7 text-xs"
+                >
+                  {approving ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                  )}
+                  {allApproved ? "All Approved" : `Approve All (${scenesWithText.length})`}
+                </Button>
+              ) : scenesWithText.length > 0 && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded">
+                  ✓ {scenesWithText.length} overlay(s) ready — will be included when you render
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -458,17 +461,16 @@ export function CaptionsPanel({
                       {displayText ? "Regen" : "Generate"}
                     </Button>
 
-                    {displayText && !isApproved && (
+                    {/* Only show Approve button after render has started */}
+                    {jobId && displayText && !isApproved && (
                       <Button
                         size="sm"
                         variant="secondary"
                         className="h-6 px-2 text-[10px]"
                         onClick={() => handleApproveOne(scene)}
-                        disabled={!jobId}
-                        title={!jobId ? "Start a render first to approve" : undefined}
                       >
                         <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
-                        {!jobId ? "Approve (render first)" : "Approve"}
+                        Approve
                       </Button>
                     )}
                   </div>
