@@ -5891,6 +5891,75 @@ export type Database = {
           },
         ]
       }
+      system_issues: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          impact: string
+          organization_id: string
+          page_url: string | null
+          related_task_id: string | null
+          reported_by: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          workaround: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact: string
+          organization_id: string
+          page_url?: string | null
+          related_task_id?: string | null
+          reported_by: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          workaround?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact?: string
+          organization_id?: string
+          page_url?: string | null
+          related_task_id?: string | null
+          reported_by?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          workaround?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_issues_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_issues_related_task_id_fkey"
+            columns: ["related_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_agent: string | null
