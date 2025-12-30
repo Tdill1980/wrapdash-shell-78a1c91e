@@ -291,3 +291,6 @@ verify_jwt = false
 
 [functions.vehicle-models]
 verify_jwt = false
+
+[functions.forward-to-team]
+verify_jwt = false
