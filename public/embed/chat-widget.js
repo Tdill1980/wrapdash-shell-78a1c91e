@@ -1,12 +1,22 @@
 (function() {
   'use strict';
 
+  // WrapCommandAI Chat Widget - Jordan Lee
+  // SAFETY: External, deferred, non-blocking. Fails silently.
+  // Does NOT execute WordPress logic or mutate WP state.
+  
+  // Kill switch - add <script>window.WRAPCOMMAND_DISABLED = true;</script> to disable
+  if (window.WRAPCOMMAND_DISABLED) {
+    console.log('[WCAI] Widget disabled via kill switch');
+    return;
+  }
+
   // Configuration from script attributes
   const scriptTag = document.currentScript;
   const config = {
     org: scriptTag?.getAttribute('data-org') || 'wpw',
-    agent: scriptTag?.getAttribute('data-agent') || 'wpw_ai_team',
-    mode: scriptTag?.getAttribute('data-mode') || 'test',
+    agent: scriptTag?.getAttribute('data-agent') || 'jordan',
+    mode: scriptTag?.getAttribute('data-mode') || 'live',
     apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/luigi-ordering-concierge'
   };
 
