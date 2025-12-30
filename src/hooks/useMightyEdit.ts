@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, type Creative } from "@/lib/creativeVault";
+import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, type Creative, type FormatSlug } from "@/lib/creativeVault";
+import { validateAndNormalizeBlueprint, type SceneBlueprintV1 } from "@/lib/blueprints";
 
 export interface VideoEditItem {
   id: string;
@@ -192,30 +193,46 @@ export function useMightyEdit() {
 
   /**
    * Create an ai_creatives record and link it to the video edit queue
+   * Blueprint MUST be pre-validated via validateAndNormalizeBlueprint
    */
   const createCreativeRecord = useCallback(async (
     video: VideoEditItem, 
-    blueprint: any,
+    blueprint: SceneBlueprintV1,
     queueId: string
   ): Promise<Creative | null> => {
     console.log("[useMightyEdit] Creating ai_creatives record...");
     
     try {
+      // Ensure blueprint is normalized (should already be, but belt + suspenders)
+      let normalizedBlueprint: SceneBlueprintV1;
+      try {
+        normalizedBlueprint = validateAndNormalizeBlueprint(blueprint);
+      } catch (e) {
+        console.error("[useMightyEdit] Blueprint validation failed in createCreativeRecord:", e);
+        // Use as-is if already validated (type assertion)
+        normalizedBlueprint = blueprint;
+      }
+      
+      // Map format to valid FormatSlug
+      const formatSlug: FormatSlug = 
+        normalizedBlueprint.format === 'story' ? 'story' : 
+        normalizedBlueprint.format === 'short' ? 'short' : 'reel';
+      
       // Create the creative record
       const creative = await createCreativeWithTags({
         title: video.title || 'MightyEdit Render',
         description: 'Generated via MightyEdit',
         sourceType: 'manual',
         toolSlug: 'mighty_edit',
-        formatSlug: 'reel',
-        platform: 'instagram',
+        formatSlug,
+        platform: normalizedBlueprint.platform || 'instagram',
         createdBy: 'user',
       });
       
       console.log("[useMightyEdit] Created creative:", creative.id);
       
-      // Save the blueprint to the creative
-      await saveBlueprintSnapshot(creative.id, blueprint);
+      // Save the normalized blueprint to the creative
+      await saveBlueprintSnapshot(creative.id, normalizedBlueprint);
       console.log("[useMightyEdit] Saved blueprint to creative");
       
       // Update the creative to rendering status
@@ -229,7 +246,7 @@ export function useMightyEdit() {
         .from('video_edit_queue')
         .update({ 
           ai_creative_id: creative.id,
-          ai_edit_suggestions: blueprint, // Ensure blueprint is in queue for render-reel
+          ai_edit_suggestions: normalizedBlueprint, // Normalized blueprint for render-reel
         })
         .eq('id', queueId);
       

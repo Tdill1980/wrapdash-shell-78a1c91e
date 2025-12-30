@@ -31,6 +31,7 @@ import { RenderProgressBar } from "@/components/mighty-edit/RenderProgressBar";
 import { RenderInspector } from "@/components/debug/RenderInspector";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
+import { validateAndNormalizeBlueprint, BlueprintValidationError } from "@/lib/blueprints";
 
 interface ContentFactoryPreset {
   action?: string;
@@ -200,14 +201,27 @@ export default function MightyEdit() {
     console.log('[MightyEdit] Generating blueprint...');
     toast.loading('Preparing render...', { id: `render-prep-${queueId}` });
     
-    const blueprint = await generateBlueprint(selectedVideo);
-    if (!blueprint || !blueprint.scenes?.length) {
-      console.error('[MightyEdit] Blueprint generation failed');
+    const rawBlueprint = await generateBlueprint(selectedVideo);
+    if (!rawBlueprint) {
+      console.error('[MightyEdit] Blueprint generation returned null');
       toast.error('Failed to generate video blueprint', { id: `render-prep-${queueId}` });
       return;
     }
     
-    console.log('[MightyEdit] Blueprint generated with', blueprint.scenes.length, 'scenes');
+    // Step 2b: Validate and normalize blueprint (HARD GATE)
+    let blueprint;
+    try {
+      blueprint = validateAndNormalizeBlueprint(rawBlueprint);
+      console.log('[MightyEdit] Blueprint validated with', blueprint.scenes.length, 'scenes');
+    } catch (e) {
+      const err = e as BlueprintValidationError;
+      console.error('[MightyEdit] Blueprint validation failed:', err.message, err.details);
+      toast.error('Blueprint invalid — cannot render', {
+        id: `render-prep-${queueId}`,
+        description: err.message,
+      });
+      return;
+    }
     
     // Step 3: Create ai_creatives record and link to queue
     console.log('[MightyEdit] Creating creative record...');
