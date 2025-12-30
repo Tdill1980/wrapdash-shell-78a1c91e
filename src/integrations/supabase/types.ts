@@ -5492,6 +5492,54 @@ export type Database = {
           },
         ]
       }
+      scene_text_overlays: {
+        Row: {
+          animation: string | null
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          end_time: number
+          id: string
+          job_id: string
+          organization_id: string | null
+          position: string
+          scene_id: string
+          start_time: number
+          text: string
+        }
+        Insert: {
+          animation?: string | null
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          end_time: number
+          id?: string
+          job_id: string
+          organization_id?: string | null
+          position?: string
+          scene_id: string
+          start_time: number
+          text: string
+        }
+        Update: {
+          animation?: string | null
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          end_time?: number
+          id?: string
+          job_id?: string
+          organization_id?: string | null
+          position?: string
+          scene_id?: string
+          start_time?: number
+          text?: string
+        }
+        Relationships: []
+      }
       shopflow_logs: {
         Row: {
           created_at: string
