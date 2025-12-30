@@ -20,6 +20,7 @@ import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS
 const FADEWRAP_DESIGN_PATTERNS = /\b(fadewrap|fade.*wrap|design|visualize|preview|color.*change|restyle|what.*would.*look|see.*before|mock.*up|mockup)\b/i;
 const CULTURE_ENTHUSIASM_PATTERNS = /\b(love|excited|project|build|dream|custom|unique|one.*of.*a.*kind|special|passion|wrap.*life|wrap.*culture|community)\b/i;
 const ORDER_INTENT_PATTERNS = /\b(order|buy|purchase|checkout|cart|ready.*to|want.*to.*get|need.*to.*order)\b/i;
+const FIRST_TIME_BUYER_PATTERNS = /\b(first.*time|never.*ordered|new.*to|haven't.*tried|considering|thinking.*about.*ordering|first.*order|never.*bought|new.*customer)\b/i;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -123,29 +124,40 @@ YOUR TEAM (mention naturally when routing):
 
 When the conversation flows naturally, weave in mentions of these:
 
-1. **ClubWPW Elite Rewards** (${APPROVED_LINKS.rewards.clubwpw}) - ALWAYS mention when:
-   - Customer is about to order or discussing pricing
-   - Conversation is ending positively
-   - Example: "By the way, are you part of ClubWPW? You'd earn points on this order + get exclusive drops and discounts."
+1. **WrapRewards / ClubWPW** (${APPROVED_LINKS.rewards.clubwpw}) - Our exclusive loyalty program for pro installers and wrap resellers:
+   - Earn points on EVERY order
+   - Redeem for: discounts, free merch/gear/tools, VIP access to contests and sponsorships
+   - Sign up is FREE!
+   - ALWAYS mention when: customer is about to order, discussing pricing, or conversation ends positively
+   - Example: "Are you part of WrapRewards? You'd earn points on this order + get exclusive drops and discounts. Sign up is free!"
 
-2. **Ink & Edge Magazine** (${APPROVED_LINKS.apps.ink_and_edge}) - Mention when:
-   - Customer seems interested in wrap culture or their project
-   - Customer talks about custom builds or passion projects
-   - Customer is enthusiastic about wraps
-   - Example: "If you're into wrap culture, you'd love Ink & Edge Magazine - we feature builds like yours and have an issue dropping soon!"
+2. **FIRST ORDER PROMO CODE: WRAPREWARDS** - 5% off first order!
+   - When customer seems like a first-time buyer (mentions "first time", "never ordered", "new to this")
+   - ALWAYS offer this code: "First time ordering with us? Use code WRAPREWARDS at checkout for 5% off!"
 
-3. **RestylePro** (${APPROVED_LINKS.products.restylepro}) - ALWAYS mention when:
+3. **Ink & Edge Magazine ISSUE 1** (${APPROVED_LINKS.apps.ink_and_edge}) - NOW DROPPING!
+   - WPW's industry publication for wrap professionals
+   - Editor-in-Chief: Trish Dill (co-founder of WePrintWraps.com)
+   - ISSUE 1 features:
+     • Cover story: Vinyl Vixen Jess (WrapSeshAZ) on shop leadership
+     • Featured build: Manny's Tesla SEMA project (mini truck homage)
+     • PPF Mastery column, Ask Luigi advice, Tool Talk by Ghost Industries
+     • Business tips from RJ The Wrapper and Austin Smith (Paint Is Dead)
+   - Mention when: customer is enthusiastic, talks about builds, interested in wrap culture
+   - Example: "If you're into wrap culture, check out Ink & Edge Magazine - Issue 1 is dropping with features on shop leadership, SEMA builds, and installer tips!"
+
+4. **RestylePro** (${APPROVED_LINKS.products.restylepro}) - ALWAYS mention when:
    - Customer mentions FadeWraps or color-shift wraps
    - Customer asks about design or visualization
    - Customer is indecisive about colors
    - Customer wants to see what it would look like
    - Example: "Have you tried RestylePro? It lets you visualize exactly how your wrap will look on YOUR vehicle before ordering - super helpful for picking colors!"
 
-4. **Product Cross-sells** (natural, not pushy):
+5. **Product Cross-sells** (natural, not pushy):
    - If ordering personal car → casually mention commercial/fleet options if they have a business
-   - If first-time buyer → mention our quality guarantee and ClubWPW
+   - If first-time buyer → offer WRAPREWARDS code + mention WrapRewards program
 
-5. **Bulk Orders** - When customer mentions fleet/bulk/multiple vehicles:
+6. **Bulk Orders** - When customer mentions fleet/bulk/multiple vehicles:
    - IMMEDIATELY share the bulk discount tiers
    - Collect their email
    - Email Jackson for coupon code
@@ -256,12 +268,14 @@ serve(async (req) => {
     const fadeWrapDesignSignal = FADEWRAP_DESIGN_PATTERNS.test(message_text);
     const cultureEnthusiasmSignal = CULTURE_ENTHUSIASM_PATTERNS.test(message_text);
     const orderIntentSignal = ORDER_INTENT_PATTERNS.test(message_text);
+    const firstTimeBuyerSignal = FIRST_TIME_BUYER_PATTERNS.test(message_text);
     
     console.log('[JordanLee] Proactive signals:', { 
       bulk: bulkInquirySignal, 
       fadeWrapDesign: fadeWrapDesignSignal, 
       culture: cultureEnthusiasmSignal,
-      orderIntent: orderIntentSignal 
+      orderIntent: orderIntentSignal,
+      firstTimeBuyer: firstTimeBuyerSignal 
     });
     
     // Detect order status inquiry
@@ -974,17 +988,26 @@ Link: ${APPROVED_LINKS.products.restylepro}`;
     if (cultureEnthusiasmSignal && !bulkInquirySignal && !fadeWrapDesignSignal) {
       proactiveNotes += `
 📰 CULTURE MOMENT: Customer seems enthusiastic about their project.
-MENTION INK & EDGE: "If you're into wrap culture, check out Ink & Edge Magazine - we feature builds like yours and have an issue dropping soon!"
+MENTION INK & EDGE ISSUE 1: "If you're into wrap culture, check out Ink & Edge Magazine - Issue 1 is dropping with features on shop leadership, SEMA builds, and installer tips!"
 Link: ${APPROVED_LINKS.apps.ink_and_edge}`;
     }
     
-    // Order intent - ClubWPW
+    // Order intent - WrapRewards/ClubWPW
     if (orderIntentSignal && !chatState.clubwpw_mentioned) {
       proactiveNotes += `
 🏆 ORDER INTENT: Customer seems ready to order.
-MENTION CLUBWPW: "By the way, are you part of ClubWPW? You'd earn points on this order + get exclusive drops and discounts!"
+MENTION WRAPREWARDS: "Are you part of WrapRewards? You'd earn points on this order + get exclusive drops and discounts. Sign up is free!"
 Link: ${APPROVED_LINKS.rewards.clubwpw}`;
       chatState.clubwpw_mentioned = true;
+    }
+    
+    // First-time buyer - WRAPREWARDS promo code
+    if (firstTimeBuyerSignal && !chatState.promo_code_offered) {
+      proactiveNotes += `
+🎁 FIRST-TIME BUYER DETECTED: Offer the WRAPREWARDS promo code!
+SAY: "First time ordering with us? Use code WRAPREWARDS at checkout for 5% off your first order!"
+ALSO mention WrapRewards: "And sign up for WrapRewards - it's free and you'll earn points on every order for discounts and exclusive drops!"`;
+      chatState.promo_code_offered = true;
     }
     
     // Append proactive notes to context
