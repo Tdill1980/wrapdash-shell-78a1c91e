@@ -9,7 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import { ExternalLink } from "lucide-react";
 
 interface BacklogItem {
   id: string;
@@ -17,6 +19,7 @@ interface BacklogItem {
   subject: string | null;
   last_inbound_at: string;
   last_outbound_at: string | null;
+  needs_response: boolean;
 }
 
 export function BacklogTable() {
@@ -26,26 +29,15 @@ export function BacklogTable() {
   const fetchBacklog = async () => {
     setLoading(true);
     try {
-      // Query conversations with last_message_at, ordered by most recent
+      // Query the ops_backlog_needs_response view
       const { data, error } = await supabase
-        .from("conversations")
-        .select("id, channel, subject, last_message_at")
-        .not("last_message_at", "is", null)
-        .order("last_message_at", { ascending: false })
+        .from("ops_backlog_needs_response" as any)
+        .select("*")
         .limit(100);
 
       if (error) throw error;
       
-      // Map to backlog items
-      setItems(
-        (data || []).map((c) => ({
-          id: c.id,
-          channel: c.channel,
-          subject: c.subject,
-          last_inbound_at: c.last_message_at || new Date().toISOString(),
-          last_outbound_at: null,
-        }))
-      );
+      setItems((data as unknown as BacklogItem[]) || []);
     } catch (e) {
       console.error("Failed to fetch backlog:", e);
     } finally {
@@ -79,6 +71,11 @@ export function BacklogTable() {
     return "text-muted-foreground";
   };
 
+  const openInMightyChat = (conversationId: string) => {
+    // Open conversation in MightyChat using the existing route
+    window.open(`/mighty-chat?conversation=${conversationId}`, "_blank");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8 text-muted-foreground">
@@ -104,6 +101,7 @@ export function BacklogTable() {
             <TableHead>Subject</TableHead>
             <TableHead>Last Inbound</TableHead>
             <TableHead>Age</TableHead>
+            <TableHead className="w-[80px]">Open</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -122,6 +120,16 @@ export function BacklogTable() {
               </TableCell>
               <TableCell className={`text-xs ${getAgeColor(item.last_inbound_at)}`}>
                 {formatDistanceToNow(new Date(item.last_inbound_at), { addSuffix: true })}
+              </TableCell>
+              <TableCell>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => openInMightyChat(item.id)}
+                  className="h-7 w-7 p-0"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           ))}

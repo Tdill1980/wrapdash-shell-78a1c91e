@@ -859,6 +859,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ai_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ai_actions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -3698,6 +3705,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "execution_receipts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "execution_receipts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -4195,6 +4209,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
             referencedColumns: ["id"]
           },
         ]
@@ -5861,6 +5882,13 @@ export type Database = {
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "story_engagement_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
         ]
       }
       tasks: {
@@ -5965,6 +5993,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -6033,6 +6068,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_commands_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
             referencedColumns: ["id"]
           },
           {
@@ -6595,7 +6637,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ops_backlog_needs_response: {
+        Row: {
+          channel: string | null
+          id: string | null
+          last_inbound_at: string | null
+          last_outbound_at: string | null
+          needs_response: boolean | null
+          subject: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_content_tag: {
