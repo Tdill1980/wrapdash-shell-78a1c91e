@@ -373,20 +373,24 @@ serve(async (req) => {
 
     // ============ START CREATOMATE RENDER ============
     console.log("[render-reel] Starting Creatomate render...");
-    
-    // Creatomate RenderScript: send the composition JSON directly as the request body
-    // (NOT wrapped in a "source" field - that's only for element sources)
-    // See: https://creatomate.com/docs/api/quick-start/create-a-video-by-render-script
-    console.log("[render-reel] Creatomate payload (RenderScript):", { 
+
+    // Creatomate requires either template_id, tags, or source (object).
+    // For RenderScript, we send the composition as a SOURCE OBJECT.
+    // Docs: https://creatomate.com/docs/api/quick-start/create-a-video-by-render-script
+    const creatomatePayload = { source: timeline };
+
+    console.log("[render-reel] Creatomate payload (RenderScript):", {
+      has_source: !!creatomatePayload.source,
+      source_type: typeof creatomatePayload.source,
       output_format: timeline.output_format,
       dimensions: `${timeline.width}x${timeline.height}`,
       duration: timeline.duration,
       elements_count: timeline.elements.length,
     });
-    
+
     const startRes = await creatomateFetch("renders", {
       method: "POST",
-      body: JSON.stringify(timeline),  // Send timeline directly - this IS the RenderScript
+      body: JSON.stringify(creatomatePayload),
     });
 
     const startJson = await startRes.json();
