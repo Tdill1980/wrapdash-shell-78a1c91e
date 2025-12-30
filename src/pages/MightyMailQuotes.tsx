@@ -414,10 +414,22 @@ export default function MightyMailQuotes() {
                             <p className="text-sm font-medium text-foreground">
                               {quote.customer_name}
                             </p>
+                            {quote.customer_name?.startsWith("ig_") && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/50">
+                                No Name
+                              </Badge>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {quote.customer_email}
-                          </p>
+                          <div className="flex items-center gap-1">
+                            <p className="text-xs text-muted-foreground">
+                              {quote.customer_email}
+                            </p>
+                            {quote.customer_email?.includes("ig_") && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/50">
+                                No Email
+                              </Badge>
+                            )}
+                          </div>
                           {(quote.source_message || quote.ai_message) && (
                             <p className="text-xs text-muted-foreground/70 truncate max-w-[200px]" title={quote.source_message || quote.ai_message}>
                               "{(quote.source_message || quote.ai_message)?.slice(0, 40)}..."
@@ -501,12 +513,13 @@ export default function MightyMailQuotes() {
                         <div className="flex gap-1">
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
                             onClick={() => handleViewDetails(quote)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 px-2 text-xs"
                             title="View Conversation"
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            <MessageSquare className="w-3 h-3 mr-1" />
+                            View
                           </Button>
                           <Button
                             size="sm"
