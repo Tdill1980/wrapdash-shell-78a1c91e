@@ -13,7 +13,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getAgentForContentType } from "@/hooks/useCalendarTaskSync";
+import { 
+  resolveExecutionTarget, 
+  setExecutionContext, 
+  buildExecutionRoute,
+  normalizeBrand,
+  normalizeContentType,
+  type ExecutionContext
+} from "@/lib/executionResolver";
 
 interface ContentItem {
   id: string;
@@ -148,19 +155,15 @@ export function ContentExecutionList() {
   });
 
   const handleCreateNow = async (item: ContentItem) => {
-    const agentId = getAgentForContentType(item.content_type);
-    const linkedTask = tasksByCalendarId[item.id];
-    
-    if (!agentId) {
-      toast.error(`No agent mapped for ${item.content_type}`);
-      return;
-    }
+    // Use the canonical execution resolver
+    const resolution = resolveExecutionTarget(item.brand, item.content_type, item.platform);
 
-    // Update status to in_progress immediately
+    // Update status to in_progress immediately with timestamp
     const { error: updateError } = await supabase
       .from('content_calendar')
       .update({ 
-        status: 'in_progress'
+        status: 'in_progress',
+        in_progress_at: new Date().toISOString()
       })
       .eq('id', item.id);
 
@@ -172,20 +175,24 @@ export function ContentExecutionList() {
     // Invalidate to reflect status change
     queryClient.invalidateQueries({ queryKey: ['content-execution-due'] });
     
-    const context = {
+    // Build and persist execution context
+    const context: ExecutionContext = {
       source: 'content_calendar',
-      calendar_id: item.id,
-      task_id: linkedTask?.id || null,
-      content_type: getContentTypeKey(item.content_type, item.platform),
+      content_calendar_id: item.id,
+      content_type: normalizeContentType(item.content_type),
       platform: item.platform,
-      brand: item.brand,
+      brand: normalizeBrand(item.brand),
       title: item.title || 'Untitled',
       caption: item.caption || '',
       scheduled_date: item.scheduled_date,
     };
     
-    sessionStorage.setItem('agent_chat_context', JSON.stringify(context));
-    navigate(`/mightytask?agent=${agentId}&calendarId=${item.id}`);
+    setExecutionContext(context);
+    
+    // Build route and navigate
+    const route = buildExecutionRoute(resolution, item.id);
+    toast.success(`Starting execution via ${resolution.label}`);
+    navigate(route);
   };
 
   const renderContentItem = (item: ContentItem, isOverdue: boolean) => {
