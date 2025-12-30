@@ -89,6 +89,104 @@ FORMAT: 🚀 BRANDFORMANCE
 - One clip, 15-60s`
 };
 
+// ═══════════════════════════════════════════════════════════════
+// STYLE-TO-TAG RULES - Determines which clips match each format
+// ═══════════════════════════════════════════════════════════════
+const STYLE_TAG_RULES: Record<string, {
+  mustHaveAny: string[];
+  mustNotHave: string[];
+  preferredTags: string[];
+}> = {
+  ugly_ads: {
+    mustHaveAny: [
+      "ugly_ads", "lo_fi", "raw", "behind_the_scenes", "authentic",
+      "handheld", "phone_video", "unpolished", "imperfect", "no_color_grade", "amateur"
+    ],
+    mustNotHave: ["studio", "cinematic", "polished", "professional", "color_graded"],
+    preferredTags: ["shop_environment", "garage", "process", "installation"],
+  },
+  grid_style: {
+    mustHaveAny: [
+      "grid_style", "clean", "polished", "studio", "cinematic",
+      "professional", "color_graded", "studio_light"
+    ],
+    mustNotHave: ["ugly_ads", "lo_fi", "raw", "handheld", "shaky", "unpolished", "amateur"],
+    preferredTags: ["high_resolution", "hero_shot", "product_focus"],
+  },
+  creator_testimonial: {
+    mustHaveAny: ["testimonial", "talking_head", "face_cam"],
+    mustNotHave: [],
+    preferredTags: ["good_audio", "close_up", "medium_shot"],
+  },
+  negative_marketing: {
+    mustHaveAny: ["negative_marketing", "harsh", "aggressive", "raw", "ugly_ads"],
+    mustNotHave: [],
+    preferredTags: ["high_contrast", "handheld"],
+  },
+  egc_warehouse: {
+    mustHaveAny: [
+      "behind_the_scenes", "shop_environment", "garage", "process",
+      "handheld", "pov", "authentic", "raw"
+    ],
+    mustNotHave: ["studio", "polished"],
+    preferredTags: ["installation", "motion"],
+  },
+  founders_objection: {
+    mustHaveAny: ["talking_head", "face_cam", "lo_fi", "raw", "authentic"],
+    mustNotHave: ["studio", "cinematic"],
+    preferredTags: ["good_audio"],
+  },
+  text_heavy: {
+    mustHaveAny: [], // Any clips work for text-heavy
+    mustNotHave: [],
+    preferredTags: ["b_roll", "motion", "vehicle"],
+  },
+  brandformance: {
+    mustHaveAny: ["authentic", "raw", "b_roll", "process"],
+    mustNotHave: [],
+    preferredTags: ["motion", "vehicle", "wrap"],
+  },
+};
+
+// Filter clips by style tags
+function filterByStyleTags(videos: any[], format: string): any[] {
+  const rules = STYLE_TAG_RULES[format];
+  if (!rules || rules.mustHaveAny.length === 0) {
+    return videos; // No filter for this format
+  }
+
+  return videos.filter(v => {
+    const clipTags = v.tags || [];
+    
+    // Must have at least one required tag
+    const hasRequired = rules.mustHaveAny.some(tag => clipTags.includes(tag));
+    if (!hasRequired) return false;
+
+    // Must NOT have any excluded tags
+    const hasExcluded = rules.mustNotHave.some(tag => clipTags.includes(tag));
+    if (hasExcluded) return false;
+
+    return true;
+  });
+}
+
+// Score clips by style match
+function scoreByStyleMatch(video: any, format: string): number {
+  const rules = STYLE_TAG_RULES[format];
+  if (!rules) return 0;
+
+  const clipTags = video.tags || [];
+  let score = 0;
+
+  // Count matching required tags
+  score += rules.mustHaveAny.filter(t => clipTags.includes(t)).length * 2;
+  
+  // Count matching preferred tags
+  score += (rules.preferredTags || []).filter(t => clipTags.includes(t)).length;
+
+  return score;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -613,7 +711,7 @@ Return JSON ONLY:
       });
     }
 
-    console.log(`Found ${videos.length} videos, applying visual tag scoring...`);
+    console.log(`Found ${videos.length} videos, applying style + visual tag scoring...`);
 
     // Filter out already-edited content
     const rawVideos = videos.filter(v => {
@@ -639,17 +737,47 @@ Return JSON ONLY:
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // STYLE-BASED TAG FILTERING (NEW!)
+    // If a Dara format is selected, filter clips by matching style tags
+    // ═══════════════════════════════════════════════════════════════
+    let styleFilteredVideos = rawVideos;
+    let styleFilterApplied = false;
+
+    if (dara_format && STYLE_TAG_RULES[dara_format]) {
+      const styleMatched = filterByStyleTags(rawVideos, dara_format);
+      console.log(`Style filter "${dara_format}": ${styleMatched.length}/${rawVideos.length} clips match tags`);
+      
+      if (styleMatched.length >= 3) {
+        styleFilteredVideos = styleMatched;
+        styleFilterApplied = true;
+        console.log(`✅ Using ${styleMatched.length} style-matched clips for ${dara_format}`);
+      } else {
+        console.log(`⚠️ Only ${styleMatched.length} clips match style, using all raw clips as fallback`);
+        // Still prefer style-matched clips but include others
+        styleFilteredVideos = [
+          ...styleMatched,
+          ...rawVideos.filter(v => !styleMatched.includes(v))
+        ];
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // SCORE + FILTER + FAIL-LOUD
     // ═══════════════════════════════════════════════════════════════
     const intent = getIntent(topic || "", content_type || "");
     const SCORE_THRESHOLD = 10;
 
-    const scored = rawVideos
-      .map(v => ({ ...v, score: scoreVideoForTopic(v, intent) }))
-      .filter(v => v.score > SCORE_THRESHOLD)
+    const scored = styleFilteredVideos
+      .map(v => {
+        // Combine visual_tags score + style_tags score
+        const visualScore = scoreVideoForTopic(v, intent);
+        const styleScore = dara_format ? scoreByStyleMatch(v, dara_format) * 5 : 0;
+        return { ...v, score: visualScore + styleScore, styleScore };
+      })
+      .filter(v => v.score > SCORE_THRESHOLD || (styleFilterApplied && v.styleScore > 0))
       .sort((a, b) => b.score - a.score);
 
-    console.log(`Scoring complete: ${scored.length} videos qualify (threshold: ${SCORE_THRESHOLD})`);
+    console.log(`Scoring complete: ${scored.length} videos qualify (threshold: ${SCORE_THRESHOLD}, style_filter: ${styleFilterApplied})`);
 
     // ═══════════════════════════════════════════════════════════════
     // FALLBACK MODE: If not enough qualifying clips, use best available
@@ -668,11 +796,11 @@ Return JSON ONLY:
         .sort((a, b) => (b.visual_tags?.quality_score ?? 0) - (a.visual_tags?.quality_score ?? 0));
       
       if (vehicleVideos.length >= 3) {
-        finalCandidates = vehicleVideos.slice(0, 10).map(v => ({ ...v, score: v.visual_tags?.quality_score ?? 50 }));
+        finalCandidates = vehicleVideos.slice(0, 10).map(v => ({ ...v, score: v.visual_tags?.quality_score ?? 50, styleScore: 0 }));
         console.log(`Fallback 1: Using ${finalCandidates.length} vehicle clips by quality`);
       } else {
         // Fallback 2: Use any raw videos sorted by recency
-        finalCandidates = rawVideos.slice(0, 10).map(v => ({ ...v, score: 25 }));
+        finalCandidates = rawVideos.slice(0, 10).map(v => ({ ...v, score: 25, styleScore: 0 }));
         console.log(`Fallback 2: Using ${finalCandidates.length} most recent raw clips`);
         confidence = "low";
       }
