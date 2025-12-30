@@ -1407,6 +1407,53 @@ export type Database = {
           },
         ]
       }
+      brand_overlay_templates: {
+        Row: {
+          animation: string
+          brand: string
+          created_at: string | null
+          example: string | null
+          id: string
+          name: string
+          organization_id: string | null
+          position: string
+          prompt: string
+          tone: string | null
+        }
+        Insert: {
+          animation?: string
+          brand: string
+          created_at?: string | null
+          example?: string | null
+          id?: string
+          name: string
+          organization_id?: string | null
+          position?: string
+          prompt: string
+          tone?: string | null
+        }
+        Update: {
+          animation?: string
+          brand?: string
+          created_at?: string | null
+          example?: string | null
+          id?: string
+          name?: string
+          organization_id?: string | null
+          position?: string
+          prompt?: string
+          tone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_overlay_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_profiles: {
         Row: {
           brand_ad_examples: Json | null
