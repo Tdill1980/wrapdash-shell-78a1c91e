@@ -987,6 +987,15 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
                 contactId={selectedConversation.contact_id}
                 channel={selectedConversation.channel}
                 customerName={selectedConversation.subject || undefined}
+                latestMessage={
+                  messages.length > 0
+                    ? {
+                        id: messages[messages.length - 1].id,
+                        content: messages[messages.length - 1].content,
+                        created_at: messages[messages.length - 1].created_at,
+                      }
+                    : null
+                }
               />
 
               {canReply ? (
