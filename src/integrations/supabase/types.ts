@@ -1896,10 +1896,12 @@ export type Database = {
           engagement_stats: Json | null
           hashtags: string[] | null
           id: string
+          in_progress_at: string | null
           organization_id: string | null
           platform: string
           post_url: string | null
           posted_at: string | null
+          ready_at: string | null
           scheduled_date: string
           scheduled_time: string
           status: string | null
@@ -1915,10 +1917,12 @@ export type Database = {
           engagement_stats?: Json | null
           hashtags?: string[] | null
           id?: string
+          in_progress_at?: string | null
           organization_id?: string | null
           platform: string
           post_url?: string | null
           posted_at?: string | null
+          ready_at?: string | null
           scheduled_date: string
           scheduled_time?: string
           status?: string | null
@@ -1934,10 +1938,12 @@ export type Database = {
           engagement_stats?: Json | null
           hashtags?: string[] | null
           id?: string
+          in_progress_at?: string | null
           organization_id?: string | null
           platform?: string
           post_url?: string | null
           posted_at?: string | null
+          ready_at?: string | null
           scheduled_date?: string
           scheduled_time?: string
           status?: string | null

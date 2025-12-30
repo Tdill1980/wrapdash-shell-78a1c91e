@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -151,6 +151,7 @@ type ViewMode = "todo" | "inprogress" | "done" | "all";
 export default function MightyTaskUnified() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const handledNavStateRef = useRef(false);
 
   const { organizationId } = useOrganization();
@@ -400,6 +401,51 @@ export default function MightyTaskUnified() {
   const isVideoContentType = (contentType?: string | null) => {
     return ['ig_reel', 'ig_story', 'fb_reel', 'fb_story', 'youtube_short', 'youtube_video', 'meta_ad'].includes(contentType || '');
   };
+
+  // ═══════════════════════════════════════════════════════════
+  // CRITICAL FIX: Handle URL params for execution from ContentExecutionList
+  // This makes /mightytask?agent=emily_carter&calendarId=xxx work
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    const agentFromUrl = searchParams.get("agent");
+    const calendarIdFromUrl = searchParams.get("calendarId");
+
+    // Only handle URL params if we have both agent and calendarId
+    if (!agentFromUrl || !calendarIdFromUrl) return;
+    if (handledNavStateRef.current) return;
+
+    // Mark as handled immediately to prevent re-triggering
+    handledNavStateRef.current = true;
+
+    // Load context from sessionStorage (set by ContentExecutionList)
+    const stored = sessionStorage.getItem("agent_chat_context");
+    if (stored) {
+      try {
+        const ctx = JSON.parse(stored);
+        setTaskContext({
+          ...ctx,
+          source: "content_calendar",
+          initial_prompt: `Execute content creation for: "${ctx.title || "Untitled"}" (${ctx.content_type} for ${ctx.brand})`,
+        });
+      } catch {
+        // Fallback context if parsing fails
+        setTaskContext({
+          source: "content_calendar",
+          content_calendar_id: calendarIdFromUrl,
+        });
+      }
+    }
+
+    // Validate agent exists, fallback to noah_bennett if not
+    const validAgent = AVAILABLE_AGENTS.find(a => a.id === agentFromUrl);
+    const finalAgentId = validAgent ? agentFromUrl : "noah_bennett";
+
+    setSelectedAgentId(finalAgentId);
+    setShowAgentPanel(true);
+
+    const agentName = AVAILABLE_AGENTS.find(a => a.id === finalAgentId)?.name || finalAgentId;
+    toast.info(`Opening ${agentName} for calendar content`);
+  }, [searchParams]);
 
   // If the user clicked a calendar item linked to a task, auto-open execution here.
   useEffect(() => {
