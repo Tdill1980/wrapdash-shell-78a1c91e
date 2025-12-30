@@ -276,7 +276,8 @@ function mapBlueprintToCreatomate(
   const finalDuration = bp.endCard ? totalDuration + bp.endCard.duration : totalDuration;
 
   // Audio track
-  if (musicUrl) {
+  // Creatomate requires a publicly reachable URL; local "/audio/*" paths will fail.
+  if (musicUrl && /^https?:\/\//i.test(musicUrl)) {
     elements.push({
       type: 'audio',
       source: musicUrl,

@@ -658,11 +658,13 @@ Return JSON ONLY:
         const tokens = topicStr
           .replace(/[^a-z0-9\s_\-]/g, " ")
           .split(/\s+/)
-          .map((w) => w.trim())
-          .filter((w) => w.length >= 3 && !stop.has(w));
+          .map((w: string) => w.trim())
+          .filter((w: string) => w.length >= 3 && !stop.has(w));
 
-        const tagSet = new Set(manualTags.map((t) => t.toLowerCase()));
-        const matches = tokens.filter((t) => tagSet.has(t) || tagSet.has(t.replace(/\s+/g, "_")));
+        const tagSet = new Set(manualTags.map((t: string) => t.toLowerCase()));
+        const matches = tokens.filter(
+          (t: string) => tagSet.has(t) || tagSet.has(t.replace(/\s+/g, "_"))
+        );
 
         // Up to +24 points to strongly bias selection toward topic-matched clips
         score += Math.min(24, matches.length * 8);

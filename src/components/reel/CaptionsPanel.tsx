@@ -138,8 +138,9 @@ export function CaptionsPanel({
   const handleBulkAddFromBlueprint = () => {
     const drafts: Record<string, string> = {};
     scenes.forEach(scene => {
-      if (scene.text) {
-        drafts[scene.sceneId] = scene.text;
+      const txt = coerceText(scene.text);
+      if (txt.trim()) {
+        drafts[scene.sceneId] = txt;
       }
     });
     setOverlayDrafts(prev => ({ ...prev, ...drafts }));
