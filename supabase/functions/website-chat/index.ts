@@ -6,6 +6,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 import { loadKnowledgeContext, isTopicCovered, getKBSilentResponse } from "../_shared/kb-loader.ts";
 import { WPW_TEAM, SILENT_CC, detectEscalation, getEscalationResponse } from "../_shared/wpw-team-config.ts";
 import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
@@ -700,10 +701,59 @@ Status: ${friendlyStatus}`;
 SHIPPED: Yes, shipped on ${shippedDate}
 TRACKING NUMBER: ${orderData.tracking_number}
 ${orderData.tracking_url ? `TRACKING URL: ${orderData.tracking_url}` : 'Carrier: Check UPS/FedEx with that tracking number'}`;
-      } else if (orderData.status === 'shipped' || orderData.customer_stage === 'shipped') {
-        // Status says shipped but no tracking - be honest
+      } else if (orderData.status === 'shipped' || orderData.customer_stage === 'shipped' || 
+                 orderData.status === 'completed' || orderData.customer_stage === 'ready') {
+        // Status says shipped/completed but no tracking - EMAIL THE TEAM!
+        const missingTrackingAlert = !orderData.tracking_number;
+        
+        if (missingTrackingAlert && resendKey) {
+          console.log('[JordanLee] ALERT: Order shipped without tracking, emailing team');
+          
+          try {
+            const resend = new Resend(resendKey);
+            
+            await resend.emails.send({
+              from: 'ShopFlow Alert <alerts@weprintwraps.com>',
+              to: ['Lance@WePrintWraps.com', 'Jackson@WePrintWraps.com', 'Trish@WePrintWraps.com'],
+              subject: `⚠️ Missing Tracking: Order #${orderData.order_number} - Customer Asking`,
+              html: `
+                <h2>🚨 Missing Tracking Number Alert</h2>
+                <p><strong>A customer is asking about tracking for an order that shows shipped but has no tracking number in the system.</strong></p>
+                <hr>
+                <p><strong>Order #:</strong> ${orderData.order_number}</p>
+                <p><strong>Customer:</strong> ${orderData.customer_name}</p>
+                <p><strong>Product:</strong> ${orderData.product_type}</p>
+                <p><strong>Status:</strong> ${orderData.status}</p>
+                <p><strong>Customer Stage:</strong> ${orderData.customer_stage || 'N/A'}</p>
+                <hr>
+                <p><strong>Action Needed:</strong> Please add the tracking number to ShopFlow so Jordan can provide accurate info to the customer.</p>
+                <p><em>This alert was triggered by Jordan Lee (AI Chat Agent) when the customer asked for tracking info.</em></p>
+              `,
+            });
+            
+            // Log to shopflow_logs (fire and forget, ignore errors)
+            try {
+              await supabase.from('shopflow_logs').insert({
+                order_id: null,
+                action: 'missing_tracking_alert',
+                details: `Customer asked for tracking on order #${orderData.order_number} - no tracking number in system. Team emailed.`,
+                performed_by: 'jordan_lee'
+              });
+            } catch { /* ignore */ }
+            
+            console.log('[JordanLee] Missing tracking alert sent to team');
+          } catch (emailError) {
+            console.error('[JordanLee] Failed to send missing tracking alert:', emailError);
+          }
+        }
+        
         orderContext += `
-SHIPPED: Status shows shipped, but I don't have a tracking number in my system yet. Let me check with the team.`;
+SHIPPED: Status shows shipped/completed, but I don't have a tracking number in my system yet. I've already notified our shipping team to get this info for you ASAP.`;
+        
+        if (missingTrackingAlert) {
+          orderContext += `
+TEAM NOTIFIED: Yes, the shipping team has been emailed about this missing tracking number.`;
+        }
       } else {
         // Not shipped yet
         orderContext += `
