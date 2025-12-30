@@ -799,37 +799,65 @@ export type Database = {
         Row: {
           action_payload: Json | null
           action_type: string
+          approved_at: string | null
+          approved_by: string | null
+          channel: string | null
+          conversation_id: string | null
           created_at: string | null
+          executed_at: string | null
           id: string
           organization_id: string | null
+          preview: string | null
           priority: string | null
           resolved: boolean | null
           resolved_at: string | null
           resolved_by: string | null
+          status: string | null
         }
         Insert: {
           action_payload?: Json | null
           action_type: string
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
+          conversation_id?: string | null
           created_at?: string | null
+          executed_at?: string | null
           id?: string
           organization_id?: string | null
+          preview?: string | null
           priority?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
+          status?: string | null
         }
         Update: {
           action_payload?: Json | null
           action_type?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
+          conversation_id?: string | null
           created_at?: string | null
+          executed_at?: string | null
           id?: string
           organization_id?: string | null
+          preview?: string | null
           priority?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
+          status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_actions_organization_id_fkey"
             columns: ["organization_id"]
@@ -2416,7 +2444,10 @@ export type Database = {
       }
       conversations: {
         Row: {
+          ai_paused: boolean
+          approval_required: boolean
           assigned_to: string | null
+          autopilot_allowed: boolean
           channel: string
           chat_state: Json | null
           contact_id: string | null
@@ -2433,7 +2464,10 @@ export type Database = {
           unread_count: number | null
         }
         Insert: {
+          ai_paused?: boolean
+          approval_required?: boolean
           assigned_to?: string | null
+          autopilot_allowed?: boolean
           channel: string
           chat_state?: Json | null
           contact_id?: string | null
@@ -2450,7 +2484,10 @@ export type Database = {
           unread_count?: number | null
         }
         Update: {
+          ai_paused?: boolean
+          approval_required?: boolean
           assigned_to?: string | null
+          autopilot_allowed?: boolean
           channel?: string
           chat_state?: Json | null
           contact_id?: string | null
@@ -3425,6 +3462,72 @@ export type Database = {
           },
         ]
       }
+      execution_receipts: {
+        Row: {
+          action_type: string
+          channel: string
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          organization_id: string | null
+          payload_snapshot: Json
+          provider: string | null
+          provider_receipt_id: string | null
+          source_id: string | null
+          source_table: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          channel: string
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          organization_id?: string | null
+          payload_snapshot?: Json
+          provider?: string | null
+          provider_receipt_id?: string | null
+          source_id?: string | null
+          source_table?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          channel?: string
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          organization_id?: string | null
+          payload_snapshot?: Json
+          provider?: string | null
+          provider_receipt_id?: string | null
+          source_id?: string | null
+          source_table?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_receipts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "execution_receipts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspo_analyses: {
         Row: {
           analysis_data: Json
@@ -3865,9 +3968,13 @@ export type Database = {
           direction: string
           id: string
           metadata: Json | null
+          provider_message_id: string | null
+          raw_payload: Json
           sender_email: string | null
           sender_name: string | null
           sender_phone: string | null
+          sender_type: string | null
+          sent_at: string | null
           status: string | null
         }
         Insert: {
@@ -3878,9 +3985,13 @@ export type Database = {
           direction: string
           id?: string
           metadata?: Json | null
+          provider_message_id?: string | null
+          raw_payload?: Json
           sender_email?: string | null
           sender_name?: string | null
           sender_phone?: string | null
+          sender_type?: string | null
+          sent_at?: string | null
           status?: string | null
         }
         Update: {
@@ -3891,9 +4002,13 @@ export type Database = {
           direction?: string
           id?: string
           metadata?: Json | null
+          provider_message_id?: string | null
+          raw_payload?: Json
           sender_email?: string | null
           sender_name?: string | null
           sender_phone?: string | null
+          sender_type?: string | null
+          sent_at?: string | null
           status?: string | null
         }
         Relationships: [
