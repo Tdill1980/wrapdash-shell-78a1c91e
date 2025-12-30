@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Type, Loader2, Sparkles, Trash2, CheckCircle2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Type, Loader2, Sparkles, Trash2, CheckCircle2, Plus, Wand2, LayoutTemplate } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -12,6 +14,25 @@ import {
   CAPTION_STYLE_CONFIGS,
 } from "@/hooks/useReelCaptions";
 
+interface OverlayTemplate {
+  id: string;
+  brand: string;
+  name: string;
+  tone: string | null;
+  prompt: string;
+  example: string | null;
+}
+
+interface SceneData {
+  sceneId: string;
+  text?: string;
+  start: number;
+  end: number;
+  purpose?: string;
+  textPosition?: string;
+  animation?: string;
+}
+
 interface CaptionsPanelProps {
   captions: Caption[];
   settings: CaptionSettings;
@@ -19,8 +40,8 @@ interface CaptionsPanelProps {
   onGenerateCaptions: (style: CaptionStyle) => void;
   onUpdateSettings: (updates: Partial<CaptionSettings>) => void;
   onRemoveCaption: (id: string) => void;
-  jobId?: string; // video_edit_queue id for overlay approval
-  scenes?: Array<{ sceneId: string; text?: string; start: number; end: number; textPosition?: string; animation?: string }>;
+  jobId?: string;
+  scenes?: SceneData[];
   onOverlaysApproved?: () => void;
 }
 
@@ -37,12 +58,141 @@ export function CaptionsPanel({
 }: CaptionsPanelProps) {
   const [approving, setApproving] = useState(false);
   const [approvedSceneIds, setApprovedSceneIds] = useState<Set<string>>(new Set());
+  
+  // NEW: Draft and AI generation state
+  const [overlayDrafts, setOverlayDrafts] = useState<Record<string, string>>({});
+  const [aiPrompt, setAiPrompt] = useState<Record<string, string>>({});
+  const [generating, setGenerating] = useState<Record<string, boolean>>({});
+  const [templates, setTemplates] = useState<OverlayTemplate[]>([]);
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
+  
   const styles: CaptionStyle[] = ["sabri", "dara", "clean"];
 
-  // Scenes with text overlays
-  const scenesWithText = scenes.filter(s => s.text);
+  // Scenes with text overlays (either from blueprint or draft)
+  const scenesWithText = scenes.filter(s => s.text || overlayDrafts[s.sceneId]);
   const allApproved = scenesWithText.length > 0 && scenesWithText.every(s => approvedSceneIds.has(s.sceneId));
 
+  // Load templates on mount
+  useEffect(() => {
+    const loadTemplates = async () => {
+      const { data } = await supabase
+        .from("brand_overlay_templates")
+        .select("*")
+        .order("name");
+      if (data) setTemplates(data as OverlayTemplate[]);
+    };
+    loadTemplates();
+  }, []);
+
+  // Get display text for a scene (draft takes priority)
+  const getSceneText = (scene: SceneData) => overlayDrafts[scene.sceneId] ?? scene.text ?? "";
+
+  // BULK: Add all from blueprint
+  const handleBulkAddFromBlueprint = () => {
+    const drafts: Record<string, string> = {};
+    scenes.forEach(scene => {
+      if (scene.text) {
+        drafts[scene.sceneId] = scene.text;
+      }
+    });
+    setOverlayDrafts(prev => ({ ...prev, ...drafts }));
+    toast.success(`${Object.keys(drafts).length} scene texts added as overlay drafts`);
+  };
+
+  // BULK: Regenerate all with AI
+  const handleBulkRegenerate = async () => {
+    if (!jobId) return;
+
+    setApproving(true);
+    try {
+      const bulkPrompt = aiPrompt["__bulk__"] || "";
+      const newDrafts: Record<string, string> = {};
+
+      for (const scene of scenes) {
+        const currentText = getSceneText(scene);
+        if (!currentText && !scene.purpose) continue;
+
+        const { data, error } = await supabase.functions.invoke("generate-text-overlay", {
+          body: {
+            scene: { ...scene, text: currentText },
+            prompt: bulkPrompt,
+          },
+        });
+
+        if (!error && data?.text) {
+          newDrafts[scene.sceneId] = data.text;
+        }
+      }
+
+      setOverlayDrafts(prev => ({ ...prev, ...newDrafts }));
+      toast.success(`${Object.keys(newDrafts).length} overlays regenerated`);
+    } catch (err) {
+      console.error("[CaptionsPanel] Bulk regenerate error:", err);
+      toast.error("Bulk regenerate failed");
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  // Apply template to all scenes
+  const handleTemplateApply = async (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+
+    setApproving(true);
+    try {
+      const drafts: Record<string, string> = {};
+
+      for (const scene of scenes) {
+        const { data } = await supabase.functions.invoke("generate-text-overlay", {
+          body: {
+            scene,
+            prompt: template.prompt,
+          },
+        });
+
+        if (data?.text) {
+          drafts[scene.sceneId] = data.text;
+        }
+      }
+
+      setOverlayDrafts(prev => ({ ...prev, ...drafts }));
+      toast.success(`Applied template: ${template.name}`);
+    } catch (err) {
+      console.error("[CaptionsPanel] Template apply error:", err);
+      toast.error("Failed to apply template");
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  // Generate single overlay with AI
+  const handleGenerateOne = async (scene: SceneData) => {
+    setGenerating(prev => ({ ...prev, [scene.sceneId]: true }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-text-overlay", {
+        body: {
+          scene: { ...scene, text: getSceneText(scene) },
+          prompt: aiPrompt[scene.sceneId] || "",
+        },
+      });
+
+      if (!error && data?.text) {
+        setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: data.text }));
+        toast.success("Overlay generated");
+      } else {
+        toast.error(error?.message || "Failed to generate overlay");
+      }
+    } catch (err) {
+      console.error("[CaptionsPanel] Generate overlay error:", err);
+      toast.error("Failed to generate overlay");
+    } finally {
+      setGenerating(prev => ({ ...prev, [scene.sceneId]: false }));
+    }
+  };
+
+  // Approve all overlays
   const handleApproveAllOverlays = async () => {
     if (!jobId || scenesWithText.length === 0) {
       toast.error("No overlays to approve or missing job ID");
@@ -51,11 +201,10 @@ export function CaptionsPanel({
 
     setApproving(true);
     try {
-      // Insert all scene overlays as approved
       const overlaysToInsert = scenesWithText.map(scene => ({
         job_id: jobId,
         scene_id: scene.sceneId,
-        text: scene.text!,
+        text: getSceneText(scene),
         position: scene.textPosition || 'center',
         animation: scene.animation || 'pop',
         start_time: scene.start,
@@ -81,8 +230,14 @@ export function CaptionsPanel({
     }
   };
 
-  const handleApproveOne = async (scene: typeof scenes[0]) => {
-    if (!jobId || !scene.text) return;
+  // Approve single overlay
+  const handleApproveOne = async (scene: SceneData) => {
+    if (!jobId) return;
+    const text = getSceneText(scene);
+    if (!text) {
+      toast.error("No text to approve");
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -90,7 +245,7 @@ export function CaptionsPanel({
         .upsert({
           job_id: jobId,
           scene_id: scene.sceneId,
-          text: scene.text,
+          text,
           position: scene.textPosition || 'center',
           animation: scene.animation || 'pop',
           start_time: scene.start,
@@ -114,19 +269,68 @@ export function CaptionsPanel({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Type className="w-4 h-4" />
-          Auto Captions
+          Text Overlays & Captions
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Blueprint Scene Overlays - Approve Section */}
-        {jobId && scenesWithText.length > 0 && (
-          <div className="p-3 rounded-lg bg-muted/30 border border-dashed border-border space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium">Scene Text Overlays</span>
+        {/* BULK ACTIONS BAR */}
+        {jobId && scenes.length > 0 && (
+          <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+            {/* Template selector */}
+            {templates.length > 0 && (
+              <div className="flex items-center gap-2">
+                <LayoutTemplate className="w-4 h-4 text-muted-foreground" />
+                <Select onValueChange={handleTemplateApply} disabled={approving}>
+                  <SelectTrigger className="flex-1 h-8 text-xs">
+                    <SelectValue placeholder="Apply brand template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map(t => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name} {t.tone && <span className="text-muted-foreground">({t.tone})</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Bulk prompt input */}
+            <Textarea
+              placeholder="Optional bulk prompt (e.g. aggressive, short hooks, sales-driven)"
+              value={aiPrompt["__bulk__"] || ""}
+              onChange={e => setAiPrompt(prev => ({ ...prev, "__bulk__": e.target.value }))}
+              className="text-xs min-h-[50px]"
+            />
+
+            {/* Bulk action buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleBulkAddFromBlueprint}
+                disabled={approving}
+                className="h-7 text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add All as Drafts
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleBulkRegenerate}
+                disabled={approving || scenes.length === 0}
+                className="h-7 text-xs"
+              >
+                {approving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Wand2 className="w-3 h-3 mr-1" />}
+                Regenerate All
+              </Button>
+
               <Button
                 size="sm"
                 variant={allApproved ? "secondary" : "default"}
-                disabled={approving || allApproved}
+                disabled={approving || allApproved || scenesWithText.length === 0}
                 onClick={handleApproveAllOverlays}
                 className="h-7 text-xs"
               >
@@ -134,39 +338,133 @@ export function CaptionsPanel({
                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                 ) : allApproved ? (
                   <CheckCircle2 className="w-3 h-3 mr-1" />
-                ) : null}
+                ) : (
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                )}
                 {allApproved ? "All Approved" : `Approve All (${scenesWithText.length})`}
               </Button>
             </div>
-            <div className="space-y-1.5 max-h-32 overflow-y-auto">
-              {scenesWithText.map((scene) => (
+          </div>
+        )}
+
+        {/* PER-SCENE OVERLAY CONTROLS */}
+        {jobId && scenes.length > 0 && (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {scenes.map((scene) => {
+              const displayText = getSceneText(scene);
+              const isApproved = approvedSceneIds.has(scene.sceneId);
+              const isEditing = editingSceneId === scene.sceneId;
+              const isGenerating = generating[scene.sceneId];
+
+              return (
                 <div
                   key={scene.sceneId}
                   className={cn(
-                    "flex items-center justify-between p-1.5 rounded text-xs",
-                    approvedSceneIds.has(scene.sceneId)
-                      ? "bg-green-500/10 border border-green-500/30"
-                      : "bg-muted/50"
+                    "p-2.5 rounded-lg border transition-colors",
+                    isApproved
+                      ? "bg-green-500/10 border-green-500/30"
+                      : displayText
+                        ? "bg-muted/50 border-border"
+                        : "bg-background border-dashed border-muted-foreground/30"
                   )}
                 >
-                  <span className="truncate flex-1 font-medium">{scene.text}</span>
-                  {approvedSceneIds.has(scene.sceneId) ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500 ml-2" />
+                  {/* Scene header */}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] text-muted-foreground font-medium">
+                      Scene {scene.sceneId.replace('scene_', '').replace('producer_', '')} • {scene.start.toFixed(1)}s – {scene.end.toFixed(1)}s
+                      {scene.purpose && <span className="ml-1 opacity-60">({scene.purpose})</span>}
+                    </span>
+                    {isApproved && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+                  </div>
+
+                  {/* Text display or editor */}
+                  {isEditing ? (
+                    <Textarea
+                      value={overlayDrafts[scene.sceneId] ?? scene.text ?? ""}
+                      onChange={e => setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: e.target.value }))}
+                      placeholder="Enter overlay text..."
+                      className="text-xs min-h-[40px] mb-2"
+                      autoFocus
+                      onBlur={() => setEditingSceneId(null)}
+                    />
+                  ) : displayText ? (
+                    <p
+                      className="text-sm font-medium truncate mb-2 cursor-pointer hover:text-primary"
+                      onClick={() => {
+                        setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: displayText }));
+                        setEditingSceneId(scene.sceneId);
+                      }}
+                      title="Click to edit"
+                    >
+                      {displayText}
+                    </p>
                   ) : (
+                    <p className="text-xs text-muted-foreground italic mb-2">No overlay text</p>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {!displayText && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => {
+                          setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: scene.text || "" }));
+                          setEditingSceneId(scene.sceneId);
+                        }}
+                      >
+                        <Plus className="w-2.5 h-2.5 mr-0.5" />
+                        Add
+                      </Button>
+                    )}
+
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-5 px-2 text-[10px]"
-                      onClick={() => handleApproveOne(scene)}
+                      className="h-6 px-2 text-[10px]"
+                      disabled={isGenerating}
+                      onClick={() => handleGenerateOne(scene)}
                     >
-                      Approve
+                      {isGenerating ? (
+                        <Loader2 className="w-2.5 h-2.5 mr-0.5 animate-spin" />
+                      ) : (
+                        <Wand2 className="w-2.5 h-2.5 mr-0.5" />
+                      )}
+                      {displayText ? "Regen" : "Generate"}
                     </Button>
+
+                    {displayText && !isApproved && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-6 px-2 text-[10px]"
+                        onClick={() => handleApproveOne(scene)}
+                      >
+                        <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
+                        Approve
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Per-scene AI prompt (collapsed by default) */}
+                  {isEditing && (
+                    <input
+                      type="text"
+                      placeholder="AI prompt for this scene..."
+                      value={aiPrompt[scene.sceneId] || ""}
+                      onChange={e => setAiPrompt(prev => ({ ...prev, [scene.sceneId]: e.target.value }))}
+                      className="w-full mt-2 text-[10px] p-1.5 rounded border bg-background"
+                    />
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
+
+        {/* DIVIDER */}
+        {jobId && scenes.length > 0 && <div className="border-t border-border my-2" />}
 
         {/* Style selector */}
         <div>
