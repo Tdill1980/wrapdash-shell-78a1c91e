@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import DOMPurify from "dompurify";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { 
   ExternalLink, 
@@ -20,7 +27,9 @@ import {
   User,
   Car,
   DollarSign,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  UserPlus
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -61,6 +70,7 @@ export function QuoteDetailDialog({ open, onOpenChange, quote, onRefresh }: Quot
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingQuote, setSendingQuote] = useState(false);
+  const [requestingInfo, setRequestingInfo] = useState(false);
 
   useEffect(() => {
     if (open && quote?.source_conversation_id) {
@@ -97,17 +107,62 @@ export function QuoteDetailDialog({ open, onOpenChange, quote, onRefresh }: Quot
     }
   };
 
+  // Check if we have valid contact info to send quote
+  const canSendQuote = (): { valid: boolean; reason?: string } => {
+    if (!quote) return { valid: false, reason: "No quote data" };
+    
+    const channel = quote.source === "instagram" ? "instagram" : "email";
+    
+    // For email channel, need valid email
+    if (channel === "email") {
+      if (!quote.customer_email || quote.customer_email.includes("ig_")) {
+        return { valid: false, reason: "Missing valid email address. Request contact info first." };
+      }
+    }
+    
+    // For Instagram, check if we have a valid IG user
+    if (channel === "instagram") {
+      if (!quote.source_conversation_id) {
+        return { valid: false, reason: "No linked conversation to send DM" };
+      }
+    }
+    
+    // Check if customer name looks incomplete
+    if (!quote.customer_name || quote.customer_name.startsWith("ig_")) {
+      return { valid: true, reason: "Warning: Customer name may be incomplete" };
+    }
+    
+    return { valid: true };
+  };
+
   const sendQuote = async () => {
     if (!quote) return;
     
+    const validation = canSendQuote();
+    if (!validation.valid) {
+      toast.error(validation.reason);
+      return;
+    }
+    
     setSendingQuote(true);
     try {
+      // Get user's organization
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single();
+
       // Determine channel based on source
       const channel = quote.source === "instagram" ? "instagram" : "email";
       const actionType = channel === "instagram" ? "dm_send" : "email_send";
 
       // Create AI action to send the quote
       const { error } = await supabase.from("ai_actions").insert({
+        organization_id: membership?.organization_id,
         action_type: actionType,
         conversation_id: quote.source_conversation_id,
         channel: channel,
@@ -136,6 +191,63 @@ export function QuoteDetailDialog({ open, onOpenChange, quote, onRefresh }: Quot
     }
   };
 
+  const requestContactInfo = async () => {
+    if (!quote?.source_conversation_id) {
+      toast.error("No conversation linked to request info from");
+      return;
+    }
+    
+    setRequestingInfo(true);
+    try {
+      // Get user's organization
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .single();
+
+      const channel = quote.source === "instagram" ? "instagram" : "email";
+      const actionType = channel === "instagram" ? "dm_send" : "email_send";
+      
+      // Determine what info is missing
+      const missingInfo: string[] = [];
+      if (!quote.customer_name || quote.customer_name.startsWith("ig_")) {
+        missingInfo.push("full name");
+      }
+      if (!quote.customer_email || quote.customer_email.includes("ig_")) {
+        missingInfo.push("email address");
+      }
+
+      const { error } = await supabase.from("ai_actions").insert({
+        organization_id: membership?.organization_id,
+        action_type: actionType,
+        conversation_id: quote.source_conversation_id,
+        channel: channel,
+        status: "pending",
+        preview: `Request contact info: ${missingInfo.join(", ")}`,
+        action_payload: {
+          request_type: "contact_info",
+          missing_fields: missingInfo,
+          quote_id: quote.id,
+          message_template: `Hey! Before I can send over your quote, I just need a few details:\n\n${missingInfo.map(f => `• Your ${f}`).join("\n")}\n\nThanks! 🙌`
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success("Contact info request queued. Run 'Process AI Actions' to send.");
+      onRefresh?.();
+    } catch (e) {
+      console.error("Failed to queue contact request:", e);
+      toast.error("Failed to request contact info");
+    } finally {
+      setRequestingInfo(false);
+    }
+  };
+
   const getChannelIcon = (channel: string) => {
     switch (channel) {
       case "instagram":
@@ -147,7 +259,34 @@ export function QuoteDetailDialog({ open, onOpenChange, quote, onRefresh }: Quot
     }
   };
 
+  // Clean and render message content - strip HTML for readability
+  const renderMessageContent = (content: string) => {
+    if (!content) return "(No content)";
+    
+    // Check if content looks like HTML
+    if (content.includes("<") && content.includes(">")) {
+      // Create a temporary element to extract text
+      const temp = document.createElement("div");
+      temp.innerHTML = DOMPurify.sanitize(content);
+      
+      // Get text content and clean up whitespace
+      let text = temp.textContent || temp.innerText || "";
+      text = text.replace(/\s+/g, " ").trim();
+      
+      // If we got meaningful text, return it
+      if (text.length > 0) {
+        return text;
+      }
+    }
+    
+    // Return as-is for plain text
+    return content;
+  };
+
   if (!quote) return null;
+
+  const validation = canSendQuote();
+  const hasMissingInfo = !validation.valid || (quote.customer_name?.startsWith("ig_") || quote.customer_email?.includes("ig_"));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,19 +301,50 @@ export function QuoteDetailDialog({ open, onOpenChange, quote, onRefresh }: Quot
                   Open in MightyChat
                 </Button>
               )}
-              <Button 
-                size="sm" 
-                onClick={sendQuote}
-                disabled={sendingQuote}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {sendingQuote ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4 mr-1" />
-                )}
-                Send Quote
-              </Button>
+              
+              {hasMissingInfo && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={requestContactInfo}
+                  disabled={requestingInfo || !quote.source_conversation_id}
+                  className="border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                >
+                  {requestingInfo ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-1" />
+                  )}
+                  Request Info
+                </Button>
+              )}
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button 
+                        size="sm" 
+                        onClick={sendQuote}
+                        disabled={sendingQuote || !validation.valid}
+                        className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {sendingQuote ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-1" />
+                        )}
+                        Send Quote
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!validation.valid && (
+                    <TooltipContent>
+                      <p>{validation.reason}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -188,8 +358,24 @@ export function QuoteDetailDialog({ open, onOpenChange, quote, onRefresh }: Quot
                 <span className="text-sm font-medium">Customer</span>
               </div>
               <div className="pl-6 space-y-1">
-                <p className="font-semibold">{quote.customer_name}</p>
-                <p className="text-sm text-muted-foreground">{quote.customer_email}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold">{quote.customer_name}</p>
+                  {quote.customer_name?.startsWith("ig_") && (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/50 text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      IG Handle Only
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">{quote.customer_email}</p>
+                  {quote.customer_email?.includes("ig_") && (
+                    <Badge variant="outline" className="text-amber-500 border-amber-500/50 text-xs">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      No Email
+                    </Badge>
+                  )}
+                </div>
                 {quote.customer_phone && (
                   <p className="text-sm text-muted-foreground">{quote.customer_phone}</p>
                 )}
@@ -282,7 +468,9 @@ export function QuoteDetailDialog({ open, onOpenChange, quote, onRefresh }: Quot
                             {msg.direction === "outbound" ? "Sent" : "Received"}
                           </span>
                         </div>
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {renderMessageContent(msg.content)}
+                        </p>
                         <p className="text-[10px] opacity-50 mt-1">
                           {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                         </p>
