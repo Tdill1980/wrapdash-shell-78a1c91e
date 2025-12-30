@@ -14,6 +14,7 @@ import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
 import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
 import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
 import { getApprovedLinksForPrompt, LINK_AWARE_RULES } from "../_shared/wpw-links.ts";
+import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType } from "../_shared/alert-system.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -288,7 +289,13 @@ serve(async (req) => {
 
       contactId = newContact?.id || null;
 
-      // Create conversation with initial state
+      // Create conversation with initial state - ENSURE GEO IS SAVED
+      const geoData = geo || {};
+      const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('cf-connecting-ip');
+      if (clientIP && !geoData.ip) {
+        geoData.ip = clientIP;
+      }
+      
       const { data: newConvo, error: convoError } = await supabase
         .from('conversations')
         .insert({
@@ -298,7 +305,7 @@ serve(async (req) => {
           status: 'open',
           priority: 'normal',
           chat_state: { stage: 'initial', escalations_sent: [] },
-          metadata: { session_id, agent: 'jordan_lee', org, mode, page_url, geo: geo || null }
+          metadata: { session_id, agent: 'jordan_lee', org, mode, page_url, geo: geoData }
         })
         .select()
         .single();

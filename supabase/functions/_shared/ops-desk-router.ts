@@ -32,6 +32,7 @@ export interface OpsDeskResult {
   action: OpsDeskAction;
   assigned_to?: string;
   revenue_impact?: RevenueImpact;
+  task_id?: string;
   error?: string;
 }
 
@@ -95,7 +96,11 @@ export async function routeToOpsDesk(
         created_at: new Date().toISOString(),
       };
       
-      const { error } = await supabase.from("tasks").insert(taskData);
+      const { data: taskResult, error } = await supabase
+        .from("tasks")
+        .insert(taskData)
+        .select("id")
+        .single();
       
       if (error) {
         console.error(`[OpsDeskRouter] Task creation failed:`, error);
@@ -106,12 +111,13 @@ export async function routeToOpsDesk(
         };
       }
       
-      console.log(`[OpsDeskRouter] Task created for ${request.target}, revenue_impact: ${revenueImpact}`);
+      console.log(`[OpsDeskRouter] Task created for ${request.target}, revenue_impact: ${revenueImpact}, task_id: ${taskResult?.id}`);
       return {
         success: true,
         action: "create_task",
         assigned_to: request.target,
         revenue_impact: revenueImpact,
+        task_id: taskResult?.id,
       };
     }
     

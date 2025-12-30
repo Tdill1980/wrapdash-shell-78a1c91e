@@ -16,6 +16,7 @@ import {
 import { useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MainLayout } from "@/layouts/MainLayout";
+import { JordanAlertsSection } from "@/components/shopflow/JordanAlertsSection";
 
 const statusConfig = {
   order_received: { label: "Order Received", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
@@ -109,6 +110,9 @@ export default function ShopFlowInternalList() {
           )}
         </Button>
       </div>
+
+      {/* Jordan Alerts Section */}
+      <JordanAlertsSection />
 
       {orders.length === 0 ? (
         <Card className="p-12 text-center">
