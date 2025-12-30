@@ -2212,7 +2212,24 @@ export default function ReelBuilder() {
               </TabsContent>
 
               <TabsContent value="captions" className="mt-4">
-                <CaptionsPanel captions={captionsEngine.captions} settings={captionsEngine.settings} loading={captionsEngine.loading} onGenerateCaptions={handleGenerateCaptions} onUpdateSettings={captionsEngine.updateSettings} onRemoveCaption={captionsEngine.removeCaption} />
+                <CaptionsPanel 
+                  captions={captionsEngine.captions} 
+                  settings={captionsEngine.settings} 
+                  loading={captionsEngine.loading} 
+                  onGenerateCaptions={handleGenerateCaptions} 
+                  onUpdateSettings={captionsEngine.updateSettings} 
+                  onRemoveCaption={captionsEngine.removeCaption}
+                  jobId={lastQueueId || undefined}
+                  scenes={sceneBlueprint?.scenes.map(s => ({
+                    sceneId: s.sceneId,
+                    text: s.text,
+                    start: s.start,
+                    end: s.end,
+                    textPosition: s.textPosition,
+                    animation: s.animation,
+                  })) || []}
+                  onOverlaysApproved={() => toast.success("Text overlays will be applied during render")}
+                />
               </TabsContent>
 
               <TabsContent value="overlays" className="mt-4">

@@ -342,27 +342,54 @@ serve(async (req) => {
         // The source video URL is used for ALL scenes since we're trimming from the same source
         const sourceVideoUrl = editItem.source_url;
         
+        // ============ FETCH APPROVED OVERLAYS FROM scene_text_overlays ============
+        console.log("[ai-execute-edits] Fetching approved overlays for job:", video_edit_id);
+        const { data: approvedOverlays } = await supabase
+          .from("scene_text_overlays")
+          .select("*")
+          .eq("job_id", video_edit_id)
+          .eq("approved", true);
+        
+        const approvedOverlayMap = new Map<string, any>();
+        if (approvedOverlays && approvedOverlays.length > 0) {
+          console.log("[ai-execute-edits] Found", approvedOverlays.length, "approved overlays");
+          for (const overlay of approvedOverlays) {
+            approvedOverlayMap.set(overlay.scene_id, overlay);
+          }
+        } else {
+          console.log("[ai-execute-edits] No approved overlays found - using blueprint text");
+        }
+        
         const blueprintScenes = scenes.slice(0, 8).map((scene: any, i: number) => {
           const startTime = Number(scene.start_time) || 0;
           const endTime = Number(scene.end_time) || Number(scene.start_time) + 3;
+          const sceneId = scene.scene_id || `scene_${i + 1}`;
+          
+          // ✅ APPROVED OVERLAY TAKES PRIORITY over blueprint intent
+          const approvedOverlay = approvedOverlayMap.get(sceneId);
+          const overlayText = approvedOverlay?.text || scene.text_overlay || scene.text;
+          const overlayPosition = approvedOverlay?.position || scene.text_position || 'center';
+          const overlayAnimation = approvedOverlay?.animation || scene.animation || 'pop';
           
           return {
-            sceneId: scene.scene_id || `scene_${i + 1}`,
+            sceneId,
             clipId: scene.clip_id || `clip_${i + 1}`,
             // CRITICAL: Use the source video URL - scenes are time-based trims from the same source
             clipUrl: scene.clip_url || scene.file_url || sourceVideoUrl,
             start: startTime,
             end: endTime > startTime ? endTime : startTime + 3, // Ensure valid timing
             purpose: scene.purpose || scene.label || 'content',
-            text: scene.text_overlay || scene.text || undefined,
-            textPosition: scene.text_position || 'center',
-            animation: scene.animation || 'pop',
+            text: overlayText || undefined,
+            textPosition: overlayPosition,
+            animation: overlayAnimation,
             cutReason: scene.cut_reason || undefined,
+            overlayApproved: !!approvedOverlay, // Flag for tracking
           };
         }).filter((s: any) => s.clipUrl && s.end > s.start); // Only valid scenes with URLs
         
         console.log("[ai-execute-edits] Blueprint scenes built:", blueprintScenes.length, 
-          "from source:", sourceVideoUrl?.substring(0, 50) + "...");
+          "from source:", sourceVideoUrl?.substring(0, 50) + "...",
+          "with approved overlays:", approvedOverlays?.length || 0);
         
         // Build the full SceneBlueprint object
         const blueprint = {
@@ -387,6 +414,7 @@ serve(async (req) => {
           format: blueprint.format,
           aspectRatio: blueprint.aspectRatio,
           templateId: blueprint.templateId,
+          approved_overlays: approvedOverlays?.length || 0,
         }));
         
         const renderRes = await supabase.functions.invoke("render-reel", {
