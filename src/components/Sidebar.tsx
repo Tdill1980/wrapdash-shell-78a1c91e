@@ -25,6 +25,7 @@ import {
   MessageSquare,
   ClipboardCheck,
   Activity,
+  ListTodo,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -188,6 +189,12 @@ const navigationItems: NavigationItem[] = [
         <span className="text-[8px] align-super text-muted-foreground">™</span>
       </span>
     )
+  },
+  { 
+    name: "Backlog", 
+    path: "/backlog", 
+    icon: ListTodo,
+    roles: ["beta_shop", "admin"],
   },
   { 
     name: "MightyPortfolio", 

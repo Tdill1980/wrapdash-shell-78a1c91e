@@ -199,19 +199,26 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
       reason: "Chat widget may not be deployed on weprintwraps.com, or no visitors have started a chat yet.",
       action: "Check if embed code is placed before </body> tag on website"
     },
-    quotes: {
-      title: "Quotes Waiting",
+    hello: {
+      title: "hello@ Inbox",
       agent: "Alex Morgan",
       inputs: ["hello@weprintwraps.com", "Website (pricing intent)", "Instagram (pricing intent)"],
       reason: "No emails received at hello@ inbox, or no pricing inquiries detected from other channels.",
       action: "Verify Power Automate flow is active for hello@weprintwraps.com"
     },
     design: {
-      title: "Design Reviews",
+      title: "design@ Inbox",
       agent: "Grant Miller",
       inputs: ["design@weprintwraps.com"],
       reason: "No emails received at design@ inbox.",
       action: "Verify Power Automate flow is active for design@weprintwraps.com"
+    },
+    jackson: {
+      title: "jackson@ Inbox",
+      agent: "Jackson (Ops)",
+      inputs: ["jackson@weprintwraps.com"],
+      reason: "No emails received at jackson@ inbox.",
+      action: "Verify Power Automate flow is active for jackson@weprintwraps.com"
     },
     dms: {
       title: "Affiliates",
@@ -223,8 +230,8 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
     ops: {
       title: "Ops Desk",
       agent: "Ops Desk",
-      inputs: ["jackson@weprintwraps.com", "Internal routing"],
-      reason: "No emails received at jackson@ inbox or no items routed for approval.",
+      inputs: ["Internal routing", "Approvals"],
+      reason: "No items routed for approval.",
     }
   };
 
@@ -281,7 +288,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeStream, setActiveStream] = useState<WorkStream>(initialStream || 'quotes'); // Default to quotes (hello@ inbox) which typically has most traffic
+  const [activeStream, setActiveStream] = useState<WorkStream>(initialStream || 'hello'); // Default to hello@ inbox which typically has most traffic
 
   // Handle initialStream from URL params
   useEffect(() => {
@@ -322,8 +329,8 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       } else if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') {
         setActiveStream('dms');
       } else if (channel === 'email') {
-        // Default to quotes for email, the specific inbox will be shown
-        setActiveStream('quotes');
+        // Default to hello@ for email, the specific inbox will be shown
+        setActiveStream('hello');
       }
     }
   }, [initialConversationChannel]);
@@ -444,13 +451,13 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
     if (channel === 'email') {
       const inbox = conv.recipient_inbox?.toLowerCase() || '';
       if (inbox.includes('design')) return 'design';
-      if (inbox.includes('jackson')) return 'ops';
-      // hello, general, or any other email goes to quotes
-      return 'quotes';
+      if (inbox.includes('jackson')) return 'jackson';
+      // hello, general, or any other email goes to hello
+      return 'hello';
     }
     
-    // Default to quotes for any unknown channel
-    return 'quotes';
+    // Default to hello for any unknown channel
+    return 'hello';
   };
 
   // Filter conversations based on active stream
@@ -463,7 +470,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
   // Compute stream counts - use same logic as getConversationStream
   const streamCounts = useMemo(() => {
-    const counts = { website: 0, quotes: 0, design: 0, dms: 0, ops: 0 };
+    const counts: Record<WorkStream, number> = { website: 0, hello: 0, design: 0, jackson: 0, dms: 0, ops: 0 };
     conversations.forEach(conv => {
       const stream = getConversationStream(conv);
       counts[stream]++;
@@ -650,7 +657,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
       {/* Mobile Stream Tabs */}
       <div className="flex lg:hidden gap-1 mb-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {(['website', 'quotes', 'design', 'dms'] as const).map((stream) => (
+        {(['website', 'hello', 'design', 'jackson', 'dms'] as const).map((stream) => (
           <Button
             key={stream}
             variant={activeStream === stream ? "default" : "outline"}
@@ -659,8 +666,9 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
             onClick={() => setActiveStream(stream)}
           >
             {stream === 'website' && '🌐'}
-            {stream === 'quotes' && '📧'}
+            {stream === 'hello' && '📧'}
             {stream === 'design' && '🎨'}
+            {stream === 'jackson' && '👤'}
             {stream === 'dms' && '💬'}
             <span className="ml-1">{streamCounts[stream] || 0}</span>
           </Button>

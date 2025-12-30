@@ -1,10 +1,9 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Mail, Palette, MessageCircle, Cog, TrendingUp, AlertTriangle, Flame, Users } from "lucide-react";
+import { Globe, Mail, Palette, MessageCircle, Cog, TrendingUp, AlertTriangle, Flame, Users, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
-
-export type WorkStream = "website" | "quotes" | "design" | "dms" | "ops";
+export type WorkStream = "website" | "hello" | "design" | "jackson" | "dms" | "ops";
 
 interface StreamConfig {
   id: WorkStream;
@@ -14,6 +13,7 @@ interface StreamConfig {
   icon: React.ReactNode;
   color: string;
   activeColor: string;
+  isEmailInbox?: boolean;
 }
 
 const STREAMS: StreamConfig[] = [
@@ -27,22 +27,34 @@ const STREAMS: StreamConfig[] = [
     activeColor: "bg-blue-500/10 border-blue-500/50 text-blue-600 shadow-sm"
   },
   { 
-    id: "quotes", 
-    label: "Quotes Waiting", 
+    id: "hello", 
+    label: "hello@ Inbox", 
     agentName: "Alex Morgan",
     inboxLabel: "hello@weprintwraps.com",
     icon: <Mail className="w-4 h-4" />,
     color: "text-emerald-500",
-    activeColor: "bg-emerald-500/10 border-emerald-500/50 text-emerald-600 shadow-sm"
+    activeColor: "bg-emerald-500/10 border-emerald-500/50 text-emerald-600 shadow-sm",
+    isEmailInbox: true
   },
   { 
     id: "design", 
-    label: "Design Reviews", 
+    label: "design@ Inbox", 
     agentName: "Grant Miller",
     inboxLabel: "design@weprintwraps.com",
     icon: <Palette className="w-4 h-4" />,
     color: "text-purple-500",
-    activeColor: "bg-purple-500/10 border-purple-500/50 text-purple-600 shadow-sm"
+    activeColor: "bg-purple-500/10 border-purple-500/50 text-purple-600 shadow-sm",
+    isEmailInbox: true
+  },
+  { 
+    id: "jackson", 
+    label: "jackson@ Inbox", 
+    agentName: "Jackson (Ops)",
+    inboxLabel: "jackson@weprintwraps.com",
+    icon: <Mail className="w-4 h-4" />,
+    color: "text-orange-500",
+    activeColor: "bg-orange-500/10 border-orange-500/50 text-orange-600 shadow-sm",
+    isEmailInbox: true
   },
   { 
     id: "dms", 
@@ -80,8 +92,9 @@ interface WorkStreamsSidebarProps {
   onOpenOpsDesk: () => void;
   counts?: {
     website?: number;
-    quotes?: number;
+    hello?: number;
     design?: number;
+    jackson?: number;
     dms?: number;
     ops?: number;
   };
@@ -127,8 +140,8 @@ export function WorkStreamsSidebar({
           const isOps = stream.id === "ops";
 
           // Signal indicators
-          const showRevenue = stream.id === 'quotes' && signals.quoteValue && signals.quoteValue > 0;
-          const showCxRisk = stream.id === 'quotes' && signals.cxRiskCount && signals.cxRiskCount > 0;
+          const showRevenue = stream.id === 'hello' && signals.quoteValue && signals.quoteValue > 0;
+          const showCxRisk = stream.id === 'hello' && signals.cxRiskCount && signals.cxRiskCount > 0;
           const showHotLead = stream.id === 'website' && signals.hotLeads && signals.hotLeads > 0;
           const showPendingReview = stream.id === 'design' && signals.pendingReviews && signals.pendingReviews > 0;
           const hasSignal = showRevenue || showCxRisk || showHotLead || showPendingReview;
@@ -249,8 +262,9 @@ export function WorkStreamsSidebar({
 export function mapInboxToStream(inbox: string): WorkStream {
   switch (inbox) {
     case "website": return "website";
-    case "hello": return "quotes";
+    case "hello": return "hello";
     case "design": return "design";
+    case "jackson": return "jackson";
     case "dms": return "dms";
     case "ops_desk": return "ops";
     default: return "website";
@@ -261,8 +275,9 @@ export function mapInboxToStream(inbox: string): WorkStream {
 export function mapStreamToInbox(stream: WorkStream): string {
   switch (stream) {
     case "website": return "website";
-    case "quotes": return "hello";
+    case "hello": return "hello";
     case "design": return "design";
+    case "jackson": return "jackson";
     case "dms": return "dms";
     case "ops": return "ops_desk";
     default: return "website";
