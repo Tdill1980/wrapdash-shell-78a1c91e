@@ -260,6 +260,21 @@ serve(async (req) => {
 
       const event = body.entry[0].messaging[0];
       const senderId = event.sender?.id || "unknown";
+      const recipientId = event.recipient?.id || "unknown";
+
+      // Ignore echo events for messages sent by our own IG business account.
+      // Outbound messages are already written via our send/execute pipeline.
+      const selfIds = [
+        Deno.env.get("INSTAGRAM_USER_ID"),
+        Deno.env.get("INSTAGRAM_PAGE_ID"),
+      ].filter(Boolean) as string[];
+
+      const isFromUs = selfIds.includes(senderId);
+      if (isFromUs) {
+        console.log(`Ignoring outbound echo event from self (sender=${senderId}, recipient=${recipientId})`);
+        return new Response("EVENT_RECEIVED", { status: 200 });
+      }
+
       const text = event.message?.text || "";
       
       // *** Extract and CACHE file attachments immediately ***
