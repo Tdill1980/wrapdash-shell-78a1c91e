@@ -78,7 +78,7 @@ export function ContentExecutionList() {
   const queryClient = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
 
-  // Fetch due/overdue content
+  // Fetch due/overdue content - using v1 state machine statuses
   const { data: dueContent = [], isLoading } = useQuery({
     queryKey: ['content-execution-due'],
     queryFn: async () => {
@@ -86,7 +86,7 @@ export function ContentExecutionList() {
         .from('content_calendar')
         .select('*')
         .lte('scheduled_date', today)
-        .in('status', ['draft', 'pending_review', 'scheduled'])
+        .in('status', ['draft', 'in_progress', 'ready'])
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true });
 
@@ -122,7 +122,7 @@ export function ContentExecutionList() {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('content_calendar')
-        .update({ status: 'published', posted_at: new Date().toISOString() })
+        .update({ status: 'published', published_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
     },
@@ -147,9 +147,30 @@ export function ContentExecutionList() {
     return isToday(scheduledDate);
   });
 
-  const handleCreateNow = (item: ContentItem) => {
+  const handleCreateNow = async (item: ContentItem) => {
     const agentId = getAgentForContentType(item.content_type);
     const linkedTask = tasksByCalendarId[item.id];
+    
+    if (!agentId) {
+      toast.error(`No agent mapped for ${item.content_type}`);
+      return;
+    }
+
+    // Update status to in_progress immediately
+    const { error: updateError } = await supabase
+      .from('content_calendar')
+      .update({ 
+        status: 'in_progress'
+      })
+      .eq('id', item.id);
+
+    if (updateError) {
+      toast.error("Could not start this item");
+      return;
+    }
+
+    // Invalidate to reflect status change
+    queryClient.invalidateQueries({ queryKey: ['content-execution-due'] });
     
     const context = {
       source: 'content_calendar',
@@ -179,24 +200,32 @@ export function ContentExecutionList() {
     const linkedTask = tasksByCalendarId[item.id];
     const isCreated = linkedTask?.status === 'completed';
 
+    const isInProgress = item.status === 'in_progress';
+    const isReady = item.status === 'ready' || isCreated;
+
     return (
       <div
         key={item.id}
+        onClick={() => !isReady && handleCreateNow(item)}
         className={cn(
           "flex items-center gap-4 p-3 rounded-lg border-l-4 border transition-all",
-          isOverdue && !isCreated ? "border-destructive/50 bg-destructive/10" : "",
-          !isOverdue && !isCreated ? brandStyle.bgClass : "",
-          isCreated ? "border-green-500/50 bg-green-500/10" : "",
+          !isReady && "cursor-pointer",
+          isOverdue && !isReady ? "border-destructive/50 bg-destructive/10" : "",
+          !isOverdue && !isReady ? brandStyle.bgClass : "",
+          isReady ? "border-green-500/50 bg-green-500/10" : "",
+          isInProgress && !isReady ? "border-yellow-500/50 bg-yellow-500/10" : "",
           "hover:ring-1 hover:ring-primary/50"
         )}
       >
         {/* Status Icon */}
         <div className={cn(
           "p-2 rounded-lg shrink-0",
-          isCreated ? "bg-green-500/20" : isOverdue ? "bg-destructive/20" : "bg-yellow-500/20"
+          isReady ? "bg-green-500/20" : isInProgress ? "bg-blue-500/20" : isOverdue ? "bg-destructive/20" : "bg-yellow-500/20"
         )}>
-          {isCreated ? (
+          {isReady ? (
             <CheckCircle2 className="w-4 h-4 text-green-400" />
+          ) : isInProgress ? (
+            <Play className="w-4 h-4 text-blue-400" />
           ) : isOverdue ? (
             <AlertTriangle className="w-4 h-4 text-destructive" />
           ) : (
@@ -216,14 +245,19 @@ export function ContentExecutionList() {
             >
               {typeConfig.emoji} {typeConfig.label}
             </Badge>
-            {isOverdue && !isCreated && (
+            {isOverdue && !isReady && !isInProgress && (
               <Badge variant="destructive" className="text-[10px]">
                 Overdue
               </Badge>
             )}
-            {isCreated && (
+            {isInProgress && !isReady && (
+              <Badge variant="outline" className="text-[10px] bg-blue-500/20 text-blue-400 border-blue-500/30">
+                In Progress
+              </Badge>
+            )}
+            {isReady && (
               <Badge variant="outline" className="text-[10px] bg-green-500/20 text-green-400 border-green-500/30">
-                Created
+                Ready
               </Badge>
             )}
           </div>
@@ -237,31 +271,48 @@ export function ContentExecutionList() {
 
         {/* Actions */}
         <div className="flex items-center gap-2 shrink-0">
-          {!isCreated ? (
+          {isReady ? (
             <Button 
               size="sm" 
-              onClick={() => handleCreateNow(item)}
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                markPublishedMutation.mutate(item.id);
+              }}
+              disabled={markPublishedMutation.isPending}
+            >
+              {markPublishedMutation.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+              )}
+              Mark Published
+            </Button>
+          ) : isInProgress ? (
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCreateNow(item);
+              }}
+              className="gap-1"
+            >
+              <ArrowRight className="w-3 h-3" />
+              Continue
+            </Button>
+          ) : (
+            <Button 
+              size="sm" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCreateNow(item);
+              }}
               className="gap-1"
             >
               <Play className="w-3 h-3" />
               Create Now
             </Button>
-          ) : (
-            <>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => markPublishedMutation.mutate(item.id)}
-                disabled={markPublishedMutation.isPending}
-              >
-                {markPublishedMutation.isPending ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                )}
-                Published
-              </Button>
-            </>
           )}
         </div>
       </div>
