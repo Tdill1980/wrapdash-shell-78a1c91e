@@ -29,8 +29,48 @@ const VEHICLE_PATTERNS = {
 // Email extraction pattern
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
+// Order number extraction pattern (4-6 digits typically)
+const ORDER_NUMBER_PATTERN = /\b(\d{4,6})\b/;
+
+// Order status inquiry detection
+const ORDER_STATUS_PATTERNS = /\b(order|tracking|shipped|shipping|status|where|track|delivery|deliver|when.*arrive|eta|package)\b/i;
+
 // Partnership/sponsorship signal detection
 const PARTNERSHIP_PATTERNS = /\b(collab|sponsor|film|commercial|partner|brand|ambassador|influencer|content creator|media|press|feature)\b/i;
+
+// Map internal status to customer-friendly status
+function getCustomerFriendlyStatus(status: string, customerStage: string | null): string {
+  // Use customer_stage if available (more customer-friendly)
+  if (customerStage) {
+    const stageMap: Record<string, string> = {
+      'order_received': 'Order Received - We got your order!',
+      'in_production': 'In Production - Your wrap is being printed',
+      'printing': 'Printing - Your wrap is on the printer now',
+      'quality_check': 'Quality Check - Verifying print quality',
+      'ready': 'Ready to Ship - Packaging your order',
+      'shipped': 'Shipped - On the way to you!',
+      'delivered': 'Delivered',
+      'completed': 'Completed'
+    };
+    return stageMap[customerStage] || customerStage.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+  
+  // Fallback to internal status
+  const statusMap: Record<string, string> = {
+    'design_requested': 'Order Received - Design review in progress',
+    'design_in_progress': 'Design In Progress',
+    'awaiting_approval': 'Awaiting Your Approval',
+    'approved': 'Approved - Moving to production',
+    'processing': 'Processing - Preparing for print',
+    'printing': 'Printing - Your wrap is on the printer',
+    'quality_check': 'Quality Check',
+    'ready_to_ship': 'Ready to Ship',
+    'shipped': 'Shipped',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled'
+  };
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
 
 // Build Jordan Lee's persona dynamically using TradeDNA
 function buildJordanPersona(voiceProfile: VoiceProfile): string {
@@ -170,6 +210,44 @@ serve(async (req) => {
     const partnershipSignal = PARTNERSHIP_PATTERNS.test(message_text);
     const escalationType = detectEscalation(message_text);
     
+    // Detect order status inquiry
+    const orderStatusIntent = ORDER_STATUS_PATTERNS.test(message_text);
+    const extractedOrderNumber = message_text.match(ORDER_NUMBER_PATTERN)?.[1] || null;
+    
+    console.log('[JordanLee] Order intent:', { orderStatusIntent, extractedOrderNumber });
+    
+    // Lookup order in ShopFlow if customer is asking about order status
+    let orderData: {
+      order_number: string;
+      status: string;
+      customer_stage: string | null;
+      tracking_number: string | null;
+      tracking_url: string | null;
+      shipped_at: string | null;
+      product_type: string;
+      customer_name: string;
+      estimated_completion_date: string | null;
+    } | null = null;
+    
+    if (orderStatusIntent && extractedOrderNumber) {
+      const { data: order, error: orderError } = await supabase
+        .from('shopflow_orders')
+        .select('order_number, status, customer_stage, tracking_number, tracking_url, shipped_at, product_type, customer_name, estimated_completion_date')
+        .eq('order_number', extractedOrderNumber)
+        .single();
+      
+      if (order && !orderError) {
+        orderData = order;
+        console.log('[JordanLee] Found order:', { 
+          order_number: order.order_number, 
+          status: order.status, 
+          tracking: order.tracking_number ? 'YES' : 'NO' 
+        });
+      } else {
+        console.log('[JordanLee] Order not found:', extractedOrderNumber);
+      }
+    }
+    
     console.log('[JordanLee] Intent:', { pricing: pricingIntent, partnership: partnershipSignal, escalation: escalationType });
 
     // Find or create conversation
@@ -277,6 +355,13 @@ serve(async (req) => {
       // Check if now complete after merge
       const merged = chatState.vehicle as Record<string, string | null>;
       chatState.vehicle_complete = !!(merged.year && merged.make && merged.model);
+    }
+
+    // Persist order number if found
+    if (orderData) {
+      chatState.order_number = orderData.order_number;
+      chatState.order_status = orderData.status;
+      chatState.stage = 'order_lookup';
     }
 
     // Insert inbound message
@@ -598,7 +683,56 @@ serve(async (req) => {
     }
     
     // Build context notes based on state
-    if (escalationType && escalationSent) {
+    // PRIORITY 1: Order status inquiries (most specific intent)
+    if (orderData) {
+      const friendlyStatus = getCustomerFriendlyStatus(orderData.status, orderData.customer_stage);
+      let orderContext = `ORDER FOUND - USE THIS EXACT DATA (DO NOT MAKE UP INFO):
+Order #${orderData.order_number}
+Customer: ${orderData.customer_name}
+Product: ${orderData.product_type}
+Status: ${friendlyStatus}`;
+
+      if (orderData.tracking_number && orderData.shipped_at) {
+        const shippedDate = new Date(orderData.shipped_at).toLocaleDateString('en-US', { 
+          weekday: 'long', month: 'long', day: 'numeric' 
+        });
+        orderContext += `
+SHIPPED: Yes, shipped on ${shippedDate}
+TRACKING NUMBER: ${orderData.tracking_number}
+${orderData.tracking_url ? `TRACKING URL: ${orderData.tracking_url}` : 'Carrier: Check UPS/FedEx with that tracking number'}`;
+      } else if (orderData.status === 'shipped' || orderData.customer_stage === 'shipped') {
+        // Status says shipped but no tracking - be honest
+        orderContext += `
+SHIPPED: Status shows shipped, but I don't have a tracking number in my system yet. Let me check with the team.`;
+      } else {
+        // Not shipped yet
+        orderContext += `
+SHIPPED: Not yet - still ${friendlyStatus.toLowerCase()}`;
+        if (orderData.estimated_completion_date) {
+          const eta = new Date(orderData.estimated_completion_date).toLocaleDateString('en-US', { 
+            weekday: 'long', month: 'long', day: 'numeric' 
+          });
+          orderContext += `
+ESTIMATED COMPLETION: ${eta}`;
+        }
+      }
+
+      orderContext += `
+
+CRITICAL: Only share the EXACT information above. If tracking_number is not shown above, say "I don't have tracking info in my system yet - let me check with the team" - NEVER make up a tracking number!`;
+      
+      contextNotes = orderContext;
+    } else if (orderStatusIntent && extractedOrderNumber) {
+      // Customer asked about an order but we couldn't find it
+      contextNotes = `ORDER NOT FOUND: Customer asked about order #${extractedOrderNumber} but it's not in my system. 
+Ask them to double-check the order number, or offer to look it up by email. 
+DO NOT make up any order status or tracking information!`;
+    } else if (orderStatusIntent && !extractedOrderNumber) {
+      // Customer wants order status but didn't give a number
+      contextNotes = `ORDER STATUS REQUEST: Customer is asking about an order but didn't provide an order number. 
+Ask them for their order number (usually 4-6 digits from their confirmation email) so you can look it up.
+DO NOT guess or make up any order information!`;
+    } else if (escalationType && escalationSent) {
       contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
     } else if (pricingIntent && !vehicleIsComplete) {
       // CRITICAL: Don't give any price without complete vehicle info
