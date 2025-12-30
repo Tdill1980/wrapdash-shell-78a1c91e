@@ -306,3 +306,12 @@ verify_jwt = false
 
 [functions.mightyedit-render-callback]
 verify_jwt = false
+
+[functions.backfill-video-tags]
+verify_jwt = false
+
+[functions.ai-tag-video]
+verify_jwt = false
+
+[functions.generate-text-overlay]
+verify_jwt = false
