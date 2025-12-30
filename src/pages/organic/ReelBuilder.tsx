@@ -113,6 +113,8 @@ export default function ReelBuilder() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("clip");
   const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [replaceClipId, setReplaceClipId] = useState<string | null>(null);
   const [reelConcept, setReelConcept] = useState<string | null>(null);
   const [isAutoProcessing, setIsAutoProcessing] = useState(false);
   const [showPostRenderModal, setShowPostRenderModal] = useState(false);
@@ -2119,17 +2121,36 @@ export default function ReelBuilder() {
                             <span className="text-lg font-bold text-primary">{index + 1}</span>
                           )}
                           <GripVertical className="w-4 h-4 text-white drop-shadow absolute top-1 left-1 opacity-0 group-hover:opacity-100" />
-                          <Button
-                            size="icon"
-                            variant="destructive"
-                            className="w-5 h-5 absolute top-1 right-1 opacity-0 group-hover:opacity-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveClip(clip.id);
-                            }}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+
+                          <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100">
+                            <Button
+                              size="icon"
+                              variant="secondary"
+                              className="w-5 h-5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReplaceClipId(clip.id);
+                                setShowReplaceModal(true);
+                              }}
+                              title="Replace clip"
+                            >
+                              <Video className="w-3 h-3" />
+                            </Button>
+
+                            <Button
+                              size="icon"
+                              variant="destructive"
+                              className="w-5 h-5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveClip(clip.id);
+                              }}
+                              title="Remove clip"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+
                           {/* Show suggested overlay text */}
                           {clip.suggestedOverlay && (
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
@@ -2220,13 +2241,28 @@ export default function ReelBuilder() {
                   onUpdateSettings={captionsEngine.updateSettings} 
                   onRemoveCaption={captionsEngine.removeCaption}
                   jobId={lastQueueId || undefined}
+                  concept={reelConcept}
+                  onSceneTextChange={(sceneId, text) => {
+                    setSceneBlueprint((prev) => {
+                      if (!prev) return prev;
+                      return {
+                        ...prev,
+                        scenes: prev.scenes.map((s) =>
+                          s.sceneId === sceneId
+                            ? { ...s, text: text || undefined }
+                            : s
+                        ),
+                      };
+                    });
+                  }}
                   scenes={sceneBlueprint?.scenes.map(s => ({
                     sceneId: s.sceneId,
-                    text: s.text,
+                    text: typeof s.text === 'string' ? s.text : '',
                     start: s.start,
                     end: s.end,
                     textPosition: s.textPosition,
                     animation: s.animation,
+                    purpose: s.purpose,
                   })) || []}
                   onOverlaysApproved={() => toast.success("Text overlays will be applied during render")}
                 />
@@ -2240,12 +2276,65 @@ export default function ReelBuilder() {
         </div>
       </div>
 
-      {/* Media Library Modal */}
+      {/* Media Library Modal (Add clips) */}
       <MediaLibraryModal
         open={showLibraryModal}
         onClose={() => setShowLibraryModal(false)}
         multiSelect
         onMultiSelect={handleAddClipsFromLibrary}
+        filterType="video"
+      />
+
+      {/* Media Library Modal (Replace a clip) */}
+      <MediaLibraryModal
+        open={showReplaceModal}
+        onClose={() => {
+          setShowReplaceModal(false);
+          setReplaceClipId(null);
+        }}
+        onSelect={(file) => {
+          if (!replaceClipId) return;
+
+          const nextClipId = file.id;
+          const nextUrl = file.file_url || "";
+
+          setClips((prev) =>
+            prev.map((c) =>
+              c.id === replaceClipId
+                ? {
+                    ...c,
+                    id: nextClipId,
+                    url: nextUrl,
+                    thumbnail: file.thumbnail_url || c.thumbnail,
+                    name: file.original_filename || c.name,
+                    duration: file.duration_seconds || c.duration,
+                  }
+                : c
+            )
+          );
+
+          setSceneBlueprint((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              scenes: prev.scenes.map((s) =>
+                s.clipId === replaceClipId
+                  ? {
+                      ...s,
+                      clipId: nextClipId,
+                      clipUrl: nextUrl,
+                    }
+                  : s
+              ),
+            };
+          });
+
+          if (selectedClip === replaceClipId) setSelectedClip(nextClipId);
+
+          toast.success("Clip replaced");
+          setShowReplaceModal(false);
+          setReplaceClipId(null);
+        }}
         filterType="video"
       />
 

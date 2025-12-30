@@ -51,12 +51,17 @@ export default function TagManager() {
   const [onlyLowConfidence, setOnlyLowConfidence] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
   const [retaggingId, setRetaggingId] = useState<string | null>(null);
-  
+
   // Retag with prompt state
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [promptFile, setPromptFile] = useState<ContentFileRow | null>(null);
   const [retagPrompt, setRetagPrompt] = useState("");
   const [promptRetagging, setPromptRetagging] = useState(false);
+
+  // Custom tag dialog (for things like "chicago", "ghost_industries")
+  const [tagDialogOpen, setTagDialogOpen] = useState(false);
+  const [tagFile, setTagFile] = useState<ContentFileRow | null>(null);
+  const [customTag, setCustomTag] = useState("");
 
   const styleOptions = useMemo(() => getStyleOptions(), []);
 
@@ -439,6 +444,20 @@ export default function TagManager() {
                     >
                       <MessageSquare className="h-3 w-3 mr-1" />
                       Fix
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setTagFile(f);
+                        setCustomTag("");
+                        setTagDialogOpen(true);
+                      }}
+                      title="Add a custom tag (ex: chicago, ghost_industries)"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Custom Tag
                     </Button>
 
                     <Button
