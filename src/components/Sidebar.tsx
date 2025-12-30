@@ -197,6 +197,18 @@ const navigationItems: NavigationItem[] = [
     roles: ["beta_shop", "admin"],
   },
   { 
+    name: "Content Drafts", 
+    path: "/content-drafts", 
+    icon: Film,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Content </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Drafts</span>
+      </span>
+    )
+  },
+  { 
     name: "MightyPortfolio", 
     path: "/portfolio", 
     icon: Briefcase, 

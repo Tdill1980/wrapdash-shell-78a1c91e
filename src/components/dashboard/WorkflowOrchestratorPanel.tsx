@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { 
   AlertTriangle, Calendar, MessageSquare, TrendingUp, 
   Target, CheckCircle, ArrowRight, Loader2, Play,
-  AlertCircle, Clock, Sparkles
+  AlertCircle, Clock, Sparkles, Film, ListTodo
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { OrchestratorQuickActions } from "./OrchestratorQuickActions";
 
 interface OrchestratorStep {
   id: string;
@@ -87,6 +88,49 @@ export function WorkflowOrchestratorPanel() {
           cta_label: "Review Now",
           cta_href: "/ai-approvals",
           icon: Sparkles,
+        });
+      }
+
+      // P1.25: Pending Content Drafts
+      const { count: draftsCount } = await supabase
+        .from("content_drafts")
+        .select("*", { count: 'exact', head: true })
+        .eq("status", "pending_review");
+
+      if (draftsCount && draftsCount > 0) {
+        orchestratorSteps.push({
+          id: "content_drafts",
+          priority: 1.25,
+          title: "Review AI Content Drafts",
+          description: `${draftsCount} content piece${draftsCount > 1 ? 's' : ''} ready to review`,
+          count: draftsCount,
+          status: "todo",
+          severity: "important",
+          cta_label: "Review",
+          cta_href: "/content-drafts",
+          icon: Film,
+        });
+      }
+
+      // P1.3: Backlog Items
+      const { count: backlogCount } = await supabase
+        .from("ai_actions")
+        .select("*", { count: 'exact', head: true })
+        .eq("action_type", "create_task")
+        .eq("resolved", false);
+
+      if (backlogCount && backlogCount > 0) {
+        orchestratorSteps.push({
+          id: "backlog",
+          priority: 1.3,
+          title: "Process Backlog Items",
+          description: `${backlogCount} task${backlogCount > 1 ? 's' : ''} awaiting action`,
+          count: backlogCount,
+          status: "todo",
+          severity: "routine",
+          cta_label: "View Backlog",
+          cta_href: "/backlog",
+          icon: ListTodo,
         });
       }
 
@@ -277,7 +321,14 @@ export function WorkflowOrchestratorPanel() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 space-y-4">
+        {/* Quick Actions Bar */}
+        <div className="pb-3 border-b border-border/50">
+          <p className="text-xs text-muted-foreground mb-2">Quick Actions</p>
+          <OrchestratorQuickActions />
+        </div>
+
+        {/* Steps */}
         <div className="space-y-2">
           {steps.slice(0, 5).map((step, index) => {
             const IconComponent = step.icon;
