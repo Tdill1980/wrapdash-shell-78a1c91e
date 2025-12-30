@@ -300,14 +300,12 @@ export default function ReelBuilder() {
       setSuggestedCta(job.cta || null);
       setReelConcept(job.hook || 'Agent-created reel');
 
-      // ✅ Music: only a URL is renderable. (Style is a hint, not executable.)
-      // ✅ FIX #2: Resolve music style to URL if no direct URL provided
+      // ✅ Music: Creatomate requires a publicly reachable URL.
+      // For now we ONLY allow absolute http(s) URLs (no local /audio/* placeholders).
       const resolveMusicUrl = (j: ProducerJob): string | null => {
-        if (j.musicUrl) return j.musicUrl;
-        if (j.musicStyle === 'upbeat') return '/audio/upbeat-industrial.mp3';
-        if (j.musicStyle === 'hiphop') return '/audio/modern-hiphop.mp3';
-        if (j.musicStyle === 'cinematic') return '/audio/cinematic-epic.mp3';
-        return null;
+        const url = j.musicUrl || null;
+        if (!url) return null;
+        return /^https?:\/\//i.test(url) ? url : null;
       };
       setAudioUrl(resolveMusicUrl(job));
 
