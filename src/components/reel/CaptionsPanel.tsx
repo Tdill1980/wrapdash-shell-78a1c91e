@@ -296,8 +296,8 @@ export function CaptionsPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* BULK ACTIONS BAR */}
-        {jobId && scenes.length > 0 && (
+        {/* BULK ACTIONS BAR - Show when scenes available (jobId only needed for approval) */}
+        {scenes.length > 0 && (
           <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
             {/* Template selector */}
             {templates.length > 0 && (
@@ -353,9 +353,10 @@ export function CaptionsPanel({
               <Button
                 size="sm"
                 variant={allApproved ? "secondary" : "default"}
-                disabled={approving || allApproved || scenesWithText.length === 0}
+                disabled={approving || allApproved || scenesWithText.length === 0 || !jobId}
                 onClick={handleApproveAllOverlays}
                 className="h-7 text-xs"
+                title={!jobId ? "Start a render first to approve overlays" : undefined}
               >
                 {approving ? (
                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -364,14 +365,14 @@ export function CaptionsPanel({
                 ) : (
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                 )}
-                {allApproved ? "All Approved" : `Approve All (${scenesWithText.length})`}
+                {!jobId ? "Approve (render first)" : allApproved ? "All Approved" : `Approve All (${scenesWithText.length})`}
               </Button>
             </div>
           </div>
         )}
 
-        {/* PER-SCENE OVERLAY CONTROLS */}
-        {jobId && scenes.length > 0 && (
+        {/* PER-SCENE OVERLAY CONTROLS - Show when scenes available (jobId only needed for approval) */}
+        {scenes.length > 0 && (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {scenes.map((scene) => {
               const displayText = getSceneText(scene);
@@ -463,9 +464,11 @@ export function CaptionsPanel({
                         variant="secondary"
                         className="h-6 px-2 text-[10px]"
                         onClick={() => handleApproveOne(scene)}
+                        disabled={!jobId}
+                        title={!jobId ? "Start a render first to approve" : undefined}
                       >
                         <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
-                        Approve
+                        {!jobId ? "Approve (render first)" : "Approve"}
                       </Button>
                     )}
                   </div>
@@ -487,7 +490,7 @@ export function CaptionsPanel({
         )}
 
         {/* DIVIDER */}
-        {jobId && scenes.length > 0 && <div className="border-t border-border my-2" />}
+        {scenes.length > 0 && <div className="border-t border-border my-2" />}
 
         {/* Style selector */}
         <div>
