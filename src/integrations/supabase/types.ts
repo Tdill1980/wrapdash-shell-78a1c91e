@@ -6598,6 +6598,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_content_tag: {
+        Args: { file_id: string; tag: string }
+        Returns: undefined
+      }
       get_quote_stats: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
@@ -6615,6 +6619,10 @@ export type Database = {
         Returns: boolean
       }
       is_organization_owner: { Args: { _org_id: string }; Returns: boolean }
+      remove_content_tag: {
+        Args: { file_id: string; tag: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "orchestrator"
