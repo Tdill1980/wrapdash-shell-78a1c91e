@@ -2,6 +2,7 @@ import React, { ReactNode, useState } from "react";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { Sidebar } from "@/components/Sidebar";
 import { LuigiWebsiteWidget } from "@/components/chat/LuigiWebsiteWidget";
+import { SOPHelpPanel } from "@/components/SOPHelpPanel";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -43,6 +44,9 @@ export const MainLayout = ({ children, userName = "User" }: MainLayoutProps) => 
 
       {/* Luigi Chat Widget - Floating on all pages */}
       <LuigiWebsiteWidget />
+
+      {/* SOP Help Panel - Floating help button */}
+      <SOPHelpPanel />
     </div>
   );
 };
