@@ -44,9 +44,11 @@ function parseCreateContent(block: string): Json {
   for (const line of lines) {
     // list item (very basic) for overlays:
     if (line.startsWith("- ") && currentKey) {
-      const arr = out[currentKey] as unknown[] ?? [];
-      arr.push(line.slice(2).trim());
-      out[currentKey] = arr;
+      // Ensure we have an actual array before pushing
+      if (!Array.isArray(out[currentKey])) {
+        out[currentKey] = [];
+      }
+      (out[currentKey] as unknown[]).push(line.slice(2).trim());
       continue;
     }
 
