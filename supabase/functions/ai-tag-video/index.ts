@@ -61,13 +61,14 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { content_file_id, video_url, thumbnail_url, existing_tags = [] } = body;
+    const { content_file_id, video_url, thumbnail_url, existing_tags = [], retag_prompt } = body;
 
     console.log("[ai-tag-video] Request:", {
       content_file_id,
       video_url: video_url?.substring(0, 60),
       thumbnail_url: thumbnail_url?.substring(0, 60),
       existing_tags,
+      retag_prompt: retag_prompt?.substring(0, 100),
     });
 
     if (!content_file_id && !video_url) {
@@ -108,9 +109,22 @@ CRITICAL RULES:
 5. Be generous with tags - more is better than fewer
 6. If unsure, lean toward the more authentic/raw tags`;
 
-    const userPrompt = `Analyze this video content and return tags.
+    // Build user prompt with optional correction guidance
+    let userPrompt = `Analyze this video content and return tags.
 
-${existing_tags.length > 0 ? `Existing manual tags: ${existing_tags.join(', ')}` : ''}
+${existing_tags.length > 0 ? `Existing manual tags: ${existing_tags.join(', ')}` : ''}`;
+
+    // Add correction prompt if provided - this guides AI to fix misclassification
+    if (retag_prompt) {
+      userPrompt += `
+
+IMPORTANT CORRECTION FROM HUMAN REVIEWER:
+${retag_prompt}
+
+Use this guidance to correct any previous misclassification. The human reviewer has seen the actual video.`;
+    }
+
+    userPrompt += `
 
 Return a JSON object with these exact fields:
 {

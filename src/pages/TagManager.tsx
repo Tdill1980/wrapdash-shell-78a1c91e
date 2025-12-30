@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, RefreshCw, Tag, Video, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, RefreshCw, Tag, Video, Plus, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { STYLE_TAG_RULES, getStyleOptions, TAG_LABELS, VALID_STYLE_TAGS, VALID_VISUAL_TAGS, VALID_QUALITY_TAGS } from "@/lib/style-tag-rules";
 import { TagList } from "@/components/ui/tag-badge";
@@ -49,6 +51,12 @@ export default function TagManager() {
   const [onlyLowConfidence, setOnlyLowConfidence] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
   const [retaggingId, setRetaggingId] = useState<string | null>(null);
+  
+  // Retag with prompt state
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [promptFile, setPromptFile] = useState<ContentFileRow | null>(null);
+  const [retagPrompt, setRetagPrompt] = useState("");
+  const [promptRetagging, setPromptRetagging] = useState(false);
 
   const styleOptions = useMemo(() => getStyleOptions(), []);
 
@@ -109,7 +117,7 @@ export default function TagManager() {
     });
   }, [files, search, onlyUntagged, onlyLowConfidence, style]);
 
-  async function retagOne(file: ContentFileRow) {
+  async function retagOne(file: ContentFileRow, prompt?: string) {
     const tags = normalizeTags(file.tags);
     const { error } = await supabase.functions.invoke("ai-tag-video", {
       body: {
@@ -117,6 +125,7 @@ export default function TagManager() {
         video_url: file.file_url,
         thumbnail_url: file.thumbnail_url,
         existing_tags: tags,
+        retag_prompt: prompt,
       },
     });
     if (error) throw error;
@@ -140,6 +149,32 @@ export default function TagManager() {
     }
     toast.success(`Removed tag: ${TAG_LABELS[tag] || tag}`);
     await load();
+  }
+
+  function openPromptDialog(file: ContentFileRow) {
+    setPromptFile(file);
+    setRetagPrompt("");
+    setPromptDialogOpen(true);
+  }
+
+  async function handlePromptRetag() {
+    if (!promptFile || !retagPrompt.trim()) {
+      toast.error("Please enter correction guidance");
+      return;
+    }
+    setPromptRetagging(true);
+    try {
+      await retagOne(promptFile, retagPrompt.trim());
+      toast.success("Video re-tagged with your guidance");
+      await load();
+      setPromptDialogOpen(false);
+      setPromptFile(null);
+      setRetagPrompt("");
+    } catch (e: any) {
+      toast.error(e.message || "Re-tag failed");
+    } finally {
+      setPromptRetagging(false);
+    }
   }
 
   async function handleRetagOne(file: ContentFileRow) {
@@ -398,6 +433,16 @@ export default function TagManager() {
 
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => openPromptDialog(f)}
+                      title="Re-tag with correction guidance"
+                    >
+                      <MessageSquare className="h-3 w-3 mr-1" />
+                      Fix
+                    </Button>
+
+                    <Button
+                      size="sm"
                       variant="ghost"
                       onClick={() => f.file_url && window.open(f.file_url, "_blank")}
                       disabled={!f.file_url}
@@ -449,6 +494,83 @@ export default function TagManager() {
           No videos match the current filters
         </div>
       )}
+
+      {/* Re-tag with Prompt Dialog */}
+      <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Re-Tag with Guidance</DialogTitle>
+            <DialogDescription>
+              Tell the AI what's wrong with the current tags and how to fix them.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {promptFile && (
+            <div className="space-y-4">
+              {/* Preview */}
+              <div className="flex gap-3 items-start">
+                {promptFile.thumbnail_url ? (
+                  <img 
+                    src={promptFile.thumbnail_url} 
+                    alt="Video thumbnail"
+                    className="w-24 h-16 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-24 h-16 bg-muted rounded flex items-center justify-center">
+                    <Video className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {promptFile.original_filename || promptFile.id.slice(0, 12)}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {normalizeTags(promptFile.tags).slice(0, 4).map((t) => (
+                      <Badge key={t} variant="secondary" className="text-xs">
+                        {TAG_LABELS[t] || t}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Prompt input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Correction Guidance</label>
+                <Textarea
+                  placeholder="e.g., This is NOT ugly ads - it's polished studio footage with professional lighting"
+                  value={retagPrompt}
+                  onChange={(e) => setRetagPrompt(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Describe what's wrong and what the correct tags should be. The AI will use this to re-analyze.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromptDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePromptRetag} 
+              disabled={promptRetagging || !retagPrompt.trim()}
+            >
+              {promptRetagging ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Re-tagging...
+                </>
+              ) : (
+                "Re-Tag with Guidance"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
