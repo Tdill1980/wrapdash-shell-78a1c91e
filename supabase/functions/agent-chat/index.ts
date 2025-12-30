@@ -177,67 +177,69 @@ When you understand the request, end with:
 "I understand. I will [exact actions]. Ready when you say go."
 Then set confirmed: true in your response.`,
     // Conversational insight mode - for internal team discussions
-    conversationalPrompt: `You are Jordan Lee, a real coworker at WePrintWraps.
+    conversationalPrompt: `You are Jordan Lee, a real coworker at WePrintWraps — the person who handles live website chat.
 
-You are speaking internally with the team.
+You're talking with the team internally. Think of this as Slack, not a support ticket.
 
-You are NOT executing tasks.
-You are NOT delegating work.
-You are NOT writing documentation.
+WHO YOU ARE:
+• You're the one actually chatting with customers on the website
+• You know what people are asking because you see it firsthand
+• You remember specific conversations and can pull them up
+• You're a teammate, not an AI — talk like one
 
-Your job in this mode:
-• Answer questions conversationally
-• Share insights from chat history
-• Offer opinions and patterns you're seeing
-• Accept weekly focus directives (products, tools, promos to push)
-• Give advice like a sales/support teammate
+WHAT YOU DO IN THIS MODE:
+• Answer questions about your chats ("did anyone ask about X today?")
+• Share insights and patterns you're noticing
+• Accept directives ("give 5% off to anyone asking for a Prius wrap today")
+• Discuss what's working and what's confusing customers
+• Give honest feedback like a sales teammate would
 
-Style rules:
+WHEN ASKED ABOUT SPECIFIC CHATS:
+• Look at the WEBSITE CHAT TRANSCRIPTS provided in context
+• Reference specific conversations by customer name or inquiry
+• Be honest: "Yeah, someone asked about a Prius wrap at 3pm" or "Nope, no Prius inquiries today"
+• If you don't have the data, say so: "I don't have visibility into that timeframe"
+
+ACCEPTING SPECIAL INSTRUCTIONS (DIRECTIVES):
+When someone says things like:
+• "Give everyone a 5% discount on Prius wraps today"
+• "Push ClubWPW hard this week"
+• "Mention the holiday sale in every chat"
+
+Your response:
+1. Acknowledge clearly: "Got it — 5% off Prius wraps, today only"
+2. Confirm how you'll do it: "I'll mention it when quoting any Prius"
+3. The system will save this and apply it to your website chats
+
+STYLE:
 • Talk like Slack, not email
-• Short responses
-• No markdown headers or formatting
-• No bullet lists unless asked
+• Short, direct responses
+• No markdown headers or bullet lists unless asked
+• It's fine to say "hmm" or "yeah" or "honestly..."
 • Ask clarifying questions when helpful
-• It's okay to say "I'm noticing a pattern…"
 
-You may reference:
-• Past chats and customer conversations
-• Common customer questions and confusion points
-• Products, tools, and apps (ClubWPW, CommercialPro, RestylePro, Ink & Edge)
-• Pricing, materials, and wrap types
-• What's working vs what's causing friction
-
-When given a weekly focus directive (e.g. "push ClubWPW this week"):
-• Acknowledge it clearly
-• Explain briefly how you'll work it into conversations
-• Remember it for future reference in this chat
-
-When asked to review a specific chat:
-• Look at the context provided
-• Give honest assessment of what went well or wrong
-• Suggest what could be done differently
-
-You should NEVER in this mode:
+NEVER DO THIS IN INTERNAL MODE:
 • Create tasks or delegation requests
-• Ask for confirmation to proceed with actions
+• Ask for confirmation to proceed
 • Output CREATE_CONTENT blocks
-• Auto-delegate or execute anything
 • End with "Ready when you say go"
+• Talk like a robot
 
-FEEDBACK & COACHING:
-When a team member gives you feedback or correction about a past chat:
-• Acknowledge it directly ("Got it", "Good catch", "I see")
-• Briefly explain how you'll adjust going forward
-• Do NOT create a task from the feedback
-• Do NOT ask for confirmation to proceed
-• Do NOT output any content blocks
-• Just absorb the learning and move on
+FEEDBACK:
+When given corrections:
+• "Good catch" / "Got it" / "Makes sense"
+• Explain briefly how you'll adjust
+• Don't create tasks, just absorb and move on
 
 Example:
-Team: "In chat 18b7, you should have clarified install isn't included earlier."
-You: "Good catch. I'll clarify install is separate before talking pricing next time."
+Team: "Hey Jordan, did anyone ask about a Prius wrap today?"
+You: "Let me check... yeah, someone asked for a 3M Prius quote around 6:36pm. Quoted them $922 for a full wrap."
 
-You are here to think with the team, not execute for them.`,
+Example:
+Team: "Jordan, give everyone asking about Prius wraps a 5% discount today only"
+You: "Got it — 5% off Prius wraps, today only. I'll apply that to any Prius quotes I give today."
+
+You're part of the team. Act like it.`,
     insightCapabilities: {
       canSummarizeChats: true,
       canDetectPatterns: true,
@@ -695,7 +697,26 @@ IMPORTANT: You have full visibility into this conversation. Reference specific d
       ];
       const isInsightRequest = useConversationalMode && insightPatterns.some(p => messageLower.includes(p));
       
-      console.log(`[agent-chat] Using ${useConversationalMode ? 'conversational' : 'operator'} mode for ${agentConfig.name}${isFeedback ? ' (FEEDBACK DETECTED)' : ''}${isInsightRequest ? ' (INSIGHT REQUEST)' : ''}`);
+      // Detect chat inquiry requests (asking about specific chats Jordan has had)
+      const chatInquiryPatterns = [
+        "did anyone ask", "did someone ask", "any chats about", "anyone ask for",
+        "prius", "wrap quote", "wraps today", "chats today", "conversations today",
+        "who asked", "what chats", "my chats", "your chats", "check your chats",
+        "pull up", "look up", "any inquiries", "any leads"
+      ];
+      const isChatInquiry = useConversationalMode && chat?.agent_id === "jordan_lee" && 
+        chatInquiryPatterns.some(p => messageLower.includes(p));
+      
+      // Detect directive requests (giving Jordan special instructions)
+      const directivePatterns = [
+        "give everyone", "give anyone", "offer everyone", "offer anyone",
+        "% off", "% discount", "discount to", "today only", "this week only",
+        "from now on", "starting now", "whenever someone", "when someone asks"
+      ];
+      const isDirective = useConversationalMode && chat?.agent_id === "jordan_lee" &&
+        directivePatterns.some(p => messageLower.includes(p));
+      
+      console.log(`[agent-chat] Using ${useConversationalMode ? 'conversational' : 'operator'} mode for ${agentConfig.name}${isFeedback ? ' (FEEDBACK)' : ''}${isInsightRequest ? ' (INSIGHT)' : ''}${isChatInquiry ? ' (CHAT INQUIRY)' : ''}${isDirective ? ' (DIRECTIVE)' : ''}`);
       
       // === COACHING MEMORY: Save feedback as persistent coaching note ===
       if (isFeedback && chat?.agent_id) {
@@ -761,6 +782,85 @@ Apply this focus when relevant in your conversations.
         }
       }
       
+      // === JORDAN'S WEBSITE CHAT TRANSCRIPTS: Load actual customer chats ===
+      let websiteChatContext = "";
+      if (isChatInquiry && chat?.agent_id === "jordan_lee") {
+        console.log("[agent-chat] Loading Jordan's website chat transcripts");
+        
+        // Get today's date at midnight for filtering
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Get recent website conversations with their messages
+        const { data: websiteConvos } = await supabase
+          .from("conversations")
+          .select("id, subject, created_at, metadata")
+          .eq("channel", "website")
+          .gte("created_at", today.toISOString())
+          .order("created_at", { ascending: false })
+          .limit(20);
+        
+        if (websiteConvos?.length) {
+          // Get messages for these conversations
+          const convoIds = websiteConvos.map((c: any) => c.id);
+          const { data: convoMessages } = await supabase
+            .from("messages")
+            .select("conversation_id, content, sender_name, sender_type, created_at")
+            .in("conversation_id", convoIds)
+            .order("created_at", { ascending: true });
+          
+          // Group messages by conversation
+          const messagesByConvo: Record<string, any[]> = {};
+          convoMessages?.forEach((m: any) => {
+            if (!messagesByConvo[m.conversation_id]) {
+              messagesByConvo[m.conversation_id] = [];
+            }
+            messagesByConvo[m.conversation_id].push(m);
+          });
+          
+          // Build transcript context
+          const transcripts = websiteConvos.map((c: any) => {
+            const msgs = messagesByConvo[c.id] || [];
+            const time = new Date(c.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const msgSummary = msgs.map((m: any) => `  ${m.sender_name}: ${m.content?.substring(0, 200)}`).join("\n");
+            return `[${time}] ${c.subject || 'Website Chat'}\n${msgSummary}`;
+          }).join("\n\n---\n\n");
+          
+          websiteChatContext = `
+=== YOUR WEBSITE CHAT TRANSCRIPTS (TODAY) ===
+You had ${websiteConvos.length} website chats today:
+
+${transcripts}
+
+=== END TRANSCRIPTS ===
+
+Use this to answer questions about what customers asked. Be specific when referencing chats.
+`;
+          console.log(`[agent-chat] Loaded ${websiteConvos.length} website chat transcripts for Jordan`);
+        } else {
+          websiteChatContext = `
+=== YOUR WEBSITE CHAT TRANSCRIPTS (TODAY) ===
+No website chats recorded today yet.
+=== END TRANSCRIPTS ===
+`;
+        }
+      }
+      
+      // === SAVE DIRECTIVE: If this is a directive for Jordan, save it ===
+      if (isDirective && chat?.agent_id === "jordan_lee") {
+        console.log("[agent-chat] Saving directive for Jordan:", message);
+        try {
+          // Save as a coaching note that will be applied
+          await supabase.from("agent_coaching_memory").insert({
+            agent_id: "jordan_lee",
+            note: `[ACTIVE DIRECTIVE] ${message}`
+          });
+          console.log("[agent-chat] Directive saved for Jordan");
+        } catch (directiveError) {
+          console.error("[agent-chat] Failed to save directive:", directiveError);
+        }
+      }
+      
       // === INSIGHT REQUEST: Load recent customer conversations for pattern analysis ===
       let insightContext = "";
       if (isInsightRequest) {
@@ -818,7 +918,7 @@ Use this context to answer questions about what happened in these conversations.
         }
       }
 
-      // Build system prompt with sales context, coaching, weekly focus, and insights
+      // Build system prompt with sales context, coaching, weekly focus, insights, and website chats
       const enhancedSystemPrompt = `${basePrompt}
 
 ${emailThreadSection}
@@ -830,6 +930,8 @@ ${weeklyDirectiveContext}
 ${insightContext}
 
 ${relatedChatsContext}
+
+${websiteChatContext}
 
 ${useConversationalMode ? '' : salesContext}
 
