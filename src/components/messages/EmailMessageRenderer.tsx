@@ -42,22 +42,29 @@ export function EmailMessageRenderer({ message }: EmailMessageRendererProps) {
   // The raw HTML content
   const rawHtml = message.content || "";
 
-  // Check if content looks like HTML
-  const isHtmlContent = rawHtml.includes("<") && rawHtml.includes(">");
+  // Heuristic: avoid treating plain text containing angle brackets (e.g. email addresses)
+  // as HTML. Only render an iframe when it really looks like an HTML email.
+  const looksLikeHtml = /<\s*(html|body|div|p|table|span|br|img|a|style|head|meta|title|h[1-6]|ul|ol|li)\b/i.test(rawHtml);
+  const parsed = new DOMParser().parseFromString(rawHtml, "text/html");
+  const hasHtmlElements = (parsed.body?.children?.length || 0) > 0;
+
+  // Consider it HTML only if we have real elements AND it contains typical HTML tags.
+  const isHtmlContent = !!rawHtml && looksLikeHtml && hasHtmlElements;
 
   // Sanitize HTML but preserve structure for email rendering
-  const sanitizedHtml = DOMPurify.sanitize(rawHtml, {
-    USE_PROFILES: { html: true },
-    ADD_ATTR: ["target"],
-    FORBID_TAGS: ["script", "form", "input", "button"],
-    FORBID_ATTR: ["onclick", "onload", "onerror"],
-  });
+  const sanitizedHtml = isHtmlContent
+    ? DOMPurify.sanitize(rawHtml, {
+        USE_PROFILES: { html: true },
+        ADD_ATTR: ["target"],
+        FORBID_TAGS: ["script", "form", "input", "button"],
+        FORBID_ATTR: ["onclick", "onload", "onerror"],
+      })
+    : "";
 
   // Extract plain text for collapsed preview
-  const getPlainTextPreview = (html: string): string => {
-    if (!isHtmlContent) return html.slice(0, 200);
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const text = doc.body?.textContent || html;
+  const getPlainTextPreview = (value: string): string => {
+    if (!isHtmlContent) return value.slice(0, 200);
+    const text = parsed.body?.textContent || value;
     return text.replace(/\s+/g, " ").trim().slice(0, 200);
   };
 
