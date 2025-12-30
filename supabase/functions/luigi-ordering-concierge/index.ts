@@ -216,7 +216,7 @@ You are a system, not a script.
 After giving ANY price estimate:
 1. Immediately offer to email a detailed quote
 2. Say: "Want me to email you this quote with all the specs? Drop your email and I'll send it right over!"
-3. When they give email, confirm: "Done! Check your inbox — I just sent your quote with a special discount code for your first order! 🎉"
+3. When they give email, confirm: "Perfect — Ill email it now. Check your inbox in a couple minutes (and spam/junk just in case)."
 
 ALWAYS collect email when giving pricing. The email includes their discount code.
 
@@ -714,41 +714,35 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
     // Create quote and send email if we have email + vehicle + pricing intent
     if (pricingIntent && chatState.customer_email && hasVehicle) {
       try {
-        // Call create-quote-from-chat to generate and email the quote
-        const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/create-quote-from-chat`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
+        // Use functions.invoke instead of raw HTTP
+        const { data: quoteData, error: quoteError } = await supabase.functions.invoke("create-quote-from-chat", {
+          body: {
             conversation_id: conversationId,
             customer_email: chatState.customer_email,
             customer_name: null,
             vehicle_year: extractedVehicle.year,
             vehicle_make: extractedVehicle.make,
             vehicle_model: extractedVehicle.model,
-            product_type: 'avery',
-            send_email: true
-          })
+            product_type: "avery",
+            send_email: true,
+          },
         });
 
-        if (quoteResponse.ok) {
-          const quoteData = await quoteResponse.json();
-          console.log('[Luigi] Quote created and emailed:', quoteData.quote_number);
+        if (quoteError) {
+          console.error("[Luigi] Failed to create/email quote:", quoteError);
+        } else {
+          console.log("[Luigi] Quote created and emailed:", quoteData?.quote_number);
           chatState.quote_sent = true;
-          chatState.quote_number = quoteData.quote_number;
-          
+          chatState.quote_number = quoteData?.quote_number;
+
           // Update conversation with quote info
           await supabase
-            .from('conversations')
+            .from("conversations")
             .update({ chat_state: chatState })
-            .eq('id', conversationId);
-        } else {
-          console.error('[Luigi] Failed to create quote:', await quoteResponse.text());
+            .eq("id", conversationId);
         }
       } catch (quoteErr) {
-        console.error('[Luigi] Quote creation error:', quoteErr);
+        console.error("[Luigi] Quote creation error:", quoteErr);
       }
     } else if (pricingIntent && chatState.customer_email && !hasVehicle) {
       // No vehicle yet - create task for manual follow-up

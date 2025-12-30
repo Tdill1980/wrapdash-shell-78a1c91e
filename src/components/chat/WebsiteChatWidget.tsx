@@ -212,7 +212,7 @@ export function WebsiteChatWidget() {
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 scrollbar-thin scrollbar-thumb-slate-300">
+      <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-3 bg-slate-50 scrollbar-thin scrollbar-thumb-slate-300">
         {messages.map((message, index) => (
           <div 
             key={message.id}
@@ -294,7 +294,7 @@ export function WebsiteChatWidget() {
       </div>
 
       {/* Input area */}
-      <div className="p-3 border-t border-slate-200 bg-white">
+      <div className="p-3 border-t border-slate-200 bg-white" style={{ paddingBottom: `calc(0.75rem + env(safe-area-inset-bottom))` }}>
         {/* Contextual input hints based on last message */}
         {(() => {
           const lastAssistantMsg = messages.filter(m => m.role === 'assistant').slice(-1)[0]?.content.toLowerCase() || '';
