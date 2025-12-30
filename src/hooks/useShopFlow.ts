@@ -133,25 +133,19 @@ export const useShopFlow = (orderId?: string) => {
           },
         });
 
-      // Update WooCommerce order meta
+      // Update WooCommerce order meta via secure edge function proxy
       try {
-        const wooConsumerKey = import.meta.env.VITE_WOO_CONSUMER_KEY;
-        const wooConsumerSecret = import.meta.env.VITE_WOO_CONSUMER_SECRET;
-        
-        if (wooConsumerKey && wooConsumerSecret) {
-          await fetch(`https://weprintwraps.com/wp-json/wc/v3/orders/${order.order_number}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': 'Basic ' + btoa(`${wooConsumerKey}:${wooConsumerSecret}`),
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+        await supabase.functions.invoke('woo-proxy', {
+          body: {
+            action: 'updateOrder',
+            orderId: order.order_number,
+            data: {
               meta_data: [
                 { key: '_shopflow_status', value: newStatus }
               ]
-            })
-          });
-        }
+            }
+          }
+        });
       } catch (wooError) {
         console.error('Error updating WooCommerce:', wooError);
       }

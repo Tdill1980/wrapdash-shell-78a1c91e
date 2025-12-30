@@ -294,3 +294,6 @@ verify_jwt = false
 
 [functions.forward-to-team]
 verify_jwt = false
+
+[functions.woo-proxy]
+verify_jwt = true
