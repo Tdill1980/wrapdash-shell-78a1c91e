@@ -1897,6 +1897,7 @@ export type Database = {
           hashtags: string[] | null
           id: string
           in_progress_at: string | null
+          migrated: boolean | null
           organization_id: string | null
           platform: string
           post_url: string | null
@@ -1918,6 +1919,7 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           in_progress_at?: string | null
+          migrated?: boolean | null
           organization_id?: string | null
           platform: string
           post_url?: string | null
@@ -1939,6 +1941,7 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           in_progress_at?: string | null
+          migrated?: boolean | null
           organization_id?: string | null
           platform?: string
           post_url?: string | null
@@ -2047,6 +2050,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_drafts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "migrated_content_audit"
+            referencedColumns: ["task_id"]
           },
           {
             foreignKeyName: "content_drafts_task_id_fkey"
@@ -2883,6 +2893,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agent_chats"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegation_log_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "migrated_content_audit"
+            referencedColumns: ["task_id"]
           },
           {
             foreignKeyName: "delegation_log_task_id_fkey"
@@ -5961,6 +5978,13 @@ export type Database = {
             foreignKeyName: "system_issues_related_task_id_fkey"
             columns: ["related_task_id"]
             isOneToOne: false
+            referencedRelation: "migrated_content_audit"
+            referencedColumns: ["task_id"]
+          },
+          {
+            foreignKeyName: "system_issues_related_task_id_fkey"
+            columns: ["related_task_id"]
+            isOneToOne: false
             referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
@@ -6058,6 +6082,13 @@ export type Database = {
             columns: ["content_calendar_id"]
             isOneToOne: false
             referencedRelation: "content_calendar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_content_calendar_id_fkey"
+            columns: ["content_calendar_id"]
+            isOneToOne: false
+            referencedRelation: "migrated_content_audit"
             referencedColumns: ["id"]
           },
           {
@@ -6712,6 +6743,23 @@ export type Database = {
       }
     }
     Views: {
+      migrated_content_audit: {
+        Row: {
+          assigned_agent: string | null
+          brand: string | null
+          id: string | null
+          in_progress_at: string | null
+          migrated: boolean | null
+          posted_at: string | null
+          ready_at: string | null
+          status: string | null
+          task_id: string | null
+          task_status: string | null
+          task_title: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
       ops_backlog_needs_response: {
         Row: {
           channel: string | null
