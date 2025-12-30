@@ -135,16 +135,54 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
     // 3. Find or create contact and conversation
     const WPW_ORG_ID = '51aa96db-c06d-41ae-b3cb-25b045c75caf';
     
-    // First, check if contact exists for this sender
-    let { data: contact } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("organization_id", WPW_ORG_ID)
-      .or(`metadata->>instagram_id.eq.${body.sender_id},metadata->>sender_id.eq.${body.sender_id}`)
-      .maybeSingle();
+    // IMPORTANT: For Instagram, the webhook already creates contact and conversation
+    // We should use the conversation_id passed from the webhook to avoid duplicates
+    let conversation = body.conversation_id 
+      ? { id: body.conversation_id } 
+      : null;
     
-    if (!contact) {
-      // Create new contact
+    let contact: any = null;
+    
+    // If we have a contact_id passed from webhook, use it
+    if (body.contact_id) {
+      const { data: existingContact } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("id", body.contact_id)
+        .single();
+      contact = existingContact;
+    }
+    
+    // For non-Instagram platforms or if webhook didn't pass IDs, find/create
+    if (!contact && body.sender_id) {
+      // Use consistent lookup - check for instagram_sender_id (used by webhook)
+      const { data: foundContact } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("source", body.platform)
+        .contains("metadata", { instagram_sender_id: body.sender_id })
+        .maybeSingle();
+      
+      if (foundContact) {
+        contact = foundContact;
+      } else {
+        // Also try the legacy sender_id pattern
+        const { data: legacyContact } = await supabase
+          .from("contacts")
+          .select("*")
+          .eq("source", body.platform)
+          .or(`metadata->>sender_id.eq.${body.sender_id},metadata->>instagram_id.eq.${body.sender_id}`)
+          .maybeSingle();
+        
+        if (legacyContact) {
+          contact = legacyContact;
+        }
+      }
+    }
+    
+    // Only create new contact if we truly don't have one
+    if (!contact && body.platform !== 'instagram') {
+      // For Instagram, the webhook handles contact creation - don't duplicate
       const { data: newContact, error: contactErr } = await supabase
         .from("contacts")
         .insert({
@@ -154,8 +192,6 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
           organization_id: WPW_ORG_ID,
           metadata: {
             sender_id: body.sender_id,
-            instagram_id: body.platform === 'instagram' ? body.sender_id : null,
-            username: body.sender_username,
           },
           tags: parsed.wants_pricing ? ['lead', 'pricing_interest'] : ['lead'],
         })
@@ -168,30 +204,52 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       } else {
         console.error("Contact create error:", contactErr);
       }
-    } else if (parsed.customer_email && !contact.email?.includes('@capture.local')) {
+    } else if (contact && parsed.customer_email && !parsed.customer_email.includes('@capture.local') && contact.email?.includes('@capture.local')) {
       // Update existing contact with real email if captured
-      // Only update if we have a REAL email (not capture.local)
-      if (parsed.customer_email && !parsed.customer_email.includes('@capture.local') && contact.email?.includes('@capture.local')) {
-        await supabase
-          .from("contacts")
-          .update({ 
-            email: parsed.customer_email,
-            tags: [...(contact.tags || []), 'email_captured'].filter((v, i, a) => a.indexOf(v) === i),
-          })
-          .eq("id", contact.id);
-        console.log("📧 Updated contact with real email:", parsed.customer_email);
+      await supabase
+        .from("contacts")
+        .update({ 
+          email: parsed.customer_email,
+          tags: [...(contact.tags || []), 'email_captured'].filter((v: string, i: number, a: string[]) => a.indexOf(v) === i),
+        })
+        .eq("id", contact.id);
+      console.log("📧 Updated contact with real email:", parsed.customer_email);
+    }
+
+    // Find existing conversation if not passed from webhook
+    if (!conversation) {
+      // For Instagram, find by contact_id (same as webhook)
+      if (body.platform === 'instagram' && contact) {
+        const { data: foundConv } = await supabase
+          .from("conversations")
+          .select("*")
+          .eq("contact_id", contact.id)
+          .eq("channel", "instagram")
+          .maybeSingle();
+        
+        if (foundConv) {
+          conversation = foundConv;
+        }
+      }
+      
+      // Fallback: search by subject pattern
+      if (!conversation) {
+        const { data: subjectConv } = await supabase
+          .from("conversations")
+          .select("*")
+          .eq("channel", body.platform)
+          .ilike("subject", `%${body.sender_id}%`)
+          .maybeSingle();
+        
+        if (subjectConv) {
+          conversation = subjectConv;
+        }
       }
     }
 
-    // Find or create conversation
-    let { data: conversation } = await supabase
-      .from("conversations")
-      .select("*")
-      .eq("channel", body.platform)
-      .ilike("subject", `%${body.sender_id}%`)
-      .maybeSingle();
-
-    if (!conversation) {
+    // Only create new conversation if we truly don't have one AND it's not Instagram
+    if (!conversation && body.platform !== 'instagram') {
+      // For Instagram, the webhook handles conversation creation - don't duplicate
       const { data: newConv, error: convError } = await supabase
         .from("conversations")
         .insert({
@@ -202,20 +260,23 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
           status: "open",
           contact_id: contact?.id || null,
           organization_id: WPW_ORG_ID,
+          last_message_at: new Date().toISOString(),
         })
         .select()
         .single();
 
       if (convError) console.error("Conversation create error:", convError);
       conversation = newConv;
-    } else {
-      // Update conversation with contact link if missing
+    } else if (conversation && 'unread_count' in conversation) {
+      // Update existing conversation with last_message_at
       const updateData: any = { 
-        unread_count: (conversation.unread_count || 0) + 1,
+        unread_count: ((conversation as any).unread_count || 0) + 1,
         last_message_at: new Date().toISOString()
       };
-      if (!conversation.contact_id && contact?.id) {
-        updateData.contact_id = contact.id;
+      if (!('contact_id' in conversation) || !(conversation as any).contact_id) {
+        if (contact?.id) {
+          updateData.contact_id = contact.id;
+        }
       }
       await supabase
         .from("conversations")
