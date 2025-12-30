@@ -436,7 +436,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
           : "They provided vehicle info but quote failed. Confirm details and ask for their email to send a formal quote.",
       design: "Ask what style they're looking for. Offer to show examples.",
       support: "Ask for their order number so you can help track it.",
-      file_received: "Thank them for sending files! Confirm you're forwarding to the design team. Ask for their email so the team can send a quote.",
+      file_received: "Thank them for sending files! Tell them our design team will review shortly. Ask for their email so the team can send a formal quote.",
       general: "Answer their question helpfully. Guide toward getting a quote if appropriate."
     };
 
@@ -444,10 +444,11 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
 FILE HANDLING RULES (CRITICAL):
 - WePrintWraps CAN receive files directly via Instagram DM!
 - ALWAYS encourage customers to send their files here
-- When they mention files/artwork/designs, say: "Yes! Send it right over - I'll forward it to our design team for a quote!"
-- If files need review, mention Jackson or Lance will take a look
+- When they mention files/artwork/designs, say: "Yes! Send it right over and our design team will take a look!"
+- If files need review, mention Jackson or Lance will review them
 - NEVER say "I can't receive files" - that's WRONG
-- When files ARE received: "Got it! 👊 Forwarding to Lance and the design team - they'll review and email your quote!"
+- When files ARE received: "Got it! 👊 Our design team will review and get back to you with a quote!"
+- NEVER say "I've forwarded" or "I've emailed" - only say the team will review
 - Always ask for their email after receiving files so team can follow up`;
 
     // Check if we have their email already
