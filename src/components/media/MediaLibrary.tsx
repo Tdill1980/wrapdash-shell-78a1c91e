@@ -6,13 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Upload, Image, Video, Music, Folder, 
-  Grid3X3, List, X, Play, Download, Trash2, Sparkles, FileStack, CheckCircle, Lightbulb
+  Grid3X3, List, X, Play, Download, Trash2, Sparkles, FileStack, CheckCircle, Lightbulb,
+  Wand2, Loader2, AlertTriangle
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MediaUploader } from "./MediaUploader";
 import { MediaCard, MediaSelectMode } from "./MediaCard";
 import { TagEditorModal } from "./TagEditorModal";
+import { toast } from "sonner";
 
 export interface MediaFile {
   id: string;
@@ -25,6 +27,14 @@ export interface MediaFile {
   created_at: string;
   duration_seconds: number | null;
   content_category?: string | null;
+  visual_tags?: {
+    style_tags?: string[];
+    visual_tags?: string[];
+    quality_tags?: string[];
+    ai_confidence?: number;
+    ai_description?: string;
+    tagged_at?: string;
+  } | null;
 }
 
 const FILE_TYPES = [
@@ -56,6 +66,7 @@ export function MediaLibrary({
   const [showUploader, setShowUploader] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [tagEditorFile, setTagEditorFile] = useState<MediaFile | null>(null);
+  const [bulkRetagging, setBulkRetagging] = useState(false);
 
   const { data: files = [], isLoading, refetch } = useQuery({
     queryKey: ["media-library", filterType, category],
@@ -108,16 +119,113 @@ export function MediaLibrary({
     refetch();
   };
 
+  // Bulk re-tag with AI
+  const handleBulkRetag = async () => {
+    const videosToTag = filteredFiles.filter(f => f.file_type === "video");
+    if (videosToTag.length === 0) {
+      toast.error("No videos to tag");
+      return;
+    }
+
+    setBulkRetagging(true);
+    let success = 0;
+    let failed = 0;
+
+    for (const file of videosToTag) {
+      try {
+        const { error } = await supabase.functions.invoke("ai-tag-video", {
+          body: {
+            content_file_id: file.id,
+            video_url: file.file_url,
+            thumbnail_url: file.thumbnail_url,
+            existing_tags: file.tags || [],
+          },
+        });
+        if (error) throw error;
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+
+    setBulkRetagging(false);
+    toast.success(`Tagged ${success} videos${failed > 0 ? `, ${failed} failed` : ""}`);
+    refetch();
+  };
+
+  // Count untagged videos
+  const untaggedCount = useMemo(() => {
+    return filteredFiles.filter(f => 
+      f.file_type === "video" && (!f.tags || f.tags.length === 0)
+    ).length;
+  }, [filteredFiles]);
+
+  // Count low confidence
+  const lowConfidenceCount = useMemo(() => {
+    return filteredFiles.filter(f => {
+      const confidence = f.visual_tags?.ai_confidence;
+      return f.file_type === "video" && confidence !== undefined && confidence < 0.5;
+    }).length;
+  }, [filteredFiles]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg sm:text-xl font-semibold">Media Library</h2>
-        <Button onClick={() => setShowUploader(true)} size="sm" className="sm:size-default">
-          <Upload className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">Upload</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={handleBulkRetag} 
+            size="sm" 
+            variant="outline"
+            disabled={bulkRetagging || filterType !== "video"}
+            className="hidden sm:flex"
+          >
+            {bulkRetagging ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Wand2 className="w-4 h-4 mr-2" />
+            )}
+            AI Tag All
+          </Button>
+          <Button onClick={() => setShowUploader(true)} size="sm" className="sm:size-default">
+            <Upload className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Upload</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Tag Status Banner */}
+      {filterType === "video" && (untaggedCount > 0 || lowConfidenceCount > 0) && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+          {untaggedCount > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <AlertTriangle className="w-4 h-4 text-yellow-500" />
+              <span>{untaggedCount} untagged</span>
+            </div>
+          )}
+          {lowConfidenceCount > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <AlertTriangle className="w-4 h-4 text-orange-500" />
+              <span>{lowConfidenceCount} low confidence</span>
+            </div>
+          )}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleBulkRetag}
+            disabled={bulkRetagging}
+            className="ml-auto h-7 text-xs"
+          >
+            {bulkRetagging ? (
+              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+            ) : (
+              <Wand2 className="w-3 h-3 mr-1" />
+            )}
+            Fix with AI
+          </Button>
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUploader && (

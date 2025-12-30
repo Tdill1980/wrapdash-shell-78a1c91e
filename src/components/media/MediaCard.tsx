@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Image, Video, Music, Check, Tag, Trash2, Target } from "lucide-react";
+import { Play, Image, Video, Music, Check, Tag, Trash2, Target, AlertTriangle, Wand2, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { VideoThumbnail } from "./VideoThumbnail";
+import { TAG_LABELS } from "@/lib/style-tag-rules";
 
 interface MediaFile {
   id: string;
@@ -19,6 +20,9 @@ interface MediaFile {
   created_at: string;
   duration_seconds: number | null;
   content_category?: string | null;
+  visual_tags?: {
+    ai_confidence?: number;
+  } | null;
 }
 
 export type MediaSelectMode = "select" | "reel" | "static" | "hybrid" | "video-ad";
@@ -117,13 +121,32 @@ export function MediaCard({
         {/* Details */}
         <div className="flex flex-col justify-between flex-1 min-w-0">
           <div>
-            <p className="font-medium truncate">{file.original_filename || "Untitled"}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium truncate flex-1">{file.original_filename || "Untitled"}</p>
+              {/* Confidence indicator */}
+              {file.visual_tags?.ai_confidence !== undefined && (
+                <Badge 
+                  variant={file.visual_tags.ai_confidence >= 0.7 ? "secondary" : "outline"}
+                  className={cn(
+                    "text-[10px] shrink-0",
+                    file.visual_tags.ai_confidence < 0.5 && "border-yellow-500 text-yellow-600"
+                  )}
+                >
+                  {(file.visual_tags.ai_confidence * 100).toFixed(0)}%
+                </Badge>
+              )}
+              {!file.tags?.length && isVideo && (
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+              )}
+            </div>
             <p className="text-xs text-muted-foreground capitalize">{file.content_category || "raw"}</p>
             
             {file.tags && file.tags.length > 0 && (
               <div className="flex gap-1 mt-1 flex-wrap">
                 {file.tags.slice(0, 3).map(t => (
-                  <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>
+                  <Badge key={t} variant="secondary" className="text-[10px]">
+                    {TAG_LABELS[t] || t}
+                  </Badge>
                 ))}
                 {file.tags.length > 3 && (
                   <span className="text-[10px] text-muted-foreground">+{file.tags.length - 3}</span>
@@ -282,14 +305,26 @@ export function MediaCard({
 
       {/* FILENAME & TAGS */}
       <div className="p-2 bg-card space-y-1">
-        <p className="text-xs font-medium truncate">
-          {file.original_filename || "Untitled"}
-        </p>
+        <div className="flex items-center gap-1">
+          <p className="text-xs font-medium truncate flex-1">
+            {file.original_filename || "Untitled"}
+          </p>
+          {!file.tags?.length && isVideo && (
+            <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
+          )}
+          {file.visual_tags?.ai_confidence !== undefined && file.visual_tags.ai_confidence < 0.5 && (
+            <Badge variant="outline" className="text-[9px] px-1 border-yellow-500 text-yellow-600">
+              {(file.visual_tags.ai_confidence * 100).toFixed(0)}%
+            </Badge>
+          )}
+        </div>
         
         {file.tags && file.tags.length > 0 && (
           <div className="flex gap-1 flex-wrap">
             {file.tags.slice(0, 2).map(t => (
-              <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>
+              <Badge key={t} variant="outline" className="text-[10px]">
+                {TAG_LABELS[t] || t}
+              </Badge>
             ))}
             {file.tags.length > 2 && (
               <span className="text-[10px] text-muted-foreground">+{file.tags.length - 2}</span>
