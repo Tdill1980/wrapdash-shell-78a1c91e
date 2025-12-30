@@ -90,6 +90,7 @@ import BulkVariationReview from "./pages/BulkVariationReview";
 import QuoteStatsDashboard from "./pages/QuoteStatsDashboard";
 import TagManager from "./pages/TagManager";
 import Backlog from "./pages/Backlog";
+import ContentDrafts from "./pages/ContentDrafts";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -143,6 +144,7 @@ const App = () => (
             <Route path="/ai-pipeline" element={<AIPipeline />} />
             <Route path="/mightychat" element={<MightyChat />} />
             <Route path="/backlog" element={<Backlog />} />
+            <Route path="/content-drafts" element={<ContentDrafts />} />
             <Route path="/mightychat-v2" element={<MightyChatV2 />} />
             <Route path="/contentbox" element={<ContentBox />} />
             <Route path="/content-creator" element={<ContentCreator />} />
