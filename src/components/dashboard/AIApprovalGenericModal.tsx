@@ -77,17 +77,70 @@ export function AIApprovalGenericModal({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [expandedMedia, setExpandedMedia] = useState<string | null>(null);
+  const [foundConversationId, setFoundConversationId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open && action?.action_payload?.conversation_id) {
-      fetchConversation(action.action_payload.conversation_id as string);
+    if (open && action) {
+      findAndFetchConversation();
     } else {
       setMessages([]);
+      setFoundConversationId(null);
     }
   }, [open, action]);
 
-  const fetchConversation = async (conversationId: string) => {
+  const findAndFetchConversation = async () => {
+    if (!action) return;
+    
     setLoadingMessages(true);
+    const payload = action.action_payload || {};
+    
+    // Try multiple ways to find conversation_id
+    let conversationId = payload.conversation_id as string | undefined;
+    
+    // Fallback 1: Look up via sender_id in messages metadata
+    if (!conversationId && payload.sender_id) {
+      console.log("🔍 Looking up conversation via sender_id:", payload.sender_id);
+      const { data: msgWithSender } = await supabase
+        .from("messages")
+        .select("conversation_id")
+        .eq("metadata->>sender_id", payload.sender_id as string)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (msgWithSender?.conversation_id) {
+        conversationId = msgWithSender.conversation_id;
+        console.log("✅ Found conversation via sender_id:", conversationId);
+      }
+    }
+    
+    // Fallback 2: Look up via sender_username pattern
+    if (!conversationId && payload.sender_username) {
+      const { data: convBySubject } = await supabase
+        .from("conversations")
+        .select("id")
+        .ilike("subject", `%${payload.sender_username}%`)
+        .order("last_message_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (convBySubject?.id) {
+        conversationId = convBySubject.id;
+        console.log("✅ Found conversation via subject pattern:", conversationId);
+      }
+    }
+    
+    if (conversationId) {
+      setFoundConversationId(conversationId);
+      await fetchConversation(conversationId);
+    } else {
+      console.log("❌ No conversation found for action:", action.id);
+      setFoundConversationId(null);
+      setLoadingMessages(false);
+    }
+  };
+
+  const fetchConversation = async (conversationId: string) => {
     try {
       const { data, error } = await supabase
         .from("messages")
@@ -141,11 +194,13 @@ export function AIApprovalGenericModal({
   const isVideo = (url: string) => url.match(/\.(mp4|mov|webm)/i);
 
   const handleViewFullThread = () => {
-    if (!conversationId) {
+    // Use the found conversation ID from our lookup, fallback to payload
+    const threadId = foundConversationId || conversationId;
+    if (!threadId) {
       toast.error("No conversation linked to this action");
       return;
     }
-    navigate(`/mightychat?id=${conversationId}`);
+    navigate(`/mightychat?id=${threadId}`);
     onOpenChange(false);
   };
 
@@ -314,8 +369,8 @@ export function AIApprovalGenericModal({
                 </div>
               )}
 
-              {/* Conversation History */}
-              {conversationId && (
+              {/* Conversation History - show if we have messages OR found a conversation */}
+              {(foundConversationId || conversationId || messages.length > 0) && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium flex items-center gap-2">
