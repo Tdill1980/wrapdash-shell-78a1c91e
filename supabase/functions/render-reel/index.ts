@@ -375,14 +375,15 @@ serve(async (req) => {
     console.log("[render-reel] Starting Creatomate render...");
     
     // Creatomate requires either template_id, tags, or source
-    // We use "source" to pass a dynamic composition JSON
+    // "source" must be a JSON STRING (not an object) per Creatomate API docs
     const creatomatePayload = {
-      source: timeline,  // Wrap timeline in "source" - REQUIRED by Creatomate API
+      source: JSON.stringify(timeline),  // MUST be stringified JSON
     };
     
     console.log("[render-reel] Creatomate payload structure:", { 
       hasSource: !!creatomatePayload.source,
-      sourceKeys: Object.keys(timeline),
+      sourceType: typeof creatomatePayload.source,
+      timelineKeys: Object.keys(timeline),
     });
     
     const startRes = await creatomateFetch("renders", {
