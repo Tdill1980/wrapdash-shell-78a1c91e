@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RefreshCw, Send, Pause, Play, Shield, Zap, MessageSquare, Mail, Globe, Users } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ConversationStatusBadge } from "@/components/ConversationStatusBadge";
 
 type Channel = "instagram" | "email" | "website" | "internal" | "all";
 
@@ -396,15 +397,24 @@ export default function MightyChatV2() {
           <div className="flex-1 flex flex-col min-w-0">
             {/* Thread header */}
             <div className="p-4 border-b bg-card flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold">
-                  {activeConversation
-                    ? (activeConversation.contact_name || activeConversation.contact_email || activeConversation.subject || activeConversation.id.slice(0, 8))
-                    : "Select a conversation"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {activeConversation ? `Channel: ${activeConversation.channel}` : ""}
-                </p>
+              <div className="flex items-center gap-3">
+                <div>
+                  <h2 className="font-semibold">
+                    {activeConversation
+                      ? (activeConversation.contact_name || activeConversation.contact_email || activeConversation.subject || activeConversation.id.slice(0, 8))
+                      : "Select a conversation"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {activeConversation ? `Channel: ${activeConversation.channel}` : ""}
+                  </p>
+                </div>
+                {activeConversation && (
+                  <ConversationStatusBadge
+                    aiPaused={activeConversation.ai_paused}
+                    pendingActions={pendingActions}
+                    receipts={receipts}
+                  />
+                )}
               </div>
 
               {activeConversation && (
