@@ -11,7 +11,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface BacklogItem {
   id: string;
@@ -20,11 +21,24 @@ interface BacklogItem {
   last_inbound_at: string;
   last_outbound_at: string | null;
   needs_response: boolean;
+  lastMessage?: string;
+  lastMessageFull?: string;
 }
 
 export function BacklogTable() {
   const [items, setItems] = useState<BacklogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleRow = (id: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedRows(newExpanded);
+  };
 
   const fetchBacklog = async () => {
     setLoading(true);
@@ -37,7 +51,38 @@ export function BacklogTable() {
 
       if (error) throw error;
       
-      setItems((data as unknown as BacklogItem[]) || []);
+      const backlogItems = (data as unknown as BacklogItem[]) || [];
+      
+      // Fetch last inbound message for each conversation
+      const itemsWithMessages = await Promise.all(
+        backlogItems.map(async (item) => {
+          const { data: msgData } = await supabase
+            .from("messages")
+            .select("content, raw_payload")
+            .eq("conversation_id", item.id)
+            .eq("direction", "inbound")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+          
+          let fullMessage = "";
+          if (msgData?.content) {
+            fullMessage = msgData.content;
+          } else if (msgData?.raw_payload) {
+            // Try to extract text from raw_payload for emails
+            const payload = msgData.raw_payload as any;
+            fullMessage = payload?.text || payload?.body || payload?.snippet || "";
+          }
+          
+          return {
+            ...item,
+            lastMessage: fullMessage.substring(0, 100) + (fullMessage.length > 100 ? "..." : ""),
+            lastMessageFull: fullMessage,
+          };
+        })
+      );
+      
+      setItems(itemsWithMessages);
     } catch (e) {
       console.error("Failed to fetch backlog:", e);
     } finally {
@@ -97,42 +142,81 @@ export function BacklogTable() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[40px]"></TableHead>
             <TableHead>Channel</TableHead>
-            <TableHead>Subject</TableHead>
-            <TableHead>Last Inbound</TableHead>
+            <TableHead>Subject / Preview</TableHead>
             <TableHead>Age</TableHead>
             <TableHead className="w-[80px]">Open</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell>
-                <Badge variant="outline" className={getChannelColor(item.channel)}>
-                  {item.channel}
-                </Badge>
-              </TableCell>
-              <TableCell className="max-w-[200px] truncate">
-                {item.subject || "—"}
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">
-                {new Date(item.last_inbound_at).toLocaleString()}
-              </TableCell>
-              <TableCell className={`text-xs ${getAgeColor(item.last_inbound_at)}`}>
-                {formatDistanceToNow(new Date(item.last_inbound_at), { addSuffix: true })}
-              </TableCell>
-              <TableCell>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => openInMightyChat(item.id)}
-                  className="h-7 w-7 p-0"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {items.map((item) => {
+            const isExpanded = expandedRows.has(item.id);
+            return (
+              <>
+                <TableRow key={item.id} className="cursor-pointer" onClick={() => toggleRow(item.id)}>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={getChannelColor(item.channel)}>
+                      {item.channel}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[300px]">
+                    <div className="font-medium truncate">{item.subject || "—"}</div>
+                    {item.lastMessage && (
+                      <div className="text-xs text-muted-foreground truncate mt-0.5">
+                        {item.lastMessage}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className={`text-xs ${getAgeColor(item.last_inbound_at)}`}>
+                    {formatDistanceToNow(new Date(item.last_inbound_at), { addSuffix: true })}
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openInMightyChat(item.id);
+                      }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+                {isExpanded && (
+                  <TableRow key={`${item.id}-expanded`}>
+                    <TableCell colSpan={5} className="bg-muted/30 p-4">
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">Last Inbound Message:</div>
+                          <div className="text-sm bg-background p-3 rounded border border-border max-h-40 overflow-y-auto whitespace-pre-wrap">
+                            {item.lastMessageFull || "No message content available"}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => openInMightyChat(item.id)}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Open in MightyChat
+                          </Button>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
