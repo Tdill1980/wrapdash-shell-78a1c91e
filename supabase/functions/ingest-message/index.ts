@@ -400,8 +400,11 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
       }
       
       // Log to ai_actions for MCP visibility - ALWAYS require approval
+      // CRITICAL: Always include conversation_id for thread linking
       const { error: actionError } = await supabase.from("ai_actions").insert({
         action_type: "create_quote",
+        conversation_id: conversation?.id || null, // Link to conversation
+        organization_id: WPW_ORG_ID,
         priority: parsed.urgency,
         resolved: false, // ALWAYS require approval before sending
         resolved_at: null,
@@ -409,6 +412,7 @@ ${hasFiles ? `NOTE: Customer also sent ${fileUrls.length} file(s)` : ''}`;
           source: body.platform,
           sender_id: body.sender_id,
           sender_username: body.sender_username,
+          conversation_id: conversation?.id || null, // Also in payload for fallback
           customer_email: parsed.customer_email,
           vehicle: parsed.vehicle,
           message: body.message_text,
