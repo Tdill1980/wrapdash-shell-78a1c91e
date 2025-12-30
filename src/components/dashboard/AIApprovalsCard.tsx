@@ -104,7 +104,7 @@ export function AIApprovalsCard() {
         .select("*")
         .eq("resolved", showHistory)
         .order("created_at", { ascending: false })
-        .limit(25);
+        .limit(200);
 
       // Apply filter if not "all"
       const filterConfig = FILTER_CONFIG[filterType];
