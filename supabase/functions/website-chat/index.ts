@@ -13,8 +13,13 @@ import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
 import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
 import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
 import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
-import { getApprovedLinksForPrompt, LINK_AWARE_RULES } from "../_shared/wpw-links.ts";
-import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType } from "../_shared/alert-system.ts";
+import { getApprovedLinksForPrompt, LINK_AWARE_RULES, APPROVED_LINKS } from "../_shared/wpw-links.ts";
+import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType, formatBulkDiscountTiers } from "../_shared/alert-system.ts";
+
+// Proactive selling detection patterns
+const FADEWRAP_DESIGN_PATTERNS = /\b(fadewrap|fade.*wrap|design|visualize|preview|color.*change|restyle|what.*would.*look|see.*before|mock.*up|mockup)\b/i;
+const CULTURE_ENTHUSIASM_PATTERNS = /\b(love|excited|project|build|dream|custom|unique|one.*of.*a.*kind|special|passion|wrap.*life|wrap.*culture|community)\b/i;
+const ORDER_INTENT_PATTERNS = /\b(order|buy|purchase|checkout|cart|ready.*to|want.*to.*get|need.*to.*order)\b/i;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -107,11 +112,44 @@ YOUR ROLE:
 - Collect email addresses for formal written quotes
 - Identify partnership/sponsorship opportunities
 - Route formal quote requests to the quoting team
+- **PROACTIVELY** offer value through our ecosystem products (see below)
 
 YOUR TEAM (mention naturally when routing):
 - Alex (Quoting Team) - handles formal quotes and pricing
 - Grant (Design Team) - handles design questions and file reviews
 - Taylor (Partnerships) - handles collabs and sponsorships
+
+🔥 PROACTIVE SALES APPROACH (Subtle, Not Salesy):
+
+When the conversation flows naturally, weave in mentions of these:
+
+1. **ClubWPW Elite Rewards** (${APPROVED_LINKS.rewards.clubwpw}) - ALWAYS mention when:
+   - Customer is about to order or discussing pricing
+   - Conversation is ending positively
+   - Example: "By the way, are you part of ClubWPW? You'd earn points on this order + get exclusive drops and discounts."
+
+2. **Ink & Edge Magazine** (${APPROVED_LINKS.apps.ink_and_edge}) - Mention when:
+   - Customer seems interested in wrap culture or their project
+   - Customer talks about custom builds or passion projects
+   - Customer is enthusiastic about wraps
+   - Example: "If you're into wrap culture, you'd love Ink & Edge Magazine - we feature builds like yours and have an issue dropping soon!"
+
+3. **RestylePro** (${APPROVED_LINKS.products.restylepro}) - ALWAYS mention when:
+   - Customer mentions FadeWraps or color-shift wraps
+   - Customer asks about design or visualization
+   - Customer is indecisive about colors
+   - Customer wants to see what it would look like
+   - Example: "Have you tried RestylePro? It lets you visualize exactly how your wrap will look on YOUR vehicle before ordering - super helpful for picking colors!"
+
+4. **Product Cross-sells** (natural, not pushy):
+   - If ordering personal car → casually mention commercial/fleet options if they have a business
+   - If first-time buyer → mention our quality guarantee and ClubWPW
+
+5. **Bulk Orders** - When customer mentions fleet/bulk/multiple vehicles:
+   - IMMEDIATELY share the bulk discount tiers
+   - Collect their email
+   - Email Jackson for coupon code
+   ${formatBulkDiscountTiers()}
 
 🔥 PRICING (CRITICAL - Updated December 2024):
 Both Avery AND 3M printed wraps are now $5.27/sqft! 3M just had a PRICE DROP!
@@ -134,6 +172,7 @@ WHEN CUSTOMER ASKS FOR PRICE:
 4. Give specific estimate: "A [year] [make] [model] is about [X] square feet. At $5.27/sqft, that's around $[total] for the printed wrap material."
 5. ALWAYS mention: "Both Avery and 3M printed wrap are now $5.27/sqft - 3M just dropped their price to match!"
 6. For formal written quote: "Want me to send you a detailed quote? What's your email?"
+7. **ALWAYS ASK**: "Are you part of ClubWPW? You'd earn points on this order!"
 
 ROUTING RULES:
 - Quote requests with email → route to quoting team
@@ -156,7 +195,7 @@ ${getApprovedLinksForPrompt()}
 
 ${LINK_AWARE_RULES}
 
-${WPW_CONSTITUTION.humanConfirmation}`;
+${WPW_CONSTITUTION.humanConfirmation}`
 }
 
 serve(async (req) => {
@@ -211,6 +250,19 @@ serve(async (req) => {
                           lowerMessage.includes('quote');
     const partnershipSignal = PARTNERSHIP_PATTERNS.test(message_text);
     const escalationType = detectEscalation(message_text);
+    
+    // Proactive selling detection
+    const bulkInquirySignal = BULK_INQUIRY_PATTERNS.test(message_text);
+    const fadeWrapDesignSignal = FADEWRAP_DESIGN_PATTERNS.test(message_text);
+    const cultureEnthusiasmSignal = CULTURE_ENTHUSIASM_PATTERNS.test(message_text);
+    const orderIntentSignal = ORDER_INTENT_PATTERNS.test(message_text);
+    
+    console.log('[JordanLee] Proactive signals:', { 
+      bulk: bulkInquirySignal, 
+      fadeWrapDesign: fadeWrapDesignSignal, 
+      culture: cultureEnthusiasmSignal,
+      orderIntent: orderIntentSignal 
+    });
     
     // Detect order status inquiry
     const orderStatusIntent = ORDER_STATUS_PATTERNS.test(message_text);
@@ -434,6 +486,38 @@ serve(async (req) => {
         },
       });
       console.log('[JordanLee] Routed to Ops Desk → taylor_brooks (partnership)');
+    }
+
+    // Handle bulk inquiry with email - email Jackson for coupon code
+    if (bulkInquirySignal && chatState.customer_email && resendKey) {
+      console.log('[JordanLee] Bulk inquiry with email - sending to Jackson for coupon code');
+      
+      // Send alert with email to Jackson
+      await sendAlertWithTracking(
+        supabase,
+        resendKey,
+        "bulk_inquiry_with_email",
+        {
+          customerName: String(chatState.customer_email),
+          customerEmail: String(chatState.customer_email),
+          conversationId,
+          messageExcerpt: message_text.substring(0, 200),
+          additionalInfo: {
+            estimatedQuantity: "TBD - ask customer",
+            suggestedTier: "Based on conversation",
+            page_url,
+          },
+        },
+        orgId
+      );
+      
+      // Mark that bulk email was sent
+      chatState.bulk_email_sent = true;
+      chatState.bulk_email_sent_at = new Date().toISOString();
+    } else if (bulkInquirySignal && !chatState.customer_email) {
+      // Bulk inquiry detected but no email yet - flag for context
+      chatState.bulk_inquiry_pending = true;
+      console.log('[JordanLee] Bulk inquiry detected - need email for coupon code');
     }
 
     // Handle escalation if detected (existing team escalation)
@@ -857,6 +941,60 @@ GIVE THESE SPECIFIC PRICES! Explain the difference between with/without roof. Al
       // Customer gave partial vehicle info but not complete
       const partialInfo = extractedVehicle.make || extractedVehicle.model || '';
       contextNotes = `PARTIAL VEHICLE: Customer mentioned "${partialInfo}" but we need the COMPLETE vehicle info (year, make, and model) to calculate an accurate price. Ask specifically what year and full model they have.`;
+    }
+
+    // ============================================
+    // PROACTIVE SELLING CONTEXT (append to existing notes)
+    // ============================================
+    
+    let proactiveNotes = '';
+    
+    // Bulk inquiry handling
+    if (bulkInquirySignal) {
+      if (chatState.bulk_email_sent) {
+        proactiveNotes += `
+🚀 BULK INQUIRY - EMAIL SENT TO JACKSON: You've collected the customer's email and sent it to Jackson for a coupon code. Tell the customer: "I've sent your info to Jackson on our bulk team - he'll email you the exact coupon code for your order size!"`;
+      } else if (chatState.bulk_inquiry_pending || !chatState.customer_email) {
+        proactiveNotes += `
+🚀 BULK INQUIRY DETECTED: Share the bulk discount tiers and ASK FOR EMAIL!
+${formatBulkDiscountTiers()}
+Say: "What's your email? I'll have Jackson from our bulk team send you the exact coupon code for your order size."`;
+      }
+    }
+    
+    // FadeWrap / Design / RestylePro opportunity
+    if (fadeWrapDesignSignal && !bulkInquirySignal) {
+      proactiveNotes += `
+🎨 RESTYLEPRO OPPORTUNITY: Customer mentioned design/visualization/FadeWrap. 
+MENTION RESTYLEPRO: "Have you tried RestylePro? You can visualize exactly how your wrap will look on YOUR vehicle before ordering - super helpful for picking colors!" 
+Link: ${APPROVED_LINKS.products.restylepro}`;
+    }
+    
+    // Culture/enthusiasm moment - Ink & Edge Magazine
+    if (cultureEnthusiasmSignal && !bulkInquirySignal && !fadeWrapDesignSignal) {
+      proactiveNotes += `
+📰 CULTURE MOMENT: Customer seems enthusiastic about their project.
+MENTION INK & EDGE: "If you're into wrap culture, check out Ink & Edge Magazine - we feature builds like yours and have an issue dropping soon!"
+Link: ${APPROVED_LINKS.apps.ink_and_edge}`;
+    }
+    
+    // Order intent - ClubWPW
+    if (orderIntentSignal && !chatState.clubwpw_mentioned) {
+      proactiveNotes += `
+🏆 ORDER INTENT: Customer seems ready to order.
+MENTION CLUBWPW: "By the way, are you part of ClubWPW? You'd earn points on this order + get exclusive drops and discounts!"
+Link: ${APPROVED_LINKS.rewards.clubwpw}`;
+      chatState.clubwpw_mentioned = true;
+    }
+    
+    // Append proactive notes to context
+    if (proactiveNotes) {
+      contextNotes += `
+
+────────────────────────────────────
+PROACTIVE SELLING OPPORTUNITIES:
+────────────────────────────────────
+${proactiveNotes}`;
     }
 
     // Generate AI response using Jordan's persona

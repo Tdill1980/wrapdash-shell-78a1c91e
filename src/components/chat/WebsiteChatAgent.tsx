@@ -9,9 +9,9 @@ interface ChatMessage {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Get a Quote", message: "I want a quote" },
-  { label: "See Wrap Colors", message: "Show me available wrap colors" },
-  { label: "View Examples", message: "Show me examples of wraps" },
+  { label: "Get a Quote", message: "I want a quote for my vehicle" },
+  { label: "Bulk/Fleet Pricing", message: "I need bulk pricing for multiple vehicles" },
+  { label: "Join ClubWPW", message: "Tell me about ClubWPW rewards" },
   { label: "Track My Order", message: "I want to track my order" },
 ];
 
