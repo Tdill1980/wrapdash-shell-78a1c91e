@@ -86,6 +86,7 @@ import RevenueHealth from "./pages/RevenueHealth";
 import AIApprovals from "./pages/AIApprovals";
 import BulkVariationReview from "./pages/BulkVariationReview";
 import QuoteStatsDashboard from "./pages/QuoteStatsDashboard";
+import TagManager from "./pages/TagManager";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -150,6 +151,7 @@ const App = () => (
             <Route path="/organic/static" element={<StaticCreator />} />
             <Route path="/organic/atomizer" element={<Atomizer />} />
             <Route path="/organic/reel-vault" element={<ReelVault />} />
+            <Route path="/organic/tag-manager" element={<TagManager />} />
             <Route path="/organic/youtube-editor" element={<YouTubeEditor />} />
             <Route path="/bulk-variations" element={<BulkVariationReview />} />
             <Route path="/ad-vault" element={<AdVault />} />
