@@ -644,6 +644,121 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_alerts: {
+        Row: {
+          agent_id: string
+          alert_type: string
+          conversation_id: string | null
+          created_at: string | null
+          customer_email: string | null
+          customer_name: string | null
+          email_sent_at: string | null
+          email_sent_to: string[] | null
+          id: string
+          message_excerpt: string | null
+          metadata: Json | null
+          order_id: string | null
+          order_number: string | null
+          organization_id: string | null
+          priority: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          task_id: string | null
+          task_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string
+          alert_type: string
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          id?: string
+          message_excerpt?: string | null
+          metadata?: Json | null
+          order_id?: string | null
+          order_number?: string | null
+          organization_id?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          task_id?: string | null
+          task_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          alert_type?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          id?: string
+          message_excerpt?: string | null
+          metadata?: Json | null
+          order_id?: string | null
+          order_number?: string | null
+          organization_id?: string | null
+          priority?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          task_id?: string | null
+          task_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_alerts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "migrated_content_audit"
+            referencedColumns: ["task_id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_chat_messages: {
         Row: {
           agent_chat_id: string | null
