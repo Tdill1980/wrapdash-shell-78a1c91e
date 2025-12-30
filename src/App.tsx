@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
 import { LuigiWebsiteWidget } from "@/components/chat/LuigiWebsiteWidget";
+import { IssueReporter } from "@/components/IssueReporter";
 import Dashboard from "./pages/Dashboard";
+import IssuesDashboard from "./pages/IssuesDashboard";
 import { Visualize as WrapCloser, InkFusion, DesignPanelPro, FadeWraps, WBTY } from "./modules/designproai";
 import DesignPanelProEnterprise from "./modules/designpanelpro-enterprise";
 import { DesignVault } from "./modules/designvault";
@@ -104,6 +106,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/issues" element={<IssuesDashboard />} />
             <Route path="/ai-approvals" element={<AIApprovals />} />
             <Route path="/wrapcloser" element={<WrapCloser />} />
             <Route path="/inkfusion" element={<InkFusion />} />
@@ -196,6 +199,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <LuigiWebsiteWidget />
+          <IssueReporter />
         </BrowserRouter>
       </TooltipProvider>
     </OrganizationProvider>
