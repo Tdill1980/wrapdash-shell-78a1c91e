@@ -199,12 +199,19 @@ export function CaptionsPanel({
       return;
     }
 
+    // FIX 3: Filter out empty overlays
+    const validOverlays = scenesWithText.filter(scene => getSceneText(scene).trim());
+    if (validOverlays.length === 0) {
+      toast.error("All overlay texts are empty");
+      return;
+    }
+
     setApproving(true);
     try {
-      const overlaysToInsert = scenesWithText.map(scene => ({
+      const overlaysToInsert = validOverlays.map(scene => ({
         job_id: jobId,
         scene_id: scene.sceneId,
-        text: getSceneText(scene),
+        text: getSceneText(scene).trim(),
         position: scene.textPosition || 'center',
         animation: scene.animation || 'pop',
         start_time: scene.start,
@@ -219,8 +226,13 @@ export function CaptionsPanel({
 
       if (error) throw error;
 
-      setApprovedSceneIds(new Set(scenesWithText.map(s => s.sceneId)));
-      toast.success(`${scenesWithText.length} text overlays approved for rendering`);
+      setApprovedSceneIds(new Set(validOverlays.map(s => s.sceneId)));
+      
+      // FIX 2: Clear drafts after successful approval
+      setOverlayDrafts({});
+      setEditingSceneId(null);
+      
+      toast.success(`${validOverlays.length} text overlays approved for rendering`);
       onOverlaysApproved?.();
     } catch (err) {
       console.error("[CaptionsPanel] Approve overlays error:", err);
@@ -234,8 +246,10 @@ export function CaptionsPanel({
   const handleApproveOne = async (scene: SceneData) => {
     if (!jobId) return;
     const text = getSceneText(scene);
-    if (!text) {
-      toast.error("No text to approve");
+    
+    // FIX 3: Prevent empty overlay approval
+    if (!text?.trim()) {
+      toast.error("Overlay text cannot be empty");
       return;
     }
 
@@ -245,7 +259,7 @@ export function CaptionsPanel({
         .upsert({
           job_id: jobId,
           scene_id: scene.sceneId,
-          text,
+          text: text.trim(),
           position: scene.textPosition || 'center',
           animation: scene.animation || 'pop',
           start_time: scene.start,
@@ -257,6 +271,15 @@ export function CaptionsPanel({
       if (error) throw error;
 
       setApprovedSceneIds(prev => new Set([...prev, scene.sceneId]));
+      
+      // FIX 2: Clear draft for this scene after approval
+      setOverlayDrafts(prev => {
+        const next = { ...prev };
+        delete next[scene.sceneId];
+        return next;
+      });
+      setEditingSceneId(null);
+      
       toast.success("Overlay approved");
     } catch (err) {
       console.error("[CaptionsPanel] Approve overlay error:", err);
