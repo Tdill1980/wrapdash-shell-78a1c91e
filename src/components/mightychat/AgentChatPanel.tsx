@@ -159,7 +159,15 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
 
   // After initial load, decide whether to show recent chats or start new chat
   useEffect(() => {
+    const forceNewChat = (context as any)?.force_new_chat === true || (context as any)?.source === "content_calendar";
+
     if (open && agentId && initialLoadDone && !loadingRecent && !chatId && !initialChatId) {
+      if (forceNewChat) {
+        setShowRecentChats(false);
+        startChat(agentId, context);
+        return;
+      }
+
       if (recentChats.length > 0) {
         setShowRecentChats(true);
       } else {
