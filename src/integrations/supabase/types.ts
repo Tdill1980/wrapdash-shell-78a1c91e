@@ -2161,6 +2161,74 @@ export type Database = {
           },
         ]
       }
+      content_jobs: {
+        Row: {
+          agent: string
+          content_draft_id: string | null
+          content_queue_id: string | null
+          conversation_id: string | null
+          create_content_block: string
+          created_at: string
+          delegated_task_id: string | null
+          error: string | null
+          id: string
+          mode: string
+          organization_id: string | null
+          parsed: Json
+          requested_by: string
+          result: Json
+          status: string
+          updated_at: string
+          video_edit_queue_id: string | null
+        }
+        Insert: {
+          agent?: string
+          content_draft_id?: string | null
+          content_queue_id?: string | null
+          conversation_id?: string | null
+          create_content_block: string
+          created_at?: string
+          delegated_task_id?: string | null
+          error?: string | null
+          id?: string
+          mode?: string
+          organization_id?: string | null
+          parsed?: Json
+          requested_by?: string
+          result?: Json
+          status?: string
+          updated_at?: string
+          video_edit_queue_id?: string | null
+        }
+        Update: {
+          agent?: string
+          content_draft_id?: string | null
+          content_queue_id?: string | null
+          conversation_id?: string | null
+          create_content_block?: string
+          created_at?: string
+          delegated_task_id?: string | null
+          error?: string | null
+          id?: string
+          mode?: string
+          organization_id?: string | null
+          parsed?: Json
+          requested_by?: string
+          result?: Json
+          status?: string
+          updated_at?: string
+          video_edit_queue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_projects: {
         Row: {
           ai_brief: string | null
@@ -2573,6 +2641,69 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      creative_vault: {
+        Row: {
+          asset_url: string
+          content_type: string | null
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          job_id: string | null
+          meta: Json
+          organization_id: string | null
+          platform: string | null
+          thumbnail_url: string | null
+          title: string | null
+          type: string
+        }
+        Insert: {
+          asset_url: string
+          content_type?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_id?: string | null
+          meta?: Json
+          organization_id?: string | null
+          platform?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          type: string
+        }
+        Update: {
+          asset_url?: string
+          content_type?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          job_id?: string | null
+          meta?: Json
+          organization_id?: string | null
+          platform?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_vault_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "content_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_vault_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_voice_profiles: {
         Row: {

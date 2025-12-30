@@ -240,7 +240,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
   const agentConfig = AVAILABLE_AGENTS.find((a) => a.id === agentId);
 
   // Check if any agent produced CREATE_CONTENT block - for Content Factory / MightyEdit
-  const contentFactoryPreset = useMemo((): ContentFactoryPreset | null => {
+  const { contentFactoryPreset, rawCreateContentBlock } = useMemo((): { contentFactoryPreset: ContentFactoryPreset | null; rawCreateContentBlock: string | null } => {
     console.log("[AgentChatPanel] Scanning", messages.length, "messages for CREATE_CONTENT");
     
     // Scan all agent messages for CREATE_CONTENT - new Content Factory format
@@ -250,14 +250,26 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
         const parsed = parseCreateContent(msg.content);
         if (parsed) {
           console.log("[AgentChatPanel] Found CREATE_CONTENT in message:", msg.id, parsed);
-          // Convert to ContentFactoryPreset format
-          return toContentFactoryPreset(parsed);
+          // Extract raw block for execute-create-content
+          const startIdx = msg.content.indexOf("===CREATE_CONTENT===");
+          const endIdx = msg.content.indexOf("===END_CREATE_CONTENT===");
+          const rawBlock = endIdx !== -1 
+            ? msg.content.slice(startIdx, endIdx + "===END_CREATE_CONTENT===".length)
+            : msg.content.slice(startIdx);
+          return { 
+            contentFactoryPreset: toContentFactoryPreset(parsed), 
+            rawCreateContentBlock: rawBlock 
+          };
         }
       }
     }
     console.log("[AgentChatPanel] No CREATE_CONTENT found in messages");
-    return null;
+    return { contentFactoryPreset: null, rawCreateContentBlock: null };
   }, [messages]);
+
+  // State for render execution
+  const [isRendering, setIsRendering] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
 
   const navigate = useNavigate();
 
@@ -425,9 +437,113 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                         )}
                       </div>
                       
-                      {/* PRIMARY ACTION: Create as Locked ProducerJob in ReelBuilder */}
+                      {/* NEW PRIMARY ACTIONS: Preview Blueprint / Render Now */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button 
+                          variant="outline"
+                          className="w-full"
+                          disabled={isPreviewing}
+                          onClick={async () => {
+                            if (!rawCreateContentBlock) return;
+                            setIsPreviewing(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("execute-create-content", {
+                                body: {
+                                  conversation_id: (context as any)?.conversationId ?? null,
+                                  organization_id: (context as any)?.organizationId ?? null,
+                                  requested_by: "user",
+                                  agent: agentId || "noah_bennett",
+                                  create_content_text: rawCreateContentBlock,
+                                  mode: "preview",
+                                },
+                              });
+                              if (error) {
+                                toast.error(error.message);
+                                return;
+                              }
+                              toast.success(`Blueprint validated (Job ${data.job_id})`, {
+                                description: `Type: ${data.parsed?.content_type || 'content'} | Platform: ${data.parsed?.platform || 'unknown'}`,
+                              });
+                              console.log("[AgentChatPanel] Preview result:", data);
+                            } catch (e) {
+                              toast.error((e as Error).message);
+                            } finally {
+                              setIsPreviewing(false);
+                            }
+                          }}
+                        >
+                          {isPreviewing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4 mr-2" />
+                          )}
+                          Preview
+                        </Button>
+                        
+                        <Button 
+                          className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                          disabled={isRendering}
+                          onClick={async () => {
+                            if (!rawCreateContentBlock) return;
+                            setIsRendering(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke("execute-create-content", {
+                                body: {
+                                  conversation_id: (context as any)?.conversationId ?? null,
+                                  organization_id: (context as any)?.organizationId ?? null,
+                                  requested_by: "user",
+                                  agent: agentId || "noah_bennett",
+                                  create_content_text: rawCreateContentBlock,
+                                  mode: "execute",
+                                },
+                              });
+                              if (error) {
+                                toast.error(error.message);
+                                return;
+                              }
+                              
+                              if (data.queued_for_approval) {
+                                toast.info("Queued for approval", {
+                                  description: "Check the Review Queue to approve this render",
+                                });
+                              } else if (data.executed) {
+                                toast.success("Render started!", {
+                                  description: `Job ${data.job_id} is processing via ${data.usedFn}`,
+                                });
+                              } else {
+                                toast.success(`Job created: ${data.job_id}`);
+                              }
+                              console.log("[AgentChatPanel] Execute result:", data);
+                            } catch (e) {
+                              toast.error((e as Error).message);
+                            } finally {
+                              setIsRendering(false);
+                            }
+                          }}
+                        >
+                          {isRendering ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4 mr-2" />
+                          )}
+                          Render Now
+                        </Button>
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="relative py-1">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t border-border/50" />
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                          <span className="bg-card px-2 text-muted-foreground">or open in editor</span>
+                        </div>
+                      </div>
+                      
+                      {/* SECONDARY: Create as Locked ProducerJob in ReelBuilder */}
                       <Button 
-                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        variant="outline"
+                        className="w-full"
                         onClick={async () => {
                           console.log('[AgentChatPanel] Creating locked ProducerJob from agent output');
                           toast.info('Loading clips from ContentBox...');
