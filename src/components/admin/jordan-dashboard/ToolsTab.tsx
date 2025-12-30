@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Database, RefreshCw, Download, Car, DollarSign, Wrench, TestTubeDiagonal, Activity, Play, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Database, RefreshCw, Download, Car, DollarSign, Wrench, Activity, Play, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -17,7 +17,6 @@ interface SystemStats {
 }
 
 export function ToolsTab() {
-  const [testing, setTesting] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [stats, setStats] = useState<SystemStats>({
     pendingActions: 0,
@@ -38,11 +37,12 @@ export function ToolsTab() {
         .select("*", { count: "exact", head: true })
         .in("status", ["pending", "processing"]);
 
-      // Fetch backlog count (conversations with recent activity)
-      const { count: backlogCount } = await supabase
-        .from("conversations")
-        .select("*", { count: "exact", head: true })
-        .not("last_message_at", "is", null);
+      // Fetch TRUE backlog count from the view
+      const { count: backlogCount, error: backlogError } = await supabase
+        .from("ops_backlog_needs_response" as any)
+        .select("*", { count: "exact", head: true });
+      
+      if (backlogError) console.error("Backlog count error:", backlogError);
 
       // Fetch recent successes (last 24h)
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -79,33 +79,6 @@ export function ToolsTab() {
     return () => clearInterval(interval);
   }, []);
 
-  const runSmokeTest = async () => {
-    setTesting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("website-chat", {
-        body: {
-          org: "wpw",
-          agent: "wpw_ai_team",
-          mode: "test",
-          session_id: `admin_smoke_${Date.now()}`,
-          message_text: "Quick test: need a quote for a 2020 Ford Transit full wrap. Email: test@example.com",
-          page_url: "https://admin.test/website-agent",
-          referrer: "",
-        },
-      });
-
-      if (error) throw error;
-
-      const price = data?.auto_quote?.formattedPrice;
-      toast.success(price ? `Website chat OK — auto quote: ${price}` : "Website chat OK — reply generated");
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "Smoke test failed");
-    } finally {
-      setTesting(false);
-    }
-  };
-
   const processAIActions = async () => {
     setProcessing(true);
     try {
@@ -136,7 +109,7 @@ export function ToolsTab() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            System Health
+            Ops Desk
           </CardTitle>
           <div className="flex gap-2">
             <Button
@@ -171,13 +144,13 @@ export function ToolsTab() {
                 Pending Actions
               </div>
             </div>
-            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-400">
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-center">
+              <div className="text-2xl font-bold text-red-400">
                 {statsLoading ? "..." : stats.backlogCount}
               </div>
               <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
                 <AlertCircle className="h-3 w-3" />
-                Conversations
+                Needs Response
               </div>
             </div>
             <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-center">
@@ -189,8 +162,8 @@ export function ToolsTab() {
                 Sent (24h)
               </div>
             </div>
-            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-center">
-              <div className="text-2xl font-bold text-red-400">
+            <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg text-center">
+              <div className="text-2xl font-bold text-orange-400">
                 {statsLoading ? "..." : stats.recentFailures}
               </div>
               <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
@@ -231,8 +204,8 @@ export function ToolsTab() {
               <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-blue-500" />
-                    Conversation Backlog
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                    Conversation Backlog (Needs Response)
                   </span>
                   {backlogOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                 </CardTitle>
@@ -284,29 +257,6 @@ export function ToolsTab() {
             </p>
             <Button variant="outline" className="w-full">
               Open Console
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Smoke Test */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TestTubeDiagonal className="h-5 w-5 text-green-500" />
-              Smoke Test
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Test Jordan's chat and quote generation
-            </p>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={runSmokeTest}
-              disabled={testing}
-            >
-              {testing ? "Testing..." : "Run Test"}
             </Button>
           </CardContent>
         </Card>
