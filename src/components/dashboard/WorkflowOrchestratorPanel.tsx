@@ -106,8 +106,8 @@ export function WorkflowOrchestratorPanel() {
           count: dueContentCount,
           status: "todo",
           severity: "important",
-          cta_label: "View Calendar",
-          cta_href: "/content-calendar",
+          cta_label: "Execute Now",
+          cta_href: "/content-calendar?mode=execute",
           icon: Calendar,
         });
       }

@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
   Calendar, 
   ChevronLeft, 
@@ -11,7 +12,9 @@ import {
   Filter,
   RefreshCw,
   MessageSquare,
-  Loader2
+  Loader2,
+  ListChecks,
+  LayoutGrid
 } from 'lucide-react';
 import { 
   format, 
@@ -30,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/layouts/MainLayout';
 import { cn } from '@/lib/utils';
 import { ContentCalendarEditModal } from '@/components/calendar/ContentCalendarEditModal';
+import { ContentExecutionList } from '@/components/calendar/ContentExecutionList';
 import { useCalendarTaskSync, getAgentForContentType } from '@/hooks/useCalendarTaskSync';
 
 interface ScheduledContent {
@@ -104,11 +108,23 @@ const getContentTypeKey = (contentType: string, platform: string): string => {
 
 export default function ContentCalendar30Day() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedChannel, setSelectedChannel] = useState('all');
   const [selectedContent, setSelectedContent] = useState<ScheduledContent | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  // Check if execution mode is requested via URL
+  const viewMode = searchParams.get('mode') === 'execute' ? 'execute' : 'calendar';
+
+  const setViewMode = (mode: 'calendar' | 'execute') => {
+    if (mode === 'execute') {
+      setSearchParams({ mode: 'execute' });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   // Calendar-Task sync hook
   const { syncTasks, isSyncing } = useCalendarTaskSync();
@@ -264,290 +280,314 @@ export default function ContentCalendar30Day() {
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        {/* Action Banner */}
-        <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted border border-border">
-          <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="font-medium">📅 Content Calendar</p>
-              <p className="text-sm text-muted-foreground">
-                Click items to open agent chat and create content. Red items need creation.
-              </p>
-            </div>
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => syncTasks()}
-            disabled={isSyncing}
-          >
-            {isSyncing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Sync Tasks
-          </Button>
-        </div>
-
-        {/* Header */}
+        {/* Header with View Toggle */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
               <Calendar className="h-8 w-8 text-primary" />
               Content Calendar
             </h1>
-            <p className="text-muted-foreground">30-day view across all channels • Click to deploy agents</p>
+            <p className="text-muted-foreground">
+              {viewMode === 'execute' 
+                ? 'Execute due content — work top to bottom' 
+                : '30-day view across all channels • Click to deploy agents'}
+            </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={goToToday}>
-              Today
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="border-l-4 border-l-indigo-600">
-            <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{statsByChannel['ink-edge-publisher']}</p>
-              <p className="text-xs text-muted-foreground">I&E Publisher</p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-red-500">
-            <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{statsByChannel.wpw}</p>
-              <p className="text-xs text-muted-foreground">WePrintWraps.com</p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{statsByChannel.wraptv}</p>
-              <p className="text-xs text-muted-foreground">WrapTVWorld</p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-pink-500">
-            <CardContent className="py-3 px-4">
-              <p className="text-2xl font-bold">{statsByChannel['ink-edge-content']}</p>
-              <p className="text-xs text-muted-foreground">I&E Content</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Channel Filter */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          {CHANNELS.map(channel => (
-            <Button
-              key={channel.id}
-              variant={selectedChannel === channel.id ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedChannel(channel.id)}
-              className={cn(
-                selectedChannel === channel.id && channel.id !== 'all' && `${channel.color} text-white hover:opacity-90`
-              )}
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'calendar' | 'execute')}>
+              <TabsList>
+                <TabsTrigger value="execute" className="gap-1">
+                  <ListChecks className="w-4 h-4" />
+                  Execute
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="gap-1">
+                  <LayoutGrid className="w-4 h-4" />
+                  Calendar
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => syncTasks()}
+              disabled={isSyncing}
             >
-              {channel.id !== 'all' && (
-                <span className={cn('w-2 h-2 rounded-full mr-2', channel.color)} />
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              {channel.name}
+              Sync
             </Button>
-          ))}
+          </div>
         </div>
 
-        {/* Month Navigation */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <Button variant="ghost" size="sm" onClick={() => navigateMonth('prev')}>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <CardTitle className="text-xl">
-                {format(currentMonth, 'MMMM yyyy')}
-              </CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => navigateMonth('next')}>
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Day Headers */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                  {day}
+        {/* Execution Mode View */}
+        {viewMode === 'execute' && (
+          <ContentExecutionList />
+        )}
+
+        {/* Calendar Mode View */}
+        {viewMode === 'calendar' && (
+          <>
+            {/* Action Banner */}
+            <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted border border-border">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">📅 Content Calendar</p>
+                  <p className="text-sm text-muted-foreground">
+                    Click items to open agent chat and create content. Red items need creation.
+                  </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Card className="border-l-4 border-l-indigo-600">
+                <CardContent className="py-3 px-4">
+                  <p className="text-2xl font-bold">{statsByChannel['ink-edge-publisher']}</p>
+                  <p className="text-xs text-muted-foreground">I&E Publisher</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-red-500">
+                <CardContent className="py-3 px-4">
+                  <p className="text-2xl font-bold">{statsByChannel.wpw}</p>
+                  <p className="text-xs text-muted-foreground">WePrintWraps.com</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-purple-500">
+                <CardContent className="py-3 px-4">
+                  <p className="text-2xl font-bold">{statsByChannel.wraptv}</p>
+                  <p className="text-xs text-muted-foreground">WrapTVWorld</p>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-pink-500">
+                <CardContent className="py-3 px-4">
+                  <p className="text-2xl font-bold">{statsByChannel['ink-edge-content']}</p>
+                  <p className="text-xs text-muted-foreground">I&E Content</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Channel Filter */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              {CHANNELS.map(channel => (
+                <Button
+                  key={channel.id}
+                  variant={selectedChannel === channel.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedChannel(channel.id)}
+                  className={cn(
+                    selectedChannel === channel.id && channel.id !== 'all' && `${channel.color} text-white hover:opacity-90`
+                  )}
+                >
+                  {channel.id !== 'all' && (
+                    <span className={cn('w-2 h-2 rounded-full mr-2', channel.color)} />
+                  )}
+                  {channel.name}
+                </Button>
               ))}
             </div>
 
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, idx) => {
-                const dateStr = format(day, 'yyyy-MM-dd');
-                const dayContent = contentByDate[dateStr] || [];
-                const isCurrentMonth = isSameMonth(day, currentMonth);
-                const isToday = isSameDay(day, new Date());
-
-                return (
-                  <div
-                    key={idx}
-                    className={cn(
-                      'min-h-[120px] border rounded-lg p-1 transition-colors',
-                      isCurrentMonth ? 'bg-card' : 'bg-muted/30',
-                      isToday && 'ring-2 ring-primary'
-                    )}
-                  >
-                    {/* Day Number */}
-                    <div className={cn(
-                      'text-sm font-medium mb-1 px-1',
-                      !isCurrentMonth && 'text-muted-foreground/50',
-                      isToday && 'text-primary font-bold'
-                    )}>
-                      {format(day, 'd')}
+            {/* Month Navigation */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <Button variant="ghost" size="sm" onClick={() => navigateMonth('prev')}>
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-xl">
+                      {format(currentMonth, 'MMMM yyyy')}
+                    </CardTitle>
+                    <Button variant="outline" size="sm" onClick={goToToday}>
+                      Today
+                    </Button>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => navigateMonth('next')}>
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                      {day}
                     </div>
+                  ))}
+                </div>
 
-                    {/* Content Items */}
-                    <div className="space-y-1 overflow-y-auto max-h-[90px]">
-                      {dayContent.slice(0, 3).map((item) => {
-                        const channelStyle = getChannelStyle(item.brand);
-                        const badgeConfig = getContentTypeBadge(item.content_type, item.platform);
-                        const linkedTask = tasksByCalendarId[item.id];
-                        const contentCreated = isContentCreated(item.id);
-                        const hasLinkedTask = !!linkedTask;
-                        
-                        return (
-                          <div
-                            key={item.id}
-                            className={cn(
-                              'text-[10px] p-1 rounded cursor-pointer hover:opacity-80 hover:ring-1 hover:ring-primary/50 transition-all relative',
-                              // Red styling if task exists but content not created
-                              hasLinkedTask && !contentCreated 
-                                ? 'border-l-4 border-l-red-500 bg-red-500/10' 
-                                : [channelStyle.border, channelStyle.bg]
-                            )}
-                            title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
-                            onClick={() => {
-                              // Route to agent chat with calendar context
-                              const agentId = getAgentForContentType(item.content_type);
-                              const context = {
-                                source: 'content_calendar',
-                                calendar_id: item.id,
-                                task_id: linkedTask?.id || null,
-                                content_type: getContentTypeKey(item.content_type, item.platform),
-                                platform: item.platform,
-                                brand: item.brand,
-                                title: item.title || 'Untitled',
-                                caption: item.caption || '',
-                                scheduled_date: item.scheduled_date,
-                                is_created: contentCreated,
-                              };
-                              
-                              // Store context and navigate to MightyTask with agent chat open
-                              sessionStorage.setItem('agent_chat_context', JSON.stringify(context));
-                              navigate(`/mightytask?agent=${agentId}&calendarId=${item.id}`);
-                            }}
-                          >
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <span className="font-medium truncate text-[9px]">
-                                {getChannelLabel(item.brand)}
-                              </span>
-                              {/* Red dot indicator for uncreated content */}
-                              {hasLinkedTask && !contentCreated && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                              )}
-                              {/* Green check for created content */}
-                              {hasLinkedTask && contentCreated && (
-                                <span className="text-green-500 text-[8px]">✓</span>
-                              )}
-                            </div>
-                            <span className={cn(
-                              'inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[8px] font-medium',
-                              badgeConfig.bgClass,
-                              badgeConfig.textClass
-                            )}>
-                              {badgeConfig.emoji} {badgeConfig.label}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {dayContent.length > 3 && (
-                        <div className="text-[10px] text-center text-muted-foreground">
-                          +{dayContent.length - 3} more
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((day, idx) => {
+                    const dateStr = format(day, 'yyyy-MM-dd');
+                    const dayContent = contentByDate[dateStr] || [];
+                    const isCurrentMonthDay = isSameMonth(day, currentMonth);
+                    const isTodayDay = isSameDay(day, new Date());
+
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          'min-h-[120px] border rounded-lg p-1 transition-colors',
+                          isCurrentMonthDay ? 'bg-card' : 'bg-muted/30',
+                          isTodayDay && 'ring-2 ring-primary'
+                        )}
+                      >
+                        {/* Day Number */}
+                        <div className={cn(
+                          'text-sm font-medium mb-1 px-1',
+                          !isCurrentMonthDay && 'text-muted-foreground/50',
+                          isTodayDay && 'text-primary font-bold'
+                        )}>
+                          {format(day, 'd')}
                         </div>
-                      )}
+
+                        {/* Content Items */}
+                        <div className="space-y-1 overflow-y-auto max-h-[90px]">
+                          {dayContent.slice(0, 3).map((item) => {
+                            const channelStyle = getChannelStyle(item.brand);
+                            const badgeConfig = getContentTypeBadge(item.content_type, item.platform);
+                            const linkedTask = tasksByCalendarId[item.id];
+                            const contentCreated = isContentCreated(item.id);
+                            const hasLinkedTask = !!linkedTask;
+                            
+                            return (
+                              <div
+                                key={item.id}
+                                className={cn(
+                                  'text-[10px] p-1 rounded cursor-pointer hover:opacity-80 hover:ring-1 hover:ring-primary/50 transition-all relative',
+                                  hasLinkedTask && !contentCreated 
+                                    ? 'border-l-4 border-l-red-500 bg-red-500/10' 
+                                    : [channelStyle.border, channelStyle.bg]
+                                )}
+                                title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
+                                onClick={() => {
+                                  const agentId = getAgentForContentType(item.content_type);
+                                  const context = {
+                                    source: 'content_calendar',
+                                    calendar_id: item.id,
+                                    task_id: linkedTask?.id || null,
+                                    content_type: getContentTypeKey(item.content_type, item.platform),
+                                    platform: item.platform,
+                                    brand: item.brand,
+                                    title: item.title || 'Untitled',
+                                    caption: item.caption || '',
+                                    scheduled_date: item.scheduled_date,
+                                    is_created: contentCreated,
+                                  };
+                                  
+                                  sessionStorage.setItem('agent_chat_context', JSON.stringify(context));
+                                  navigate(`/mightytask?agent=${agentId}&calendarId=${item.id}`);
+                                }}
+                              >
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <span className="font-medium truncate text-[9px]">
+                                    {getChannelLabel(item.brand)}
+                                  </span>
+                                  {hasLinkedTask && !contentCreated && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                  )}
+                                  {hasLinkedTask && contentCreated && (
+                                    <span className="text-green-500 text-[8px]">✓</span>
+                                  )}
+                                </div>
+                                <span className={cn(
+                                  'inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-[8px] font-medium',
+                                  badgeConfig.bgClass,
+                                  badgeConfig.textClass
+                                )}>
+                                  {badgeConfig.emoji} {badgeConfig.label}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {dayContent.length > 3 && (
+                            <div className="text-[10px] text-center text-muted-foreground">
+                              +{dayContent.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legend */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Legend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-6">
+                  {/* Creation Status */}
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Creation Status</p>
+                    <div className="flex flex-wrap gap-3">
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <span className="w-3 h-3 rounded bg-red-500" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                        Not Created
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <span className="text-green-500">✓</span>
+                        Created
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Legend */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Legend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-6">
-              {/* Creation Status */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Creation Status</p>
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="w-3 h-3 rounded bg-red-500" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                    Not Created
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="text-green-500">✓</span>
-                    Created
-                  </div>
-                </div>
-              </div>
-
-              {/* Channels */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Channels</p>
-                <div className="flex flex-wrap gap-3">
-                  {CHANNELS.filter(c => c.id !== 'all').map(channel => (
-                    <div key={channel.id} className="flex items-center gap-1.5 text-sm">
-                      <span className={cn('w-3 h-3 rounded', channel.color)} />
-                      {channel.name}
+                  {/* Channels */}
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Channels</p>
+                    <div className="flex flex-wrap gap-3">
+                      {CHANNELS.filter(c => c.id !== 'all').map(channel => (
+                        <div key={channel.id} className="flex items-center gap-1.5 text-sm">
+                          <span className={cn('w-3 h-3 rounded', channel.color)} />
+                          {channel.name}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Content Types */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Content Types</p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(CONTENT_TYPE_CONFIG).slice(0, 8).map(([key, config]) => (
-                    <span 
-                      key={key}
-                      className={cn(
-                        'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
-                        config.bgClass,
-                        config.textClass
-                      )}
-                    >
-                      {config.emoji} {config.label}
-                    </span>
-                  ))}
+                  {/* Content Types */}
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Content Types</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(CONTENT_TYPE_CONFIG).slice(0, 8).map(([key, config]) => (
+                        <span 
+                          key={key}
+                          className={cn(
+                            'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+                            config.bgClass,
+                            config.textClass
+                          )}
+                        >
+                          {config.emoji} {config.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
         {/* Loading State */}
         {isLoading && (
           <div className="text-center py-8 text-muted-foreground">
             Loading calendar...
           </div>
+        )}
+          </>
         )}
       </div>
 
