@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { MainLayout } from '@/layouts/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -148,7 +149,7 @@ function StepTimeline({ steps, onSendTest }: { steps: EmailFlowStep[]; onSendTes
             <CardContent className="pt-0">
               <div 
                 className="text-xs text-muted-foreground line-clamp-2 bg-muted/50 rounded-lg p-2"
-                dangerouslySetInnerHTML={{ __html: step.body_html.substring(0, 150) + '...' }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(step.body_html.substring(0, 150) + '...') }}
               />
             </CardContent>
           </Card>

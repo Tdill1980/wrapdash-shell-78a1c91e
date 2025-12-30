@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DOMPurify from 'dompurify';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -605,7 +606,7 @@ export default function RevenueHealth() {
             </DialogHeader>
             <div 
               className="border rounded-lg overflow-hidden"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }}
             />
           </DialogContent>
         </Dialog>
