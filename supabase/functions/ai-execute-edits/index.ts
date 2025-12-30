@@ -128,87 +128,15 @@ serve(async (req) => {
       }
     }
 
-    // If no Mux asset yet, upload to Mux (this will wait for it to be ready)
-    if (!muxAssetId && editItem.source_url) {
-      console.log("[ai-execute-edits] No Mux asset found, uploading to Mux...");
-      console.log("[ai-execute-edits] Source URL:", editItem.source_url);
-      
-      try {
-        const muxUploadRes = await supabase.functions.invoke("mux-upload", {
-          body: { 
-            file_url: editItem.source_url,
-            content_file_id: editItem.content_file_id,
-            organization_id: editItem.organization_id,
-            wait_for_ready: true // Wait for asset to be ready before returning
-          }
-        });
-        
-        console.log("[ai-execute-edits] Mux upload response:", JSON.stringify(muxUploadRes.data));
-        
-        if (muxUploadRes.error) {
-          console.error("[ai-execute-edits] Mux upload error:", muxUploadRes.error);
-          await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${muxUploadRes.error.message}`, {
-            stage: "mux_upload",
-            ai_edit_suggestions: aiSuggestions,
-            mux_error: muxUploadRes.error,
-            render_type,
-          });
-          return new Response(
-            JSON.stringify({ success: false, error: `Mux upload failed: ${muxUploadRes.error.message}` }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-          );
-        }
-        
-        if (!muxUploadRes.data?.asset_id) {
-          console.error("[ai-execute-edits] Mux upload did not return asset_id");
-          await updateQueueFailed(supabase, video_edit_id, "Mux upload completed but no asset_id returned", {
-            stage: "mux_upload",
-            ai_edit_suggestions: aiSuggestions,
-            mux_response: muxUploadRes.data,
-            render_type,
-          });
-          return new Response(
-            JSON.stringify({ success: false, error: "Mux upload completed but no asset_id returned" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-          );
-        }
-        
-        muxAssetId = muxUploadRes.data.asset_id;
-        muxPlaybackId = muxUploadRes.data.playback_id;
-        
-        // Check if asset is ready
-        if (!muxUploadRes.data.ready) {
-          console.warn("[ai-execute-edits] Asset uploaded but not ready yet - stitch may fail");
-        }
-        
-        console.log("[ai-execute-edits] Mux upload complete:", muxAssetId, "ready:", muxUploadRes.data.ready);
-        
-        // Update content_files if we have one
-        if (editItem.content_file_id) {
-          await supabase
-            .from("content_files")
-            .update({ mux_asset_id: muxAssetId, mux_playback_id: muxPlaybackId })
-            .eq("id", editItem.content_file_id);
-        }
-      } catch (e) {
-        console.error("[ai-execute-edits] Mux upload exception:", e);
-        await updateQueueFailed(supabase, video_edit_id, `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown'}`, {
-          stage: "mux_upload",
-          ai_edit_suggestions: aiSuggestions,
-          exception: e instanceof Error ? e.stack : String(e),
-          render_type,
-        });
-        return new Response(
-          JSON.stringify({ success: false, error: `Mux upload failed: ${e instanceof Error ? e.message : 'Unknown'}` }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-        );
-      }
-    }
-
-    if (!muxAssetId) {
-      console.error("[ai-execute-edits] No Mux asset ID available");
+    // ✅ MUX IS NOW OPTIONAL - We can render directly from Supabase Storage URLs
+    // Only attempt Mux upload if we DON'T have a direct source URL
+    // render-reel uses clipUrl directly, so Mux is not required
+    
+    if (!muxAssetId && !editItem.source_url) {
+      // No Mux asset AND no source URL = cannot render
+      console.error("[ai-execute-edits] No video source available (no Mux asset, no source URL)");
       await updateQueueFailed(supabase, video_edit_id, "No video source URL available", {
-        stage: "mux_asset_check",
+        stage: "source_check",
         ai_edit_suggestions: aiSuggestions,
         source_url: editItem.source_url,
         content_file_id: editItem.content_file_id,
@@ -220,8 +148,12 @@ serve(async (req) => {
       );
     }
 
-    console.log("[ai-execute-edits] Using Mux asset:", muxAssetId);
-
+    // Log video source strategy
+    if (muxAssetId) {
+      console.log("[ai-execute-edits] Using Mux asset:", muxAssetId);
+    } else {
+      console.log("[ai-execute-edits] ✅ Using direct Supabase Storage URL (Mux bypassed):", editItem.source_url?.substring(0, 80));
+    }
     let renderResult = null;
     const shortsResults: any[] = [];
     const videoDuration = editItem.duration_seconds || 60;
