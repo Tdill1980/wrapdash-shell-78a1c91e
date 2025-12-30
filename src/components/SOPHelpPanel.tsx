@@ -21,7 +21,7 @@ export function SOPHelpPanel() {
         <Button
           variant="outline"
           size="icon"
-          className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 border-0"
+          className="fixed bottom-6 left-6 z-50 h-12 w-12 rounded-full shadow-lg bg-amber-500 text-white hover:bg-amber-600 border-0 lg:left-[calc(16rem+1.5rem)]"
         >
           <HelpCircle className="h-6 w-6" />
         </Button>
