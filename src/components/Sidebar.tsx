@@ -24,6 +24,7 @@ import {
   Sparkles as SparklesIcon,
   MessageSquare,
   ClipboardCheck,
+  Activity,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -350,6 +351,18 @@ const navigationItems: NavigationItem[] = [
   { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
   { name: "Vehicle Admin", path: "/admin/vehicles", icon: Car },
   { name: "Organizations", path: "/admin/organizations", icon: Users },
+  { 
+    name: "Ops Desk", 
+    path: "/admin/website-agent", 
+    icon: Activity,
+    roles: ["admin", "beta_shop"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Ops </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Desk</span>
+      </span>
+    )
+  },
 ];
 
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
