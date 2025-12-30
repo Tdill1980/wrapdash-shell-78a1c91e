@@ -153,6 +153,7 @@ export default function MightyTaskUnified() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const handledNavStateRef = useRef(false);
+  const EXECUTION_HANDLED_KEY = "handled_calendar_execution";
 
   const { organizationId } = useOrganization();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -410,45 +411,56 @@ export default function MightyTaskUnified() {
     const agentFromUrl = searchParams.get("agent");
     const calendarIdFromUrl = searchParams.get("calendarId");
 
-    // Only handle URL params if we have both agent and calendarId
     if (!agentFromUrl || !calendarIdFromUrl) return;
-    if (handledNavStateRef.current) return;
 
-    // Mark as handled immediately to prevent re-triggering
-    handledNavStateRef.current = true;
+    // Idempotent per calendar item (NOT per component lifecycle)
+    const handledFor = sessionStorage.getItem(EXECUTION_HANDLED_KEY);
+    if (handledFor === calendarIdFromUrl) return;
+    sessionStorage.setItem(EXECUTION_HANDLED_KEY, calendarIdFromUrl);
 
-    // Load context from sessionStorage (set by ContentExecutionList)
+    // Build deterministic base context (works even if sessionStorage is missing)
+    let ctx: Record<string, unknown> = {
+      source: "content_calendar",
+      content_calendar_id: calendarIdFromUrl,
+      force_new_chat: true,
+    };
+
+    // Merge in execution context written by ContentExecutionList (best effort)
     const stored = sessionStorage.getItem("agent_chat_context");
     if (stored) {
       try {
-        const ctx = JSON.parse(stored);
-        setTaskContext({
-          ...ctx,
-          source: "content_calendar",
-          initial_prompt: `Execute content creation for: "${ctx.title || "Untitled"}" (${ctx.content_type} for ${ctx.brand})`,
-        });
+        ctx = { ...ctx, ...(JSON.parse(stored) as Record<string, unknown>) };
       } catch {
-        // Fallback context if parsing fails
-        setTaskContext({
-          source: "content_calendar",
-          content_calendar_id: calendarIdFromUrl,
-        });
+        // ignore
       }
     }
 
+    const title = (ctx.title as string | null | undefined) ?? "Untitled";
+    const brand = (ctx.brand as string | undefined) ?? "";
+    const contentType = (ctx.content_type as string | undefined) ?? "content";
+
+    ctx = {
+      ...ctx,
+      initial_prompt: `Execute scheduled content: "${title}"${brand ? ` for ${brand}` : ""} (${contentType})`,
+    };
+
     // Validate agent exists, fallback to noah_bennett if not
-    const validAgent = AVAILABLE_AGENTS.find(a => a.id === agentFromUrl);
+    const validAgent = AVAILABLE_AGENTS.find((a) => a.id === agentFromUrl);
     const finalAgentId = validAgent ? agentFromUrl : "noah_bennett";
 
+    setTaskContext(ctx);
     setSelectedAgentId(finalAgentId);
     setShowAgentPanel(true);
 
-    const agentName = AVAILABLE_AGENTS.find(a => a.id === finalAgentId)?.name || finalAgentId;
-    toast.info(`Opening ${agentName} for calendar content`);
+    const agentName = AVAILABLE_AGENTS.find((a) => a.id === finalAgentId)?.name || finalAgentId;
+    toast.info(`Executing calendar item with ${agentName}`);
   }, [searchParams]);
 
   // If the user clicked a calendar item linked to a task, auto-open execution here.
   useEffect(() => {
+    // If URL execution params exist (calendar execution), do not run legacy task execution.
+    if (searchParams.get("agent") && searchParams.get("calendarId")) return;
+
     const state = (location.state || {}) as Record<string, unknown>;
     const executeTaskId = state.executeTaskId as string | undefined;
 
@@ -474,7 +486,7 @@ export default function MightyTaskUnified() {
     }
 
     executeWithAgent(taskToRun);
-  }, [location.state, loading, tasks, navigate, location.pathname]);
+  }, [location.state, loading, tasks, navigate, location.pathname, searchParams]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -855,7 +867,13 @@ export default function MightyTaskUnified() {
       {/* Agent Chat Panel for Task Execution (quick execute) */}
       <AgentChatPanel
         open={showAgentPanel}
-        onOpenChange={setShowAgentPanel}
+        onOpenChange={(open) => {
+          setShowAgentPanel(open);
+          if (!open) {
+            sessionStorage.removeItem(EXECUTION_HANDLED_KEY);
+            handledNavStateRef.current = false;
+          }
+        }}
         agentId={selectedAgentId}
         context={taskContext}
       />
