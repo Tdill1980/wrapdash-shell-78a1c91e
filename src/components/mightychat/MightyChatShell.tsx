@@ -25,13 +25,18 @@ export function MightyChatShell() {
   // Handle URL params for deep-linking from AI Approval modal
   useEffect(() => {
     const id = searchParams.get("id");
-    const stream = searchParams.get("stream") as WorkStream | null;
+    let stream = searchParams.get("stream") as WorkStream | null;
+    
+    // Map legacy "quotes" to "hello" for backward compatibility
+    if (stream === "quotes" as string) {
+      stream = "hello";
+    }
     
     if (id) {
       setSelectedConversationId(id);
       setMode("chat");
       
-      if (stream && ["website", "quotes", "design", "dms", "ops"].includes(stream)) {
+      if (stream && ["website", "hello", "design", "jackson", "dms", "ops"].includes(stream)) {
         setInitialStream(stream);
       }
     }
