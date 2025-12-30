@@ -46,6 +46,7 @@ import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist"
 
 import { AIApprovalsCard } from "@/components/dashboard/AIApprovalsCard";
 import { ContentToolsCard } from "@/components/dashboard/ContentToolsCard";
+import { WorkflowOrchestratorPanel } from "@/components/dashboard/WorkflowOrchestratorPanel";
 
 const metrics = [
   {
@@ -319,9 +320,11 @@ export default function Dashboard() {
           activeRendersCount={activeRendersCount}
         />
 
+      {/* Workflow Orchestrator - TOP PRIORITY - Work top to bottom */}
+      <WorkflowOrchestratorPanel />
+
       {/* Onboarding Checklist - Beta */}
       <OnboardingChecklist />
-
 
       {/* AI Approvals - Pending items from AI agents */}
       <AIApprovalsCard />
