@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WooCommerceOrder {
   id: number;
@@ -37,24 +38,24 @@ export const useWooCommerceData = (orderNumber: string) => {
       setError(null);
       
       try {
-        const wooUrl = import.meta.env.VITE_WOO_URL || 'https://weprintwraps.com';
-        const consumerKey = import.meta.env.VITE_WOO_CONSUMER_KEY;
-        const consumerSecret = import.meta.env.VITE_WOO_CONSUMER_SECRET;
+        // Use edge function proxy instead of direct API call
+        const { data, error: fnError } = await supabase.functions.invoke('woo-proxy', {
+          body: { 
+            action: 'getOrder',
+            orderNumber: orderNumber 
+          }
+        });
 
-        if (!consumerKey || !consumerSecret) {
-          throw new Error("WooCommerce credentials not configured");
+        if (fnError) {
+          throw new Error(fnError.message || "Failed to fetch order");
         }
 
-        const url = `${wooUrl}/wp-json/wc/v3/orders?number=${orderNumber}&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch order: ${response.status}`);
-        }
-
-        const orders = await response.json();
-        if (orders && orders.length > 0) {
-          setWooData(orders[0]);
+        // Response is an array of orders
+        if (data && Array.isArray(data) && data.length > 0) {
+          setWooData(data[0]);
+        } else if (data && !Array.isArray(data)) {
+          // Single order response
+          setWooData(data);
         } else {
           setError("Order not found in WooCommerce");
         }
