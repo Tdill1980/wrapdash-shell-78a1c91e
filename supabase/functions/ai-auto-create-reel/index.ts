@@ -646,6 +646,28 @@ Return JSON ONLY:
       // Quality bonus
       score += Math.floor((tags.quality_score || 50) / 10);
 
+      // Topic ↔ manual tag bonus (ex: "chicago", "ghost_industries")
+      // This lets you steer the picker by tagging videos in Tag Manager.
+      const manualTags: string[] = Array.isArray(v.tags) ? v.tags : [];
+      const topicStr = (topic || "").toLowerCase();
+      if (manualTags.length && topicStr.trim()) {
+        const stop = new Set([
+          "the","a","an","and","or","to","for","of","in","on","at","with","from","is","are","was","were",
+          "reel","short","video","clip","post","ad","ads","content","wpw","wrap","wraps","printing","print",
+        ]);
+        const tokens = topicStr
+          .replace(/[^a-z0-9\s_\-]/g, " ")
+          .split(/\s+/)
+          .map((w) => w.trim())
+          .filter((w) => w.length >= 3 && !stop.has(w));
+
+        const tagSet = new Set(manualTags.map((t) => t.toLowerCase()));
+        const matches = tokens.filter((t) => tagSet.has(t) || tagSet.has(t.replace(/\s+/g, "_")));
+
+        // Up to +24 points to strongly bias selection toward topic-matched clips
+        score += Math.min(24, matches.length * 8);
+      }
+
       return score;
     }
 

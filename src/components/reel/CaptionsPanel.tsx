@@ -25,7 +25,7 @@ interface OverlayTemplate {
 
 interface SceneData {
   sceneId: string;
-  text?: string;
+  text?: unknown;
   start: number;
   end: number;
   purpose?: string;
@@ -43,6 +43,10 @@ interface CaptionsPanelProps {
   jobId?: string;
   scenes?: SceneData[];
   onOverlaysApproved?: () => void;
+  // NEW: keep blueprint in sync so you can see edits immediately in the preview
+  onSceneTextChange?: (sceneId: string, text: string) => void;
+  // Optional context so AI can generate better "Sabri" style hooks
+  concept?: string | null;
 }
 
 export function CaptionsPanel({
@@ -55,37 +59,80 @@ export function CaptionsPanel({
   jobId,
   scenes = [],
   onOverlaysApproved,
+  onSceneTextChange,
+  concept,
 }: CaptionsPanelProps) {
   const [approving, setApproving] = useState(false);
   const [approvedSceneIds, setApprovedSceneIds] = useState<Set<string>>(new Set());
-  
+
   // NEW: Draft and AI generation state
   const [overlayDrafts, setOverlayDrafts] = useState<Record<string, string>>({});
   const [aiPrompt, setAiPrompt] = useState<Record<string, string>>({});
   const [generating, setGenerating] = useState<Record<string, boolean>>({});
   const [templates, setTemplates] = useState<OverlayTemplate[]>([]);
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
-  
+
   const styles: CaptionStyle[] = ["sabri", "dara", "clean"];
 
+  const coerceText = (v: unknown): string => (typeof v === "string" ? v : "");
+
+  const defaultOverlayPrompt = (baseText: string) => {
+    const base = baseText?.trim();
+    const ctx = (concept || "").trim();
+
+    if (settings.style === "sabri") {
+      return [
+        "You are Sabri Suby: direct-response, punchy, aggressive, conversion-focused.",
+        ctx ? `Context: ${ctx}` : "",
+        base ? `Rewrite this into a short overlay: ${base}` : "",
+        "Rules: UPPERCASE, 3–7 words, strong verb, no fluff, no emojis unless it makes it hit harder.",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    if (settings.style === "dara") {
+      return [
+        "You are Dara Denney: relatable, paid-social friendly, clean and specific.",
+        ctx ? `Context: ${ctx}` : "",
+        base ? `Rewrite this into a short overlay: ${base}` : "",
+        "Rules: 4–9 words, sentence case, no hype, clear benefit.",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    return [
+      "Write a clean, professional short overlay.",
+      ctx ? `Context: ${ctx}` : "",
+      base ? `Rewrite this into a short overlay: ${base}` : "",
+      "Rules: 3–8 words, neutral tone, no emojis.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  };
+
   // Scenes with text overlays (either from blueprint or draft)
-  const scenesWithText = scenes.filter(s => s.text || overlayDrafts[s.sceneId]);
-  const allApproved = scenesWithText.length > 0 && scenesWithText.every(s => approvedSceneIds.has(s.sceneId));
+  const scenesWithText = scenes.filter((s) => coerceText(s.text) || overlayDrafts[s.sceneId]);
+  const allApproved =
+    scenesWithText.length > 0 && scenesWithText.every((s) => approvedSceneIds.has(s.sceneId));
 
   // Load templates on mount
   useEffect(() => {
     const loadTemplates = async () => {
-      const { data } = await supabase
-        .from("brand_overlay_templates")
-        .select("*")
-        .order("name");
+      const { data } = await supabase.from("brand_overlay_templates").select("*").order("name");
       if (data) setTemplates(data as OverlayTemplate[]);
     };
     loadTemplates();
   }, []);
 
   // Get display text for a scene (draft takes priority)
-  const getSceneText = (scene: SceneData) => overlayDrafts[scene.sceneId] ?? scene.text ?? "";
+  const getSceneText = (scene: SceneData) => overlayDrafts[scene.sceneId] ?? coerceText(scene.text);
+
+  const setSceneDraft = (sceneId: string, text: string) => {
+    setOverlayDrafts((prev) => ({ ...prev, [sceneId]: text }));
+    onSceneTextChange?.(sceneId, text);
+  };
 
   // BULK: Add all from blueprint
   const handleBulkAddFromBlueprint = () => {
@@ -105,17 +152,19 @@ export function CaptionsPanel({
 
     setApproving(true);
     try {
-      const bulkPrompt = aiPrompt["__bulk__"] || "";
+      const bulkPromptRaw = aiPrompt["__bulk__"] || "";
       const newDrafts: Record<string, string> = {};
 
       for (const scene of scenes) {
         const currentText = getSceneText(scene);
         if (!currentText && !scene.purpose) continue;
 
+        const promptToUse = bulkPromptRaw.trim() || defaultOverlayPrompt(currentText);
+
         const { data, error } = await supabase.functions.invoke("generate-text-overlay", {
           body: {
             scene: { ...scene, text: currentText },
-            prompt: bulkPrompt,
+            prompt: promptToUse,
           },
         });
 
@@ -124,7 +173,8 @@ export function CaptionsPanel({
         }
       }
 
-      setOverlayDrafts(prev => ({ ...prev, ...newDrafts }));
+      // Keep drafts + blueprint in sync
+      Object.entries(newDrafts).forEach(([sceneId, text]) => setSceneDraft(sceneId, text));
       toast.success(`${Object.keys(newDrafts).length} overlays regenerated`);
     } catch (err) {
       console.error("[CaptionsPanel] Bulk regenerate error:", err);
@@ -136,7 +186,7 @@ export function CaptionsPanel({
 
   // Apply template to all scenes
   const handleTemplateApply = async (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
+    const template = templates.find((t) => t.id === templateId);
     if (!template) return;
 
     setApproving(true);
@@ -144,10 +194,13 @@ export function CaptionsPanel({
       const drafts: Record<string, string> = {};
 
       for (const scene of scenes) {
+        const currentText = getSceneText(scene);
+        const promptToUse = template.prompt?.trim() || defaultOverlayPrompt(currentText);
+
         const { data } = await supabase.functions.invoke("generate-text-overlay", {
           body: {
-            scene,
-            prompt: template.prompt,
+            scene: { ...scene, text: currentText },
+            prompt: promptToUse,
           },
         });
 
@@ -156,7 +209,7 @@ export function CaptionsPanel({
         }
       }
 
-      setOverlayDrafts(prev => ({ ...prev, ...drafts }));
+      Object.entries(drafts).forEach(([sceneId, text]) => setSceneDraft(sceneId, text));
       toast.success(`Applied template: ${template.name}`);
     } catch (err) {
       console.error("[CaptionsPanel] Template apply error:", err);
@@ -168,18 +221,22 @@ export function CaptionsPanel({
 
   // Generate single overlay with AI
   const handleGenerateOne = async (scene: SceneData) => {
-    setGenerating(prev => ({ ...prev, [scene.sceneId]: true }));
+    setGenerating((prev) => ({ ...prev, [scene.sceneId]: true }));
 
     try {
+      const currentText = getSceneText(scene);
+      const promptRaw = aiPrompt[scene.sceneId] || "";
+      const promptToUse = promptRaw.trim() || defaultOverlayPrompt(currentText);
+
       const { data, error } = await supabase.functions.invoke("generate-text-overlay", {
         body: {
-          scene: { ...scene, text: getSceneText(scene) },
-          prompt: aiPrompt[scene.sceneId] || "",
+          scene: { ...scene, text: currentText },
+          prompt: promptToUse,
         },
       });
 
       if (!error && data?.text) {
-        setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: data.text }));
+        setSceneDraft(scene.sceneId, data.text);
         toast.success("Overlay generated");
       } else {
         toast.error(error?.message || "Failed to generate overlay");
@@ -188,7 +245,7 @@ export function CaptionsPanel({
       console.error("[CaptionsPanel] Generate overlay error:", err);
       toast.error("Failed to generate overlay");
     } finally {
-      setGenerating(prev => ({ ...prev, [scene.sceneId]: false }));
+      setGenerating((prev) => ({ ...prev, [scene.sceneId]: false }));
     }
   };
 
@@ -407,8 +464,8 @@ export function CaptionsPanel({
                   {/* Text display or editor */}
                   {isEditing ? (
                     <Textarea
-                      value={overlayDrafts[scene.sceneId] ?? scene.text ?? ""}
-                      onChange={e => setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: e.target.value }))}
+                      value={overlayDrafts[scene.sceneId] ?? coerceText(scene.text)}
+                      onChange={(e) => setSceneDraft(scene.sceneId, e.target.value)}
                       placeholder="Enter overlay text..."
                       className="text-xs min-h-[40px] mb-2"
                       autoFocus
@@ -418,7 +475,7 @@ export function CaptionsPanel({
                     <p
                       className="text-sm font-medium truncate mb-2 cursor-pointer hover:text-primary"
                       onClick={() => {
-                        setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: displayText }));
+                        setSceneDraft(scene.sceneId, displayText);
                         setEditingSceneId(scene.sceneId);
                       }}
                       title="Click to edit"
@@ -437,7 +494,7 @@ export function CaptionsPanel({
                         variant="ghost"
                         className="h-6 px-2 text-[10px]"
                         onClick={() => {
-                          setOverlayDrafts(prev => ({ ...prev, [scene.sceneId]: scene.text || "" }));
+                          setSceneDraft(scene.sceneId, coerceText(scene.text));
                           setEditingSceneId(scene.sceneId);
                         }}
                       >
