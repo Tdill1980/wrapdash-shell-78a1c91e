@@ -3,8 +3,6 @@
 // Enforces: LIVE/MANUAL/OFF mode, ai_paused, approval_required, autopilot_allowed
 // Writes: messages + execution_receipts on every attempt
 
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-
 type Json = Record<string, unknown>;
 
 const corsHeaders = {
