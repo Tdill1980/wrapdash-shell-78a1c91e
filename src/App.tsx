@@ -175,6 +175,7 @@ const App = () => (
             <Route path="/admin/designvault" element={<DesignVaultAdmin />} />
             <Route path="/admin/dashboard-hero" element={<DashboardHeroAdmin />} />
             <Route path="/admin/website-agent" element={<JordanLeeAdminDashboard />} />
+            <Route path="/jordan-lee-admin" element={<JordanLeeAdminDashboard />} />
             <Route path="/admin/chat-widget-demo" element={<ChatWidgetDemo />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
