@@ -26,6 +26,7 @@ import {
   ClipboardCheck,
   Activity,
   ListTodo,
+  Power,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -379,6 +380,18 @@ const navigationItems: NavigationItem[] = [
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Ops </span>
         <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Desk</span>
+      </span>
+    )
+  },
+  { 
+    name: "Jordan Control", 
+    path: "/jordan-lee-admin", 
+    icon: Power,
+    roles: ["admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Jordan </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Control</span>
       </span>
     )
   },
