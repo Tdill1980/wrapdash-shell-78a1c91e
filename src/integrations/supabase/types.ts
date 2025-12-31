@@ -883,6 +883,48 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_schedules: {
+        Row: {
+          active_after: string | null
+          active_before: string | null
+          active_holidays: boolean | null
+          active_weekends: boolean | null
+          agent_name: string
+          created_at: string | null
+          emergency_off: boolean | null
+          enabled: boolean | null
+          id: string
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active_after?: string | null
+          active_before?: string | null
+          active_holidays?: boolean | null
+          active_weekends?: boolean | null
+          agent_name: string
+          created_at?: string | null
+          emergency_off?: boolean | null
+          enabled?: boolean | null
+          id?: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active_after?: string | null
+          active_before?: string | null
+          active_holidays?: boolean | null
+          active_weekends?: boolean | null
+          agent_name?: string
+          created_at?: string | null
+          emergency_off?: boolean | null
+          enabled?: boolean | null
+          id?: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       agent_weekly_directives: {
         Row: {
           active: boolean | null

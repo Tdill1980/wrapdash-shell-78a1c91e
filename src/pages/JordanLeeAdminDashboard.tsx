@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench } from "lucide-react";
+import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { AgenticAITab } from "@/components/admin/jordan-dashboard/AgenticAITab";
 import { WrapGuruTab } from "@/components/admin/jordan-dashboard/WrapGuruTab";
@@ -13,8 +13,10 @@ import { FileAnalysisTab } from "@/components/admin/jordan-dashboard/FileAnalysi
 import { ReviewsTab } from "@/components/admin/jordan-dashboard/ReviewsTab";
 import { EmailTrackingTab } from "@/components/admin/jordan-dashboard/EmailTrackingTab";
 import { ToolsTab } from "@/components/admin/jordan-dashboard/ToolsTab";
+import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
 
 const TABS = [
+  { id: "control", label: "Agent Control", icon: Power, color: "bg-red-500" },
   { id: "analytics", label: "Analytics", icon: BarChart3, color: "bg-green-500" },
   { id: "agentic", label: "Agentic AI", icon: Brain, color: "bg-orange-500" },
   { id: "wrapguru", label: "WrapGuru", icon: Car, color: "bg-purple-500" },
@@ -29,7 +31,7 @@ const TABS = [
 ];
 
 export default function JordanLeeAdminDashboard() {
-  const [activeTab, setActiveTab] = useState("analytics");
+  const [activeTab, setActiveTab] = useState("control");
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,6 +91,10 @@ export default function JordanLeeAdminDashboard() {
           </TabsList>
 
           {/* Tab Contents */}
+          <TabsContent value="control" className="mt-6">
+            <AgentControlPanel />
+          </TabsContent>
+
           <TabsContent value="analytics" className="mt-6">
             <AnalyticsTab />
           </TabsContent>

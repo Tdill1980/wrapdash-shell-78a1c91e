@@ -1,13 +1,40 @@
-(() => {
+(async () => {
   // Prevent double loading
   if (window.__WPW_CHAT_WIDGET_LOADED__) return;
   window.__WPW_CHAT_WIDGET_LOADED__ = true;
+
+  // Kill switch - add <script>window.WRAPCOMMAND_DISABLED = true;</script> to disable
+  if (window.WRAPCOMMAND_DISABLED) {
+    console.log('[WPW Chat] Widget disabled via kill switch');
+    return;
+  }
 
   // Read script attributes
   const currentScript = document.currentScript;
   const org = currentScript.getAttribute("data-org") || "wpw";
   const agent = currentScript.getAttribute("data-agent") || "wpw_ai_team";
   const mode = currentScript.getAttribute("data-mode") || "live";
+  const statusUrl = 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status';
+
+  // ========================================
+  // RUNTIME SCHEDULE CHECK - Ask WrapCommand if agent is active
+  // This happens BEFORE rendering anything. Fail-safe = OFF.
+  // ========================================
+  try {
+    const statusRes = await fetch(`${statusUrl}?agent=${agent}`);
+    const { active, reason } = await statusRes.json();
+    
+    if (!active) {
+      console.log(`[WPW Chat] Agent inactive: ${reason}`);
+      return; // Exit silently, no bubble rendered
+    }
+    console.log(`[WPW Chat] Agent active: ${reason}`);
+  } catch (err) {
+    // FAIL SAFE - if status check fails, don't show widget
+    console.log('[WPW Chat] Status check failed, exiting (fail-safe)');
+    return;
+  }
+  // ========================================
 
   // Create container
   const container = document.createElement("div");
