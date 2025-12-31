@@ -5407,6 +5407,7 @@ export type Database = {
           customer_price: number | null
           dimensions: Json | null
           email_design: string | null
+          email_sent: boolean | null
           email_tone: string | null
           engagement_level: string | null
           expires_at: string | null
@@ -5470,6 +5471,7 @@ export type Database = {
           customer_price?: number | null
           dimensions?: Json | null
           email_design?: string | null
+          email_sent?: boolean | null
           email_tone?: string | null
           engagement_level?: string | null
           expires_at?: string | null
@@ -5533,6 +5535,7 @@ export type Database = {
           customer_price?: number | null
           dimensions?: Json | null
           email_design?: string | null
+          email_sent?: boolean | null
           email_tone?: string | null
           engagement_level?: string | null
           expires_at?: string | null

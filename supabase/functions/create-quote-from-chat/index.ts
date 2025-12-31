@@ -331,6 +331,16 @@ serve(async (req) => {
         if (emailResponse.ok) {
           emailSent = true;
           console.log('[CreateQuoteFromChat] Email sent successfully');
+          
+          // Update quote record with email_sent = true
+          const { error: updateError } = await supabase
+            .from('quotes')
+            .update({ email_sent: true })
+            .eq('id', quote.id);
+          
+          if (updateError) {
+            console.error('[CreateQuoteFromChat] Failed to update email_sent flag:', updateError);
+          }
         } else {
           const errorText = await emailResponse.text();
           console.error('[CreateQuoteFromChat] Email send error:', errorText);
