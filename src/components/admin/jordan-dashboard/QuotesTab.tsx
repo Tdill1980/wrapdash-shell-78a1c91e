@@ -39,6 +39,24 @@ export function QuotesTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, completed: 0, expired: 0, autoFollow: 0 });
+  const [runningRetargeting, setRunningRetargeting] = useState(false);
+
+  const runRetargeting = async () => {
+    setRunningRetargeting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('run-quote-followups');
+      if (error) throw error;
+      
+      const processed = data?.processed || 0;
+      toast.success(`Retargeting complete: ${processed} follow-up${processed !== 1 ? 's' : ''} sent`);
+      fetchQuotes();
+    } catch (error: any) {
+      console.error("Retargeting error:", error);
+      toast.error(error.message || "Failed to run retargeting");
+    } finally {
+      setRunningRetargeting(false);
+    }
+  };
 
   const fetchQuotes = async () => {
     setLoading(true);
@@ -189,6 +207,14 @@ export function QuotesTab() {
         <Button variant="outline" onClick={fetchQuotes} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Refresh
+        </Button>
+        <Button 
+          onClick={runRetargeting} 
+          disabled={runningRetargeting || loading}
+          className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] hover:opacity-90 text-white"
+        >
+          <Zap className={`h-4 w-4 mr-2 ${runningRetargeting ? "animate-pulse" : ""}`} />
+          {runningRetargeting ? "Running..." : "Run Retargeting"}
         </Button>
       </div>
 
