@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Power, Clock, Calendar, Shield, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Power, Clock, Calendar, Shield, RefreshCw, Rocket } from 'lucide-react';
 import { useAgentSchedule } from '@/hooks/useAgentSchedule';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -41,6 +41,7 @@ export default function AgentControlPanel() {
     updateSchedule, 
     toggleEnabled, 
     toggleEmergencyOff,
+    toggleForceOn,
     currentStatus,
     refetch
   } = useAgentSchedule('jordan');
@@ -74,22 +75,28 @@ export default function AgentControlPanel() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-lg bg-background/60 p-3 border">
               <p className="font-semibold text-green-500 mb-1">🟢 AUTO MODE (Recommended)</p>
               <p className="text-muted-foreground">
-                Leave "Agent Enabled" <span className="font-bold text-foreground">ON</span>. Jordan will automatically turn on at <span className="font-bold">5:00 PM</span> and turn off at <span className="font-bold">8:30 AM</span> every day. You don't need to do anything!
+                Leave "Agent Enabled" <span className="font-bold text-foreground">ON</span>. Jordan auto-runs from <span className="font-bold">5 PM</span> to <span className="font-bold">8:30 AM</span>.
               </p>
             </div>
             <div className="rounded-lg bg-background/60 p-3 border">
-              <p className="font-semibold text-red-500 mb-1">🔴 TURN OFF COMPLETELY</p>
+              <p className="font-semibold text-blue-500 mb-1">🚀 FORCE START</p>
               <p className="text-muted-foreground">
-                Need to stop Jordan immediately? Hit the red <span className="font-bold">"EMERGENCY STOP"</span> button below. This overrides everything and turns Jordan off instantly.
+                Need Jordan during the day? Hit <span className="font-bold">"Force Start"</span> to turn him ON outside auto-schedule.
+              </p>
+            </div>
+            <div className="rounded-lg bg-background/60 p-3 border">
+              <p className="font-semibold text-red-500 mb-1">🔴 EMERGENCY STOP</p>
+              <p className="text-muted-foreground">
+                Need to stop Jordan? Hit the red button to turn him OFF instantly.
               </p>
             </div>
           </div>
           <p className="text-xs text-muted-foreground border-t pt-2">
-            💡 <strong>TL;DR:</strong> Don't touch anything for auto-schedule. Hit Emergency Stop if something goes wrong. That's it!
+            💡 <strong>TL;DR:</strong> Auto runs evenings/nights. Force Start for daytime. Emergency Stop if something's wrong.
           </p>
         </CardContent>
       </Card>
@@ -112,44 +119,91 @@ export default function AgentControlPanel() {
         </CardHeader>
       </Card>
 
-      {/* Emergency Stop */}
-      <Card className={schedule.emergency_off ? 'border-red-500 bg-red-500/10' : ''}>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-red-500" />
-            <CardTitle>Emergency Controls</CardTitle>
-          </div>
-          <CardDescription>
-            Immediately disable Jordan regardless of schedule
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            variant={schedule.emergency_off ? "default" : "destructive"} 
-            size="lg" 
-            className="w-full"
-            onClick={toggleEmergencyOff}
-            disabled={saving}
-          >
-            {schedule.emergency_off ? (
-              <>
-                <Power className="mr-2 h-5 w-5" />
-                Deactivate Emergency Stop
-              </>
-            ) : (
-              <>
-                <AlertTriangle className="mr-2 h-5 w-5" />
-                EMERGENCY STOP
-              </>
+      {/* Control Buttons */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Force Start */}
+        <Card className={schedule.force_on ? 'border-blue-500 bg-blue-500/10' : ''}>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Rocket className="h-5 w-5 text-blue-500" />
+              <CardTitle>Force Start</CardTitle>
+            </div>
+            <CardDescription>
+              Turn Jordan ON outside of scheduled hours
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant={schedule.force_on ? "outline" : "default"} 
+              size="lg" 
+              className={`w-full ${!schedule.force_on ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+              onClick={toggleForceOn}
+              disabled={saving || schedule.emergency_off}
+            >
+              {schedule.force_on ? (
+                <>
+                  <Power className="mr-2 h-5 w-5" />
+                  Deactivate Force Start
+                </>
+              ) : (
+                <>
+                  <Rocket className="mr-2 h-5 w-5" />
+                  FORCE START
+                </>
+              )}
+            </Button>
+            {schedule.force_on && (
+              <p className="mt-3 text-sm text-blue-500 text-center">
+                🚀 Force Start is active. Jordan is ON (ignoring schedule).
+              </p>
             )}
-          </Button>
-          {schedule.emergency_off && (
-            <p className="mt-3 text-sm text-red-500 text-center">
-              ⚠️ Emergency stop is active. Jordan will not appear on the website.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            {schedule.emergency_off && !schedule.force_on && (
+              <p className="mt-3 text-sm text-muted-foreground text-center">
+                Disabled while Emergency Stop is active
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Emergency Stop */}
+        <Card className={schedule.emergency_off ? 'border-red-500 bg-red-500/10' : ''}>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-red-500" />
+              <CardTitle>Emergency Stop</CardTitle>
+            </div>
+            <CardDescription>
+              Immediately disable Jordan regardless of everything
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant={schedule.emergency_off ? "default" : "destructive"} 
+              size="lg" 
+              className="w-full"
+              onClick={toggleEmergencyOff}
+              disabled={saving}
+            >
+              {schedule.emergency_off ? (
+                <>
+                  <Power className="mr-2 h-5 w-5" />
+                  Deactivate Emergency Stop
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="mr-2 h-5 w-5" />
+                  EMERGENCY STOP
+                </>
+              )}
+            </Button>
+            {schedule.emergency_off && (
+              <p className="mt-3 text-sm text-red-500 text-center">
+                ⚠️ Emergency stop is active. Jordan will not appear on the website.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Master Toggle */}
       <Card>
