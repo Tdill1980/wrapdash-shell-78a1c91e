@@ -1,4 +1,4 @@
-(function() {
+(async function() {
   'use strict';
 
   // WrapCommandAI Chat Widget - Jordan Lee
@@ -17,8 +17,29 @@
     org: scriptTag?.getAttribute('data-org') || 'wpw',
     agent: scriptTag?.getAttribute('data-agent') || 'jordan',
     mode: scriptTag?.getAttribute('data-mode') || 'live',
-    apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/luigi-ordering-concierge'
+    apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/luigi-ordering-concierge',
+    statusUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status'
   };
+
+  // ========================================
+  // RUNTIME SCHEDULE CHECK - Ask WrapCommand if agent is active
+  // This happens BEFORE rendering anything. Fail-safe = OFF.
+  // ========================================
+  try {
+    const statusRes = await fetch(`${config.statusUrl}?agent=${config.agent}`);
+    const { active, reason } = await statusRes.json();
+    
+    if (!active) {
+      console.log(`[WCAI] Agent inactive: ${reason}`);
+      return; // Exit silently, no bubble rendered
+    }
+    console.log(`[WCAI] Agent active: ${reason}`);
+  } catch (err) {
+    // FAIL SAFE - if status check fails, don't show widget
+    console.log('[WCAI] Status check failed, exiting (fail-safe)');
+    return;
+  }
+  // ========================================
 
   // WPW Logo (base64 encoded small version for embed)
   const WPW_LOGO = 'https://weprintwraps.com/cdn/shop/files/WePrintWraps-Logo-White.png?v=1690318107';
