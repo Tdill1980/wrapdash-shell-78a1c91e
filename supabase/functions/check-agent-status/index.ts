@@ -65,6 +65,15 @@ serve(async (req) => {
       );
     }
 
+    // Check force_on - overrides schedule to turn ON
+    if (data.force_on) {
+      console.log('[check-agent-status] Force Start is active');
+      return new Response(
+        JSON.stringify({ active: true, reason: "Force Start active (ignoring schedule)" }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get current time in agent's timezone
     const timezone = data.timezone || 'America/Phoenix';
     const now = new Date();

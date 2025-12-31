@@ -12,6 +12,7 @@ export interface AgentSchedule {
   active_weekends: boolean;
   active_holidays: boolean;
   emergency_off: boolean;
+  force_on: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -123,11 +124,45 @@ export function useAgentSchedule(agentName: string = 'jordan') {
     }
   };
 
+  // Toggle force on
+  const toggleForceOn = async () => {
+    if (!schedule?.id) return;
+
+    const newValue = !schedule.force_on;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('agent_schedules')
+        .update({ force_on: newValue })
+        .eq('id', schedule.id);
+
+      if (error) throw error;
+
+      setSchedule(prev => prev ? { ...prev, force_on: newValue } : null);
+      toast({
+        title: newValue ? '🚀 Force Start Activated' : '⏹️ Force Start Deactivated',
+        description: newValue 
+          ? 'Jordan is now ONLINE (ignoring schedule)' 
+          : 'Jordan is back to auto-schedule',
+      });
+    } catch (err) {
+      console.error('Error toggling force on:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to toggle force start',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Compute current status
   const computeCurrentStatus = (): { active: boolean; reason: string } => {
     if (!schedule) return { active: false, reason: 'Schedule not loaded' };
     if (schedule.emergency_off) return { active: false, reason: 'Emergency shutdown active' };
     if (!schedule.enabled) return { active: false, reason: 'Agent disabled' };
+    if (schedule.force_on) return { active: true, reason: 'Force Start is active (ignoring schedule)' };
 
     const timezone = schedule.timezone || 'America/Phoenix';
     const now = new Date();
@@ -174,6 +209,7 @@ export function useAgentSchedule(agentName: string = 'jordan') {
     updateSchedule,
     toggleEnabled,
     toggleEmergencyOff,
+    toggleForceOn,
     currentStatus,
     refetch: fetchSchedule
   };

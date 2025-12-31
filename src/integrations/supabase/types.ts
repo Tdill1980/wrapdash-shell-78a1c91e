@@ -893,6 +893,7 @@ export type Database = {
           created_at: string | null
           emergency_off: boolean | null
           enabled: boolean | null
+          force_on: boolean
           id: string
           timezone: string | null
           updated_at: string | null
@@ -906,6 +907,7 @@ export type Database = {
           created_at?: string | null
           emergency_off?: boolean | null
           enabled?: boolean | null
+          force_on?: boolean
           id?: string
           timezone?: string | null
           updated_at?: string | null
@@ -919,6 +921,7 @@ export type Database = {
           created_at?: string | null
           emergency_off?: boolean | null
           enabled?: boolean | null
+          force_on?: boolean
           id?: string
           timezone?: string | null
           updated_at?: string | null
