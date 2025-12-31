@@ -66,6 +66,34 @@ export default function AgentControlPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Jackson Quick Guide */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            👋 Hey Jackson! Here's how Jordan works:
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg bg-background/60 p-3 border">
+              <p className="font-semibold text-green-500 mb-1">🟢 AUTO MODE (Recommended)</p>
+              <p className="text-muted-foreground">
+                Leave "Agent Enabled" <span className="font-bold text-foreground">ON</span>. Jordan will automatically turn on at <span className="font-bold">5:00 PM</span> and turn off at <span className="font-bold">8:30 AM</span> every day. You don't need to do anything!
+              </p>
+            </div>
+            <div className="rounded-lg bg-background/60 p-3 border">
+              <p className="font-semibold text-red-500 mb-1">🔴 TURN OFF COMPLETELY</p>
+              <p className="text-muted-foreground">
+                Need to stop Jordan immediately? Hit the red <span className="font-bold">"EMERGENCY STOP"</span> button below. This overrides everything and turns Jordan off instantly.
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground border-t pt-2">
+            💡 <strong>TL;DR:</strong> Don't touch anything for auto-schedule. Hit Emergency Stop if something goes wrong. That's it!
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Current Status Card */}
       <Card className={currentStatus.active ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}>
         <CardHeader className="pb-3">
