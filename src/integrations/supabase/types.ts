@@ -2095,11 +2095,14 @@ export type Database = {
           content_project_id: string | null
           content_type: string
           created_at: string
+          directive: string | null
           engagement_stats: Json | null
+          google_doc_url: string | null
           hashtags: string[] | null
           id: string
           in_progress_at: string | null
           migrated: boolean | null
+          notes: string | null
           organization_id: string | null
           platform: string
           post_url: string | null
@@ -2117,11 +2120,14 @@ export type Database = {
           content_project_id?: string | null
           content_type: string
           created_at?: string
+          directive?: string | null
           engagement_stats?: Json | null
+          google_doc_url?: string | null
           hashtags?: string[] | null
           id?: string
           in_progress_at?: string | null
           migrated?: boolean | null
+          notes?: string | null
           organization_id?: string | null
           platform: string
           post_url?: string | null
@@ -2139,11 +2145,14 @@ export type Database = {
           content_project_id?: string | null
           content_type?: string
           created_at?: string
+          directive?: string | null
           engagement_stats?: Json | null
+          google_doc_url?: string | null
           hashtags?: string[] | null
           id?: string
           in_progress_at?: string | null
           migrated?: boolean | null
+          notes?: string | null
           organization_id?: string | null
           platform?: string
           post_url?: string | null
