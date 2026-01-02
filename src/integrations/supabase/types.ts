@@ -726,7 +726,21 @@ export type Database = {
             foreignKeyName: "agent_alerts_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
             referencedColumns: ["id"]
           },
           {
@@ -1022,7 +1036,21 @@ export type Database = {
             foreignKeyName: "ai_actions_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
             referencedColumns: ["id"]
           },
           {
@@ -3891,7 +3919,21 @@ export type Database = {
             foreignKeyName: "execution_receipts_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "execution_receipts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "execution_receipts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
             referencedColumns: ["id"]
           },
           {
@@ -4398,7 +4440,21 @@ export type Database = {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -6072,7 +6128,21 @@ export type Database = {
             foreignKeyName: "story_engagement_log_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_engagement_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "story_engagement_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -6265,7 +6335,21 @@ export type Database = {
             foreignKeyName: "tasks_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
             referencedColumns: ["id"]
           },
           {
@@ -6343,7 +6427,21 @@ export type Database = {
             foreignKeyName: "team_commands_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_commands_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_commands_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
             referencedColumns: ["id"]
           },
           {
@@ -6906,6 +7004,84 @@ export type Database = {
       }
     }
     Views: {
+      mightychat_conversations: {
+        Row: {
+          ai_paused: boolean | null
+          approval_required: boolean | null
+          assigned_to: string | null
+          autopilot_allowed: boolean | null
+          channel: string | null
+          chat_state: Json | null
+          contact_id: string | null
+          created_at: string | null
+          id: string | null
+          last_message_at: string | null
+          metadata: Json | null
+          organization_id: string | null
+          priority: string | null
+          recipient_inbox: string | null
+          review_status: string | null
+          status: string | null
+          subject: string | null
+          unread_count: number | null
+        }
+        Insert: {
+          ai_paused?: boolean | null
+          approval_required?: boolean | null
+          assigned_to?: string | null
+          autopilot_allowed?: boolean | null
+          channel?: string | null
+          chat_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          last_message_at?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          priority?: string | null
+          recipient_inbox?: string | null
+          review_status?: string | null
+          status?: string | null
+          subject?: string | null
+          unread_count?: number | null
+        }
+        Update: {
+          ai_paused?: boolean | null
+          approval_required?: boolean | null
+          assigned_to?: string | null
+          autopilot_allowed?: boolean | null
+          channel?: string | null
+          chat_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          last_message_at?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          priority?: string | null
+          recipient_inbox?: string | null
+          review_status?: string | null
+          status?: string | null
+          subject?: string | null
+          unread_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       migrated_content_audit: {
         Row: {
           assigned_agent: string | null
@@ -6933,6 +7109,84 @@ export type Database = {
           subject: string | null
         }
         Relationships: []
+      }
+      website_chat_conversations: {
+        Row: {
+          ai_paused: boolean | null
+          approval_required: boolean | null
+          assigned_to: string | null
+          autopilot_allowed: boolean | null
+          channel: string | null
+          chat_state: Json | null
+          contact_id: string | null
+          created_at: string | null
+          id: string | null
+          last_message_at: string | null
+          metadata: Json | null
+          organization_id: string | null
+          priority: string | null
+          recipient_inbox: string | null
+          review_status: string | null
+          status: string | null
+          subject: string | null
+          unread_count: number | null
+        }
+        Insert: {
+          ai_paused?: boolean | null
+          approval_required?: boolean | null
+          assigned_to?: string | null
+          autopilot_allowed?: boolean | null
+          channel?: string | null
+          chat_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          last_message_at?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          priority?: string | null
+          recipient_inbox?: string | null
+          review_status?: string | null
+          status?: string | null
+          subject?: string | null
+          unread_count?: number | null
+        }
+        Update: {
+          ai_paused?: boolean | null
+          approval_required?: boolean | null
+          assigned_to?: string | null
+          autopilot_allowed?: boolean | null
+          channel?: string | null
+          chat_state?: Json | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          last_message_at?: string | null
+          metadata?: Json | null
+          organization_id?: string | null
+          priority?: string | null
+          recipient_inbox?: string | null
+          review_status?: string | null
+          status?: string | null
+          subject?: string | null
+          unread_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
