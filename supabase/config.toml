@@ -321,3 +321,6 @@ verify_jwt = false
 
 [functions.check-agent-status]
 verify_jwt = false
+
+[functions.sync-all-vehicles]
+verify_jwt = false
