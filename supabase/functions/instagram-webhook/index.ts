@@ -1,6 +1,11 @@
 // INSTAGRAM WEBHOOK WITH USERNAME/AVATAR LOOKUP + FILE HANDLING
 // Updated to load PAGE_ACCESS_TOKEN from database for 60-day token model
 // Now caches attachment files immediately to avoid expired CDN links
+//
+// ⛔ INSTAGRAM INGESTION DISABLED - 2026-01-02
+// MightyChats frozen per admin request. Uncomment KILL_SWITCH to re-enable.
+const KILL_SWITCH_INSTAGRAM = true; // Set to false to re-enable
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -229,6 +234,24 @@ async function getInstagramUserProfile(igUserId: string): Promise<{
 serve(async (req) => {
   try {
     const url = new URL(req.url);
+
+    // ⛔ KILL SWITCH: Instagram ingestion disabled
+    if (KILL_SWITCH_INSTAGRAM) {
+      // Still respond to Meta verification challenges (required)
+      if (req.method === "GET") {
+        const mode = url.searchParams.get("hub.mode");
+        const token = url.searchParams.get("hub.verify_token");
+        const challenge = url.searchParams.get("hub.challenge");
+        if (mode === "subscribe" && token === VERIFY_TOKEN) {
+          console.log("⛔ KILL SWITCH ON - Webhook verified but ingestion disabled");
+          return new Response(challenge, { status: 200 });
+        }
+        return new Response("INVALID_VERIFY_TOKEN", { status: 403 });
+      }
+      // For POST requests, acknowledge but don't process
+      console.log("⛔ INSTAGRAM KILL SWITCH ACTIVE - Ignoring inbound DM");
+      return new Response("EVENT_RECEIVED_DISABLED", { status: 200 });
+    }
 
     // -------------------------------------------------------------------------
     // 1. VERIFY WEBHOOK (Meta GET Challenge)

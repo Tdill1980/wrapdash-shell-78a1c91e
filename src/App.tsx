@@ -142,10 +142,12 @@ const App = () => (
             <Route path="/mightymail/campaign-sender" element={<MightyMailCampaignSender />} />
             <Route path="/quote-drafts" element={<QuoteDrafts />} />
             <Route path="/ai-pipeline" element={<AIPipeline />} />
-            <Route path="/mightychat" element={<MightyChat />} />
+            {/* DISABLED: MightyChats frozen - Instagram/Email ingestion stopped */}
+            {/* <Route path="/mightychat" element={<MightyChat />} /> */}
+            {/* <Route path="/mightychat-v2" element={<MightyChatV2 />} /> */}
+            <Route path="/mightychat" element={<Navigate to="/jordan-lee-admin" replace />} />
+            <Route path="/mightychat-v2" element={<Navigate to="/jordan-lee-admin" replace />} />
             <Route path="/backlog" element={<Backlog />} />
-            <Route path="/content-drafts" element={<ContentDrafts />} />
-            <Route path="/mightychat-v2" element={<MightyChatV2 />} />
             <Route path="/contentbox" element={<ContentBox />} />
             <Route path="/content-creator" element={<ContentCreator />} />
             <Route path="/content-schedule" element={<ContentSchedule />} />
