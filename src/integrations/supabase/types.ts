@@ -726,6 +726,13 @@ export type Database = {
             foreignKeyName: "agent_alerts_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "agent_alerts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "mightychat_conversations"
             referencedColumns: ["id"]
           },
@@ -1031,6 +1038,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
           },
           {
             foreignKeyName: "ai_actions_conversation_id_fkey"
@@ -3919,6 +3933,13 @@ export type Database = {
             foreignKeyName: "execution_receipts_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "execution_receipts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "mightychat_conversations"
             referencedColumns: ["id"]
           },
@@ -4435,6 +4456,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
           },
           {
             foreignKeyName: "messages_conversation_id_fkey"
@@ -5687,6 +5715,90 @@ export type Database = {
           },
         ]
       }
+      recovered_instagram_leads: {
+        Row: {
+          conversation_id: string | null
+          created_at: string | null
+          extracted_email: string | null
+          extracted_phone: string | null
+          followed_up_at: string | null
+          followed_up_by: string | null
+          id: string
+          ig_sender_name: string | null
+          intent_keywords: string[] | null
+          message_content: string | null
+          notes: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string | null
+          extracted_email?: string | null
+          extracted_phone?: string | null
+          followed_up_at?: string | null
+          followed_up_by?: string | null
+          id?: string
+          ig_sender_name?: string | null
+          intent_keywords?: string[] | null
+          message_content?: string | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string | null
+          extracted_email?: string | null
+          extracted_phone?: string | null
+          followed_up_at?: string | null
+          followed_up_by?: string | null
+          id?: string
+          ig_sender_name?: string | null
+          intent_keywords?: string[] | null
+          message_content?: string | null
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovered_instagram_leads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovered_instagram_leads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "recovered_instagram_leads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovered_instagram_leads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovered_instagram_leads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       revenue_health_status: {
         Row: {
           campaign_status: string | null
@@ -6128,6 +6240,13 @@ export type Database = {
             foreignKeyName: "story_engagement_log_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "story_engagement_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "mightychat_conversations"
             referencedColumns: ["id"]
           },
@@ -6335,6 +6454,13 @@ export type Database = {
             foreignKeyName: "tasks_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "mightychat_conversations"
             referencedColumns: ["id"]
           },
@@ -6422,6 +6548,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_commands_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
           },
           {
             foreignKeyName: "team_commands_conversation_id_fkey"
@@ -7004,6 +7137,17 @@ export type Database = {
       }
     }
     Views: {
+      instagram_leads_with_emails: {
+        Row: {
+          conversation_id: string | null
+          direction: string | null
+          extracted_email: string | null
+          ig_sender_name: string | null
+          message_content: string | null
+          message_date: string | null
+        }
+        Relationships: []
+      }
       mightychat_conversations: {
         Row: {
           ai_paused: boolean | null

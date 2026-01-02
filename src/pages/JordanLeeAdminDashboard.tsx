@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power } from "lucide-react";
+import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power, Instagram } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { AgenticAITab } from "@/components/admin/jordan-dashboard/AgenticAITab";
 import { WrapGuruTab } from "@/components/admin/jordan-dashboard/WrapGuruTab";
@@ -14,9 +14,11 @@ import { ReviewsTab } from "@/components/admin/jordan-dashboard/ReviewsTab";
 import { EmailTrackingTab } from "@/components/admin/jordan-dashboard/EmailTrackingTab";
 import { ToolsTab } from "@/components/admin/jordan-dashboard/ToolsTab";
 import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
+import { RecoveredLeadsTab } from "@/components/admin/jordan-dashboard/RecoveredLeadsTab";
 
 const TABS = [
   { id: "control", label: "Agent Control", icon: Power, color: "bg-red-500" },
+  { id: "recovered", label: "Recovered IG Leads", icon: Instagram, color: "bg-pink-500" },
   { id: "analytics", label: "Analytics", icon: BarChart3, color: "bg-green-500" },
   { id: "agentic", label: "Agentic AI", icon: Brain, color: "bg-orange-500" },
   { id: "wrapguru", label: "WrapGuru", icon: Car, color: "bg-purple-500" },
@@ -93,6 +95,10 @@ export default function JordanLeeAdminDashboard() {
           {/* Tab Contents */}
           <TabsContent value="control" className="mt-6">
             <AgentControlPanel />
+          </TabsContent>
+
+          <TabsContent value="recovered" className="mt-6">
+            <RecoveredLeadsTab />
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-6">
