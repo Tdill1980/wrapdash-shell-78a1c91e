@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format, differenceInMinutes, differenceInSeconds } from "date-fns";
-import { MapPin, Mail, Clock, AlertCircle, Download, MessageSquare } from "lucide-react";
+import { MapPin, Mail, Clock, AlertCircle, Download, MessageSquare, Globe, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 
@@ -86,7 +86,19 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
         {/* Left: Session info */}
         <div className="flex-1 min-w-0 space-y-2">
           {/* Session ID header */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Channel badge */}
+            {conversation.channel === 'instagram' ? (
+              <Badge variant="outline" className="text-xs bg-pink-500/10 text-pink-500 border-pink-500/30">
+                <Instagram className="h-3 w-3 mr-1" />
+                Instagram
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/30">
+                <Globe className="h-3 w-3 mr-1" />
+                Website
+              </Badge>
+            )}
             <span className="font-semibold">Session {sessionId}</span>
             {chatState?.customer_email && (
               <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
@@ -95,7 +107,7 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
               </Badge>
             )}
             {conversation.status === 'open' && (
-              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/30">
+              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
                 Active
               </Badge>
             )}

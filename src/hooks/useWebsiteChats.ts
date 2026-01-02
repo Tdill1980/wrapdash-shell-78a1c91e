@@ -62,7 +62,7 @@ export function useWebsiteChats() {
   const query = useQuery({
     queryKey: ['website-chats'],
     queryFn: async (): Promise<ChatConversation[]> => {
-      // Fetch conversations with website channel
+      // Fetch conversations from website and instagram channels (Jordan-handled)
       const { data: conversations, error } = await supabase
         .from('conversations')
         .select(`
@@ -78,9 +78,9 @@ export function useWebsiteChats() {
           chat_state,
           metadata
         `)
-        .eq('channel', 'website')
+        .in('channel', ['website', 'instagram'])
         .order('last_message_at', { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (error) throw error;
 
@@ -129,8 +129,8 @@ export function useWebsiteChats() {
         {
           event: '*',
           schema: 'public',
-          table: 'conversations',
-          filter: 'channel=eq.website'
+          table: 'conversations'
+          // Listen to all conversation changes, filter in query
         },
         () => {
           query.refetch();
@@ -162,7 +162,7 @@ export function useWebsiteChatStats() {
       const { count: totalToday } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
-        .eq('channel', 'website')
+        .in('channel', ['website', 'instagram'])
         .gte('created_at', today.toISOString());
 
       // Emails captured today
@@ -178,7 +178,7 @@ export function useWebsiteChatStats() {
       const { count: activeConversations } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
-        .eq('channel', 'website')
+        .in('channel', ['website', 'instagram'])
         .eq('status', 'open');
 
       return {

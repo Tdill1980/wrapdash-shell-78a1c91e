@@ -22,8 +22,11 @@ interface Quote {
   status: string | null;
   auto_retarget: boolean | null;
   followup_count?: number | null;
+  follow_up_count?: number | null;
   created_at: string | null;
   woocommerce_synced?: boolean | null;
+  email_sent?: boolean | null;
+  source?: string | null;
 }
 
 interface Stats {
@@ -32,13 +35,15 @@ interface Stats {
   completed: number;
   expired: number;
   autoFollow: number;
+  emailsSent: number;
 }
 
 export function QuotesTab() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, completed: 0, expired: 0, autoFollow: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, completed: 0, expired: 0, autoFollow: 0, emailsSent: 0 });
+  const [emailFilter, setEmailFilter] = useState<string>("all");
   const [runningRetargeting, setRunningRetargeting] = useState(false);
 
   const runRetargeting = async () => {
@@ -75,10 +80,11 @@ export function QuotesTab() {
       // Calculate stats
       setStats({
         total: quotesData.length,
-        pending: quotesData.filter(q => q.status === "pending" || q.status === "lead").length,
+        pending: quotesData.filter(q => q.status === "pending" || q.status === "lead" || q.status === "pending_approval").length,
         completed: quotesData.filter(q => q.status === "completed" || q.status === "converted").length,
         expired: quotesData.filter(q => q.status === "expired").length,
         autoFollow: quotesData.filter(q => q.auto_retarget).length,
+        emailsSent: quotesData.filter(q => q.email_sent).length,
       });
     } catch (error) {
       console.error("Error fetching quotes:", error);
@@ -115,19 +121,29 @@ export function QuotesTab() {
     // Implementation would call edge function
   };
 
-  const filteredQuotes = quotes.filter(q => 
-    q.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    q.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    q.quote_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    q.vehicle_make?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    q.vehicle_model?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredQuotes = quotes.filter(q => {
+    // Email filter
+    if (emailFilter === "sent" && !q.email_sent) return false;
+    if (emailFilter === "not_sent" && q.email_sent) return false;
+    
+    // Search filter
+    return (
+      q.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.quote_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.vehicle_make?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.vehicle_model?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      q.source?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
       case "pending":
       case "lead":
         return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30">Pending</Badge>;
+      case "pending_approval":
+        return <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/30">Needs Approval</Badge>;
       case "completed":
       case "converted":
         return <Badge className="bg-green-500/10 text-green-500 border-green-500/30">Completed</Badge>;
@@ -141,7 +157,7 @@ export function QuotesTab() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Quotes</CardTitle>
@@ -149,6 +165,16 @@ export function QuotesTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setEmailFilter(emailFilter === "sent" ? "all" : "sent")}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Emails Sent</CardTitle>
+            <Mail className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${emailFilter === "sent" ? "text-emerald-500" : ""}`}>{stats.emailsSent}</div>
           </CardContent>
         </Card>
 
@@ -225,11 +251,12 @@ export function QuotesTab() {
             <TableHeader>
               <TableRow>
                 <TableHead>Quote #</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Vehicle</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Email Sent</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>WC Sync</TableHead>
                 <TableHead>Follow-ups</TableHead>
                 <TableHead>Auto-Retarget</TableHead>
                 <TableHead>Created</TableHead>
@@ -239,13 +266,13 @@ export function QuotesTab() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     Loading quotes...
                   </TableCell>
                 </TableRow>
               ) : filteredQuotes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     No quotes found
                   </TableCell>
                 </TableRow>
@@ -253,6 +280,11 @@ export function QuotesTab() {
                 filteredQuotes.map((quote) => (
                   <TableRow key={quote.id}>
                     <TableCell className="font-mono text-sm">{quote.quote_number}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {quote.source || "manual"}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{quote.customer_name || "Unknown"}</div>
@@ -269,16 +301,18 @@ export function QuotesTab() {
                         ? `$${quote.customer_price.toLocaleString()}`
                         : "—"}
                     </TableCell>
-                    <TableCell>{getStatusBadge(quote.status)}</TableCell>
                     <TableCell>
-                      {quote.woocommerce_synced ? (
-                        <Badge className="bg-green-500/10 text-green-500 border-green-500/30">✓</Badge>
+                      {quote.email_sent ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+                          <Mail className="h-3 w-3 mr-1" /> Sent
+                        </Badge>
                       ) : (
-                        <Badge variant="outline">—</Badge>
+                        <Badge variant="outline" className="text-muted-foreground">Not Sent</Badge>
                       )}
                     </TableCell>
+                    <TableCell>{getStatusBadge(quote.status)}</TableCell>
                     <TableCell>
-                      <span className="font-medium">{quote.followup_count || 0}</span>
+                      <span className="font-medium">{quote.follow_up_count || quote.followup_count || 0}</span>
                       <span className="text-muted-foreground">/3</span>
                     </TableCell>
                     <TableCell>
@@ -300,6 +334,7 @@ export function QuotesTab() {
                           size="sm" 
                           title="Send Follow-up"
                           onClick={() => sendFollowUp(quote)}
+                          disabled={!quote.customer_email}
                         >
                           <Mail className="h-4 w-4" />
                         </Button>
