@@ -230,7 +230,7 @@ export function LuigiWebsiteWidget() {
       {/* Trust Signal Badge */}
       <div className="bg-slate-900 px-4 py-1.5 text-center">
         <span className="text-xs text-slate-300">
-          ✨ Live wrap pricing help • Real team • Fast replies
+          ✨ Live wrap pricing help • Fast replies
         </span>
       </div>
 
