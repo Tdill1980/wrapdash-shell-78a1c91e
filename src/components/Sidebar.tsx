@@ -6,8 +6,6 @@ import {
   Package,
   Calendar,
   CalendarDays,
-  Send,
-  Store,
   ShoppingCart,
   Users,
   CheckCircle,
@@ -16,17 +14,10 @@ import {
   DollarSign,
   Settings,
   Mail,
-  TrendingUp,
   Car,
-  Film,
-  Image,
-  BarChart3,
-  Sparkles as SparklesIcon,
-  MessageSquare,
-  ClipboardCheck,
   Activity,
-  ListTodo,
   Power,
+  Dna,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -36,99 +27,18 @@ interface NavigationItem {
   path: string;
   icon: any;
   customRender?: React.ReactNode;
-  roles?: OrganizationRole[]; // If undefined, only admin sees it
+  roles?: OrganizationRole[];
 }
 
-const navigationItems: NavigationItem[] = [
+interface NavigationSection {
+  title: string;
+  items: NavigationItem[];
+}
+
+// CORE: Essential daily operations
+const coreItems: NavigationItem[] = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["beta_shop", "affiliate", "admin"] },
-  { 
-    name: "AI Approvals", 
-    path: "/ai-approvals", 
-    icon: ClipboardCheck,
-    roles: ["admin", "beta_shop"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">AI </span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Approvals</span>
-      </span>
-    )
-  },
-  { 
-    name: "InkFusion™", 
-    path: "/inkfusion", 
-    icon: Sparkles,
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Ink</span>
-        <span className="text-gradient">Fusion</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "DesignPanelPro™", 
-    path: "/designpanel", 
-    icon: Sparkles,
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Design</span>
-        <span className="text-gradient">Panel</span>
-        <span className="text-white">Pro</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "DesignPanelPro Enterprise™", 
-    path: "/designpanelpro-enterprise", 
-    icon: Sparkles,
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Design</span>
-        <span className="text-gradient">Panel</span>
-        <span className="text-white">Pro</span>
-        <span className="text-white"> Enterprise</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "Design Generator™", 
-    path: "/design-generator", 
-    icon: Sparkles,
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Design</span>
-        <span className="text-gradient">Generator</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "FadeWraps™", 
-    path: "/fadewraps", 
-    icon: Sparkles,
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Fade</span>
-        <span className="text-gradient">Wraps</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "WBTY™", 
-    path: "/wbty", 
-    icon: Sparkles,
-    customRender: (
-      <span className="font-medium text-gradient">WBTY™</span>
-    )
-  },
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle, roles: ["beta_shop", "admin"] },
-  { name: "DesignVault", path: "/designvault", icon: FolderOpen },
-  { name: "WrapBox", path: "/wrapbox", icon: Package },
-  { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
-  { name: "Design Market", path: "/design-market", icon: Store },
   { 
     name: "ShopFlow", 
     path: "/my-shopflow", 
@@ -139,77 +49,18 @@ const navigationItems: NavigationItem[] = [
     )
   },
   { 
-    name: "ShopFlow Internal", 
-    path: "/shopflow-internal", 
-    icon: Package,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Shop</span>
-        <span className="text-gradient">Flow</span>
-        <span className="text-white"> Internal</span>
-      </span>
-    )
-  },
-  { 
-    name: "ShopFlow Bulk Admin", 
+    name: "ShopFlow Bulk", 
     path: "/shopflow-bulk-admin", 
     icon: Package,
     roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-medium">
-        <span className="text-white">Shop</span>
-        <span className="text-gradient">Flow</span>
-        <span className="text-white"> Bulk</span>
+        <span className="text-white">ShopFlow </span>
+        <span className="text-gradient">Bulk</span>
       </span>
     )
   },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users, roles: ["beta_shop", "admin"] },
-  // DISABLED: MightyChats frozen - Instagram/Email ingestion stopped
-  // { 
-  //   name: "MightyChat", 
-  //   path: "/mightychat", 
-  //   icon: MessageSquare,
-  //   roles: ["beta_shop", "admin"],
-  //   customRender: (
-  //     <span className="font-['Poppins',sans-serif] font-semibold">
-  //       <span className="text-white">Mighty</span>
-  //       <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Chat</span>
-  //       <span className="text-[8px] align-super text-muted-foreground">™</span>
-  //     </span>
-  //   )
-  // },
-  { 
-    name: "MightyTask", 
-    path: "/mightytask", 
-    icon: CheckCircle,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Mighty</span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Task</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "Backlog", 
-    path: "/backlog", 
-    icon: ListTodo,
-    roles: ["beta_shop", "admin"],
-  },
-  { 
-    name: "Content Drafts", 
-    path: "/content-drafts", 
-    icon: Film,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Content </span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Drafts</span>
-      </span>
-    )
-  },
   { 
     name: "MightyPortfolio", 
     path: "/portfolio", 
@@ -223,17 +74,43 @@ const navigationItems: NavigationItem[] = [
       </span>
     )
   },
-  { name: "My Products", path: "/settings/my-products", icon: DollarSign, roles: ["beta_shop", "admin"] },
-  { name: "Settings", path: "/settings", icon: Settings, roles: ["beta_shop", "affiliate", "admin"] },
+];
+
+// OPERATIONS: Backend management
+const operationsItems: NavigationItem[] = [
   { 
-    name: "ContentBox AI", 
-    path: "/contentbox", 
-    icon: Film,
-    roles: ["beta_shop", "affiliate", "admin"],
+    name: "Website Chat", 
+    path: "/jordan-lee-admin", 
+    icon: Activity,
+    roles: ["admin", "beta_shop"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Website </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Chat</span>
+      </span>
+    )
+  },
+  { 
+    name: "ShopFlow Internal", 
+    path: "/shopflow-internal", 
+    icon: Package,
+    roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-medium">
-        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">ContentBox</span>
-        <span className="text-white"> AI</span>
+        <span className="text-white">ShopFlow </span>
+        <span className="text-gradient">Internal</span>
+      </span>
+    )
+  },
+  { 
+    name: "MightyMail", 
+    path: "/admin/mightymail", 
+    icon: Mail,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Mighty</span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Mail</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
       </span>
     )
@@ -250,55 +127,50 @@ const navigationItems: NavigationItem[] = [
       </span>
     )
   },
+];
+
+// TOOLS: Design and content creation
+const toolsItems: NavigationItem[] = [
+  { name: "DesignVault", path: "/designvault", icon: FolderOpen },
   { 
-    name: "Organic Hub", 
-    path: "/organic", 
-    icon: SparklesIcon,
+    name: "DesignPanelPro™", 
+    path: "/designpanel", 
+    icon: Sparkles,
     customRender: (
       <span className="font-medium">
-        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Organic</span>
-        <span className="text-white"> Hub</span>
+        <span className="text-white">Design</span>
+        <span className="text-gradient">Panel</span>
+        <span className="text-white">Pro</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
       </span>
     )
   },
+  { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
+];
+
+// ONBOARDING: Setup and configuration
+const onboardingItems: NavigationItem[] = [
   { 
-    name: "MightyEdit", 
-    path: "/mighty-edit", 
-    icon: Film,
-    roles: ["admin"],
+    name: "TradeDNA Wizard", 
+    path: "/trade-dna", 
+    icon: Dna,
+    roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-medium">
-        <span className="text-primary">Mighty</span>
-        <span className="text-white">Edit</span>
+        <span className="text-white">Trade</span>
+        <span className="text-gradient">DNA</span>
+        <span className="text-white"> Wizard</span>
       </span>
     )
   },
-  {
-    name: "Ad Vault", 
-    path: "/ad-vault", 
-    icon: Image,
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Ad </span>
-        <span className="bg-gradient-to-r from-[#405DE6] to-[#E1306C] bg-clip-text text-transparent">Vault</span>
-      </span>
-    )
-  },
-  { 
-    name: "Paid Ads Performance", 
-    path: "/paid-ads-performance", 
-    icon: BarChart3,
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Paid Ads </span>
-        <span className="bg-gradient-to-r from-[#405DE6] to-[#E1306C] bg-clip-text text-transparent">Performance</span>
-      </span>
-    )
-  },
+];
+
+// AFFILIATE: Affiliate program management
+const affiliateItems: NavigationItem[] = [
   { 
     name: "Affiliate Dashboard", 
     path: "/affiliate/dashboard", 
-    icon: TrendingUp,
+    icon: Award,
     roles: ["affiliate", "admin"],
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
@@ -318,77 +190,22 @@ const navigationItems: NavigationItem[] = [
       </span>
     )
   },
-  { name: "Affiliate Payments", path: "/affiliate/payments", icon: DollarSign },
-  { 
-    name: "MightyMail", 
-    path: "/admin/mightymail", 
-    icon: Mail,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Mighty</span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Mail</span>
-        <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "Campaign Sender", 
-    path: "/mightymail/campaign-sender", 
-    icon: Send,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Campaign </span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Sender</span>
-      </span>
-    )
-  },
-  { 
-    name: "Quotes & Retargeting", 
-    path: "/admin/mightymail/quotes", 
-    icon: Mail,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Quotes & </span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Retargeting</span>
-      </span>
-    )
-  },
-  { 
-    name: "Quote Stats", 
-    path: "/admin/mightymail/stats", 
-    icon: BarChart3,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Quote </span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Stats</span>
-      </span>
-    )
-  },
-  { name: "Product Admin", path: "/admin/products", icon: Settings },
-  { name: "Dashboard Hero", path: "/admin/dashboard-hero", icon: Settings },
+];
+
+// ACCOUNT: Settings and products
+const accountItems: NavigationItem[] = [
+  { name: "My Products", path: "/settings/my-products", icon: DollarSign, roles: ["beta_shop", "admin"] },
+  { name: "Settings", path: "/settings", icon: Settings, roles: ["beta_shop", "affiliate", "admin"] },
+];
+
+// ADMIN ONLY: Internal tools
+const adminItems: NavigationItem[] = [
   { name: "Vehicle Admin", path: "/admin/vehicles", icon: Car },
   { name: "Organizations", path: "/admin/organizations", icon: Users },
   { 
-    name: "Ops Desk", 
-    path: "/admin/website-agent", 
-    icon: Activity,
-    roles: ["admin", "beta_shop"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Ops </span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Desk</span>
-      </span>
-    )
-  },
-  { 
     name: "Jordan Control", 
-    path: "/jordan-lee-admin", 
+    path: "/admin/website-agent", 
     icon: Power,
-    roles: ["admin"],
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Jordan </span>
@@ -398,55 +215,80 @@ const navigationItems: NavigationItem[] = [
   },
 ];
 
+const sections: NavigationSection[] = [
+  { title: "Core", items: coreItems },
+  { title: "Operations", items: operationsItems },
+  { title: "Tools", items: toolsItems },
+  { title: "Onboarding", items: onboardingItems },
+  { title: "Affiliate", items: affiliateItems },
+  { title: "Account", items: accountItems },
+  { title: "Admin", items: adminItems },
+];
+
 export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
   const { role, isLoading } = useUserRole();
 
-  // During loading, show beta_shop items as default to prevent flash
-  // This ensures MightyChat is visible while role is being determined
   const effectiveRole = isLoading ? "beta_shop" : role;
-  
-  console.log('[Sidebar] Role:', role, 'isLoading:', isLoading, 'effectiveRole:', effectiveRole);
 
-  // Filter navigation items based on user role
-  const filteredNavItems = navigationItems.filter((item) => {
-    // If no roles specified, only admin can see it
-    if (!item.roles) {
-      return effectiveRole === "admin";
-    }
-    // Check if user's role is in the allowed roles
-    return item.roles.includes(effectiveRole);
-  });
+  // Filter items based on role
+  const filterItems = (items: NavigationItem[]) => {
+    return items.filter((item) => {
+      if (!item.roles) {
+        return effectiveRole === "admin";
+      }
+      return item.roles.includes(effectiveRole);
+    });
+  };
 
   return (
     <aside className="flex flex-col w-full h-full bg-sidebar border-r border-sidebar-border">
-      <div className="px-3 py-8 border-b border-sidebar-border">
+      <div className="px-3 py-6 border-b border-sidebar-border">
         <img 
           src={logo} 
           alt="WrapCommand AI" 
-          className="w-full h-24 object-contain" 
+          className="w-full h-20 object-contain" 
         />
       </div>
       
-      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        {filteredNavItems.map((item) => {
-          const Icon = item.icon;
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        {sections.map((section) => {
+          const filteredItems = filterItems(section.items);
+          
+          // Don't render empty sections
+          if (filteredItems.length === 0) return null;
+          
+          // Hide Admin section from non-admins
+          if (section.title === "Admin" && effectiveRole !== "admin") return null;
+          
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={() => onMobileClose?.()}
-              className="flex items-center gap-3 px-3 py-2.5 text-sm text-sidebar-foreground hover:text-foreground hover:bg-white/5 transition-all rounded-lg relative"
-              activeClassName="text-foreground bg-white/5 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-gradient-primary before:rounded-r"
-            >
-              <Icon className="w-[18px] h-[18px]" strokeWidth={1.5} />
-              {item.customRender || <span className="font-medium">{item.name}</span>}
-            </NavLink>
+            <div key={section.title}>
+              <p className="px-3 mb-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                {section.title}
+              </p>
+              <div className="space-y-0.5">
+                {filteredItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => onMobileClose?.()}
+                      className="flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground hover:text-foreground hover:bg-white/5 transition-all rounded-lg relative"
+                      activeClassName="text-foreground bg-white/5 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-gradient-primary before:rounded-r"
+                    >
+                      <Icon className="w-4 h-4" strokeWidth={1.5} />
+                      {item.customRender || <span className="font-medium">{item.name}</span>}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>
 
       <div className="p-3 border-t border-sidebar-border">
-        <div className="px-3 py-2.5 rounded-xl bg-white/[0.02] border border-border">
+        <div className="px-3 py-2 rounded-xl bg-white/[0.02] border border-border">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-foreground">
