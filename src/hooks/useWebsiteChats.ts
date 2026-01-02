@@ -60,9 +60,9 @@ interface MessageMetadata {
 
 export function useWebsiteChats() {
   const query = useQuery({
-    queryKey: ['jordan-lee-website-chats'],
+    queryKey: ['website-page-chats'],
     queryFn: async (): Promise<ChatConversation[]> => {
-      // Fetch conversations with website channel handled by Jordan Lee only
+      // Fetch ALL website channel conversations (channel = wall, not agent)
       const { data: conversations, error } = await supabase
         .from('conversations')
         .select(`
@@ -79,7 +79,6 @@ export function useWebsiteChats() {
           metadata
         `)
         .eq('channel', 'website')
-        .eq('metadata->>agent', 'jordan_lee')
         .order('last_message_at', { ascending: false })
         .limit(200);
 
@@ -151,23 +150,22 @@ export function useWebsiteChats() {
   };
 }
 
-// Stats hook
+// Stats hook - channel-scoped only (no agent filter)
 export function useWebsiteChatStats() {
   return useQuery({
-    queryKey: ['jordan-lee-chat-stats'],
+    queryKey: ['website-page-chat-stats'],
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Total Jordan Lee chats today
+      // Website chats today (channel = wall)
       const { count: totalToday } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
         .eq('channel', 'website')
-        .eq('metadata->>agent', 'jordan_lee')
         .gte('created_at', today.toISOString());
 
-      // Emails captured today from Jordan Lee chats
+      // Emails captured today from website chat
       const { count: emailsCaptured } = await supabase
         .from('contacts')
         .select('*', { count: 'exact', head: true })
@@ -176,12 +174,11 @@ export function useWebsiteChatStats() {
         .not('email', 'ilike', '%@capture.local%')
         .gte('created_at', today.toISOString());
 
-      // Active Jordan Lee conversations
+      // Active website conversations
       const { count: activeConversations } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
         .eq('channel', 'website')
-        .eq('metadata->>agent', 'jordan_lee')
         .eq('status', 'open');
 
       return {
