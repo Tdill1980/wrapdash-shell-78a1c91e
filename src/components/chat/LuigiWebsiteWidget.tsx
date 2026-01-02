@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { 
   MessageCircle, X, Send, DollarSign, 
-  Package, HelpCircle, Mail, Clock, Palette
+  Package, HelpCircle, Mail, Truck, Users, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,23 +14,27 @@ interface Message {
   isTyping?: boolean;
 }
 
+// Reordered for sales focus - pricing first
 const QUICK_ACTIONS = [
   { 
     icon: DollarSign, 
-    label: "How much does a wrap cost?", 
-    message: "How much does a wrap cost?",
+    label: "💲 Get wrap pricing", 
+    message: "I need wrap pricing for my vehicle",
     primary: true 
   },
+  { icon: FileText, label: "Get an exact quote", message: "I want to get an exact quote" },
+  { icon: Users, label: "Fleet / bulk pricing", message: "I need fleet or bulk pricing" },
   { icon: Package, label: "How do I order?", message: "How do I place an order?" },
-  { icon: Mail, label: "Email my quote", message: "I need my quote emailed to me" },
+  { icon: Truck, label: "Production & Shipping", message: "Tell me about production time and shipping" },
   { icon: HelpCircle, label: "Order status", message: "I want to check my order or quote status" },
-  { icon: Palette, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
-  { icon: Clock, label: "Production & Shipping", message: "Tell me about production time and shipping" },
 ];
 
 const SAMPLE_QUESTIONS = [
   "Get an exact quote",
 ];
+
+// Session storage key for auto-open tracking
+const AUTO_OPEN_KEY = 'wpw-chat-auto-opened';
 
 export function LuigiWebsiteWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,7 +43,24 @@ export function LuigiWebsiteWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `wpw-${crypto.randomUUID()}`);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-open after 12 seconds (once per session)
+  useEffect(() => {
+    const alreadyOpened = sessionStorage.getItem(AUTO_OPEN_KEY);
+    if (alreadyOpened || isOpen) return;
+
+    const timer = setTimeout(() => {
+      if (!isOpen && !hasAutoOpened) {
+        setIsOpen(true);
+        setHasAutoOpened(true);
+        sessionStorage.setItem(AUTO_OPEN_KEY, 'true');
+      }
+    }, 12000);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, hasAutoOpened]);
 
   // Add welcome message when chat opens
   useEffect(() => {
@@ -48,7 +69,7 @@ export function LuigiWebsiteWidget() {
         {
           id: "welcome",
           role: "assistant",
-          content: "Hey! I'm Jordan with WePrintWraps.com. What can I help you with today?",
+          content: "Need wrap pricing? I can give you a fast estimate or send an exact quote.",
         },
       ]);
     }
@@ -161,34 +182,40 @@ export function LuigiWebsiteWidget() {
     }
   };
 
-  // Floating bubble when closed
+  // Floating bubble when closed - moved up and left slightly for better visibility
   if (!isOpen) {
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className={cn(
-          "fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full",
-          "bg-gradient-to-br from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
-          "text-white shadow-2xl flex items-center justify-center",
-          "transition-all duration-300 ease-out",
-          "hover:scale-110 hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]",
-          "before:absolute before:inset-0 before:rounded-full",
-          "before:bg-gradient-to-br before:from-[#2563EB] before:via-[#7C3AED] before:to-[#A855F7]",
-          "before:animate-ping before:opacity-30"
-        )}
-        style={{
-          boxShadow: "0 4px 20px rgba(124, 58, 237, 0.4), 0 0 40px rgba(37, 99, 235, 0.2)"
-        }}
-      >
-        <MessageCircle className="w-7 h-7 relative z-10" />
-      </button>
+      <div className="fixed bottom-20 right-8 z-50 flex flex-col items-end gap-2">
+        {/* Teaser text */}
+        <div className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm font-medium text-slate-700 animate-in fade-in slide-in-from-right-2 duration-500">
+          Need wrap pricing? 💬
+        </div>
+        <button
+          onClick={() => setIsOpen(true)}
+          className={cn(
+            "w-16 h-16 rounded-full",
+            "bg-gradient-to-br from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
+            "text-white shadow-2xl flex items-center justify-center",
+            "transition-all duration-300 ease-out",
+            "hover:scale-110 hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]",
+            "before:absolute before:inset-0 before:rounded-full",
+            "before:bg-gradient-to-br before:from-[#2563EB] before:via-[#7C3AED] before:to-[#A855F7]",
+            "before:animate-ping before:opacity-30"
+          )}
+          style={{
+            boxShadow: "0 4px 20px rgba(124, 58, 237, 0.4), 0 0 40px rgba(37, 99, 235, 0.2)"
+          }}
+        >
+          <MessageCircle className="w-7 h-7 relative z-10" />
+        </button>
+      </div>
     );
   }
 
   return (
     <div 
       className={cn(
-        "fixed bottom-6 right-6 z-50",
+        "fixed bottom-20 right-8 z-50",
         "w-[400px] max-w-[calc(100vw-48px)]",
         "h-[600px] max-h-[calc(100vh-100px)]",
         "bg-white backdrop-blur-xl",
@@ -200,6 +227,13 @@ export function LuigiWebsiteWidget() {
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 60px rgba(131, 58, 180, 0.1)"
       }}
     >
+      {/* Trust Signal Badge */}
+      <div className="bg-slate-900 px-4 py-1.5 text-center">
+        <span className="text-xs text-slate-300">
+          ✨ Live wrap pricing help • Real team • Fast replies
+        </span>
+      </div>
+
       {/* Header */}
       <div className="relative bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7] px-4 py-4">
         <div className="absolute inset-0 bg-black/10" />
@@ -215,7 +249,7 @@ export function LuigiWebsiteWidget() {
               </span>
               <span className="text-white/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                WPW Live Chat Agent • Online
+                Wrap Pricing Expert • Online
               </span>
             </div>
           </div>
