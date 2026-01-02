@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Globe, Mail, Palette, MessageCircle, Cog, TrendingUp, AlertTriangle, Flame, Users, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
-export type WorkStream = "website" | "hello" | "design" | "jackson" | "dms" | "ops";
+export type WorkStream = "hello" | "design" | "jackson" | "dms" | "ops";
 
 interface StreamConfig {
   id: WorkStream;
@@ -17,15 +17,6 @@ interface StreamConfig {
 }
 
 const STREAMS: StreamConfig[] = [
-  { 
-    id: "website", 
-    label: "Website Leads", 
-    agentName: "Jordan Lee",
-    inboxLabel: "Website Chat",
-    icon: <Globe className="w-4 h-4" />,
-    color: "text-blue-500",
-    activeColor: "bg-blue-500/10 border-blue-500/50 text-blue-600 shadow-sm"
-  },
   { 
     id: "hello", 
     label: "hello@ Inbox", 
@@ -60,7 +51,7 @@ const STREAMS: StreamConfig[] = [
     id: "dms", 
     label: "Social DMs", 
     agentName: "Casey Ramirez",
-    inboxLabel: "Instagram DMs",
+    inboxLabel: "Instagram / Facebook",
     icon: <MessageCircle className="w-4 h-4" />,
     color: "text-pink-500",
     activeColor: "bg-pink-500/10 border-pink-500/50 text-pink-600 shadow-sm"
@@ -91,7 +82,6 @@ interface WorkStreamsSidebarProps {
   onStreamChange: (stream: WorkStream) => void;
   onOpenOpsDesk: () => void;
   counts?: {
-    website?: number;
     hello?: number;
     design?: number;
     jackson?: number;
@@ -142,7 +132,7 @@ export function WorkStreamsSidebar({
           // Signal indicators
           const showRevenue = stream.id === 'hello' && signals.quoteValue && signals.quoteValue > 0;
           const showCxRisk = stream.id === 'hello' && signals.cxRiskCount && signals.cxRiskCount > 0;
-          const showHotLead = stream.id === 'website' && signals.hotLeads && signals.hotLeads > 0;
+          const showHotLead = false;
           const showPendingReview = stream.id === 'design' && signals.pendingReviews && signals.pendingReviews > 0;
           const hasSignal = showRevenue || showCxRisk || showHotLead || showPendingReview;
 
@@ -200,12 +190,6 @@ export function WorkStreamsSidebar({
               {/* Signal indicators */}
               {hasSignal && (
                 <div className="flex items-center gap-1.5 mt-1.5 pl-6">
-                  {showHotLead && (
-                    <span className="text-[9px] text-orange-500 flex items-center gap-0.5 animate-pulse">
-                      <Flame className="w-2.5 h-2.5" />
-                      {signals.hotLeads} hot
-                    </span>
-                  )}
                   {showRevenue && (
                     <span className="text-[9px] text-emerald-600 flex items-center gap-0.5">
                       <TrendingUp className="w-2.5 h-2.5" />
@@ -261,25 +245,23 @@ export function WorkStreamsSidebar({
 // Helper to map old AgentInbox types to WorkStream
 export function mapInboxToStream(inbox: string): WorkStream {
   switch (inbox) {
-    case "website": return "website";
     case "hello": return "hello";
     case "design": return "design";
     case "jackson": return "jackson";
     case "dms": return "dms";
     case "ops_desk": return "ops";
-    default: return "website";
+    default: return "hello";
   }
 }
 
 // Helper to map WorkStream back to AgentInbox for data queries
 export function mapStreamToInbox(stream: WorkStream): string {
   switch (stream) {
-    case "website": return "website";
     case "hello": return "hello";
     case "design": return "design";
     case "jackson": return "jackson";
     case "dms": return "dms";
     case "ops": return "ops_desk";
-    default: return "website";
+    default: return "hello";
   }
 }

@@ -69,8 +69,11 @@ export function QuotesTab() {
       const { data, error } = await supabase
         .from("quotes")
         .select("*")
+        // Website Page Chat only (never include Instagram/email sourced quotes here)
+        .or("source.eq.website_chat,source.eq.website")
         .order("created_at", { ascending: false })
         .limit(100);
+
 
       if (error) throw error;
 
