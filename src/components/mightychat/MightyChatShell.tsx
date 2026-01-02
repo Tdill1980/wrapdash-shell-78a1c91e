@@ -28,15 +28,15 @@ export function MightyChatShell() {
     let stream = searchParams.get("stream") as WorkStream | null;
     
     // Map legacy "quotes" to "hello" for backward compatibility
-    if (stream === "quotes" as string) {
+    if (stream === ("quotes" as string) || stream === ("website" as string)) {
       stream = "hello";
     }
-    
+
     if (id) {
       setSelectedConversationId(id);
       setMode("chat");
-      
-      if (stream && ["website", "hello", "design", "jackson", "dms", "ops"].includes(stream)) {
+
+      if (stream && ["hello", "design", "jackson", "dms", "ops"].includes(stream)) {
         setInitialStream(stream);
       }
     }

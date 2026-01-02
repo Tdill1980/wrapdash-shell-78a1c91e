@@ -192,13 +192,6 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
     reason: string;
     action?: string;
   }> = {
-    website: {
-      title: "Website Leads",
-      agent: "Jordan Lee",
-      inputs: ["Website Chat Widget"],
-      reason: "Chat widget may not be deployed on weprintwraps.com, or no visitors have started a chat yet.",
-      action: "Check if embed code is placed before </body> tag on website"
-    },
     hello: {
       title: "hello@ Inbox",
       agent: "Alex Morgan",
@@ -324,12 +317,13 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   useEffect(() => {
     if (initialConversationChannel) {
       const channel = initialConversationChannel.toLowerCase();
-      if (channel === 'website' || channel === 'website_chat') {
-        setActiveStream('website');
-      } else if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') {
+      if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') {
         setActiveStream('dms');
       } else if (channel === 'email') {
         // Default to hello@ for email, the specific inbox will be shown
+        setActiveStream('hello');
+      } else {
+        // MightyChats = Social + Email only (website chat lives in Website Page Chat dashboard)
         setActiveStream('hello');
       }
     }
@@ -371,6 +365,8 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
         *,
         contacts:contact_id (name, email)
       `)
+      // MightyChats is ONLY Social DMs + Email
+      .in("channel", ["instagram", "facebook", "messenger", "email"])
       .or(`last_message_at.gte.${sinceIso},and(last_message_at.is.null,created_at.gte.${sinceIso})`)
       .order("last_message_at", { ascending: false })
       .order("created_at", { ascending: false })
@@ -440,13 +436,10 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   // Map conversation to stream
   const getConversationStream = (conv: Conversation): WorkStream => {
     const channel = conv.channel?.toLowerCase() || '';
-    
-    // Website chat (both 'website' and 'website_chat')
-    if (channel === 'website' || channel === 'website_chat') return 'website';
-    
+
     // Social DMs (Instagram, Facebook)
     if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') return 'dms';
-    
+
     // Email routing based on inbox
     if (channel === 'email') {
       const inbox = conv.recipient_inbox?.toLowerCase() || '';
@@ -455,7 +448,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       // hello, general, or any other email goes to hello
       return 'hello';
     }
-    
+
     // Default to hello for any unknown channel
     return 'hello';
   };
@@ -470,7 +463,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
   // Compute stream counts - use same logic as getConversationStream
   const streamCounts = useMemo(() => {
-    const counts: Record<WorkStream, number> = { website: 0, hello: 0, design: 0, jackson: 0, dms: 0, ops: 0 };
+    const counts: Record<WorkStream, number> = { hello: 0, design: 0, jackson: 0, dms: 0, ops: 0 };
     conversations.forEach(conv => {
       const stream = getConversationStream(conv);
       counts[stream]++;
@@ -491,7 +484,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
   // Compute signals for sidebar
   const streamSignals = useMemo(() => ({
-    hotLeads: conversations.filter(c => c.channel === 'website' && c.priority === 'urgent').length,
+    hotLeads: 0,
     cxRiskCount: conversations.filter(c => c.priority === 'urgent' || c.priority === 'high').length,
     pendingReviews: conversations.filter(c => c.review_status === 'pending_review').length,
     quoteValue: 0 // Would come from actual quote data
@@ -657,7 +650,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
       {/* Mobile Stream Tabs */}
       <div className="flex lg:hidden gap-1 mb-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {(['website', 'hello', 'design', 'jackson', 'dms'] as const).map((stream) => (
+        {(['hello', 'design', 'jackson', 'dms'] as const).map((stream) => (
           <Button
             key={stream}
             variant={activeStream === stream ? "default" : "outline"}
@@ -665,7 +658,6 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
             className="text-xs whitespace-nowrap flex-shrink-0"
             onClick={() => setActiveStream(stream)}
           >
-            {stream === 'website' && '🌐'}
             {stream === 'hello' && '📧'}
             {stream === 'design' && '🎨'}
             {stream === 'jackson' && '👤'}
