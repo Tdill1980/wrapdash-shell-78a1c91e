@@ -60,9 +60,9 @@ interface MessageMetadata {
 
 export function useWebsiteChats() {
   const query = useQuery({
-    queryKey: ['website-chats'],
+    queryKey: ['jordan-lee-website-chats'],
     queryFn: async (): Promise<ChatConversation[]> => {
-      // Fetch conversations with website channel (Jordan Lee chats from weprintwraps.com)
+      // Fetch conversations with website channel handled by Jordan Lee only
       const { data: conversations, error } = await supabase
         .from('conversations')
         .select(`
@@ -79,6 +79,7 @@ export function useWebsiteChats() {
           metadata
         `)
         .eq('channel', 'website')
+        .eq('metadata->>agent', 'jordan_lee')
         .order('last_message_at', { ascending: false })
         .limit(200);
 
@@ -153,19 +154,20 @@ export function useWebsiteChats() {
 // Stats hook
 export function useWebsiteChatStats() {
   return useQuery({
-    queryKey: ['website-chat-stats'],
+    queryKey: ['jordan-lee-chat-stats'],
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Total chats today
+      // Total Jordan Lee chats today
       const { count: totalToday } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
         .eq('channel', 'website')
+        .eq('metadata->>agent', 'jordan_lee')
         .gte('created_at', today.toISOString());
 
-      // Emails captured today
+      // Emails captured today from Jordan Lee chats
       const { count: emailsCaptured } = await supabase
         .from('contacts')
         .select('*', { count: 'exact', head: true })
@@ -174,11 +176,12 @@ export function useWebsiteChatStats() {
         .not('email', 'ilike', '%@capture.local%')
         .gte('created_at', today.toISOString());
 
-      // Active conversations
+      // Active Jordan Lee conversations
       const { count: activeConversations } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
         .eq('channel', 'website')
+        .eq('metadata->>agent', 'jordan_lee')
         .eq('status', 'open');
 
       return {
