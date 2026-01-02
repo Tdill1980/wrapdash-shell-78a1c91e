@@ -22,7 +22,7 @@ const TABS = [
   { id: "wrapguru", label: "WrapGuru", icon: Car, color: "bg-purple-500" },
   { id: "corrections", label: "Corrections", icon: FileEdit, color: "bg-red-500" },
   { id: "knowledge", label: "Knowledge Base", icon: BookOpen, color: "bg-teal-500" },
-  { id: "chats", label: "Chat Sessions", icon: MessageSquare, color: "bg-blue-500" },
+  { id: "chats", label: "Website Page Chat", icon: MessageSquare, color: "bg-blue-500" },
   { id: "quotes", label: "Quotes", icon: FileText, color: "bg-indigo-500" },
   { id: "files", label: "File Analysis", icon: FolderSearch, color: "bg-pink-500" },
   { id: "reviews", label: "Reviews", icon: Star, color: "bg-yellow-500" },
@@ -40,10 +40,10 @@ export default function JordanLeeAdminDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">
-              Jordan Lee <span className="text-primary">Admin Dashboard</span>
+              Website Page Chat — <span className="text-primary">WePrintWraps.com</span>
             </h1>
             <p className="text-sm text-muted-foreground">
-              Manage Jordan's knowledge base and monitor chat sessions
+              Monitor and manage live website chat conversations from weprintwraps.com
             </p>
           </div>
           <div className="flex items-center gap-3">

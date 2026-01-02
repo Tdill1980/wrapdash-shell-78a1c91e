@@ -81,7 +81,7 @@ export function ChatTranscriptViewer() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.totalToday || 0}</p>
-                <p className="text-xs text-muted-foreground">Chats Today</p>
+                <p className="text-xs text-muted-foreground">Website Chats Today</p>
               </div>
             </div>
           </CardContent>
@@ -123,7 +123,7 @@ export function ChatTranscriptViewer() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.activeConversations || 0}</p>
-                <p className="text-xs text-muted-foreground">Active Chats</p>
+                <p className="text-xs text-muted-foreground">Website Chats Active</p>
               </div>
             </div>
           </CardContent>
@@ -135,7 +135,7 @@ export function ChatTranscriptViewer() {
         {/* Left: Session List */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Jordan Lee Chat Sessions</h2>
+            <h2 className="text-xl font-bold">Website Page Chat Sessions</h2>
             <div className="flex items-center gap-2">
               <Button 
                 variant={todayOnly ? "default" : "outline"} 
@@ -155,7 +155,7 @@ export function ChatTranscriptViewer() {
             </div>
           </div>
 
-          <h3 className="text-lg font-semibold mb-3">Recent Sessions</h3>
+          <h3 className="text-lg font-semibold mb-3">Recent Website Conversations</h3>
 
           {/* Filters */}
           <div className="flex flex-wrap gap-3 mb-4">
@@ -185,7 +185,7 @@ export function ChatTranscriptViewer() {
                 <SelectValue placeholder="Escalations" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Chats</SelectItem>
+                <SelectItem value="all">Website Chats</SelectItem>
                 <SelectItem value="any">Has Escalation</SelectItem>
                 <SelectItem value="jackson">Jackson</SelectItem>
                 <SelectItem value="lance">Lance</SelectItem>
