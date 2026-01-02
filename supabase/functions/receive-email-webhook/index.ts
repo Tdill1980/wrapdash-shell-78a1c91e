@@ -2,6 +2,10 @@
 // Email webhook with MCP agent routing: Alex (hello@), Grant (design@), Jackson (ops_desk)
 // Now auto-generates quotes for pricing inquiries (pending approval)
 // Now caches email attachments immediately to Supabase Storage
+//
+// ⛔ EMAIL INGESTION DISABLED - 2026-01-02
+// MightyChats frozen per admin request. Uncomment KILL_SWITCH to re-enable.
+const KILL_SWITCH_EMAIL = true; // Set to false to re-enable
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -110,6 +114,15 @@ serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // ⛔ KILL SWITCH: Email ingestion disabled
+  if (KILL_SWITCH_EMAIL) {
+    console.log("⛔ EMAIL KILL SWITCH ACTIVE - Ignoring inbound email");
+    return new Response(JSON.stringify({ status: 'disabled', message: 'Email ingestion temporarily disabled' }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
