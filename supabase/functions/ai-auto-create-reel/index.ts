@@ -727,9 +727,10 @@ Return JSON ONLY:
     // Step 3: Fetch videos from media library (with visual_tags, excluding inspo)
     let query = supabase
       .from("content_files")
-      .select("id, file_url, original_filename, duration_seconds, tags, content_category, thumbnail_url, created_at, visual_tags")
+      .select("id, file_url, original_filename, duration_seconds, tags, content_category, thumbnail_url, created_at, visual_tags, mux_playback_id")
       .eq("file_type", "video")
       .neq("content_category", "inspo_reference")
+      .not("mux_playback_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(max_videos || 50);
 
@@ -757,10 +758,71 @@ Return JSON ONLY:
       });
     }
 
-    console.log(`Found ${videos.length} videos, applying style + visual tag scoring...`);
+    // ═══════════════════════════════════════════════════════════════
+    // DETERMINISTIC TAG-BASED SELECTION (NEW ARCHITECTURE)
+    // Fetch media_tags and media_analysis for all videos
+    // ═══════════════════════════════════════════════════════════════
+    const videoIds = videos.map(v => v.id);
+    
+    const [mediaTagsResult, mediaAnalysisResult] = await Promise.all([
+      supabase.from("media_tags").select("asset_id, tag, locked, source").in("asset_id", videoIds),
+      supabase.from("media_analysis").select("*").in("asset_id", videoIds),
+    ]);
+
+    // Build lookup maps
+    const tagsByVideo = new Map<string, string[]>();
+    if (mediaTagsResult.data) {
+      for (const row of mediaTagsResult.data) {
+        const existing = tagsByVideo.get(row.asset_id) || [];
+        existing.push(row.tag);
+        tagsByVideo.set(row.asset_id, existing);
+      }
+    }
+
+    const analysisByVideo = new Map<string, any>();
+    if (mediaAnalysisResult.data) {
+      for (const row of mediaAnalysisResult.data) {
+        analysisByVideo.set(row.asset_id, row);
+      }
+    }
+
+    console.log(`Found ${videos.length} videos, ${tagsByVideo.size} with media_tags, ${analysisByVideo.size} with media_analysis`);
+
+    // ═══════════════════════════════════════════════════════════════
+    // TOPIC-TO-TAGS: Convert topic into required/forbidden tags
+    // ═══════════════════════════════════════════════════════════════
+    function topicToRequiredTags(topicStr: string): string[] {
+      const t = topicStr.toLowerCase();
+      const tags: string[] = [];
+      
+      if (t.includes("wrap") || t.includes("install")) tags.push("wrap_install");
+      if (t.includes("fleet") || t.includes("commercial")) tags.push("fleet", "commercial");
+      if (t.includes("reveal") || t.includes("transform")) tags.push("reveal");
+      if (t.includes("before") && t.includes("after")) tags.push("before_after");
+      if (t.includes("color change")) tags.push("color_change");
+      if (t.includes("truck") || t.includes("van")) tags.push("commercial");
+      if (t.includes("peel") || t.includes("satisfying")) tags.push("peel");
+      
+      // If no specific tags, default to vehicle content
+      if (tags.length === 0) tags.push("vehicle");
+      
+      return [...new Set(tags)];
+    }
+
+    const requiredTags = topic ? topicToRequiredTags(topic) : [];
+    console.log(`Topic "${topic}" → required tags: ${requiredTags.join(", ")}`);
+
+    // Enrich videos with tags and analysis for scoring
+    const videosWithTags = videos.map(v => ({
+      ...v,
+      mediaTags: tagsByVideo.get(v.id) || [],
+      mediaAnalysis: analysisByVideo.get(v.id) || null,
+    }));
+
+    console.log(`Found ${videos.length} videos, applying deterministic tag-based selection...`);
 
     // Filter out already-edited content
-    const rawVideos = videos.filter(v => {
+    const rawVideos = videosWithTags.filter(v => {
       const filename = (v.original_filename || "").toLowerCase();
       return !filename.includes("reel") && 
              !filename.includes("edited") && 
@@ -783,47 +845,89 @@ Return JSON ONLY:
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // STYLE-BASED TAG FILTERING (NEW!)
+    // DETERMINISTIC TAG-BASED FILTERING (NEW ARCHITECTURE)
+    // Use media_tags for precise filtering - AI annotates, system decides
+    // ═══════════════════════════════════════════════════════════════
+    let tagFilteredVideos = rawVideos;
+    let tagFilterApplied = false;
+
+    if (requiredTags.length > 0) {
+      const tagMatched = rawVideos.filter(v => {
+        const videoTags = v.mediaTags || [];
+        // Must have at least one required tag
+        return requiredTags.some(rt => videoTags.includes(rt));
+      });
+      
+      console.log(`Tag filter: ${tagMatched.length}/${rawVideos.length} clips match required tags [${requiredTags.join(", ")}]`);
+      
+      if (tagMatched.length >= 3) {
+        tagFilteredVideos = tagMatched;
+        tagFilterApplied = true;
+        console.log(`✅ Using ${tagMatched.length} tag-matched clips`);
+      } else {
+        console.log(`⚠️ Only ${tagMatched.length} clips match required tags, including untagged as fallback`);
+        // Prioritize tag-matched, then include others
+        tagFilteredVideos = [
+          ...tagMatched,
+          ...rawVideos.filter(v => !tagMatched.includes(v))
+        ];
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // STYLE-BASED TAG FILTERING
     // If a Dara format is selected, filter clips by matching style tags
     // ═══════════════════════════════════════════════════════════════
-    let styleFilteredVideos = rawVideos;
+    let styleFilteredVideos = tagFilteredVideos;
     let styleFilterApplied = false;
 
     if (dara_format && STYLE_TAG_RULES[dara_format]) {
-      const styleMatched = filterByStyleTags(rawVideos, dara_format);
-      console.log(`Style filter "${dara_format}": ${styleMatched.length}/${rawVideos.length} clips match tags`);
+      const styleMatched = filterByStyleTags(tagFilteredVideos, dara_format);
+      console.log(`Style filter "${dara_format}": ${styleMatched.length}/${tagFilteredVideos.length} clips match tags`);
       
       if (styleMatched.length >= 3) {
         styleFilteredVideos = styleMatched;
         styleFilterApplied = true;
         console.log(`✅ Using ${styleMatched.length} style-matched clips for ${dara_format}`);
       } else {
-        console.log(`⚠️ Only ${styleMatched.length} clips match style, using all raw clips as fallback`);
-        // Still prefer style-matched clips but include others
+        console.log(`⚠️ Only ${styleMatched.length} clips match style, using all filtered clips as fallback`);
         styleFilteredVideos = [
           ...styleMatched,
-          ...rawVideos.filter(v => !styleMatched.includes(v))
+          ...tagFilteredVideos.filter(v => !styleMatched.includes(v))
         ];
       }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // SCORE + FILTER + FAIL-LOUD
+    // SCORE + FILTER + DETERMINISTIC SELECTION
     // ═══════════════════════════════════════════════════════════════
     const intent = getIntent(topic || "", content_type || "");
     const SCORE_THRESHOLD = 10;
 
     const scored = styleFilteredVideos
       .map(v => {
-        // Combine visual_tags score + style_tags score
+        // Combine visual_tags score + style_tags score + media_tags bonus
         const visualScore = scoreVideoForTopic(v, intent);
         const styleScore = dara_format ? scoreByStyleMatch(v, dara_format) * 5 : 0;
-        return { ...v, score: visualScore + styleScore, styleScore };
+        
+        // BONUS: Score boost for videos with locked system tags matching required tags
+        const mediaTagBonus = requiredTags.filter(rt => (v.mediaTags || []).includes(rt)).length * 10;
+        
+        // BONUS: Score boost for videos with media_analysis data
+        const analysisBonus = v.mediaAnalysis ? 5 : 0;
+        
+        return { 
+          ...v, 
+          score: visualScore + styleScore + mediaTagBonus + analysisBonus, 
+          styleScore,
+          mediaTagBonus,
+          matchedTags: requiredTags.filter(rt => (v.mediaTags || []).includes(rt))
+        };
       })
-      .filter(v => v.score > SCORE_THRESHOLD || (styleFilterApplied && v.styleScore > 0))
+      .filter(v => v.score > SCORE_THRESHOLD || tagFilterApplied || (styleFilterApplied && v.styleScore > 0))
       .sort((a, b) => b.score - a.score);
 
-    console.log(`Scoring complete: ${scored.length} videos qualify (threshold: ${SCORE_THRESHOLD}, style_filter: ${styleFilterApplied})`);
+    console.log(`Scoring complete: ${scored.length} videos qualify (threshold: ${SCORE_THRESHOLD}, tag_filter: ${tagFilterApplied}, style_filter: ${styleFilterApplied})`);
 
     // ═══════════════════════════════════════════════════════════════
     // FALLBACK MODE: If not enough qualifying clips, use best available
@@ -842,11 +946,23 @@ Return JSON ONLY:
         .sort((a, b) => (b.visual_tags?.quality_score ?? 0) - (a.visual_tags?.quality_score ?? 0));
       
       if (vehicleVideos.length >= 3) {
-        finalCandidates = vehicleVideos.slice(0, 10).map(v => ({ ...v, score: v.visual_tags?.quality_score ?? 50, styleScore: 0 }));
+        finalCandidates = vehicleVideos.slice(0, 10).map(v => ({ 
+          ...v, 
+          score: v.visual_tags?.quality_score ?? 50, 
+          styleScore: 0,
+          mediaTagBonus: 0,
+          matchedTags: [] as string[]
+        }));
         console.log(`Fallback 1: Using ${finalCandidates.length} vehicle clips by quality`);
       } else {
         // Fallback 2: Use any raw videos sorted by recency
-        finalCandidates = rawVideos.slice(0, 10).map(v => ({ ...v, score: 25, styleScore: 0 }));
+        finalCandidates = rawVideos.slice(0, 10).map(v => ({ 
+          ...v, 
+          score: 25, 
+          styleScore: 0,
+          mediaTagBonus: 0,
+          matchedTags: [] as string[]
+        }));
         console.log(`Fallback 2: Using ${finalCandidates.length} most recent raw clips`);
         confidence = "low";
       }
