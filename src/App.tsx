@@ -91,6 +91,7 @@ import QuoteStatsDashboard from "./pages/QuoteStatsDashboard";
 import TagManager from "./pages/TagManager";
 import Backlog from "./pages/Backlog";
 import ContentDrafts from "./pages/ContentDrafts";
+import ContentStudio from "./pages/ContentStudio";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -108,6 +109,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/studio" element={<ContentStudio />} />
             <Route path="/issues" element={<IssuesDashboard />} />
             <Route path="/ai-approvals" element={<AIApprovals />} />
             <Route path="/wrapcloser" element={<WrapCloser />} />
