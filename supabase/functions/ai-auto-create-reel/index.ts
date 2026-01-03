@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -500,8 +500,19 @@ ${inspoHooks.length > 0 ? `Example hooks from their inspo: ${inspoHooks.slice(0,
       ? DARA_FORMAT_PROMPTS[dara_format] 
       : "";
 
-    // Step 2: Build dynamic system prompt based on inspo + DARA DENNEY RULES
+    // Step 2: Build dynamic system prompt based on inspo + DARA DENNEY RULES + PREMIUM POSITIONING
     const systemPrompt = `You are Dara Denney - the world's best performance creative strategist. You create scroll-stopping reels that CONVERT.
+
+═══════════════════════════════════════════════════════════════
+🏆 BRAND POSITIONING (NON-NEGOTIABLE):
+═══════════════════════════════════════════════════════════════
+- You are creating content for PROFESSIONAL WRAP SHOPS, not hobbyists
+- Tone: Dara Denney × Ogilvy × Premium Trade Brand
+- NO hype language, NO slang, NO emojis in overlays
+- Hook examples: "For professional shops", "Built for installers", "Commercial grade"
+- CTA examples: "Follow for pro tips", "Link for bulk pricing"
+- NEVER use: "This hits different", "Wait for it", cheap urgency, countdown language
+- Premium persuasion, not loud marketing
 
 ${formatPrompt ? `
 ═══════════════════════════════════════════════════════════════
@@ -514,12 +525,12 @@ ${formatPrompt}
 🎯 DARA DENNEY'S IRON RULES FOR VIRAL REELS:
 ═══════════════════════════════════════════════════════════════
 
-1. HOOK = 2-4 WORDS MAX. Never more. Examples:
-   - "Wait for it..."
-   - "POV:"
-   - "This hits different"
-   - "Game changer"
-   - "Watch this"
+1. HOOK = 2-4 WORDS MAX. Never more. Professional examples:
+   - "For pro shops"
+   - "Commercial grade"
+   - "Built for scale"
+   - "The standard"
+   - "Professional quality"
    - "Before → After"
 
 2. TEXT MUST FIT ON SCREEN - TRUNCATE AT WORD BOUNDARIES
@@ -533,15 +544,26 @@ ${formatPrompt}
    - Clip 2-3 (3-12s): PAYOFF - deliver the satisfying moment
    - Clip 4 (12-15s): CTA - "Follow for more" or "Link in bio"
 
-4. UGC ENERGY, NOT POLISHED ADS:
-   - Raw, authentic clips
+4. PROFESSIONAL ENERGY, NOT UGC CHAOS:
+   - Clean, competent clips
    - Quick cuts (2-5 sec each)
-   - No corporate vibes
+   - No amateur vibes
 
 5. PATTERN INTERRUPT:
    - Start mid-action
    - Show the reveal FAST
    - Don't make them wait
+
+═══════════════════════════════════════════════════════════════
+TOPIC MATCHING (CRITICAL - RELEVANCE FIRST):
+═══════════════════════════════════════════════════════════════
+${topic ? `
+THE TOPIC/DIRECTIVE IS: "${topic}"
+- You MUST select clips that are relevant to this topic
+- If a clip's tags, filename, or content don't match the topic, SKIP IT
+- Prefer clips with tags that match keywords from the topic
+- If you cannot find at least 3 relevant clips, return an error message
+` : '- No specific topic provided, select best general content'}
 
 ═══════════════════════════════════════════════════════════════
 CRITICAL RULES:

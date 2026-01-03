@@ -381,7 +381,7 @@ export default function MightyTaskUnified() {
       hook: task.description?.split('\n')[0] || task.title,
       cta: 'Follow for more',
       style: 'dara',
-      musicStyle: 'hiphop',
+      musicStyle: 'upbeat',
       captionStyle: 'dara',
       brand: getChannelBrand(task.channel),
     };

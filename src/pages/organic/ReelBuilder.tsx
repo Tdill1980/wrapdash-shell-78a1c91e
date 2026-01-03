@@ -61,6 +61,7 @@ import { DARA_FORMATS, DaraFormat } from "@/lib/dara-denney-formats";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeForJson } from "@/lib/sanitizeForJson";
 import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, replaceStatusTag, SourceType } from "@/lib/creativeVault";
+import { finalizeRender } from "@/lib/finalizeRender";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -128,6 +129,10 @@ export default function ReelBuilder() {
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [contentMetadata, setContentMetadata] = useContentMetadata("wpw");
   
+  // FINALIZATION: Track guaranteed download URL (only set after finalization succeeds)
+  const [finalizedDownloadUrl, setFinalizedDownloadUrl] = useState<string | null>(null);
+  const [isFinalizingRender, setIsFinalizingRender] = useState(false);
+  const [lastCreativeId, setLastCreativeId] = useState<string | null>(null);
   // ============ SCENE BLUEPRINT AUTHORITY ============
   // This is the ONLY object that controls rendering.
   // If this is null, NOTHING renders. Period.
@@ -744,7 +749,9 @@ export default function ReelBuilder() {
   // Auto-save when render succeeds via renderProgress
   useEffect(() => {
     const saveRenderedVideo = async () => {
-      if (renderProgress?.status === 'complete' && renderProgress.outputUrl) {
+      if (renderProgress?.status === 'complete' && renderProgress.outputUrl && !isFinalizingRender) {
+        setIsFinalizingRender(true);
+        
         try {
           // 🔧 FIX: Use correct sources for hook/cta - prioritize producerJob, then suggestedHook state, then autoCreateState
           const effectiveHook = suggestedHook 
@@ -831,18 +838,53 @@ export default function ReelBuilder() {
             }
           }
 
+          // ============ PHASE 5: FINALIZATION CONTRACT ============
+          // This is the CRITICAL step that guarantees downloads work
+          // We call finalizeRender to ensure the video is properly stored
+          // and the download URL is persisted in the database
+          if (lastCreativeId) {
+            console.log('[ReelBuilder] 🔒 Finalizing render for creative:', lastCreativeId);
+            
+            const finalizationResult = await finalizeRender({
+              sourceType: 'ai_creative',
+              sourceId: lastCreativeId,
+              externalUrl: renderProgress.outputUrl,
+              metadata: {
+                title: effectiveCaption || 'Reel Builder Export',
+                format: sceneBlueprint?.format || 'reel',
+                duration: sceneBlueprint?.totalDuration,
+              },
+            });
+
+            if (finalizationResult.success && finalizationResult.downloadUrl) {
+              console.log('[ReelBuilder] ✅ Finalization complete, download URL:', finalizationResult.downloadUrl);
+              setFinalizedDownloadUrl(finalizationResult.downloadUrl);
+            } else {
+              console.error('[ReelBuilder] Finalization failed:', finalizationResult.error);
+              // Still allow download from render URL as fallback
+              setFinalizedDownloadUrl(renderProgress.outputUrl);
+            }
+          } else {
+            // No creative ID, use render URL directly
+            setFinalizedDownloadUrl(renderProgress.outputUrl);
+          }
+
           setSavedVideoUrl(renderProgress.outputUrl);
           setShowPostRenderModal(true);
           toast.success('Reel saved to library and queue!');
         } catch (error) {
           console.error('Failed to save rendered video:', error);
           toast.error('Render complete but failed to save');
+          // Still allow download from render URL
+          setFinalizedDownloadUrl(renderProgress.outputUrl);
+        } finally {
+          setIsFinalizingRender(false);
         }
       }
     };
 
     saveRenderedVideo();
-  }, [renderProgress?.status, renderProgress?.outputUrl, contentMetadata, suggestedHook, suggestedCta, producerJobState, contentCalendarId]);
+  }, [renderProgress?.status, renderProgress?.outputUrl, contentMetadata, suggestedHook, suggestedCta, producerJobState, contentCalendarId, lastCreativeId, sceneBlueprint, isFinalizingRender]);
 
   // Handle render reel - REQUIRES SCENE BLUEPRINT (Authority enforced)
   const handleRenderReel = async () => {
@@ -902,6 +944,9 @@ export default function ReelBuilder() {
       });
 
       console.log('[ReelBuilder] ✅ Created ai_creative:', creative.id);
+      
+      // Store creative ID for finalization after render completes
+      setLastCreativeId(creative.id);
 
       // ============ SAVE BLUEPRINT SNAPSHOT ============
       await saveBlueprintSnapshot(creative.id, sceneBlueprint as unknown as Record<string, never>);
@@ -1025,8 +1070,12 @@ export default function ReelBuilder() {
   };
 
   const handleDownloadVideo = () => {
-    if (savedVideoUrl) {
-      window.open(savedVideoUrl, '_blank');
+    // Prioritize finalized URL (guaranteed to work), fall back to saved URL
+    const downloadUrl = finalizedDownloadUrl || savedVideoUrl;
+    if (downloadUrl) {
+      window.open(downloadUrl, '_blank');
+    } else {
+      toast.error('Download not ready yet');
     }
   };
 

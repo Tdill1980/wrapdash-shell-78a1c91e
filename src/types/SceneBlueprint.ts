@@ -40,6 +40,13 @@ export interface SceneBlueprint {
   font?: string;
   textStyle?: 'bold' | 'minimal' | 'modern';
   
+  // ============ CAPTION STYLE ============
+  // Controls how captions/overlays are formatted
+  // sabri: UPPERCASE, bold, punchy
+  // dara: Sentence case, professional, no emoji
+  // clean: lowercase, minimal, light
+  captionStyle?: 'sabri' | 'dara' | 'clean';
+  
   // ============ CAPTION (Auto Captions) ============
   // Global caption for the entire reel
   caption?: string;

@@ -167,7 +167,7 @@ export function ContentCalendarEditModal({
               hook: caption?.split('\n')[0] || title || undefined,  // First line as hook
               cta: 'Follow for more',
               style: 'dara' as const,
-              musicStyle: 'hiphop' as const,
+              musicStyle: 'upbeat' as const,
               captionStyle: 'dara' as const,
               brand: content.brand,
             },
