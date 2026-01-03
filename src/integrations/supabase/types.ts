@@ -2451,6 +2451,71 @@ export type Database = {
           },
         ]
       }
+      content_intents: {
+        Row: {
+          angle: string | null
+          brand: string | null
+          caption_style: string | null
+          created_at: string | null
+          forbidden_tags: string[] | null
+          goal: string | null
+          id: string
+          is_template: boolean | null
+          max_clips: number | null
+          min_clips: number | null
+          min_motion: number | null
+          music_style: string | null
+          name: string
+          organization_id: string | null
+          platform: string
+          required_tags: string[] | null
+        }
+        Insert: {
+          angle?: string | null
+          brand?: string | null
+          caption_style?: string | null
+          created_at?: string | null
+          forbidden_tags?: string[] | null
+          goal?: string | null
+          id?: string
+          is_template?: boolean | null
+          max_clips?: number | null
+          min_clips?: number | null
+          min_motion?: number | null
+          music_style?: string | null
+          name: string
+          organization_id?: string | null
+          platform: string
+          required_tags?: string[] | null
+        }
+        Update: {
+          angle?: string | null
+          brand?: string | null
+          caption_style?: string | null
+          created_at?: string | null
+          forbidden_tags?: string[] | null
+          goal?: string | null
+          id?: string
+          is_template?: boolean | null
+          max_clips?: number | null
+          min_clips?: number | null
+          min_motion?: number | null
+          music_style?: string | null
+          name?: string
+          organization_id?: string | null
+          platform?: string
+          required_tags?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_intents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_jobs: {
         Row: {
           agent: string
@@ -4364,6 +4429,112 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_analysis: {
+        Row: {
+          analyzed_at: string | null
+          asset_id: string
+          confidence: number | null
+          created_at: string | null
+          detected_actions: string[] | null
+          detected_objects: string[] | null
+          energy_level: string | null
+          environment: string | null
+          has_before_after: boolean | null
+          has_install: boolean | null
+          has_motion: boolean | null
+          has_people: boolean | null
+          has_reveal: boolean | null
+          has_vehicle: boolean | null
+          id: string
+          motion_score: number | null
+          text_detected: boolean | null
+        }
+        Insert: {
+          analyzed_at?: string | null
+          asset_id: string
+          confidence?: number | null
+          created_at?: string | null
+          detected_actions?: string[] | null
+          detected_objects?: string[] | null
+          energy_level?: string | null
+          environment?: string | null
+          has_before_after?: boolean | null
+          has_install?: boolean | null
+          has_motion?: boolean | null
+          has_people?: boolean | null
+          has_reveal?: boolean | null
+          has_vehicle?: boolean | null
+          id?: string
+          motion_score?: number | null
+          text_detected?: boolean | null
+        }
+        Update: {
+          analyzed_at?: string | null
+          asset_id?: string
+          confidence?: number | null
+          created_at?: string | null
+          detected_actions?: string[] | null
+          detected_objects?: string[] | null
+          energy_level?: string | null
+          environment?: string | null
+          has_before_after?: boolean | null
+          has_install?: boolean | null
+          has_motion?: boolean | null
+          has_people?: boolean | null
+          has_reveal?: boolean | null
+          has_vehicle?: boolean | null
+          id?: string
+          motion_score?: number | null
+          text_detected?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_analysis_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: true
+            referencedRelation: "content_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_tags: {
+        Row: {
+          asset_id: string
+          confidence: number | null
+          created_at: string | null
+          id: string
+          locked: boolean | null
+          source: string
+          tag: string
+        }
+        Insert: {
+          asset_id: string
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          locked?: boolean | null
+          source?: string
+          tag: string
+        }
+        Update: {
+          asset_id?: string
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          locked?: boolean | null
+          source?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_tags_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "content_files"
             referencedColumns: ["id"]
           },
         ]

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -255,13 +255,95 @@ Return ONLY valid JSON, no explanation.`
       throw new Error(`Database update failed: ${updateError.message}`);
     }
 
+    // Also populate media_analysis table for deterministic selection
+    const analysisRow = {
+      asset_id: video_id,
+      has_vehicle: visualTags.has_vehicle,
+      has_people: visualTags.has_person,
+      has_install: visualTags.has_wrap_install,
+      has_before_after: visualTags.wrap_process_stage?.stage === 'before',
+      has_reveal: visualTags.has_finished_result || visualTags.has_peel,
+      has_motion: visualTags.dominant_motion !== 'static',
+      environment: visualTags.environment === 'unknown' ? null : visualTags.environment,
+      motion_score: visualTags.dominant_motion === 'static' ? 0.2 : 
+                    visualTags.dominant_motion === 'camera_pan' ? 0.5 : 
+                    visualTags.dominant_motion === 'hand_install' ? 0.7 : 
+                    visualTags.dominant_motion === 'peel_motion' ? 0.8 : 0.4,
+      energy_level: visualTags.quality_score > 75 ? 'high' : 
+                    visualTags.quality_score > 50 ? 'medium' : 'low',
+      text_detected: visualTags.has_logo,
+      detected_objects: visualTags.has_vehicle ? ['vehicle'] : [],
+      detected_actions: [
+        visualTags.has_wrap_install ? 'install' : null,
+        visualTags.has_peel ? 'peel' : null,
+        visualTags.has_finished_result ? 'reveal' : null,
+      ].filter(Boolean),
+      confidence: (visualTags.wrap_type_category?.confidence || 0 + 
+                   visualTags.wrap_process_stage?.confidence || 0 + 
+                   visualTags.content_origin?.confidence || 0) / 3,
+      analyzed_at: new Date().toISOString(),
+    };
+
+    // Upsert to media_analysis
+    const { error: analysisError } = await supabase
+      .from("media_analysis")
+      .upsert(analysisRow, { onConflict: 'asset_id' });
+
+    if (analysisError) {
+      console.warn("Failed to update media_analysis (non-fatal):", analysisError);
+    }
+
+    // Assign system tags based on analysis
+    const systemTags: string[] = [];
+    if (visualTags.has_vehicle) systemTags.push('vehicle');
+    if (visualTags.has_wrap_install) systemTags.push('wrap_install');
+    if (visualTags.has_finished_result) systemTags.push('reveal');
+    if (visualTags.has_peel) systemTags.push('peel');
+    if (visualTags.has_logo) systemTags.push('commercial');
+    if (visualTags.has_person) systemTags.push('people');
+    if (visualTags.environment === 'shop') systemTags.push('shop', 'professional');
+    if (visualTags.environment === 'outdoor') systemTags.push('outdoor');
+    if (visualTags.wrap_type_category?.category === 'commercial_business') {
+      systemTags.push('fleet', 'commercial');
+    }
+    if (visualTags.wrap_process_stage?.stage === 'install') {
+      systemTags.push('installation');
+    }
+    if (visualTags.content_origin?.source === 'professional') {
+      systemTags.push('high_production');
+    }
+    if (visualTags.content_origin?.source === 'ugc') {
+      systemTags.push('ugc');
+    }
+
+    // Insert tags (locked = true for system tags)
+    const tagRows = [...new Set(systemTags)].map(tag => ({
+      asset_id: video_id,
+      tag,
+      source: 'system',
+      locked: true,
+      confidence: 1.0,
+    }));
+
+    if (tagRows.length > 0) {
+      const { error: tagError } = await supabase
+        .from("media_tags")
+        .upsert(tagRows, { onConflict: 'asset_id,tag' });
+
+      if (tagError) {
+        console.warn("Failed to insert media_tags (non-fatal):", tagError);
+      }
+    }
+
     console.log(`Successfully analyzed video ${video_id}:`, visualTags);
+    console.log(`Assigned ${tagRows.length} system tags:`, systemTags);
 
     return new Response(
       JSON.stringify({
         success: true,
         video_id,
         visual_tags: visualTags,
+        system_tags: systemTags,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
