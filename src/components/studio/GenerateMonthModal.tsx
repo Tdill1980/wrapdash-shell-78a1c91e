@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sparkles, Loader2, Calendar, CheckCircle } from 'lucide-react';
@@ -72,6 +73,13 @@ export function GenerateMonthModal({ open, onOpenChange }: GenerateMonthModalPro
   const [selectedMonth, setSelectedMonth] = useState(() => format(addMonths(new Date(), 1), 'yyyy-MM'));
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['instagram_reel', 'instagram_static', 'youtube_short']);
   const [selectedBrands, setSelectedBrands] = useState<string[]>(['wpw', 'ink-edge', 'wraptv']);
+  
+  // NEW: Monthly theme - required input for content direction
+  const [monthlyTheme, setMonthlyTheme] = useState('Professional Wrap Techniques');
+  
+  // NEW: Default style settings (dara + upbeat for premium positioning)
+  const [captionStyle, setCaptionStyle] = useState<'sabri' | 'dara' | 'clean'>('dara');
+  const [musicStyle, setMusicStyle] = useState<'upbeat' | 'cinematic' | 'hiphop' | 'none'>('upbeat');
 
   const toggleChannel = (channelId: string) => {
     setSelectedChannels(prev => 
@@ -108,6 +116,10 @@ export function GenerateMonthModal({ open, onOpenChange }: GenerateMonthModalPro
     }
     if (selectedBrands.length === 0) {
       toast({ title: 'Select at least one brand', variant: 'destructive' });
+      return;
+    }
+    if (!monthlyTheme.trim()) {
+      toast({ title: 'Enter a monthly theme', variant: 'destructive' });
       return;
     }
 
@@ -152,15 +164,22 @@ export function GenerateMonthModal({ open, onOpenChange }: GenerateMonthModalPro
           return null;
         }
 
+        // Include monthly theme in directive and store style metadata
         const entry = {
           title: template.title,
-          directive: `[${category.toUpperCase()}] ${template.directive}`,
+          directive: `[${category.toUpperCase()}] [Theme: ${monthlyTheme}] ${template.directive}`,
           scheduled_date: format(scheduledDate, 'yyyy-MM-dd'),
           scheduled_time: '10:00:00',
           content_type: channelForEntry.contentType,
           platform: channelForEntry.platform,
           brand: brand,
           status: 'Needs Creating',
+          // Store style preferences in notes for downstream use
+          notes: JSON.stringify({
+            monthlyTheme,
+            captionStyle,
+            musicStyle,
+          }),
         };
 
         dayOffset++;
@@ -251,6 +270,23 @@ export function GenerateMonthModal({ open, onOpenChange }: GenerateMonthModalPro
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Monthly Theme - Required */}
+          <div className="space-y-2">
+            <Label htmlFor="monthly-theme" className="flex items-center gap-1">
+              Monthly Theme <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="monthly-theme"
+              value={monthlyTheme}
+              onChange={(e) => setMonthlyTheme(e.target.value)}
+              placeholder="e.g., Professional Wrap Techniques"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              This theme will guide all AI content generation for the month
+            </p>
+          </div>
+
           {/* Month Selection */}
           <div className="space-y-2">
             <Label>Month to Generate</Label>
@@ -269,6 +305,37 @@ export function GenerateMonthModal({ open, onOpenChange }: GenerateMonthModalPro
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Style Settings */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Caption Style</Label>
+              <Select value={captionStyle} onValueChange={(v: 'sabri' | 'dara' | 'clean') => setCaptionStyle(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dara">Dara (Professional)</SelectItem>
+                  <SelectItem value="sabri">Sabri (Bold Caps)</SelectItem>
+                  <SelectItem value="clean">Clean (Minimal)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Music Style</Label>
+              <Select value={musicStyle} onValueChange={(v: 'upbeat' | 'cinematic' | 'hiphop' | 'none') => setMusicStyle(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upbeat">Upbeat</SelectItem>
+                  <SelectItem value="cinematic">Cinematic</SelectItem>
+                  <SelectItem value="hiphop">Hip Hop</SelectItem>
+                  <SelectItem value="none">No Music</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Channel Selection */}

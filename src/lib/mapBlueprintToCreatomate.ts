@@ -11,6 +11,35 @@
 
 import { SceneBlueprint, SceneBlueprintScene } from "@/types/SceneBlueprint";
 
+// Caption style definitions - controls how text appears in final render
+type CaptionStyleConfig = {
+  textTransform: 'uppercase' | 'none' | 'lowercase';
+  fontWeight: string;
+  strokeWidth: string;
+  fontSize: string;
+};
+
+const CAPTION_STYLE_CONFIG: Record<'sabri' | 'dara' | 'clean', CaptionStyleConfig> = {
+  sabri: {
+    textTransform: 'uppercase',
+    fontWeight: '800',
+    strokeWidth: '1.5 vh',
+    fontSize: '7 vh',
+  },
+  dara: {
+    textTransform: 'none', // sentence case - preserve original
+    fontWeight: '600',
+    strokeWidth: '1 vh',
+    fontSize: '6 vh',
+  },
+  clean: {
+    textTransform: 'lowercase',
+    fontWeight: '400',
+    strokeWidth: '0.5 vh',
+    fontSize: '5 vh',
+  },
+};
+
 export interface CreatomateElement {
   type: 'video' | 'text' | 'audio';
   source?: string;
@@ -139,6 +168,10 @@ export function mapBlueprintToCreatomate(
   const fontFamily = getFontFamily(bp.font, bp.overlayPack);
   const elements: CreatomateElement[] = [];
   
+  // Get caption style config - default to sabri for backwards compatibility
+  const captionStyle = bp.captionStyle || 'sabri';
+  const styleConfig = CAPTION_STYLE_CONFIG[captionStyle];
+  
   let timelineCursor = 0;
 
   // ============ BUILD VIDEO ELEMENTS ============
@@ -155,7 +188,7 @@ export function mapBlueprintToCreatomate(
       trim_duration: clipDuration,
     });
 
-    // Text overlay (if present)
+    // Text overlay (if present) - NOW RESPECTS CAPTION STYLE
     if (scene.text && scene.text.trim()) {
       const { x, y } = mapPositionToXY(scene.textPosition);
       
@@ -170,12 +203,12 @@ export function mapBlueprintToCreatomate(
         x_alignment: '50%',
         y_alignment: '50%',
         font_family: fontFamily,
-        font_weight: bp.textStyle === 'bold' ? '800' : '600',
-        font_size: '7 vh',
+        font_weight: styleConfig.fontWeight,
+        font_size: styleConfig.fontSize,
         fill_color: '#ffffff',
         stroke_color: '#000000',
-        stroke_width: '1.5 vh',
-        text_transform: 'uppercase',
+        stroke_width: styleConfig.strokeWidth,
+        text_transform: styleConfig.textTransform,
         enter: mapAnimation(scene.animation),
         exit: { type: 'fade', duration: '0.2 s' },
       });
@@ -186,10 +219,11 @@ export function mapBlueprintToCreatomate(
 
   const totalDuration = timelineCursor;
 
-  // ============ ADD END CARD (if present) ============
+  // ============ ADD END CARD (if present) - ALSO RESPECTS STYLE ============
   if (bp.endCard) {
     const { x, y } = mapPositionToXY('center');
     
+    // End card uses slightly larger font but same style
     elements.push({
       type: 'text',
       text: bp.endCard.text,
@@ -201,12 +235,12 @@ export function mapBlueprintToCreatomate(
       x_alignment: '50%',
       y_alignment: '50%',
       font_family: fontFamily,
-      font_weight: '800',
+      font_weight: styleConfig.fontWeight,
       font_size: '8 vh',
       fill_color: '#ffffff',
       stroke_color: '#000000',
-      stroke_width: '2 vh',
-      text_transform: 'uppercase',
+      stroke_width: styleConfig.strokeWidth,
+      text_transform: styleConfig.textTransform,
       enter: { type: 'scale', duration: '0.4 s', easing: 'back-out' },
     });
   }
