@@ -1,7 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Image, Video, Music, Check, Tag, Trash2, Target, AlertTriangle, Wand2, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  Play, Image, Video, Music, Check, Tag, Trash2, Target, AlertTriangle, 
+  Wand2, Loader2, MoreVertical, Sparkles, Lightbulb, Bot 
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +45,7 @@ interface MediaCardProps {
   listMode?: boolean;
   onEditTags?: () => void;
   onDelete?: () => void;
+  onCategoryChange?: () => void;
 }
 
 export function MediaCard({ 
@@ -44,7 +55,8 @@ export function MediaCard({
   selectionMode,
   listMode = false,
   onEditTags,
-  onDelete
+  onDelete,
+  onCategoryChange
 }: MediaCardProps) {
   const isMobile = useIsMobile();
   const isImage = file.file_type === "image";
@@ -72,6 +84,28 @@ export function MediaCard({
     } catch (err) {
       console.error("Delete error:", err);
       toast.error("Failed to delete file");
+    }
+  };
+
+  const handleCategoryChange = async (newCategory: string) => {
+    try {
+      const { error } = await supabase
+        .from("content_files")
+        .update({ content_category: newCategory })
+        .eq("id", file.id);
+      
+      if (error) throw error;
+      
+      const categoryLabels: Record<string, string> = {
+        raw: "Source Footage",
+        ai_output: "AI Output",
+        inspo_reference: "Inspiration"
+      };
+      toast.success(`Moved to ${categoryLabels[newCategory] || newCategory}`);
+      onCategoryChange?.();
+    } catch (err) {
+      console.error("Category change error:", err);
+      toast.error("Failed to change category");
     }
   };
 
@@ -303,7 +337,7 @@ export function MediaCard({
         </div>
       )}
 
-      {/* FILENAME & TAGS */}
+      {/* FILENAME & TAGS & MENU */}
       <div className="p-2 bg-card space-y-1">
         <div className="flex items-center gap-1">
           <p className="text-xs font-medium truncate flex-1">
@@ -317,6 +351,57 @@ export function MediaCard({
               {(file.visual_tags.ai_confidence * 100).toFixed(0)}%
             </Badge>
           )}
+          
+          {/* Category Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-5 w-5 p-0 shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreVertical className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem 
+                onClick={() => handleCategoryChange("raw")}
+                disabled={file.content_category === "raw"}
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-2" />
+                Move to Source
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleCategoryChange("inspo_reference")}
+                disabled={file.content_category === "inspo_reference"}
+              >
+                <Lightbulb className="w-3.5 h-3.5 mr-2" />
+                Move to Inspo
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleCategoryChange("ai_output")}
+                disabled={file.content_category === "ai_output"}
+              >
+                <Bot className="w-3.5 h-3.5 mr-2" />
+                Mark as AI Output
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {onEditTags && (
+                <DropdownMenuItem onClick={onEditTags}>
+                  <Tag className="w-3.5 h-3.5 mr-2" />
+                  Edit Tags
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem 
+                onClick={handleDelete}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {file.tags && file.tags.length > 0 && (

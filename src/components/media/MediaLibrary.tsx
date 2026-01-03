@@ -46,10 +46,11 @@ const FILE_TYPES = [
 
 const CATEGORY_TABS = [
   { id: "all", label: "All", icon: Grid3X3 },
-  { id: "raw", label: "Raw", icon: Sparkles },
+  { id: "raw", label: "Source", icon: Sparkles },
+  { id: "ai_output", label: "AI Outputs", icon: Wand2 },
+  { id: "inspo_reference", label: "Inspo", icon: Lightbulb },
   { id: "template", label: "Templates", icon: FileStack },
   { id: "finished", label: "Finished", icon: CheckCircle },
-  { id: "inspiration", label: "Inspiration", icon: Lightbulb },
 ];
 
 export function MediaLibrary({ 
@@ -362,6 +363,7 @@ export function MediaLibrary({
               selectionMode={selectionMode}
               onEditTags={() => setTagEditorFile(file)}
               onDelete={refetch}
+              onCategoryChange={refetch}
             />
           ))}
         </div>
@@ -377,6 +379,7 @@ export function MediaLibrary({
               selectionMode={selectionMode}
               onEditTags={() => setTagEditorFile(file)}
               onDelete={refetch}
+              onCategoryChange={refetch}
             />
           ))}
         </div>
