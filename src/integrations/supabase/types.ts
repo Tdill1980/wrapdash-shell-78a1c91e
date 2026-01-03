@@ -2110,6 +2110,8 @@ export type Database = {
           hashtags: string[] | null
           id: string
           in_progress_at: string | null
+          intent_preset_id: string | null
+          locked_metadata: Json | null
           migrated: boolean | null
           notes: string | null
           organization_id: string | null
@@ -2135,6 +2137,8 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           in_progress_at?: string | null
+          intent_preset_id?: string | null
+          locked_metadata?: Json | null
           migrated?: boolean | null
           notes?: string | null
           organization_id?: string | null
@@ -2160,6 +2164,8 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           in_progress_at?: string | null
+          intent_preset_id?: string | null
+          locked_metadata?: Json | null
           migrated?: boolean | null
           notes?: string | null
           organization_id?: string | null
@@ -2179,6 +2185,13 @@ export type Database = {
             columns: ["content_project_id"]
             isOneToOne: false
             referencedRelation: "content_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_calendar_intent_preset_id_fkey"
+            columns: ["intent_preset_id"]
+            isOneToOne: false
+            referencedRelation: "content_intents"
             referencedColumns: ["id"]
           },
           {
@@ -2467,6 +2480,7 @@ export type Database = {
           music_style: string | null
           name: string
           organization_id: string | null
+          overlay_style: string | null
           platform: string
           required_tags: string[] | null
         }
@@ -2485,6 +2499,7 @@ export type Database = {
           music_style?: string | null
           name: string
           organization_id?: string | null
+          overlay_style?: string | null
           platform: string
           required_tags?: string[] | null
         }
@@ -2503,6 +2518,7 @@ export type Database = {
           music_style?: string | null
           name?: string
           organization_id?: string | null
+          overlay_style?: string | null
           platform?: string
           required_tags?: string[] | null
         }
