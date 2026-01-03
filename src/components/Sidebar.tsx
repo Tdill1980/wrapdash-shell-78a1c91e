@@ -18,6 +18,8 @@ import {
   Activity,
   Power,
   Dna,
+  FileText,
+  Palette,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -76,6 +78,46 @@ const coreItems: NavigationItem[] = [
   },
 ];
 
+// STUDIO: Content creation workspace
+const studioItems: NavigationItem[] = [
+  { 
+    name: "Content Studio", 
+    path: "/studio", 
+    icon: Palette,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Content </span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Studio</span>
+      </span>
+    )
+  },
+  { 
+    name: "Content Calendar", 
+    path: "/content-calendar", 
+    icon: CalendarDays,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-medium">
+        <span className="text-white">Content </span>
+        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Calendar</span>
+      </span>
+    )
+  },
+  { 
+    name: "Content Drafts", 
+    path: "/content-drafts", 
+    icon: FileText,
+    roles: ["beta_shop", "admin"],
+  },
+  { 
+    name: "Media Library", 
+    path: "/contentbox", 
+    icon: FolderOpen,
+    roles: ["beta_shop", "admin"],
+  },
+];
+
 // OPERATIONS: Backend management
 const operationsItems: NavigationItem[] = [
   { 
@@ -112,18 +154,6 @@ const operationsItems: NavigationItem[] = [
         <span className="text-white">Mighty</span>
         <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Mail</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
-      </span>
-    )
-  },
-  { 
-    name: "Content Calendar", 
-    path: "/content-calendar", 
-    icon: CalendarDays,
-    roles: ["beta_shop", "admin"],
-    customRender: (
-      <span className="font-medium">
-        <span className="text-white">Content </span>
-        <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Calendar</span>
       </span>
     )
   },
@@ -217,6 +247,7 @@ const adminItems: NavigationItem[] = [
 
 const sections: NavigationSection[] = [
   { title: "Core", items: coreItems },
+  { title: "Studio", items: studioItems },
   { title: "Operations", items: operationsItems },
   { title: "Tools", items: toolsItems },
   { title: "Onboarding", items: onboardingItems },

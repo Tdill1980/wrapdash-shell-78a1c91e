@@ -1130,6 +1130,8 @@ export type Database = {
           created_by: string | null
           created_by_agent: string | null
           description: string | null
+          download_url: string | null
+          finalized_at: string | null
           format_slug: string | null
           id: string
           latest_render_job_id: string | null
@@ -1140,6 +1142,7 @@ export type Database = {
           source_id: string | null
           source_type: string
           status: string
+          storage_path: string | null
           thumbnail_url: string | null
           title: string | null
           tool_slug: string | null
@@ -1154,6 +1157,8 @@ export type Database = {
           created_by?: string | null
           created_by_agent?: string | null
           description?: string | null
+          download_url?: string | null
+          finalized_at?: string | null
           format_slug?: string | null
           id?: string
           latest_render_job_id?: string | null
@@ -1164,6 +1169,7 @@ export type Database = {
           source_id?: string | null
           source_type: string
           status?: string
+          storage_path?: string | null
           thumbnail_url?: string | null
           title?: string | null
           tool_slug?: string | null
@@ -1178,6 +1184,8 @@ export type Database = {
           created_by?: string | null
           created_by_agent?: string | null
           description?: string | null
+          download_url?: string | null
+          finalized_at?: string | null
           format_slug?: string | null
           id?: string
           latest_render_job_id?: string | null
@@ -1188,6 +1196,7 @@ export type Database = {
           source_id?: string | null
           source_type?: string
           status?: string
+          storage_path?: string | null
           thumbnail_url?: string | null
           title?: string | null
           tool_slug?: string | null
@@ -6771,9 +6780,11 @@ export type Database = {
           content_file_id: string | null
           created_at: string
           debug_payload: Json | null
+          download_url: string | null
           duration_seconds: number | null
           error_message: string | null
           final_render_url: string | null
+          finalized_at: string | null
           id: string
           organization_id: string | null
           producer_blueprint: Json | null
@@ -6785,6 +6796,7 @@ export type Database = {
           source_url: string
           speed_ramps: Json | null
           status: string | null
+          storage_path: string | null
           text_overlays: Json | null
           title: string | null
           transcript: string | null
@@ -6797,9 +6809,11 @@ export type Database = {
           content_file_id?: string | null
           created_at?: string
           debug_payload?: Json | null
+          download_url?: string | null
           duration_seconds?: number | null
           error_message?: string | null
           final_render_url?: string | null
+          finalized_at?: string | null
           id?: string
           organization_id?: string | null
           producer_blueprint?: Json | null
@@ -6811,6 +6825,7 @@ export type Database = {
           source_url: string
           speed_ramps?: Json | null
           status?: string | null
+          storage_path?: string | null
           text_overlays?: Json | null
           title?: string | null
           transcript?: string | null
@@ -6823,9 +6838,11 @@ export type Database = {
           content_file_id?: string | null
           created_at?: string
           debug_payload?: Json | null
+          download_url?: string | null
           duration_seconds?: number | null
           error_message?: string | null
           final_render_url?: string | null
+          finalized_at?: string | null
           id?: string
           organization_id?: string | null
           producer_blueprint?: Json | null
@@ -6837,6 +6854,7 @@ export type Database = {
           source_url?: string
           speed_ramps?: Json | null
           status?: string | null
+          storage_path?: string | null
           text_overlays?: Json | null
           title?: string | null
           transcript?: string | null
