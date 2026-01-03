@@ -249,11 +249,14 @@ export async function selectMediaForIntent(
   console.log('[SelectionEngine] Starting selection with intent:', intent);
   
   // Step 1: Get all video assets for the organization
+  // CRITICAL: Only select from 'raw' source footage
+  // Never select from ai_output or inspo_reference
   const { data: allAssets, error: assetError } = await supabase
     .from('content_files')
-    .select('id, file_url, mux_playback_id, duration_seconds, brand')
+    .select('id, file_url, mux_playback_id, duration_seconds, brand, content_category')
     .eq('organization_id', organizationId)
     .eq('file_type', 'video')
+    .eq('content_category', 'raw')  // ONLY source footage
     .not('mux_playback_id', 'is', null);
   
   if (assetError) {
@@ -268,6 +271,23 @@ export async function selectMediaForIntent(
   }
   
   if (!allAssets || allAssets.length === 0) {
+    // Check if there are videos but in wrong category
+    const { count: totalVideos } = await supabase
+      .from('content_files')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .eq('file_type', 'video');
+    
+    if (totalVideos && totalVideos > 0) {
+      return {
+        success: false,
+        assets: [],
+        totalCandidates: 0,
+        filteredOut: 0,
+        error: `No source footage found. You have ${totalVideos} videos but they may be categorized as AI outputs or inspiration. Check your Media Library and move videos to "Source" category.`,
+      };
+    }
+    
     return {
       success: false,
       assets: [],
@@ -277,7 +297,7 @@ export async function selectMediaForIntent(
     };
   }
   
-  console.log(`[SelectionEngine] Found ${allAssets.length} total video assets`);
+  console.log(`[SelectionEngine] Found ${allAssets.length} source footage videos (excluding AI outputs and inspo)`);
   
   // Step 2: Filter by brand if specified
   let filteredAssets = allAssets;

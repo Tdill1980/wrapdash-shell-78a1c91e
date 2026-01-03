@@ -29,16 +29,19 @@ export function useVisualAnalyzer() {
   };
 
   const getStatus = async () => {
+    // Only count raw source footage for analysis status
     const { count: analyzedCount } = await supabase
       .from("content_files")
       .select("id", { count: "exact", head: true })
       .eq("file_type", "video")
+      .eq("content_category", "raw")
       .not("visual_analyzed_at", "is", null);
 
     const { count: unanalyzedCount } = await supabase
       .from("content_files")
       .select("id", { count: "exact", head: true })
       .eq("file_type", "video")
+      .eq("content_category", "raw")
       .is("visual_analyzed_at", null);
 
     return {
