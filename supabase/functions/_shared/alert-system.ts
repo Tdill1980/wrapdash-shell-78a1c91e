@@ -1,9 +1,11 @@
 // Unified Alert System for Jordan Lee Agent
 // Email first, then Ops Desk task, then log to agent_alerts table
 
-import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "https://cdn.jsdelivr.net/npm/resend@2/+esm";
 import { routeToOpsDesk } from "./ops-desk-router.ts";
+
+// Use any type for SupabaseClient to avoid esm.sh CDN issues
+type SupabaseClientType = any;
 
 export type AlertType = 
   | "missing_tracking" 
@@ -211,7 +213,8 @@ function getAlertEmailHtml(alertType: AlertType, context: AlertContext): string 
 }
 
 export async function sendAlertWithTracking(
-  supabase: SupabaseClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   resendKey: string | undefined,
   alertType: AlertType,
   context: AlertContext,
