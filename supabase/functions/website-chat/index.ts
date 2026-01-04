@@ -1121,6 +1121,45 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       metadata: { ai_generated: true, agent: 'jordan_lee', escalation: escalationType }
     });
 
+    // ============================================
+    // CREATE QUOTE when Jordan provides pricing
+    // ============================================
+    // Trigger when: email captured + complete vehicle + valid pricing
+    if (chatState.customer_email && vehicleIsComplete && vehicleSqft > 0 && !chatState.quote_created) {
+      try {
+        const quoteResponse = await supabase.functions.invoke('create-quote-from-chat', {
+          body: {
+            conversation_id: conversationId,
+            organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
+            customer_email: chatState.customer_email,
+            customer_name: chatState.customer_name || null,
+            vehicle_year: currentVehicle?.year,
+            vehicle_make: currentVehicle?.make,
+            vehicle_model: currentVehicle?.model,
+            product_type: 'avery', // Default to Avery
+            send_email: true
+          }
+        });
+        
+        if (quoteResponse.data?.success) {
+          chatState.quote_created = true;
+          chatState.quote_id = quoteResponse.data.quote_id;
+          chatState.quote_number = quoteResponse.data.quote_number;
+          console.log('[JordanLee] Quote created:', quoteResponse.data.quote_number);
+          
+          // Update conversation with quote state
+          await supabase
+            .from('conversations')
+            .update({ chat_state: chatState })
+            .eq('id', conversationId);
+        } else {
+          console.log('[JordanLee] Quote creation returned:', quoteResponse.data);
+        }
+      } catch (quoteError) {
+        console.error('[JordanLee] Failed to create quote:', quoteError);
+      }
+    }
+
     // Log to message_ingest_log
     await supabase.from('message_ingest_log').insert({
       platform: 'website',
