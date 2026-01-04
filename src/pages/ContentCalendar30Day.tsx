@@ -14,7 +14,8 @@ import {
   MessageSquare,
   Loader2,
   ListChecks,
-  LayoutGrid
+  LayoutGrid,
+  Sparkles
 } from 'lucide-react';
 import { 
   format, 
@@ -35,6 +36,8 @@ import { cn } from '@/lib/utils';
 import { ContentCalendarEditModal } from '@/components/calendar/ContentCalendarEditModal';
 import { ContentExecutionList } from '@/components/calendar/ContentExecutionList';
 import { useCalendarTaskSync, getAgentForContentType } from '@/hooks/useCalendarTaskSync';
+import { CampaignContentCreator } from '@/components/studio/CampaignContentCreator';
+import { isWithinCampaign } from '@/lib/campaign-prompts/january-2026';
 
 interface ScheduledContent {
   id: string;
@@ -114,6 +117,8 @@ export default function ContentCalendar30Day() {
   const [selectedChannel, setSelectedChannel] = useState('all');
   const [selectedContent, setSelectedContent] = useState<ScheduledContent | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [showCampaignCreator, setShowCampaignCreator] = useState(false);
+  const [campaignItem, setCampaignItem] = useState<ScheduledContent | null>(null);
 
   // Check if execution mode is requested via URL
   const viewMode = searchParams.get('mode') === 'execute' ? 'execute' : 'calendar';
@@ -465,12 +470,22 @@ export default function ContentCalendar30Day() {
                                 key={item.id}
                                 className={cn(
                                   'text-[10px] p-1 rounded cursor-pointer hover:opacity-80 hover:ring-1 hover:ring-primary/50 transition-all relative',
-                                  hasLinkedTask && !contentCreated 
-                                    ? 'border-l-4 border-l-red-500 bg-red-500/10' 
-                                    : [channelStyle.border, channelStyle.bg]
+                                  isWithinCampaign(item.scheduled_date)
+                                    ? 'border-l-4 border-l-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
+                                    : hasLinkedTask && !contentCreated 
+                                      ? 'border-l-4 border-l-red-500 bg-red-500/10' 
+                                      : [channelStyle.border, channelStyle.bg]
                                 )}
-                                title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
+                                title={`${getChannelLabel(item.brand)} - ${badgeConfig.label}: ${item.title || 'Untitled'}${isWithinCampaign(item.scheduled_date) ? ' 🎯 Jan 2026 Campaign' : ''}${hasLinkedTask ? (contentCreated ? ' ✓ Created' : ' ⚠ Not Created') : ''}`}
                                 onClick={() => {
+                                  // Campaign gate: Jan 2026 items go to CampaignContentCreator
+                                  if (isWithinCampaign(item.scheduled_date)) {
+                                    setCampaignItem(item);
+                                    setShowCampaignCreator(true);
+                                    return;
+                                  }
+                                  
+                                  // Legacy path - agent chat
                                   const agentId = getAgentForContentType(item.content_type);
                                   const context = {
                                     source: 'content_calendar',
@@ -490,6 +505,9 @@ export default function ContentCalendar30Day() {
                                 }}
                               >
                                 <div className="flex items-center gap-1 mb-0.5">
+                                  {isWithinCampaign(item.scheduled_date) && (
+                                    <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                                  )}
                                   <span className="font-medium truncate text-[9px]">
                                     {getChannelLabel(item.brand)}
                                   </span>
@@ -603,6 +621,28 @@ export default function ContentCalendar30Day() {
           queryClient.invalidateQueries({ queryKey: ['content-calendar-30day'] });
         }}
         isContentCreated={selectedContent ? isContentCreated(selectedContent.id) : false}
+      />
+
+      {/* Campaign Content Creator Modal */}
+      <CampaignContentCreator
+        open={showCampaignCreator}
+        onOpenChange={setShowCampaignCreator}
+        calendarItem={campaignItem ? {
+          id: campaignItem.id,
+          title: campaignItem.title || 'Untitled',
+          brand: campaignItem.brand,
+          content_type: campaignItem.content_type,
+          platform: campaignItem.platform,
+          scheduled_date: campaignItem.scheduled_date,
+          directive: campaignItem.caption || '',
+          locked_metadata: null,
+        } : null}
+        organizationId={null}
+        onDraftSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['content-calendar-30day'] });
+          setShowCampaignCreator(false);
+          setCampaignItem(null);
+        }}
       />
     </MainLayout>
   );
