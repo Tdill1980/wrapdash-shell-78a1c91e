@@ -337,10 +337,14 @@ serve(async (req) => {
       console.log('[JordanLee] Existing conversation:', conversationId);
     } else {
       // Create anonymous contact
+      // WPW organization ID for proper RLS visibility
+      const WPW_ORGANIZATION_ID = '51aa96db-c06d-41ae-b3cb-25b045c75caf';
+      
       const { data: newContact } = await supabase
         .from('contacts')
         .insert({
           name: `Website Visitor (${session_id.substring(0, 8)})`,
+          organization_id: WPW_ORGANIZATION_ID,
           source: 'website_chat',
           tags: ['website', 'chat', mode === 'test' ? 'test_mode' : 'live'],
           metadata: {
@@ -367,6 +371,7 @@ serve(async (req) => {
         .insert({
           channel: 'website',
           contact_id: contactId,
+          organization_id: WPW_ORGANIZATION_ID,
           subject: 'Website Chat',
           status: 'open',
           priority: 'normal',
