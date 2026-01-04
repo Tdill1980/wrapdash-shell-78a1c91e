@@ -92,14 +92,15 @@ serve(async (req) => {
 
     console.log(`Backfill starting: limit=${limit}, user=${user.id}`);
 
-    // Query unanalyzed videos with mux_playback_id (exclude inspo_reference)
+    // Query unanalyzed videos with mux_playback_id (ONLY raw source footage)
+    // Rule 1: NEVER analyze ai_output or inspo_reference - only content_category = 'raw'
     const { data: videos, error: queryError } = await supabase
       .from("content_files")
-      .select("id, mux_playback_id, visual_analyzed_at")
+      .select("id, mux_playback_id, visual_analyzed_at, content_category")
       .eq("file_type", "video")
+      .eq("content_category", "raw")  // ONLY source footage
       .is("visual_analyzed_at", null)
       .not("mux_playback_id", "is", null)
-      .neq("content_category", "inspo_reference")
       .limit(limit);
 
     if (queryError) {
