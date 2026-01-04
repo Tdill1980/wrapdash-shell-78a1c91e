@@ -14,7 +14,8 @@ import {
   Clock,
   AlertCircle,
   X,
-  MessageSquare
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { 
   format, 
@@ -34,6 +35,9 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { AgentChatPanel } from '@/components/mightychat/AgentChatPanel';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { CampaignContentCreator } from '@/components/studio/CampaignContentCreator';
+import { isWithinCampaign } from '@/lib/campaign-prompts/january-2026';
+import { useOrganization } from '@/contexts/OrganizationContext';
 
 interface MightyCalendar {
   id: string;
@@ -97,7 +101,10 @@ export function MightyTaskWorkspace({
   const [selectedItem, setSelectedItem] = useState<MightyCalendarItem | null>(null);
   const [showAgentChat, setShowAgentChat] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [showCampaignCreator, setShowCampaignCreator] = useState(false);
+  const [campaignItem, setCampaignItem] = useState<MightyCalendarItem | null>(null);
   const queryClient = useQueryClient();
+  const { organizationId } = useOrganization();
 
   // Fetch calendar config
   const { data: calendar } = useQuery({
@@ -212,16 +219,34 @@ export function MightyTaskWorkspace({
     return item.status !== 'complete' && item.status !== 'blocked';
   };
 
-  // Handle execute with agent
+  // Handle execute with agent - OR campaign content creator for campaign dates
   const handleExecute = (item: MightyCalendarItem, agentId: string) => {
     if (!canExecute(item)) {
       toast.error('Cannot execute - waiting on source content');
       return;
     }
+    
+    // Campaign gate: Route January 2026 items to CampaignContentCreator
+    if (isWithinCampaign(item.scheduled_date)) {
+      setCampaignItem(item);
+      setShowCampaignCreator(true);
+      setSelectedItem(null); // Close the detail modal
+      toast.info('Opening Campaign Content Creator');
+      return;
+    }
+    
+    // Legacy path: Use agent execution
     setSelectedItem(item);
     setSelectedAgent(agentId);
     setShowAgentChat(true);
     updateItem.mutate({ id: item.id, status: 'executing' });
+  };
+
+  // Open campaign creator directly (for campaign items)
+  const openCampaignCreator = (item: MightyCalendarItem) => {
+    setCampaignItem(item);
+    setShowCampaignCreator(true);
+    setSelectedItem(null);
   };
 
   // Handle checklist toggle
@@ -389,19 +414,23 @@ export function MightyTaskWorkspace({
                     {dayItems.slice(0, 3).map((item) => {
                       const statusConfig = STATUS_CONFIG[item.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.planned;
                       const isBlocked = item.requires_source && !item.source_item_id;
+                      const isCampaignItem = isWithinCampaign(item.scheduled_date);
                       
                       return (
                         <div
                           key={item.id}
-                          onClick={() => setSelectedItem(item)}
+                          onClick={() => isCampaignItem ? openCampaignCreator(item) : setSelectedItem(item)}
                           className={cn(
                             'text-[10px] p-1.5 rounded cursor-pointer transition-all hover:scale-[1.02]',
                             statusConfig.color,
-                            isBlocked && 'opacity-60'
+                            isBlocked && 'opacity-60',
+                            isCampaignItem && 'ring-1 ring-primary/50'
                           )}
                         >
                           <div className="flex items-center gap-1">
-                            {isBlocked ? (
+                            {isCampaignItem ? (
+                              <Sparkles className="h-3 w-3 text-primary" />
+                            ) : isBlocked ? (
                               <Lock className="h-3 w-3" />
                             ) : (
                               <statusConfig.icon className="h-3 w-3" />
@@ -411,6 +440,11 @@ export function MightyTaskWorkspace({
                           {item.franchise_slug && (
                             <div className="truncate text-[9px] opacity-70">
                               {item.franchise_slug}
+                            </div>
+                          )}
+                          {isCampaignItem && (
+                            <div className="text-[8px] text-primary font-medium mt-0.5">
+                              Jan 2026
                             </div>
                           )}
                         </div>
@@ -581,6 +615,32 @@ export function MightyTaskWorkspace({
           }}
         />
       )}
+
+      {/* Campaign Content Creator Modal */}
+      <CampaignContentCreator
+        open={showCampaignCreator}
+        onOpenChange={(open) => {
+          setShowCampaignCreator(open);
+          if (!open) setCampaignItem(null);
+        }}
+        calendarItem={campaignItem ? {
+          id: campaignItem.id,
+          title: campaignItem.title,
+          brand: 'wrapmate', // Default brand for mighty calendar items
+          content_type: 'reel', // Default content type
+          platform: 'meta', // Default platform
+          scheduled_date: campaignItem.scheduled_date,
+          directive: campaignItem.description,
+          locked_metadata: null,
+        } : null}
+        organizationId={organizationId}
+        onDraftSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['mighty-calendar-items'] });
+          setShowCampaignCreator(false);
+          setCampaignItem(null);
+          toast.success('Campaign draft saved successfully');
+        }}
+      />
 
       {/* Loading */}
       {isLoading && (
