@@ -349,36 +349,70 @@ Return a JSON object with these keys:
 }
 `;
 
-    // Call Lovable AI
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
+    // Call Lovable AI with retry logic for transient errors
+    const MAX_RETRIES = 2;
+    let aiResponse: Response | null = null;
+    let lastError: string | null = null;
 
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Rate limit exceeded, please try again later" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+          }),
+        });
+
+        if (aiResponse.ok) {
+          break; // Success, exit retry loop
+        }
+
+        // Handle non-retryable errors immediately
+        if (aiResponse.status === 429) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Rate limit exceeded, please try again later" }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (aiResponse.status === 402) {
+          return new Response(
+            JSON.stringify({ success: false, error: "AI credits exhausted" }),
+            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Retryable errors (503, 500, etc.)
+        lastError = `AI API error: ${aiResponse.status}`;
+        if (attempt < MAX_RETRIES) {
+          console.log(`[hybrid-generate-content] Retry ${attempt + 1}/${MAX_RETRIES} after ${lastError}`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // Exponential backoff
+        }
+      } catch (fetchErr) {
+        lastError = fetchErr instanceof Error ? fetchErr.message : "Network error";
+        if (attempt < MAX_RETRIES) {
+          console.log(`[hybrid-generate-content] Retry ${attempt + 1}/${MAX_RETRIES} after ${lastError}`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
       }
-      if (aiResponse.status === 402) {
-        return new Response(
-          JSON.stringify({ success: false, error: "AI credits exhausted" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI API error: ${aiResponse.status}`);
+    }
+
+    if (!aiResponse || !aiResponse.ok) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "AI service temporarily unavailable. Please try again in a moment.",
+          details: lastError
+        }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiResult = await aiResponse.json();
