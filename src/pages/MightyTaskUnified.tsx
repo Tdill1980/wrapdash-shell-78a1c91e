@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isWithinCampaign } from "@/lib/campaign-prompts/january-2026";
 import {
   CheckCircle,
   Circle,
@@ -435,6 +436,25 @@ export default function MightyTaskUnified() {
       }
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // CAMPAIGN GUARD: January 2026 items CANNOT use agents
+    // This is the safety lock - even if UI paths slip through
+    // ═══════════════════════════════════════════════════════════
+    const scheduledDate = ctx.scheduled_date as string | undefined;
+    if (scheduledDate && isWithinCampaign(scheduledDate)) {
+      toast.error("Campaign content must be created via Campaign Content Creator");
+      // Redirect back to calendar with state to open the campaign modal
+      navigate("/content-calendar", { 
+        replace: true, 
+        state: { 
+          openCampaign: true, 
+          calendarId: calendarIdFromUrl,
+          scheduledDate 
+        } 
+      });
+      return;
+    }
+
     const title = (ctx.title as string | null | undefined) ?? "Untitled";
     const brand = (ctx.brand as string | undefined) ?? "";
     const contentType = (ctx.content_type as string | undefined) ?? "content";
@@ -454,7 +474,7 @@ export default function MightyTaskUnified() {
 
     const agentName = AVAILABLE_AGENTS.find((a) => a.id === finalAgentId)?.name || finalAgentId;
     toast.info(`Executing calendar item with ${agentName}`);
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   // If the user clicked a calendar item linked to a task, auto-open execution here.
   useEffect(() => {

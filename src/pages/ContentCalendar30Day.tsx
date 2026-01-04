@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -111,6 +111,7 @@ const getContentTypeKey = (contentType: string, platform: string): string => {
 
 export default function ContentCalendar30Day() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -162,6 +163,30 @@ export default function ContentCalendar30Day() {
       return data as Task[];
     }
   });
+
+  // ═══════════════════════════════════════════════════════════
+  // REDIRECT-OPEN: Handle navigation state from /mightytask guard
+  // When campaign items are redirected here, auto-open the CampaignContentCreator
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    const navState = location.state as { 
+      openCampaign?: boolean; 
+      calendarId?: string; 
+      scheduledDate?: string; 
+    } | null;
+    
+    if (!navState?.openCampaign || !navState?.calendarId) return;
+    
+    // Find the calendar item to open
+    const itemToOpen = scheduledContent.find(item => item.id === navState.calendarId);
+    if (itemToOpen) {
+      setCampaignItem(itemToOpen);
+      setShowCampaignCreator(true);
+    }
+    
+    // Clear navigation state to prevent re-triggering on refresh
+    navigate(location.pathname + location.search, { replace: true, state: {} });
+  }, [location.state, scheduledContent, navigate, location.pathname, location.search]);
 
   // Map tasks by content_calendar_id for quick lookup
   const tasksByCalendarId = useMemo(() => {
