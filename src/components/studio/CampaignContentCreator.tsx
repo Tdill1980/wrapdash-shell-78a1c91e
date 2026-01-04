@@ -23,9 +23,10 @@ interface CampaignContentCreatorProps {
     content_type: string;
     platform: string;
     scheduled_date: string;
-    directive: string | null;
+    directive?: string | null;
+    locked_metadata?: Record<string, unknown> | null;
   } | null;
-  organizationId: string | null;
+  organizationId?: string | null;
   onDraftSaved?: () => void;
 }
 

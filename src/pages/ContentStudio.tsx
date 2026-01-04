@@ -12,19 +12,37 @@ import {
   ChevronRight,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Wand2
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addDays, isBefore, isToday, startOfDay } from 'date-fns';
 import { GenerateMonthModal } from '@/components/studio/GenerateMonthModal';
+import { CampaignContentCreator } from '@/components/studio/CampaignContentCreator';
+import { isWithinCampaign } from '@/lib/campaign-prompts/january-2026';
+
+interface CalendarItem {
+  id: string;
+  title: string | null;
+  scheduled_date: string;
+  status: string | null;
+  content_type: string;
+  platform: string;
+  brand: string;
+  directive?: string | null;
+  locked_metadata?: any;
+  intent_preset_id?: string | null;
+}
 
 export default function ContentStudio() {
   const navigate = useNavigate();
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
-
+  const [campaignCreatorOpen, setCampaignCreatorOpen] = useState(false);
+  const [selectedCalendarItem, setSelectedCalendarItem] = useState<CalendarItem | null>(null);
   // Fetch upcoming content calendar entries (next 14 days)
-  const { data: upcomingContent = [] } = useQuery({
+  const { data: upcomingContent = [], refetch: refetchUpcoming } = useQuery({
     queryKey: ['studio-upcoming-content'],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -32,14 +50,14 @@ export default function ContentStudio() {
       
       const { data, error } = await supabase
         .from('content_calendar')
-        .select('id, title, scheduled_date, status, content_type, platform, brand')
+        .select('id, title, scheduled_date, status, content_type, platform, brand, directive, locked_metadata, intent_preset_id')
         .gte('scheduled_date', today)
         .lte('scheduled_date', twoWeeksOut)
         .order('scheduled_date', { ascending: true })
         .limit(10);
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as CalendarItem[];
     }
   });
 
@@ -208,23 +226,53 @@ export default function ContentStudio() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {upcomingContent.slice(0, 6).map((item) => (
-                    <div 
-                      key={item.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                      onClick={() => navigate('/content-calendar')}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {item.title || `${item.content_type} for ${item.brand}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(item.scheduled_date), 'MMM d')} • {item.platform}
-                        </p>
+                  {upcomingContent.slice(0, 6).map((item) => {
+                    const isCampaignItem = isWithinCampaign(item.scheduled_date);
+                    return (
+                      <div 
+                        key={item.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                      >
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => navigate('/content-calendar')}
+                        >
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm truncate">
+                              {item.title || `${item.content_type} for ${item.brand}`}
+                            </p>
+                            {isCampaignItem && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/50 text-primary">
+                                <Lock className="h-2.5 w-2.5 mr-1" />
+                                Jan 2026
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(item.scheduled_date), 'MMM d')} • {item.platform}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(item.status)}
+                          {isCampaignItem && (!item.status || item.status === 'Needs Creating' || item.status === 'needs_creating') && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCalendarItem(item);
+                                setCampaignCreatorOpen(true);
+                              }}
+                            >
+                              <Wand2 className="h-3.5 w-3.5 mr-1" />
+                              Create
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      {getStatusBadge(item.status)}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -306,6 +354,27 @@ export default function ContentStudio() {
         open={generateModalOpen} 
         onOpenChange={setGenerateModalOpen} 
       />
+
+      {selectedCalendarItem && (
+        <CampaignContentCreator
+          open={campaignCreatorOpen}
+          onOpenChange={setCampaignCreatorOpen}
+          calendarItem={{
+            id: selectedCalendarItem.id,
+            title: selectedCalendarItem.title,
+            scheduled_date: selectedCalendarItem.scheduled_date,
+            content_type: selectedCalendarItem.content_type,
+            platform: selectedCalendarItem.platform,
+            brand: selectedCalendarItem.brand,
+            directive: selectedCalendarItem.directive ?? null,
+            locked_metadata: selectedCalendarItem.locked_metadata ?? null,
+          }}
+          onDraftSaved={() => {
+            refetchUpcoming();
+            setSelectedCalendarItem(null);
+          }}
+        />
+      )}
     </MainLayout>
   );
 }
