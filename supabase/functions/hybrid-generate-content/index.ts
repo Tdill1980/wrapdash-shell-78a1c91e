@@ -1,5 +1,6 @@
 // Hybrid Content Generation Edge Function
 // Generates content using Auto/Hybrid/Exact modes with Voice Engine integration
+// Supports locked campaign prompts for disciplined content execution
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -9,6 +10,180 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// ============================================================================
+// CAMPAIGN CONFIGURATIONS - IMMUTABLE AT RUNTIME
+// These are locked system prompts that CANNOT be overridden by request body
+// ============================================================================
+
+const CAMPAIGN_CONFIGS: Record<string, {
+  id: string;
+  name: string;
+  forbiddenPhrases: string[];
+  buildSystemPrompt: (contentType: string) => string;
+}> = {
+  "january_2026_new_year": {
+    id: "january_2026_new_year",
+    name: "January 2026 — New Year. New Systems. Better Wrap Jobs.",
+    forbiddenPhrases: [
+      "level up", "game changer", "don't miss out", "crushing it", "smash that",
+      "link in bio", "drop a comment", "fire", "lit", "viral", "blow up",
+      "grind", "hustle", "boss", "slay"
+    ],
+    buildSystemPrompt: (contentType: string) => {
+      const reelSchema = contentType === 'reel' ? `
+🎬 REEL CREATION RULES
+Output ONLY this structure:
+{
+  "type": "reel",
+  "mode": "meta | organic",
+  "title": "",
+  "intent_preset": "",
+  "overlay_style": "poppins_premium | poppins_bold",
+  "caption_style": "dara",
+  "music_style": "none",
+  "overlays": [
+    { "text": "", "start": 0.0, "end": 1.8 },
+    { "text": "", "start": 1.8, "end": 4.0 },
+    { "text": "", "start": 4.0, "end": 6.5 }
+  ],
+  "caption": "",
+  "cta": ""
+}
+
+Overlays must:
+• Be short (under 50 chars)
+• Be declarative
+• Be premium
+• Never sound like an ad from TikTok
+` : '';
+
+      const staticSchema = contentType === 'static' ? `
+🖼️ STATIC CREATION RULES
+{
+  "type": "static",
+  "headline": "",
+  "subtext": "",
+  "caption": "",
+  "cta": ""
+}
+` : '';
+
+      const carouselSchema = contentType === 'carousel' ? `
+🧩 CAROUSEL CREATION RULES
+{
+  "type": "carousel",
+  "slides": [
+    { "headline": "", "subtext": "" }
+  ],
+  "caption": ""
+}
+` : '';
+
+      return `Role:
+You are the Content Studio AI for WePrintWraps (WPW).
+Your job is to create executable content drafts that obey system rules.
+You do NOT invent strategy. You execute a locked campaign.
+
+🔒 GLOBAL CONSTRAINTS (NON-NEGOTIABLE)
+• No autopilot claims
+• No vibe-based content
+• No music by default (music_style = none)
+• No influencer language
+• No hip hop / trend culture
+• No rendering — output drafts only
+• Everything must be professional, premium, and calm
+
+If you cannot meet constraints → fail loud.
+
+🎯 CAMPAIGN LOCK (DO NOT DEVIATE)
+Campaign Name: January 2026 — New Year. New Systems. Better Wrap Jobs.
+Target Buyer: Professional wrap shops handling commercial and fleet work.
+
+Core Offers (ONLY):
+• CommercialPro quote system
+• Bulk discounts
+• Premium Wrap Guarantee
+• 1–2 day production
+• RestylePro AI previews
+
+🧠 BRAND VOICE RULES
+Default voice: DARA_PREMIUM × OGILVY
+• Authority over urgency
+• Identity mirroring
+• Risk removal
+• Systemized advantage
+
+Allowed voices (preset IDs only):
+• DARA_PREMIUM
+• WPW_COMMERCIAL
+• INK_EDGE_EDITORIAL
+
+❌ Do not use Sabri hype here.
+
+🧩 CONTENT MODES (EXPLICIT)
+
+🔘 MODE 1 — META AD
+Purpose: conversion
+Tone: calm, confident, professional
+CTA allowed
+
+🔘 MODE 2 — ORGANIC
+Purpose: authority, education, recognition
+Soft CTA only
+
+${reelSchema}${staticSchema}${carouselSchema}
+
+🚫 FORBIDDEN PHRASES
+Never generate:
+• "level up"
+• "game changer"
+• "don't miss out"
+• "crushing it"
+• "smash that"
+• emojis
+• slang
+• creator advice
+• social growth tips
+
+✅ QUALITY CHECK BEFORE OUTPUT
+Before returning content, verify:
+• Would a professional wrap shop owner respect this?
+• Does it feel inevitable, not loud?
+• Does it sell certainty, not excitement?
+
+If not, rewrite.
+
+Return ONLY valid JSON. No markdown, no explanations.`;
+    }
+  }
+};
+
+// Validate and clean output against forbidden phrases
+function validateCampaignOutput(output: string, forbiddenPhrases: string[]): {
+  cleaned: string;
+  violations: string[];
+} {
+  const violations: string[] = [];
+  let cleaned = output;
+  
+  for (const phrase of forbiddenPhrases) {
+    const regex = new RegExp(phrase, 'gi');
+    if (regex.test(cleaned)) {
+      violations.push(phrase);
+      // Don't remove - just flag for logging
+    }
+  }
+  
+  // Check for emojis
+  const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu;
+  if (emojiRegex.test(cleaned)) {
+    violations.push('emojis');
+    cleaned = cleaned.replace(emojiRegex, '');
+  }
+  
+  return { cleaned, violations };
+}
 
 serve(async (req: Request) => {
   // CORS preflight
@@ -26,7 +201,21 @@ serve(async (req: Request) => {
       references = '',
       assets = '',
       media_url = '',
+      // Campaign context - CANNOT override system prompt
+      campaign_id = null,
+      content_mode = 'meta', // 'meta' or 'organic'
+      intent_preset = '',
+      title = '',
     } = body;
+
+    // SECURITY: Reject any attempt to pass custom systemPrompt
+    if (body.systemPrompt || body.system_prompt) {
+      console.warn("[hybrid-generate-content] Blocked attempt to override system prompt");
+      return new Response(
+        JSON.stringify({ success: false, error: "System prompt override not allowed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -41,18 +230,27 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Load TradeDNA + brand voice
-    let voiceProfile = null;
-    let brandContext = "";
-    
-    try {
-      if (organization_id) {
-        voiceProfile = await loadVoiceProfile(organization_id);
-        
-        const merged = voiceProfile?.merged || {};
-        const overlays = merged.overlays || voiceProfile?.brand_defaults?.brand_overlays || {};
-        
-        brandContext = `
+    // Determine which prompt to use
+    let systemPrompt: string;
+    let activeCampaign: typeof CAMPAIGN_CONFIGS[string] | null = null;
+
+    if (campaign_id && CAMPAIGN_CONFIGS[campaign_id]) {
+      // USE LOCKED CAMPAIGN PROMPT
+      activeCampaign = CAMPAIGN_CONFIGS[campaign_id];
+      systemPrompt = activeCampaign.buildSystemPrompt(content_type);
+      console.log(`[hybrid-generate-content] Using locked campaign: ${activeCampaign.name}`);
+    } else {
+      // FALLBACK: Load TradeDNA + brand voice
+      let brandContext = "";
+      
+      try {
+        if (organization_id) {
+          const voiceProfile = await loadVoiceProfile(organization_id);
+          
+          const merged = voiceProfile?.merged || {};
+          const overlays = merged.overlays || voiceProfile?.brand_defaults?.brand_overlays || {};
+          
+          brandContext = `
 BRAND VOICE PROFILE:
 - Tone: ${merged.tone || 'professional, confident'}
 - Energy: ${merged.energy || 'high-performance'}
@@ -62,13 +260,12 @@ BRAND VOICE PROFILE:
 - Primary Color: ${overlays.primary_color || '#00AFFF'}
 - Secondary Color: ${overlays.secondary_color || '#4EEAFF'}
 `;
+        }
+      } catch (err) {
+        console.warn("[hybrid-generate-content] Could not load voice profile:", err);
       }
-    } catch (err) {
-      console.warn("[hybrid-generate-content] Could not load voice profile:", err);
-    }
 
-    // Build system prompt based on mode
-    const systemPrompt = `You are the HYBRID CONTENT ENGINE for a vehicle wrap industry creative platform.
+      systemPrompt = `You are the HYBRID CONTENT ENGINE for a vehicle wrap industry creative platform.
 ${brandContext}
 
 You create content packages that include scripts, hooks, captions, hashtags, and CTAs.
@@ -76,9 +273,25 @@ Always output valid JSON only, no markdown or explanations.
 
 Content should match the brand voice and be optimized for the target platform.
 For wrap shops: focus on transformation, quality, turnaround time, and visual impact.`;
+    }
 
     // Build user prompt
-    const userPrompt = `
+    const userPrompt = activeCampaign 
+      ? `
+CAMPAIGN: ${activeCampaign.name}
+MODE: ${content_mode.toUpperCase()}
+CONTENT TYPE: ${content_type}
+TITLE: ${title || '(Generate appropriate title)'}
+INTENT PRESET: ${intent_preset || '(Infer from brief)'}
+
+BRIEF/INSTRUCTIONS:
+${hybrid_brief || "(Execute based on title and intent)"}
+
+${references ? `REFERENCE STYLE:\n${references}` : ''}
+${assets ? `ASSETS AVAILABLE:\n${assets}` : ''}
+
+Generate the ${content_type} draft now. Return ONLY valid JSON.`
+      : `
 MODE: ${mode.toUpperCase()}
 CONTENT TYPE: ${content_type}
 
@@ -174,14 +387,33 @@ Return a JSON object with these keys:
     // Clean up output - remove markdown code blocks if present
     output = output.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
-    // Save to content_queue
+    // Validate campaign output if active
+    let violations: string[] = [];
+    if (activeCampaign) {
+      const validation = validateCampaignOutput(output, activeCampaign.forbiddenPhrases);
+      output = validation.cleaned;
+      violations = validation.violations;
+      
+      if (violations.length > 0) {
+        console.warn(`[hybrid-generate-content] Forbidden phrase violations: ${violations.join(', ')}`);
+      }
+    }
+
+    // Save to content_queue with campaign metadata
     try {
       await supabase.from("content_queue").insert({
         organization_id,
         content_type,
-        mode,
+        mode: activeCampaign ? content_mode : mode,
         ai_prompt: hybrid_brief,
-        ai_metadata: { references, assets, media_url },
+        ai_metadata: { 
+          references, 
+          assets, 
+          media_url,
+          campaign_id: activeCampaign?.id || null,
+          intent_preset,
+          violations: violations.length > 0 ? violations : null,
+        },
         script: output,
         status: "draft",
       });
@@ -191,7 +423,12 @@ Return a JSON object with these keys:
     }
 
     return new Response(
-      JSON.stringify({ success: true, output }),
+      JSON.stringify({ 
+        success: true, 
+        output,
+        campaign_id: activeCampaign?.id || null,
+        violations: violations.length > 0 ? violations : undefined,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

@@ -4,22 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, CheckCircle, FileText, Hash, MessageSquare, Zap, Play } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
-interface HybridOutput {
-  script?: string;
-  hook?: string;
-  caption?: string;
-  hashtags?: string[];
-  cta?: string;
-  overlays?: Array<{ text: string; time: string; style: string }>;
-  media_plan?: {
-    cuts?: Array<{ description?: string; duration?: string; start?: number; end?: number }>;
-    music_suggestion?: string;
-    music_url?: string;
-    color_palette?: string[];
-    layout_template?: string;
-  };
-}
+import { HybridOutput } from "@/hooks/useHybridGenerate";
 
 interface HybridOutputDisplayProps {
   output: HybridOutput | null;
@@ -175,13 +160,20 @@ export function HybridOutputDisplay({ output, rawOutput, onSendToRender, onAddTo
               <div className="space-y-1">
                 <span className="text-xs font-medium text-muted-foreground">Text Overlays</span>
                 <div className="space-y-1">
-                  {output.overlays.map((overlay, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs bg-background/50 p-2 rounded border border-border/50">
-                      <span className="text-primary font-mono">{overlay.time}</span>
-                      <span>{overlay.text}</span>
-                      <Badge variant="outline" className="text-[10px]">{overlay.style}</Badge>
-                    </div>
-                  ))}
+                  {output.overlays.map((overlay, i) => {
+                    // Support both legacy (time) and campaign (start/end) formats
+                    const timeDisplay = overlay.time || 
+                      (overlay.start !== undefined && overlay.end !== undefined 
+                        ? `${overlay.start}s - ${overlay.end}s` 
+                        : '');
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-xs bg-background/50 p-2 rounded border border-border/50">
+                        {timeDisplay && <span className="text-primary font-mono">{timeDisplay}</span>}
+                        <span>{overlay.text}</span>
+                        {overlay.style && <Badge variant="outline" className="text-[10px]">{overlay.style}</Badge>}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
