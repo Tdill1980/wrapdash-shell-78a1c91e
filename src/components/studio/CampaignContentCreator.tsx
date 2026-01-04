@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Sparkles, Lock, AlertTriangle, CheckCircle2, Copy } from "lucide-react";
+import { Loader2, Sparkles, Lock, AlertTriangle, CheckCircle2, Copy, Film } from "lucide-react";
 import { useHybridGenerate, CampaignOutput } from "@/hooks/useHybridGenerate";
 import { JANUARY_2026_CAMPAIGN } from "@/lib/campaign-prompts/january-2026";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,7 @@ export function CampaignContentCreator({
   organizationId,
   onDraftSaved,
 }: CampaignContentCreatorProps) {
+  const navigate = useNavigate();
   const [contentMode, setContentMode] = useState<'meta' | 'organic'>('meta');
   const [intentPreset, setIntentPreset] = useState<string>('');
   const [additionalBrief, setAdditionalBrief] = useState('');
@@ -61,6 +63,31 @@ export function CampaignContentCreator({
     error,
     violations 
   } = useHybridGenerate();
+
+  // Hand-off to MightyEdit for actual video production
+  const handleContinueToProduction = () => {
+    if (!calendarItem || !campaignOutput) return;
+    
+    // Build preset for MightyEdit in the format it expects
+    const preset = {
+      source: 'campaign_creator',
+      calendar_id: calendarItem.id,
+      task_id: calendarItem.id, // For marking complete after render
+      content_type: calendarItem.content_type,
+      platform: calendarItem.platform,
+      hook: campaignOutput.type === 'reel' ? campaignOutput.overlays?.[0]?.text : '',
+      cta: campaignOutput.type === 'reel' ? campaignOutput.cta : '',
+      caption: campaignOutput.caption,
+      overlays: campaignOutput.type === 'reel' ? campaignOutput.overlays : [],
+      brand: calendarItem.brand,
+      scheduled_date: calendarItem.scheduled_date,
+    };
+    
+    sessionStorage.setItem('mightyedit_preset', JSON.stringify(preset));
+    handleClose();
+    navigate('/mightyedit');
+    toast.success('Opening MightyEdit — select a video to render your ad');
+  };
 
   const handleGenerate = async () => {
     if (!calendarItem) return;
@@ -290,24 +317,30 @@ export function CampaignContentCreator({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 flex-wrap">
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
           {rawOutput && (
-            <Button onClick={handleSaveDraft} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4 mr-2" />
-                  Lock & Save Draft
-                </>
-              )}
-            </Button>
+            <>
+              <Button variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-4 h-4 mr-2" />
+                    Save Draft Only
+                  </>
+                )}
+              </Button>
+              <Button onClick={handleContinueToProduction}>
+                <Film className="w-4 h-4 mr-2" />
+                Continue to Production
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

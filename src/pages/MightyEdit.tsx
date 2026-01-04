@@ -242,12 +242,23 @@ export default function MightyEdit() {
       await executeEdits(queueId, renderType);
       console.log('[MightyEdit] executeEdits completed');
       
-      // If this was from a calendar preset, mark the linked task as complete
+      // If this was from a calendar/campaign preset, mark calendar complete and task done
+      if (calendarPreset?.calendar_id) {
+        console.log('[MightyEdit] Updating calendar item:', calendarPreset.calendar_id);
+        await supabase
+          .from('content_calendar')
+          .update({ 
+            status: 'completed',
+            posted_at: new Date().toISOString(),
+          })
+          .eq('id', calendarPreset.calendar_id);
+        toast.success('Calendar item marked complete!');
+      }
       if (calendarPreset?.task_id) {
         console.log('[MightyEdit] Marking task complete:', calendarPreset.task_id);
         await markTaskComplete(calendarPreset.task_id);
-        setCalendarPreset(null);
       }
+      setCalendarPreset(null);
     } catch (err) {
       console.error('[MightyEdit] executeEdits failed:', err);
       toast.error('Render failed', {
@@ -266,9 +277,9 @@ export default function MightyEdit() {
         const preset: ContentFactoryPreset = JSON.parse(storedPreset);
         console.log('[MightyEdit] Loaded preset from sessionStorage:', preset);
         
-        // Handle calendar presets - need to show video picker
-        if (preset.source === 'content_calendar') {
-          console.log('[MightyEdit] Calendar preset detected, loading video picker...');
+        // Handle calendar presets OR campaign_creator presets - both need video picker
+        if (preset.source === 'content_calendar' || preset.source === 'campaign_creator') {
+          console.log(`[MightyEdit] ${preset.source} preset detected, loading video picker...`);
           setCalendarPreset(preset);
           setActiveTab("editor");
           setPresetApplied(true);
