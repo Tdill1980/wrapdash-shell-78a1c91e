@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { getAgentForContentType } from "@/hooks/useCalendarTaskSync";
+import { isWithinCampaign } from "@/lib/campaign-prompts/january-2026";
 
 interface ScheduledContent {
   id: string;
@@ -415,43 +416,66 @@ export function ContentCalendarEditModal({
 
                 {!isContentCreated && (
                   <>
-                    <Button 
-                      onClick={() => {
-                        // Route to agent chat with calendar context
-                        const agentId = getAgentForContentType(contentType);
-                        const context = {
-                          source: 'content_calendar',
-                          calendar_id: content.id,
-                          content_type: contentType,
-                          platform,
-                          brand: content.brand,
-                          title: title || 'Untitled',
-                          caption: caption || '',
-                          scheduled_date: content.scheduled_date,
-                        };
-                        sessionStorage.setItem('agent_chat_context', JSON.stringify(context));
-                        navigate(`/mightytask?agent=${agentId}&calendarId=${content.id}`);
-                        onClose();
-                      }}
-                      className="w-full"
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Execute with Agent
-                    </Button>
+                    {/* Campaign items: Show Campaign Studio button, hide agent execution */}
+                    {isWithinCampaign(content.scheduled_date) ? (
+                      <Button 
+                        onClick={() => {
+                          // Navigate to content calendar where CampaignContentCreator will open
+                          navigate('/content-calendar', {
+                            state: {
+                              openCampaign: true,
+                              calendarId: content.id,
+                              scheduledDate: content.scheduled_date
+                            }
+                          });
+                          onClose();
+                        }}
+                        className="w-full bg-amber-600 hover:bg-amber-700"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Create in Campaign Studio
+                      </Button>
+                    ) : (
+                      <>
+                        <Button 
+                          onClick={() => {
+                            // Route to agent chat with calendar context (non-campaign only)
+                            const agentId = getAgentForContentType(contentType);
+                            const context = {
+                              source: 'content_calendar',
+                              calendar_id: content.id,
+                              content_type: contentType,
+                              platform,
+                              brand: content.brand,
+                              title: title || 'Untitled',
+                              caption: caption || '',
+                              scheduled_date: content.scheduled_date,
+                            };
+                            sessionStorage.setItem('agent_chat_context', JSON.stringify(context));
+                            navigate(`/mightytask?agent=${agentId}&calendarId=${content.id}`);
+                            onClose();
+                          }}
+                          className="w-full"
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Execute with Agent
+                        </Button>
 
-                    <Button 
-                      variant="outline"
-                      onClick={handleGenerateWithAI}
-                      disabled={isGenerating}
-                      className="w-full"
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Wand2 className="w-4 h-4 mr-2" />
-                      )}
-                      Quick Create (Skip Agent)
-                    </Button>
+                        <Button 
+                          variant="outline"
+                          onClick={handleGenerateWithAI}
+                          disabled={isGenerating}
+                          className="w-full"
+                        >
+                          {isGenerating ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Wand2 className="w-4 h-4 mr-2" />
+                          )}
+                          Quick Create (Skip Agent)
+                        </Button>
+                      </>
+                    )}
                   </>
                 )}
 

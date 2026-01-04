@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, isToday, isPast, parseISO } from "date-fns";
 import { 
   AlertTriangle, CheckCircle2, Clock, Play, 
-  ArrowRight, Loader2, Calendar, ExternalLink
+  ArrowRight, Loader2, Calendar, ExternalLink, Sparkles
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
   normalizeContentType,
   type ExecutionContext
 } from "@/lib/executionResolver";
+import { CampaignContentCreator } from "@/components/studio/CampaignContentCreator";
+import { isWithinCampaign } from "@/lib/campaign-prompts/january-2026";
 
 interface ContentItem {
   id: string;
@@ -84,6 +86,10 @@ export function ContentExecutionList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
+  
+  // Campaign Content Creator state
+  const [showCampaignCreator, setShowCampaignCreator] = useState(false);
+  const [campaignItem, setCampaignItem] = useState<ContentItem | null>(null);
 
   // Fetch due/overdue content - using v1 state machine statuses
   const { data: dueContent = [], isLoading } = useQuery({
@@ -155,7 +161,17 @@ export function ContentExecutionList() {
   });
 
   const handleCreateNow = async (item: ContentItem) => {
-    // Use the canonical execution resolver
+    // ═══════════════════════════════════════════════════════════
+    // CAMPAIGN GATE: January 2026 items go to CampaignContentCreator
+    // This enforces ONE execution path for campaign content
+    // ═══════════════════════════════════════════════════════════
+    if (isWithinCampaign(item.scheduled_date)) {
+      setCampaignItem(item);
+      setShowCampaignCreator(true);
+      return;
+    }
+
+    // Use the canonical execution resolver (for non-campaign items only)
     const resolution = resolveExecutionTarget(item.brand, item.content_type, item.platform);
 
     // Update status to in_progress immediately with timestamp
@@ -205,6 +221,7 @@ export function ContentExecutionList() {
     };
     const brandStyle = getBrandStyle(item.brand);
     const linkedTask = tasksByCalendarId[item.id];
+    const isCampaignItem = isWithinCampaign(item.scheduled_date);
     const isCreated = linkedTask?.status === 'completed';
 
     const isInProgress = item.status === 'in_progress';
@@ -217,10 +234,11 @@ export function ContentExecutionList() {
         className={cn(
           "flex items-center gap-4 p-3 rounded-lg border-l-4 border transition-all",
           !isReady && "cursor-pointer",
-          isOverdue && !isReady ? "border-destructive/50 bg-destructive/10" : "",
-          !isOverdue && !isReady ? brandStyle.bgClass : "",
+          isCampaignItem && !isReady ? "border-amber-500/50 bg-amber-500/10 ring-1 ring-amber-500/30" : "",
+          !isCampaignItem && isOverdue && !isReady ? "border-destructive/50 bg-destructive/10" : "",
+          !isCampaignItem && !isOverdue && !isReady ? brandStyle.bgClass : "",
           isReady ? "border-green-500/50 bg-green-500/10" : "",
-          isInProgress && !isReady ? "border-yellow-500/50 bg-yellow-500/10" : "",
+          !isCampaignItem && isInProgress && !isReady ? "border-yellow-500/50 bg-yellow-500/10" : "",
           "hover:ring-1 hover:ring-primary/50"
         )}
       >
@@ -243,6 +261,9 @@ export function ContentExecutionList() {
         {/* Content Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
+            {isCampaignItem && (
+              <Sparkles className="w-3 h-3 text-amber-500" />
+            )}
             <span className={cn("text-xs font-medium", brandStyle.color)}>
               {brandStyle.label}
             </span>
@@ -252,7 +273,12 @@ export function ContentExecutionList() {
             >
               {typeConfig.emoji} {typeConfig.label}
             </Badge>
-            {isOverdue && !isReady && !isInProgress && (
+            {isCampaignItem && !isReady && (
+              <Badge variant="outline" className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30">
+                Campaign
+              </Badge>
+            )}
+            {!isCampaignItem && isOverdue && !isReady && !isInProgress && (
               <Badge variant="destructive" className="text-[10px]">
                 Overdue
               </Badge>
@@ -311,14 +337,24 @@ export function ContentExecutionList() {
           ) : (
             <Button 
               size="sm" 
+              variant={isCampaignItem ? "default" : "default"}
               onClick={(e) => {
                 e.stopPropagation();
                 handleCreateNow(item);
               }}
-              className="gap-1"
+              className={cn("gap-1", isCampaignItem && "bg-amber-600 hover:bg-amber-700")}
             >
-              <Play className="w-3 h-3" />
-              Create Now
+              {isCampaignItem ? (
+                <>
+                  <Sparkles className="w-3 h-3" />
+                  Create Draft
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3" />
+                  Create Now
+                </>
+              )}
             </Button>
           )}
         </div>
@@ -413,6 +449,29 @@ export function ContentExecutionList() {
           </ScrollArea>
         )}
       </CardContent>
+
+      {/* Campaign Content Creator Modal */}
+      <CampaignContentCreator
+        open={showCampaignCreator}
+        onOpenChange={setShowCampaignCreator}
+        calendarItem={campaignItem ? {
+          id: campaignItem.id,
+          title: campaignItem.title || 'Untitled',
+          brand: campaignItem.brand,
+          content_type: campaignItem.content_type,
+          platform: campaignItem.platform,
+          scheduled_date: campaignItem.scheduled_date,
+          directive: campaignItem.caption || '',
+          locked_metadata: null,
+        } : null}
+        organizationId={null}
+        onDraftSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['content-execution-due'] });
+          queryClient.invalidateQueries({ queryKey: ['content-calendar-30day'] });
+          setShowCampaignCreator(false);
+          setCampaignItem(null);
+        }}
+      />
     </Card>
   );
 }
