@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Upload, Image, Video, Music, Folder, 
   Grid3X3, List, X, Play, Download, Trash2, Sparkles, FileStack, CheckCircle, Lightbulb,
-  Wand2, Loader2, AlertTriangle
+  Wand2, Loader2, AlertTriangle, Scan
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,17 @@ import { MediaUploader } from "./MediaUploader";
 import { MediaCard, MediaSelectMode } from "./MediaCard";
 import { TagEditorModal } from "./TagEditorModal";
 import { toast } from "sonner";
+import { useVisualAnalyzer } from "@/hooks/useVisualAnalyzer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export interface MediaFile {
   id: string;
@@ -68,6 +79,30 @@ export function MediaLibrary({
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [tagEditorFile, setTagEditorFile] = useState<MediaFile | null>(null);
   const [bulkRetagging, setBulkRetagging] = useState(false);
+  const [showAnalysisConfirm, setShowAnalysisConfirm] = useState(false);
+  
+  const { analyzeAllUntagged, getStatus, analyzing } = useVisualAnalyzer();
+  const [analysisStatus, setAnalysisStatus] = useState<{ analyzed: number; unanalyzed: number } | null>(null);
+
+  // Fetch analysis status on mount
+  useEffect(() => {
+    getStatus().then(setAnalysisStatus).catch(console.error);
+  }, []);
+
+  const handleRunAnalysis = async () => {
+    setShowAnalysisConfirm(false);
+    try {
+      const result = await analyzeAllUntagged(50);
+      toast.success(`Analysis complete: ${result.processed} analyzed, ${result.skipped} skipped`);
+      // Refresh status after analysis
+      const newStatus = await getStatus();
+      setAnalysisStatus(newStatus);
+      refetch();
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      toast.error("Analysis failed. Check console for details.");
+    }
+  };
 
   const { data: files = [], isLoading, refetch } = useQuery({
     queryKey: ["media-library", filterType, category],
@@ -171,10 +206,49 @@ export function MediaLibrary({
 
   return (
     <div className="space-y-4">
+      {/* Analysis Confirmation Dialog */}
+      <AlertDialog open={showAnalysisConfirm} onOpenChange={setShowAnalysisConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Analyze Source Footage</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will analyze all unprocessed source videos and assign system tags.
+              AI outputs and inspiration videos are excluded.
+              {analysisStatus && (
+                <span className="block mt-2 font-medium">
+                  {analysisStatus.unanalyzed} videos pending analysis
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRunAnalysis}>
+              Run Analysis
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg sm:text-xl font-semibold">Media Library</h2>
         <div className="flex items-center gap-2">
+          {/* Run Analysis Button */}
+          <Button 
+            onClick={() => setShowAnalysisConfirm(true)} 
+            size="sm" 
+            variant="outline"
+            disabled={analyzing || (analysisStatus?.unanalyzed === 0)}
+            className="hidden sm:flex"
+          >
+            {analyzing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Scan className="w-4 h-4 mr-2" />
+            )}
+            {analyzing ? "Analyzing..." : `Analyze${analysisStatus?.unanalyzed ? ` (${analysisStatus.unanalyzed})` : ""}`}
+          </Button>
           <Button 
             onClick={handleBulkRetag} 
             size="sm" 
