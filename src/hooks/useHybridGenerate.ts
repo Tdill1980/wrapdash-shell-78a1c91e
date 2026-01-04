@@ -191,11 +191,13 @@ export function useHybridGenerate() {
 
       // Try to parse the JSON output
       try {
+        console.log('[CampaignGen] raw output:', data.output);
         const parsed = JSON.parse(data.output);
+        console.log('[CampaignGen] parsed output:', parsed);
         setCampaignOutput(parsed as CampaignOutput);
         setOutput(parsed);
-      } catch {
-        console.warn('Could not parse campaign output as JSON');
+      } catch (parseErr) {
+        console.warn('[CampaignGen] Could not parse campaign output as JSON:', parseErr);
       }
 
       toast.success("Campaign content generated!");

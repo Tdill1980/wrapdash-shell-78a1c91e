@@ -222,8 +222,8 @@ export function CampaignContentCreator({
               />
             </div>
 
-            {/* Generate Button */}
-            {!campaignOutput && (
+            {/* Generate Button - show if no raw output yet */}
+            {!rawOutput && (
               <Button 
                 onClick={handleGenerate} 
                 disabled={isGenerating}
@@ -294,7 +294,7 @@ export function CampaignContentCreator({
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
-          {campaignOutput && (
+          {rawOutput && (
             <Button onClick={handleSaveDraft} disabled={isSaving}>
               {isSaving ? (
                 <>
