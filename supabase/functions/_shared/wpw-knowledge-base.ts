@@ -385,6 +385,173 @@ MATERIALS:
 };
 
 // =============================================================================
+// SPECIALTY PRODUCTS (LOCKED PRICING - January 2025)
+// =============================================================================
+
+export const WPW_INKFUSION: KnowledgeEntry = {
+  category: "products",
+  title: "InkFusion™ Premium Vinyl",
+  appliesTo: ["jordan_lee", "alex_morgan", "taylor_brooks"],
+  keywords: ["inkfusion", "ink fusion", "paint quality", "sw900", "premium", "roll"],
+  priority: 95,
+  content: `
+INKFUSION™ - AUTOMOTIVE PAINT-QUALITY VINYL
+
+⚠️ CRITICAL: InkFusion is a SUITE-BASED PRODUCT, not chat-quoted!
+
+PRICE: $2,075 per roll (FULL ROLL ONLY)
+COVERAGE: 375 sq ft (~24 yards)
+WIDTH: 60"
+MATERIAL: Avery SW900 Cast Vinyl + DOL1360 Max Gloss Laminate
+FINISHES: Gloss or Luster (same price) - Matte NOT recommended
+TURNAROUND: 1-2 business days
+PRODUCT ID: 69439
+
+ORDER PATH:
+RestylePro → PrintPro Suite → Select colors/finishes → Add to Cart → WPW WooCommerce
+
+JORDAN MUST:
+1. Acknowledge we DO sell InkFusion
+2. State: "$2,075 per full roll (375 sqft)"
+3. Explain it's ordered through PrintPro Suite
+4. Offer to explain the Suite or answer finish questions
+
+JORDAN MUST NEVER:
+❌ Quote InkFusion by square foot
+❌ Ask "how many sqft?"
+❌ Say "we don't sell InkFusion"
+❌ Treat it like a standard wrap product
+
+APPROVED RESPONSE:
+"InkFusion™ is our premium paint-quality printed vinyl system.
+It's sold as a full 375 sq ft roll for $2,075, printed on Avery SW900 with our Max Gloss laminate.
+InkFusion is ordered through our PrintPro Suite in RestylePro, where you can select colors and finishes.
+Want me to show you how to access it or answer questions about finishes?"
+
+Product page: https://weprintwraps.com/product/inkfusion/
+`,
+};
+
+export const WPW_WBTY: KnowledgeEntry = {
+  category: "products",
+  title: "Wrap By The Yard",
+  appliesTo: ["jordan_lee", "alex_morgan", "taylor_brooks"],
+  keywords: ["wrap by the yard", "wbty", "yard", "bape", "camo", "marble", "trippy", "wicked wild", "nebula", "galaxy", "starry night", "matrix"],
+  priority: 85,
+  content: `
+WRAP BY THE YARD - PRE-DESIGNED PRINTS
+
+PRICE: $95.50 per yard
+QUANTITIES: 1, 5, 10, 25, or 50 yards
+
+QUICK MATH:
+• 1 yard = $95.50
+• 5 yards = $477.50
+• 10 yards = $955
+• 25 yards = $2,387.50
+• 50 yards = $4,775
+
+COLLECTIONS:
+• Camo & Carbon (ID: 1726) - Sand Camo, Black Camo, Gray Carbon, etc.
+• Metal & Marble (ID: 39698) - Gray Marble, Gold Foil, Diamond Plate, etc.
+• Wicked & Wild (ID: 4181) - Nebula Galaxy, Starry Night, Matrix, etc.
+• Bape Camo (ID: 42809) - Red/Blue/Purple/Pink Bape patterns
+• Modern & Trippy (ID: 52489) - Modern Wave, Psychedelic Drip, etc.
+
+WHEN CUSTOMER ASKS ABOUT A PATTERN:
+1. Identify which collection it belongs to
+2. Quote: "$95.50/yard - how many yards do you need?"
+3. Calculate total
+4. Offer quote email or order link
+
+JORDAN RESPONSE EXAMPLE:
+"That pattern is in our Wicked & Wild collection! It's $95.50 per yard.
+How many yards do you need? I can calculate your total and send a quote."
+`,
+};
+
+export const WPW_FADEWRAPS: KnowledgeEntry = {
+  category: "products",
+  title: "FadeWraps Pre-Designed",
+  appliesTo: ["jordan_lee", "alex_morgan", "taylor_brooks"],
+  keywords: ["fade", "fadewrap", "fade wrap", "pre-designed", "sides"],
+  priority: 85,
+  content: `
+FADEWRAPS - PRE-DESIGNED FADE GRAPHICS
+
+PRODUCT ID: 58391
+
+SIZE OPTIONS (Driver + Passenger Sides):
+• Small (144x59.5"): $600
+• Medium (172x59.5"): $710
+• Large (200x59.5"): $825
+• XL (240x59.5"): $990
+
+ADD-ONS:
+• Hood (72x59.5"): $160
+• Front Bumper (38x120.5"): $200
+• Rear + Bumper (59x72.5" + 38x120"): $395
+• Roof Small (72x59.5"): $160
+• Roof Medium (110x59.5"): $225
+• Roof Large (160x59.5"): $330
+
+FINISHES: Gloss, Luster, or Matte
+MATERIAL: Avery MPI 1105 with UV laminate
+
+JORDAN'S RESPONSE:
+"FadeWraps start at $600 for small sides (both driver + passenger).
+Medium is $710, Large is $825, XL is $990.
+Want to add hood ($160) or roof ($160-$330)?
+What size vehicle is this for so I can recommend the right size?"
+
+Product page: https://weprintwraps.com/our-products/pre-designed-fade-wraps/
+`,
+};
+
+export const WPW_STANDALONE_PRODUCTS: KnowledgeEntry = {
+  category: "products",
+  title: "Standalone Products (No Vehicle Required)",
+  appliesTo: ["jordan_lee", "alex_morgan"],
+  keywords: ["window perf", "perforated", "window vinyl", "cut contour", "decal", "graphic", "standalone"],
+  priority: 90,
+  content: `
+STANDALONE PRODUCTS - NO VEHICLE CONTEXT REQUIRED
+
+These products are sold STANDALONE. Jordan must quote them directly!
+
+✅ WINDOW PERF (Perforated Window Vinyl 50/50)
+   • Price: $5.95/sqft
+   • Product ID: 80
+   • Sold standalone - no wrap required
+   • Calculate: Sqft × $5.95
+   • Example: "100 sqft = $595"
+   • Link: https://weprintwraps.com/product/perforated-window-vinyl/
+
+✅ CUT CONTOUR VINYL (Decals/Graphics)
+   • Avery: $6.32/sqft (ID: 108)
+   • 3M: $6.92/sqft (ID: 19420)
+   • Weeded and masked, ready to install
+
+WHEN CUSTOMER ASKS FOR THESE:
+1. Give the sqft price immediately
+2. Calculate total if they provide sqft
+3. Offer quote email or order link
+4. DO NOT ask for vehicle info - it's not needed!
+
+JORDAN MUST NEVER SAY:
+❌ "We don't typically offer window perf as a standalone product"
+❌ "We don't sell that"
+❌ "What vehicle is this for?" (when asking about window perf)
+
+WE DO SELL THESE STANDALONE. ALWAYS QUOTE THEM!
+
+Example Response:
+"Window perf is $5.95 per square foot. 100 sqft would be $595.
+Want me to email you a quote? What's your email address?"
+`,
+};
+
+// =============================================================================
 // FULL KNOWLEDGE BASE EXPORT
 // =============================================================================
 
@@ -399,6 +566,11 @@ export const WPW_KNOWLEDGE_BASE: KnowledgeEntry[] = [
   WPW_ESCALATION_RULES,
   WPW_APPROVED_LANGUAGE,
   WPW_POSITIONING,
+  // Specialty Products (January 2025)
+  WPW_INKFUSION,
+  WPW_WBTY,
+  WPW_FADEWRAPS,
+  WPW_STANDALONE_PRODUCTS,
 ];
 
 /**
