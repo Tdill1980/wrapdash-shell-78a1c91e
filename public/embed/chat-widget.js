@@ -90,6 +90,45 @@
       z-index: 999999;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
+    .wcai-bubble-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+    }
+    .wcai-ask-trigger {
+      background: white;
+      border-radius: 24px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #475569;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s;
+      opacity: 0;
+      animation: wcai-slide-in 0.4s ease-out 2s forwards;
+    }
+    .wcai-ask-trigger:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      border-color: #6366f1;
+    }
+    .wcai-ask-trigger svg {
+      width: 16px;
+      height: 16px;
+      color: #6366f1;
+    }
+    .wcai-ask-trigger.hidden {
+      display: none;
+    }
+    @keyframes wcai-slide-in {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
     .wcai-chat-bubble {
       width: 60px;
       height: 60px;
@@ -469,16 +508,27 @@
         Powered by <a href="https://weprintwraps.com" target="_blank">weprintwraps.com</a>
       </div>
     </div>
-    <div class="wcai-chat-bubble" id="wcai-bubble">
-      ${config.mode === 'test' ? '<span class="wcai-test-badge">TEST</span>' : ''}
-      <img src="${WPW_LOGO}" alt="WPW" onerror="this.outerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'white\\' width=\\'28\\'><path d=\\'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z\\'/></svg>'"/>
-      <span class="wcai-bubble-pulse"></span>
+    <div class="wcai-bubble-row">
+      <div class="wcai-ask-trigger" id="wcai-ask-trigger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        Ask anything
+      </div>
+      <div class="wcai-chat-bubble" id="wcai-bubble">
+        ${config.mode === 'test' ? '<span class="wcai-test-badge">TEST</span>' : ''}
+        <img src="${WPW_LOGO}" alt="WPW" onerror="this.outerHTML='<svg viewBox=\\'0 0 24 24\\' fill=\\'white\\' width=\\'28\\'><path d=\\'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z\\'/></svg>'"/>
+        <span class="wcai-bubble-pulse"></span>
+      </div>
     </div>
   `;
   document.body.appendChild(container);
 
   // Elements
   const bubble = document.getElementById('wcai-bubble');
+  const askTrigger = document.getElementById('wcai-ask-trigger');
   const chatWindow = document.getElementById('wcai-window');
   const closeBtn = document.getElementById('wcai-close');
   const messagesContainer = document.getElementById('wcai-messages');
@@ -489,6 +539,20 @@
 
   let isOpen = false;
   let hasInteracted = false;
+
+  // Hide ask trigger after first interaction
+  function hideAskTrigger() {
+    if (askTrigger && !askTrigger.classList.contains('hidden')) {
+      askTrigger.classList.add('hidden');
+    }
+  }
+
+  // Ask trigger opens chat too
+  if (askTrigger) {
+    askTrigger.addEventListener('click', () => {
+      toggleChat();
+    });
+  }
 
   // Typewriter effect
   function typeMessage(element, text, speed = 30) {
@@ -581,6 +645,7 @@
     if (!messageText) return;
 
     hideQuickActions();
+    hideAskTrigger(); // Hide the ask trigger after first message
     addMessage(messageText, true);
     input.value = '';
     sendBtn.disabled = true;

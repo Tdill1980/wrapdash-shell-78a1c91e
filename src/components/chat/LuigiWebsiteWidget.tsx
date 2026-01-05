@@ -185,11 +185,24 @@ export function LuigiWebsiteWidget() {
   // Floating bubble when closed - moved up and left slightly for better visibility
   if (!isOpen) {
     return (
-      <div className="fixed bottom-20 right-8 z-50 flex flex-col items-end gap-2">
-        {/* Teaser text */}
-        <div className="bg-white rounded-lg shadow-lg px-3 py-2 text-sm font-medium text-slate-700 animate-in fade-in slide-in-from-right-2 duration-500">
-          Need wrap pricing? 💬
-        </div>
+      <div className="fixed bottom-20 right-8 z-50 flex items-end gap-3">
+        {/* Ask anything trigger */}
+        <button
+          onClick={() => setIsOpen(true)}
+          className={cn(
+            "bg-white rounded-full shadow-lg px-4 py-2.5",
+            "flex items-center gap-2",
+            "border border-slate-200 hover:border-[#7C3AED]/40",
+            "hover:scale-105 transition-all duration-200",
+            "animate-in fade-in slide-in-from-right-4 duration-500"
+          )}
+          style={{ animationDelay: '2s', animationFillMode: 'both' }}
+        >
+          <HelpCircle className="w-4 h-4 text-[#7C3AED]" />
+          <span className="text-sm font-medium text-slate-700">Ask anything</span>
+        </button>
+
+        {/* Main chat bubble */}
         <button
           onClick={() => setIsOpen(true)}
           className={cn(
