@@ -691,52 +691,69 @@ serve(async (req) => {
       }
     }
 
+    // Merge vehicle from current message with saved state
     if (hasVehicle) {
       chatState.vehicle = extractedVehicle;
     }
+    
+    // Get effective vehicle (saved state + current message)
+    const savedVehicleForPricing = chatState.vehicle as { year?: string; make?: string; model?: string } | undefined;
+    const vehicleForPricing = {
+      year: savedVehicleForPricing?.year || extractedVehicle.year,
+      make: savedVehicleForPricing?.make || extractedVehicle.make,
+      model: savedVehicleForPricing?.model || extractedVehicle.model,
+    };
+    const hasVehicleForPricing = !!(vehicleForPricing.make || vehicleForPricing.model);
 
     // Track when pricing was given to prompt for email
-    if (pricingIntent && hasVehicle) {
+    if (pricingIntent && hasVehicleForPricing) {
       chatState.pricing_given_at = new Date().toISOString();
       chatState.pricing_given_count = ((chatState.pricing_given_count as number) || 0) + 1;
     }
 
-    // Calculate pricing if vehicle detected
+    // Calculate pricing if vehicle detected (from current message OR saved state)
     let pricingContext = '';
-    if (hasVehicle && pricingIntent) {
-      const modelKey = (extractedVehicle.model || '').toLowerCase().replace(/[-\s]/g, '');
-      const sqft = VEHICLE_SQFT[modelKey];
+    const shouldShowPricing = (pricingIntent && hasVehicleForPricing) || 
+                              (extractedEmail && chatState.calculated_price);
+    
+    if (shouldShowPricing) {
+      const modelKeyForPricing = (vehicleForPricing.model || '').toLowerCase().replace(/[-\s]/g, '');
+      const sqftForPricing = VEHICLE_SQFT[modelKeyForPricing];
       
-      if (!sqft) {
+      if (!sqftForPricing && !chatState.calculated_price) {
         // ❌ NO SILENT FALLBACK - Block pricing for unknown vehicles
         console.warn('[PRICING BLOCKED]', {
           source: 'luigi-chat',
-          vehicle: { year: extractedVehicle.year, make: extractedVehicle.make, model: extractedVehicle.model },
-          modelKey: modelKey,
+          vehicle: vehicleForPricing,
+          modelKey: modelKeyForPricing,
           reason: 'Model not in VEHICLE_SQFT lookup table'
         });
         
         pricingContext = `
 PRICING BLOCKED - VEHICLE NOT RECOGNIZED:
-The model "${extractedVehicle.model}" is not in our pricing database.
+The model "${vehicleForPricing.model}" is not in our pricing database.
 DO NOT give a price estimate. Instead, ask the customer to:
 1. Confirm the exact year, make, and model
 2. Or use the quote tool on the homepage for accurate pricing
 Say: "I want to make sure I give you an accurate price. Could you confirm the exact year, make, and model of your vehicle? Or you can use our quote tool at weprintwraps.com for instant pricing!"`;
       } else {
-        const materialCost = Math.round(sqft * 5.27);
+        // Use saved calculation if available, otherwise calculate fresh
+        const sqftFinal = sqftForPricing || (chatState.calculated_price as any)?.sqft || 0;
+        const materialCost = Math.round(sqftFinal * 5.27);
         
         pricingContext = `
 CALCULATED PRICING FOR THIS CUSTOMER:
-Vehicle: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''}
-Estimated SQFT: ${sqft}
+Vehicle: ${vehicleForPricing.year || ''} ${vehicleForPricing.make || ''} ${vehicleForPricing.model || ''}
+Estimated SQFT: ${sqftFinal}
 Material Cost at $5.27/sqft: $${materialCost}
 
-TELL THE CUSTOMER THIS EXACT PRICE! Say: "A ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''} is about ${sqft} square feet. At $5.27/sqft, that's around $${materialCost} for the printed wrap material."
+TELL THE CUSTOMER THIS EXACT PRICE! Say: "A ${vehicleForPricing.year || ''} ${vehicleForPricing.make || ''} ${vehicleForPricing.model || ''} is about ${sqftFinal} square feet. At $5.27/sqft, that's around $${materialCost} for the printed wrap material."
 
 🚨 IMPORTANT: After giving this price, IMMEDIATELY ask for their email to send a detailed quote! Say something like: "Want me to email you a detailed quote with all the specs? What's your email?"`;
         
-        chatState.calculated_price = { sqft, materialCost };
+        if (!chatState.calculated_price) {
+          chatState.calculated_price = { sqft: sqftFinal, materialCost };
+        }
       }
     }
 
@@ -911,13 +928,51 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 🔒 CRITICAL FIX: Create quote BEFORE AI response so we know if it succeeded
+    // Use SAVED state, not just current message detection
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     let quoteResultContext = '';
-    const modelKey = (extractedVehicle.model || '').toLowerCase().replace(/[-\s]/g, '');
+    
+    // Get vehicle from SAVED state first, fall back to current message extraction
+    const savedVehicle = chatState.vehicle as { year?: string; make?: string; model?: string } | undefined;
+    const effectiveVehicle = {
+      year: savedVehicle?.year || extractedVehicle.year,
+      make: savedVehicle?.make || extractedVehicle.make,
+      model: savedVehicle?.model || extractedVehicle.model,
+    };
+    const hasEffectiveVehicle = !!(effectiveVehicle.make || effectiveVehicle.model);
+    
+    const modelKey = (effectiveVehicle.model || '').toLowerCase().replace(/[-\s]/g, '');
     const sqft = VEHICLE_SQFT[modelKey] || 0;
     
-    // Only attempt quote if we have email + vehicle + pricing intent + sqft
-    if (pricingIntent && chatState.customer_email && hasVehicle && sqft > 0 && !chatState.quote_sent) {
+    // Get saved pricing from state
+    const hadPricingGiven = !!(chatState.pricing_given_at || chatState.calculated_price);
+    
+    // Trigger quote creation if:
+    // 1. We have customer email (current message or saved)
+    // 2. We have vehicle info (current message or saved)  
+    // 3. We have sqft calculated
+    // 4. Quote not already sent
+    // 5. Either current message has pricing intent OR we previously gave pricing
+    const shouldAttemptQuote = 
+      chatState.customer_email && 
+      hasEffectiveVehicle && 
+      sqft > 0 && 
+      !chatState.quote_sent &&
+      (pricingIntent || hadPricingGiven || extractedEmail);
+    
+    console.log('[Luigi] Quote trigger check:', {
+      hasEmail: !!chatState.customer_email,
+      hasEffectiveVehicle,
+      effectiveVehicle,
+      sqft,
+      quoteSent: !!chatState.quote_sent,
+      pricingIntent,
+      hadPricingGiven,
+      extractedEmail: !!extractedEmail,
+      shouldAttemptQuote
+    });
+    
+    if (shouldAttemptQuote) {
       console.log('[Luigi] Attempting quote creation BEFORE AI response...');
       try {
         const { data: quoteData, error: quoteError } = await supabase.functions.invoke("create-quote-from-chat", {
@@ -925,9 +980,10 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
             conversation_id: conversationId,
             customer_email: chatState.customer_email,
             customer_name: null,
-            vehicle_year: extractedVehicle.year,
-            vehicle_make: extractedVehicle.make,
-            vehicle_model: extractedVehicle.model,
+            // Use SAVED vehicle state, not just current message
+            vehicle_year: effectiveVehicle.year,
+            vehicle_make: effectiveVehicle.make,
+            vehicle_model: effectiveVehicle.model,
             product_type: "avery",
             send_email: true,
           },
