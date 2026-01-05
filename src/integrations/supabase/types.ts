@@ -6211,7 +6211,9 @@ export type Database = {
           estimated_completion_date: string | null
           file_error_details: Json | null
           files: Json | null
+          hidden: boolean | null
           id: string
+          is_paid: boolean | null
           missing_file_list: Json | null
           notes: string | null
           order_number: string
@@ -6230,8 +6232,10 @@ export type Database = {
           tracking_url: string | null
           updated_at: string
           vehicle_info: Json | null
+          woo_date_paid: string | null
           woo_order_id: number | null
           woo_order_number: number | null
+          woo_status_raw: string | null
           wpw_production_order_id: string | null
         }
         Insert: {
@@ -6245,7 +6249,9 @@ export type Database = {
           estimated_completion_date?: string | null
           file_error_details?: Json | null
           files?: Json | null
+          hidden?: boolean | null
           id?: string
+          is_paid?: boolean | null
           missing_file_list?: Json | null
           notes?: string | null
           order_number: string
@@ -6264,8 +6270,10 @@ export type Database = {
           tracking_url?: string | null
           updated_at?: string
           vehicle_info?: Json | null
+          woo_date_paid?: string | null
           woo_order_id?: number | null
           woo_order_number?: number | null
+          woo_status_raw?: string | null
           wpw_production_order_id?: string | null
         }
         Update: {
@@ -6279,7 +6287,9 @@ export type Database = {
           estimated_completion_date?: string | null
           file_error_details?: Json | null
           files?: Json | null
+          hidden?: boolean | null
           id?: string
+          is_paid?: boolean | null
           missing_file_list?: Json | null
           notes?: string | null
           order_number?: string
@@ -6298,8 +6308,10 @@ export type Database = {
           tracking_url?: string | null
           updated_at?: string
           vehicle_info?: Json | null
+          woo_date_paid?: string | null
           woo_order_id?: number | null
           woo_order_number?: number | null
+          woo_status_raw?: string | null
           wpw_production_order_id?: string | null
         }
         Relationships: [

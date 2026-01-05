@@ -52,6 +52,9 @@ export const useShopFlow = (orderId?: string) => {
       const { data, error } = await supabase
         .from('shopflow_orders')
         .select('*')
+        // PAID GATE: Filter out hidden and unpaid orders
+        .neq('hidden', true)
+        .neq('is_paid', false)
         .order('created_at', { ascending: false });
 
       if (error) {

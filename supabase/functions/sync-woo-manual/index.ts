@@ -5,6 +5,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============================================================
+// PAID GATE: Only these statuses indicate a PAID order
+// ============================================================
+const PAID_STATUSES = ['processing', 'completed'];
+
+// UNPAID statuses - NEVER create new ShopFlow records for these
+const UNPAID_STATUSES = ['pending', 'pending-payment', 'on-hold', 'failed', 'cancelled', 'refunded'];
+
+/**
+ * Check if a WooCommerce order is PAID
+ */
+function isOrderPaid(wooStatus: string, datePaid: string | null): boolean {
+  const normalizedStatus = normalizeStatus(wooStatus);
+  
+  if (PAID_STATUSES.includes(normalizedStatus)) {
+    return true;
+  }
+  
+  if (datePaid && datePaid.trim() !== '') {
+    return true;
+  }
+  
+  return false;
+}
+
 // Design product IDs that should go to ApproveFlow
 const DESIGN_PRODUCT_IDS = [
   234,   // Custom Vehicle Wrap Design
@@ -52,12 +77,11 @@ async function fetchWooProductImage(productId: number | null, wooKey: string, wo
 }
 
 /**
- * WOO → INTERNAL STATUS MAPPING (matches sync-wc-shopflow)
+ * WOO → INTERNAL STATUS MAPPING
+ * NOTE: These only apply to PAID orders
  */
 const wooToInternalStatus: Record<string, string> = {
-  "pending": "order_received",
-  "pending-payment": "order_received",
-  "on-hold": "order_received",
+  "processing": "order_received",
   "waiting-to-place-order": "order_received",
   "waiting-on-email-response": "order_received",
   "add-on": "order_received",
@@ -74,7 +98,6 @@ const wooToInternalStatus: Record<string, string> = {
   "print-production": "in_production",
   "lamination": "in_production",
   "finishing": "in_production",
-  "processing": "in_production",
   "ready-for-pickup": "ready_or_shipped",
   "shipping-cost": "ready_or_shipped",
   "shipped": "ready_or_shipped",
@@ -316,6 +339,12 @@ Deno.serve(async (req) => {
 
         // Sync to ShopFlow
         if (target === 'shopflow' || target === 'both') {
+          // ============================================================
+          // PAID GATE: Check if order is paid before creating
+          // ============================================================
+          const datePaid = order.date_paid;
+          const isPaid = isOrderPaid(wooStatus, datePaid);
+          
           // Fetch product image
           const productImageUrl = await fetchWooProductImage(productId, wooKey, wooSecret);
           
@@ -329,6 +358,15 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
             if (!existing) {
+              // PAID GATE: Block new unpaid orders
+              if (!isPaid) {
+                console.log(`⛔ PAID GATE BLOCKED: Order ${orderNumber} is UNPAID (status: ${wooStatus}, date_paid: ${datePaid})`);
+                skipped++;
+                continue;
+              }
+              
+              console.log(`✅ PAID GATE PASSED: Order ${orderNumber} is PAID`);
+              
               // Insert new order with all fields
               const { error: insertError } = await supabase
                 .from('shopflow_orders')
@@ -345,6 +383,11 @@ Deno.serve(async (req) => {
                   priority: internalStatus === 'action_required' ? 'high' : 'normal',
                   created_at: order.date_created,
                   updated_at: new Date().toISOString(),
+                  // Payment tracking fields
+                  is_paid: true,
+                  hidden: false,
+                  woo_status_raw: wooStatusRaw,
+                  woo_date_paid: datePaid || new Date().toISOString(),
                 });
 
             if (insertError) {
@@ -354,7 +397,7 @@ Deno.serve(async (req) => {
               console.log(`✅ Synced order ${orderNumber} to ShopFlow`);
             }
             } else {
-              // Update existing order with all fields
+              // Update existing order with all fields (updates allowed even for unpaid)
               const { error: updateError } = await supabase
                 .from('shopflow_orders')
                 .update({
@@ -367,6 +410,10 @@ Deno.serve(async (req) => {
                   status: internalStatus,
                   customer_stage: customerStage,
                   updated_at: new Date().toISOString(),
+                  // Update payment tracking if order became paid
+                  is_paid: isPaid,
+                  woo_status_raw: wooStatusRaw,
+                  woo_date_paid: datePaid || null,
                 })
                 .eq('id', existing.id);
 
