@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useContentQueue } from "@/hooks/useContentQueue";
 import { format } from "date-fns";
 import { MainLayout } from "@/layouts/MainLayout";
+import { SINGLE_PATH_MODE } from "@/lib/featureFlags";
 
 const CONTENT_TYPES = [
   { id: "reel", label: "Reel", icon: Video, color: "from-pink-500 to-purple-500", route: "/contentbox" },
@@ -63,29 +64,48 @@ export default function ContentCreator() {
             </p>
           </div>
 
-          {/* Content Type Grid */}
-          <div>
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Create New Content
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {CONTENT_TYPES.map((type) => (
-                <Card 
-                  key={type.id}
-                  className="cursor-pointer hover:border-primary/50 transition-all hover:scale-105 group"
-                  onClick={() => navigate(type.route, { state: { contentType: type.id } })}
+          {/* Content Type Grid - Hidden in Single Path Mode */}
+          {SINGLE_PATH_MODE ? (
+            <Card className="border-dashed border-primary/30 bg-primary/5">
+              <CardContent className="py-8 text-center">
+                <Film className="w-12 h-12 mx-auto mb-4 text-primary" />
+                <h3 className="text-lg font-semibold mb-2">Single Path Mode Active</h3>
+                <p className="text-muted-foreground text-sm mb-4 max-w-md mx-auto">
+                  All content creation now flows through the Multi-Clip Reel Builder for consistency and quality control.
+                </p>
+                <Button 
+                  onClick={() => navigate("/organic/reel-builder")}
+                  className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
                 >
-                  <CardContent className="pt-6 text-center">
-                    <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br ${type.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                      <type.icon className="w-6 h-6 text-white" />
-                    </div>
-                    <span className="font-medium text-sm">{type.label}</span>
-                  </CardContent>
-                </Card>
-              ))}
+                  <Film className="w-4 h-4 mr-2" />
+                  Go to Reel Builder
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Create New Content
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {CONTENT_TYPES.map((type) => (
+                  <Card 
+                    key={type.id}
+                    className="cursor-pointer hover:border-primary/50 transition-all hover:scale-105 group"
+                    onClick={() => navigate(type.route, { state: { contentType: type.id } })}
+                  >
+                    <CardContent className="pt-6 text-center">
+                      <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br ${type.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                        <type.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="font-medium text-sm">{type.label}</span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="grid lg:grid-cols-3 gap-6">
             {/* AI Suggestions */}
@@ -118,14 +138,17 @@ export default function ContentCreator() {
                     </div>
                   </div>
                 ))}
-                <Button variant="outline" className="w-full mt-2">
-                  <Zap className="w-4 h-4 mr-2" />
-                  Generate Weekly Content Plan
-                </Button>
+                {!SINGLE_PATH_MODE && (
+                  <Button variant="outline" className="w-full mt-2">
+                    <Zap className="w-4 h-4 mr-2" />
+                    Generate Weekly Content Plan
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
+            {/* Quick Actions - Hidden in Single Path Mode */}
+            {!SINGLE_PATH_MODE && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
@@ -146,6 +169,7 @@ export default function ContentCreator() {
                 ))}
               </CardContent>
             </Card>
+            )}
           </div>
 
           {/* Recent Creations */}

@@ -11,6 +11,7 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isWithinCampaign } from "@/lib/campaign-prompts/january-2026";
+import { SINGLE_PATH_MODE } from "@/lib/featureFlags";
 import {
   CheckCircle,
   Circle,
@@ -361,8 +362,15 @@ export default function MightyTaskUnified() {
 
   // ============ BUILD REEL DIRECTLY (SKIP AGENT) ============
   // Sends task directly to ReelBuilder with full AutoCreateInput contract
+  // GATED: Disabled in Single Path Mode
   const buildReelDirectly = (task: Task, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    
+    if (SINGLE_PATH_MODE) {
+      toast.info("Redirecting to Reel Builder...");
+      navigate('/organic/reel-builder');
+      return;
+    }
     
     const contentType = task.content_type;
     const isVideoContent = ['ig_reel', 'ig_story', 'fb_reel', 'fb_story', 'youtube_short', 'youtube_video', 'meta_ad'].includes(contentType || '');
