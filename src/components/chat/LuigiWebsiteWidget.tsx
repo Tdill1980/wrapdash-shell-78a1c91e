@@ -189,38 +189,41 @@ export function LuigiWebsiteWidget() {
   if (!isOpen) {
     return (
       <div className="fixed bottom-20 right-8 z-50 flex flex-col items-end gap-2">
-        {/* Teaser / engagement pill */}
+        {/* Teaser / engagement pill - WPW Blue background, white text */}
         <button
           onClick={() => setIsOpen(true)}
           className={cn(
-            "bg-white rounded-full shadow-lg px-4 py-2.5",
+            "rounded-full shadow-lg px-4 py-2.5",
             "flex items-center gap-2",
-            "border border-slate-200 hover:border-[#7C3AED]/40",
+            "border border-[#0057b8]/20 hover:border-[#0057b8]/60",
             "hover:scale-105 transition-all duration-200",
             "animate-in fade-in slide-in-from-right-4 duration-500"
           )}
-          style={{ animationDelay: '2s', animationFillMode: 'both' }}
+          style={{ 
+            animationDelay: '2s', 
+            animationFillMode: 'both',
+            backgroundColor: '#0057b8'
+          }}
           aria-label="Open chat"
         >
-          <span className="text-sm font-medium text-slate-700">Need wrap pricing?</span>
-          <MessageCircle className="w-4 h-4 text-[#7C3AED]" />
+          <span className="text-sm font-medium text-white">Need wrap pricing?</span>
+          <MessageCircle className="w-4 h-4 text-white" />
         </button>
 
-        {/* Main chat bubble */}
+        {/* Main chat bubble - WPW Magenta */}
         <button
           onClick={() => setIsOpen(true)}
           className={cn(
             "w-16 h-16 rounded-full",
-            "bg-gradient-to-br from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
             "text-white shadow-2xl flex items-center justify-center",
             "transition-all duration-300 ease-out",
-            "hover:scale-110 hover:shadow-[0_0_30px_rgba(124,58,237,0.5)]",
+            "hover:scale-110 hover:shadow-[0_0_30px_rgba(230,0,126,0.5)]",
             "before:absolute before:inset-0 before:rounded-full",
-            "before:bg-gradient-to-br before:from-[#2563EB] before:via-[#7C3AED] before:to-[#A855F7]",
             "before:animate-ping before:opacity-30"
           )}
           style={{
-            boxShadow: "0 4px 20px rgba(124, 58, 237, 0.4), 0 0 40px rgba(37, 99, 235, 0.2)"
+            backgroundColor: '#e6007e',
+            boxShadow: "0 4px 20px rgba(230, 0, 126, 0.4), 0 0 40px rgba(230, 0, 126, 0.2)"
           }}
         >
           <MessageCircle className="w-7 h-7 relative z-10" />
@@ -251,13 +254,13 @@ export function LuigiWebsiteWidget() {
         </span>
       </div>
 
-      {/* Header */}
-      <div className="relative bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7] px-4 py-4">
+      {/* Header - WPW Magenta */}
+      <div className="relative px-4 py-4" style={{ backgroundColor: '#e6007e' }}>
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Jordan avatar - "J" initial */}
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#405DE6] to-[#E1306C] flex items-center justify-center ring-2 ring-white/30 text-xl font-bold text-white">
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30 text-xl font-bold text-white">
               J
             </div>
             <div>
