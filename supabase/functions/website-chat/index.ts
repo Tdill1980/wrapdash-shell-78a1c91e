@@ -591,6 +591,42 @@ serve(async (req) => {
       }
     }
 
+    // ============================================
+    // QUALITY ISSUE / UNHAPPY CUSTOMER ALERTS
+    // Trigger sendAlertWithTracking for quality or unhappy customer signals
+    // ============================================
+    const detectedAlertType = detectAlertType(message_text);
+    if (detectedAlertType && resendKey) {
+      console.log('[JordanLee] Detected alert type:', detectedAlertType, '- sending tracked alert');
+      
+      try {
+        const customerEmail = typeof chatState.customer_email === 'string' ? chatState.customer_email : undefined;
+        const orderNum = typeof chatState.order_number === 'string' ? chatState.order_number : (extractedOrderNumber || undefined);
+        
+        await sendAlertWithTracking(
+          supabase,
+          resendKey,
+          detectedAlertType,
+          {
+            orderNumber: orderNum,
+            customerName: customerEmail || 'Website Visitor',
+            customerEmail: customerEmail,
+            conversationId,
+            messageExcerpt: message_text.substring(0, 300),
+            additionalInfo: {
+              page_url,
+              session_id,
+              vehicle: chatState.vehicle,
+              alert_source: 'website_chat',
+            },
+          },
+          orgId
+        );
+        console.log('[JordanLee] Alert sent successfully:', detectedAlertType);
+      } catch (alertErr) {
+        console.error('[JordanLee] Failed to send alert:', alertErr);
+      }
+    }
 
     // ============================================
     // AI RESPONSE GENERATION

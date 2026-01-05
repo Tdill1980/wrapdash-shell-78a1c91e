@@ -155,10 +155,11 @@ export function useWebsiteChatStats() {
   return useQuery({
     queryKey: ['website-page-chat-stats'],
     queryFn: async () => {
+      // Use UTC midnight to match database timestamps (Supabase stores in UTC)
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      today.setUTCHours(0, 0, 0, 0);
 
-      // Website chats today (channel = wall)
+      // Website chats today (channel = website)
       const { count: totalToday } = await supabase
         .from('conversations')
         .select('*', { count: 'exact', head: true })
