@@ -97,31 +97,31 @@
       gap: 10px;
     }
     .wcai-ask-trigger {
-      background: white;
+      background: #0057b8;
       border-radius: 24px;
       padding: 10px 16px;
       font-size: 14px;
       font-weight: 500;
-      color: #475569;
+      color: #ffffff;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 12px rgba(0,87,184,0.3);
+      border: 1px solid rgba(0,87,184,0.2);
       transition: all 0.2s;
       opacity: 0;
       animation: wcai-slide-in 0.4s ease-out 2s forwards;
     }
     .wcai-ask-trigger:hover {
       transform: scale(1.03);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-      border-color: #6366f1;
+      box-shadow: 0 4px 16px rgba(0,87,184,0.4);
+      border-color: #0057b8;
     }
     .wcai-ask-trigger svg {
       width: 16px;
       height: 16px;
-      color: #6366f1;
+      color: #ffffff;
     }
     .wcai-ask-trigger.hidden {
       display: none;
@@ -134,18 +134,18 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      background: #e6007e;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 20px rgba(230,0,126,0.4);
       transition: transform 0.2s, box-shadow 0.2s;
       position: relative;
     }
     .wcai-chat-bubble:hover {
       transform: scale(1.1);
-      box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+      box-shadow: 0 6px 25px rgba(230,0,126,0.5);
     }
     .wcai-chat-bubble img {
       width: 36px;
@@ -190,7 +190,7 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .wcai-chat-header {
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      background: #e6007e;
       padding: 16px 20px;
       color: white;
       display: flex;
@@ -201,7 +201,7 @@
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: #4338ca;
+      background: rgba(255,255,255,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -274,7 +274,7 @@
     }
     .wcai-message.user {
       align-self: flex-end;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      background: #0057b8;
       color: white;
       border-bottom-right-radius: 4px;
     }
@@ -297,7 +297,7 @@
     .wcai-typing-dots span {
       width: 8px;
       height: 8px;
-      background: #6366f1;
+      background: #e6007e;
       border-radius: 50%;
       animation: wcai-bounce 1.4s infinite ease-in-out;
     }
@@ -331,8 +331,8 @@
       text-align: left;
     }
     .wcai-quick-btn:hover {
-      border-color: #6366f1;
-      background: #f5f3ff;
+      border-color: #e6007e;
+      background: #fdf2f8;
     }
     .wcai-quick-btn.primary {
       background: linear-gradient(135deg, #f97316, #fb923c);
@@ -378,7 +378,7 @@
       color: #94a3b8;
     }
     .wcai-chat-input:focus {
-      border-color: #6366f1;
+      border-color: #e6007e;
       background: #ffffff;
     }
     .wcai-chat-send {
@@ -386,7 +386,7 @@
       height: 44px;
       border-radius: 50%;
       border: none;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      background: #e6007e;
       color: white;
       cursor: pointer;
       display: flex;
@@ -396,7 +396,7 @@
     }
     .wcai-chat-send:hover {
       transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 4px 12px rgba(230, 0, 126, 0.4);
     }
     .wcai-chat-send:disabled {
       opacity: 0.5;
@@ -411,7 +411,7 @@
       border-top: 1px solid #f1f5f9;
     }
     .wcai-powered a {
-      color: #6366f1;
+      color: #e6007e;
       text-decoration: none;
     }
     .wcai-test-badge {
@@ -427,14 +427,14 @@
     }
     .wcai-typewriter {
       overflow: hidden;
-      border-right: 2px solid #6366f1;
+      border-right: 2px solid #e6007e;
       animation: wcai-cursor 0.7s step-end infinite;
     }
     .wcai-typewriter.done {
       border-right: none;
     }
     @keyframes wcai-cursor {
-      0%, 100% { border-color: #6366f1; }
+      0%, 100% { border-color: #e6007e; }
       50% { border-color: transparent; }
     }
     @media (max-width: 480px) {
