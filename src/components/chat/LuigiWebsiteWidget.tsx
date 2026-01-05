@@ -96,12 +96,15 @@ export function LuigiWebsiteWidget() {
     setShowQuickActions(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("luigi-ordering-concierge", {
+      const { data, error } = await supabase.functions.invoke("website-chat", {
         body: {
+          org: "wpw",
+          agent: "wpw_ai_team",
+          mode: "live",
           session_id: sessionId,
           message_text: text,
           page_url: window.location.href,
-          mode: "live",
+          referrer: document.referrer || "",
         },
       });
 
@@ -185,8 +188,8 @@ export function LuigiWebsiteWidget() {
   // Floating bubble when closed - moved up and left slightly for better visibility
   if (!isOpen) {
     return (
-      <div className="fixed bottom-20 right-8 z-50 flex items-end gap-3">
-        {/* Ask anything trigger */}
+      <div className="fixed bottom-20 right-8 z-50 flex flex-col items-end gap-2">
+        {/* Teaser / engagement pill */}
         <button
           onClick={() => setIsOpen(true)}
           className={cn(
@@ -197,9 +200,10 @@ export function LuigiWebsiteWidget() {
             "animate-in fade-in slide-in-from-right-4 duration-500"
           )}
           style={{ animationDelay: '2s', animationFillMode: 'both' }}
+          aria-label="Open chat"
         >
-          <HelpCircle className="w-4 h-4 text-[#7C3AED]" />
-          <span className="text-sm font-medium text-slate-700">Ask anything</span>
+          <span className="text-sm font-medium text-slate-700">Need wrap pricing?</span>
+          <MessageCircle className="w-4 h-4 text-[#7C3AED]" />
         </button>
 
         {/* Main chat bubble */}
