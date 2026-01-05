@@ -17,9 +17,32 @@
     org: scriptTag?.getAttribute('data-org') || 'wpw',
     agent: scriptTag?.getAttribute('data-agent') || 'jordan',
     mode: scriptTag?.getAttribute('data-mode') || 'live',
+    theme: scriptTag?.getAttribute('data-theme') || 'wpw',
     apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/website-chat',
     statusUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status'
   };
+
+  // ========================================
+  // THEME CONFIGURATION
+  // Supports: data-theme="wpw" (default), or custom themes
+  // ========================================
+  const themes = {
+    wpw: {
+      primary: '#e6007e',      // WPW Magenta - bubble, header, send button
+      secondary: '#0057b8',    // WPW Blue - helper pill background
+      text: '#ffffff',         // White text on colored backgrounds
+      accent: '#22c55e'        // Green - online indicator
+    },
+    default: {
+      primary: '#e6007e',
+      secondary: '#0057b8', 
+      text: '#ffffff',
+      accent: '#22c55e'
+    }
+  };
+  
+  const colors = themes[config.theme] || themes.default;
+  console.log(`[WCAI] Theme: ${config.theme}`, colors);
 
   // ========================================
   // RUNTIME SCHEDULE CHECK - Ask WrapCommand if agent is active
@@ -81,7 +104,7 @@
     }
   })();
 
-  // Styles
+  // Styles - using theme colors
   const styles = `
     .wcai-chat-container {
       position: fixed;
@@ -97,12 +120,12 @@
       gap: 10px;
     }
     .wcai-ask-trigger {
-      background: #0057b8;
+      background: ${colors.secondary};
       border-radius: 24px;
       padding: 10px 16px;
       font-size: 14px;
       font-weight: 500;
-      color: #ffffff;
+      color: ${colors.text};
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -116,12 +139,12 @@
     .wcai-ask-trigger:hover {
       transform: scale(1.03);
       box-shadow: 0 4px 16px rgba(0,87,184,0.4);
-      border-color: #0057b8;
+      border-color: ${colors.secondary};
     }
     .wcai-ask-trigger svg {
       width: 16px;
       height: 16px;
-      color: #ffffff;
+      color: ${colors.text};
     }
     .wcai-ask-trigger.hidden {
       display: none;
@@ -134,7 +157,7 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background: #e6007e;
+      background: ${colors.primary};
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -158,7 +181,7 @@
       right: 0;
       width: 14px;
       height: 14px;
-      background: #22c55e;
+      background: ${colors.accent};
       border-radius: 50%;
       border: 2px solid white;
       animation: wcai-pulse 2s infinite;
@@ -190,9 +213,9 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .wcai-chat-header {
-      background: #e6007e;
+      background: ${colors.primary};
       padding: 16px 20px;
-      color: white;
+      color: ${colors.text};
       display: flex;
       align-items: center;
       gap: 12px;
@@ -207,7 +230,7 @@
       justify-content: center;
       font-size: 18px;
       font-weight: 700;
-      color: white;
+      color: ${colors.text};
       border: 2px solid rgba(255,255,255,0.3);
     }
     .wcai-chat-header-info h3 {
@@ -226,7 +249,7 @@
     .wcai-live-dot {
       width: 8px;
       height: 8px;
-      background: #22c55e;
+      background: ${colors.accent};
       border-radius: 50%;
       animation: wcai-blink 1.5s infinite;
     }
@@ -238,7 +261,7 @@
       margin-left: auto;
       background: rgba(255,255,255,0.1);
       border: none;
-      color: white;
+      color: ${colors.text};
       cursor: pointer;
       font-size: 20px;
       padding: 0;
@@ -274,8 +297,8 @@
     }
     .wcai-message.user {
       align-self: flex-end;
-      background: #0057b8;
-      color: white;
+      background: ${colors.secondary};
+      color: ${colors.text};
       border-bottom-right-radius: 4px;
     }
     .wcai-message.agent {
@@ -297,7 +320,7 @@
     .wcai-typing-dots span {
       width: 8px;
       height: 8px;
-      background: #e6007e;
+      background: ${colors.primary};
       border-radius: 50%;
       animation: wcai-bounce 1.4s infinite ease-in-out;
     }
@@ -331,7 +354,7 @@
       text-align: left;
     }
     .wcai-quick-btn:hover {
-      border-color: #e6007e;
+      border-color: ${colors.primary};
       background: #fdf2f8;
     }
     .wcai-quick-btn.primary {
@@ -378,7 +401,7 @@
       color: #94a3b8;
     }
     .wcai-chat-input:focus {
-      border-color: #e6007e;
+      border-color: ${colors.primary};
       background: #ffffff;
     }
     .wcai-chat-send {
@@ -386,8 +409,8 @@
       height: 44px;
       border-radius: 50%;
       border: none;
-      background: #e6007e;
-      color: white;
+      background: ${colors.primary};
+      color: ${colors.text};
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -411,7 +434,7 @@
       border-top: 1px solid #f1f5f9;
     }
     .wcai-powered a {
-      color: #e6007e;
+      color: ${colors.primary};
       text-decoration: none;
     }
     .wcai-test-badge {
@@ -427,14 +450,14 @@
     }
     .wcai-typewriter {
       overflow: hidden;
-      border-right: 2px solid #e6007e;
+      border-right: 2px solid ${colors.primary};
       animation: wcai-cursor 0.7s step-end infinite;
     }
     .wcai-typewriter.done {
       border-right: none;
     }
     @keyframes wcai-cursor {
-      0%, 100% { border-color: #e6007e; }
+      0%, 100% { border-color: ${colors.primary}; }
       50% { border-color: transparent; }
     }
     @media (max-width: 480px) {
