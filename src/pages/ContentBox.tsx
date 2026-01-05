@@ -30,7 +30,7 @@ import {
   FolderOpen
 } from "lucide-react";
 import { toast } from "sonner";
-
+import { SINGLE_PATH_MODE } from "@/lib/featureFlags";
 // Components
 import { SourceIntegrationsPanel } from "@/components/contentbox/SourceIntegrationsPanel";
 import { AIVideoEditor } from "@/components/contentbox/AIVideoEditor";
@@ -501,31 +501,39 @@ export default function ContentBox() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          {/* Bulk Variations Button */}
-          <Button 
-            size="sm"
-            className="sm:size-default"
-            variant="outline"
-            onClick={() => setShowBulkGenerator(true)}
-          >
-            <Sparkles className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Bulk Variations</span>
-          </Button>
+          {/* Bulk Variations Button - Hidden in Single Path Mode */}
+          {!SINGLE_PATH_MODE && (
+            <Button 
+              size="sm"
+              className="sm:size-default"
+              variant="outline"
+              onClick={() => setShowBulkGenerator(true)}
+            >
+              <Sparkles className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Bulk Variations</span>
+            </Button>
+          )}
 
-          {/* AI Auto-Create Reel Button */}
+          {/* AI Auto-Create Reel Button - Redirects to ReelBuilder in Single Path Mode */}
           <Button 
             size="sm"
             className="sm:size-default bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-            onClick={handleAutoCreateReel}
-            disabled={autoCreateReel.loading}
+            onClick={() => {
+              if (SINGLE_PATH_MODE) {
+                navigate("/organic/reel-builder");
+              } else {
+                handleAutoCreateReel();
+              }
+            }}
+            disabled={!SINGLE_PATH_MODE && autoCreateReel.loading}
           >
-            {autoCreateReel.loading ? (
+            {autoCreateReel.loading && !SINGLE_PATH_MODE ? (
               <Loader2 className="w-4 h-4 animate-spin sm:mr-2" />
             ) : (
               <Zap className="w-4 h-4 sm:mr-2" />
             )}
-            <span className="hidden sm:inline">AI Auto-Create Reel</span>
-            <span className="sm:hidden">Auto</span>
+            <span className="hidden sm:inline">{SINGLE_PATH_MODE ? "Go to Reel Builder" : "AI Auto-Create Reel"}</span>
+            <span className="sm:hidden">{SINGLE_PATH_MODE ? "Builder" : "Auto"}</span>
           </Button>
 
           <Button 
@@ -543,7 +551,8 @@ export default function ContentBox() {
             <span className="hidden sm:inline">Sync Instagram</span>
           </Button>
           
-          {selectedFiles.length > 0 && (
+          {/* Generate Button - Hidden in Single Path Mode */}
+          {selectedFiles.length > 0 && !SINGLE_PATH_MODE && (
             <Button 
               size="sm"
               className="sm:size-default bg-gradient-to-r from-[#405DE6] to-[#E1306C]"

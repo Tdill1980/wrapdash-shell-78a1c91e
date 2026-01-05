@@ -43,6 +43,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { SINGLE_PATH_MODE } from "@/lib/featureFlags";
 import { useInspoAnalysis, StyleAnalysis as HookStyleAnalysis } from "@/hooks/useInspoAnalysis";
 import { useInspoLibrary, InspoFile } from "@/hooks/useInspoLibrary";
 import { InspoUploadModal } from "@/components/inspo/InspoUploadModal";
@@ -309,7 +310,13 @@ export default function InspirationHub() {
   };
 
   // Generate similar content based on analyzed style
+  // GATED: Disabled in Single Path Mode
   const handleGenerateSimilar = (file: InspoFile) => {
+    if (SINGLE_PATH_MODE) {
+      toast.info("Opening Reel Builder...");
+      navigate("/organic/reel-builder", { state: { inspoFile: file } });
+      return;
+    }
     toast.info("Opening Ad Creator with this style...");
     navigate("/contentbox", { state: { inspoFile: file } });
   };

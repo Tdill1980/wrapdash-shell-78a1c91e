@@ -14,7 +14,8 @@ import {
   Clock,
   AlertCircle,
   Lock,
-  Wand2
+  Wand2,
+  Film
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +23,7 @@ import { format, addDays, isBefore, isToday, startOfDay } from 'date-fns';
 import { GenerateMonthModal } from '@/components/studio/GenerateMonthModal';
 import { CampaignContentCreator } from '@/components/studio/CampaignContentCreator';
 import { isWithinCampaign } from '@/lib/campaign-prompts/january-2026';
+import { SINGLE_PATH_MODE } from '@/lib/featureFlags';
 
 interface CalendarItem {
   id: string;
@@ -127,14 +129,25 @@ export default function ContentStudio() {
               Creative workspace for planning and drafting content
             </p>
           </div>
-          <Button 
-            size="lg" 
-            className="gap-2"
-            onClick={() => setGenerateModalOpen(true)}
-          >
-            <Sparkles className="h-4 w-4" />
-            Generate Month of Content
-          </Button>
+          {SINGLE_PATH_MODE ? (
+            <Button 
+              size="lg" 
+              className="gap-2 bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+              onClick={() => navigate('/organic/reel-builder')}
+            >
+              <Film className="h-4 w-4" />
+              Go to Reel Builder
+            </Button>
+          ) : (
+            <Button 
+              size="lg" 
+              className="gap-2"
+              onClick={() => setGenerateModalOpen(true)}
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate Month of Content
+            </Button>
+          )}
         </div>
 
         {/* Stats Overview */}
