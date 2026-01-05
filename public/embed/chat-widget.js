@@ -17,7 +17,7 @@
     org: scriptTag?.getAttribute('data-org') || 'wpw',
     agent: scriptTag?.getAttribute('data-agent') || 'jordan',
     mode: scriptTag?.getAttribute('data-mode') || 'live',
-    apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/luigi-ordering-concierge',
+    apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/website-chat',
     statusUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status'
   };
 
@@ -92,8 +92,9 @@
     }
     .wcai-bubble-row {
       display: flex;
+      flex-direction: column;
       align-items: flex-end;
-      gap: 12px;
+      gap: 10px;
     }
     .wcai-ask-trigger {
       background: white;
@@ -515,7 +516,7 @@
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        Ask anything
+        Need wrap pricing?
       </div>
       <div class="wcai-chat-bubble" id="wcai-bubble">
         ${config.mode === 'test' ? '<span class="wcai-test-badge">TEST</span>' : ''}

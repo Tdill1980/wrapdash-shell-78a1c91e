@@ -63,7 +63,7 @@ export function WebsiteChatWidget() {
     setShowQuickActions(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("luigi-ordering-concierge", {
+      const { data, error } = await supabase.functions.invoke("website-chat", {
         body: {
           org: "wpw",
           agent: "wpw_ai_team",
@@ -71,6 +71,7 @@ export function WebsiteChatWidget() {
           session_id: sessionId,
           message_text: text,
           page_url: window.location.href,
+          referrer: document.referrer || "",
         },
       });
 
