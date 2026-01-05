@@ -142,7 +142,7 @@ serve(async (req) => {
 
     console.log('[CreateQuoteFromChat] Calculated:', { sqft, pricePerSqft, materialCost, quoteNumber });
 
-    // Create quote record
+    // Create quote record (using ONLY columns that exist in quotes table)
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
       .insert({
@@ -155,17 +155,14 @@ serve(async (req) => {
         vehicle_model,
         sqft,
         material_cost: materialCost,
-        total_price: materialCost, // Material only for now
-        status: 'sent',
+        total_price: materialCost,
+        status: 'created', // Start as 'created', update to 'sent' after email
         source: 'website_chat',
         ai_generated: true,
-        metadata: {
-          created_via: 'create_quote_from_chat',
-          conversation_id,
-          product_type,
-          price_per_sqft: pricePerSqft,
-          created_at: new Date().toISOString()
-        }
+        ai_sqft_estimate: sqft,
+        ai_message: `Auto-generated from chat. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`,
+        source_conversation_id: conversation_id || null,
+        email_sent: false
       })
       .select()
       .single();
@@ -193,26 +190,17 @@ serve(async (req) => {
         .eq('id', conversation_id);
     }
 
-    // Create MightyTask for Alex Morgan (quote follow-up)
+    // Create MightyTask for Alex Morgan (quote follow-up) - using ONLY valid columns
     const { error: taskError } = await supabase
       .from('tasks')
       .insert({
         title: `Quote Follow-Up: ${vehicle_year || ''} ${vehicle_make || ''} ${vehicle_model || ''} - $${materialCost}`.trim(),
-        description: `Website chat quote sent to ${customer_email}. Vehicle: ${vehicle_year || ''} ${vehicle_make || ''} ${vehicle_model || ''} (${sqft} sqft). Material: $${materialCost}. Follow up to close!`,
+        description: `Website chat quote sent to ${customer_email}. Vehicle: ${vehicle_year || ''} ${vehicle_make || ''} ${vehicle_model || ''} (${sqft} sqft). Material: $${materialCost}. Quote #${quoteNumber}. Conversation: ${conversation_id || 'N/A'}. Follow up to close!`,
         status: 'pending',
         priority: materialCost > 1500 ? 'high' : 'medium',
         assigned_to: 'alex_morgan',
-        due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days
-        organization_id,
-        metadata: {
-          type: 'quote_followup',
-          quote_id: quote.id,
-          quote_number: quoteNumber,
-          customer_email,
-          conversation_id,
-          source: 'website_chat',
-          material_cost: materialCost
-        }
+        due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        organization_id
       });
 
     if (taskError) {
@@ -332,14 +320,14 @@ serve(async (req) => {
           emailSent = true;
           console.log('[CreateQuoteFromChat] Email sent successfully');
           
-          // Update quote record with email_sent = true
+          // Update quote record: email_sent = true AND status = 'sent'
           const { error: updateError } = await supabase
             .from('quotes')
-            .update({ email_sent: true })
+            .update({ email_sent: true, status: 'sent' })
             .eq('id', quote.id);
           
           if (updateError) {
-            console.error('[CreateQuoteFromChat] Failed to update email_sent flag:', updateError);
+            console.error('[CreateQuoteFromChat] Failed to update quote after email:', updateError);
           }
         } else {
           const errorText = await emailResponse.text();

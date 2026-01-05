@@ -13,6 +13,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// WPW Organization ID - ALWAYS set this on contacts/conversations to ensure admin visibility
+const WPW_ORGANIZATION_ID = '51aa96db-c06d-41ae-b3cb-25b045c75caf';
+
 // Vehicle SQFT estimates for pricing calculations
 const VEHICLE_SQFT: Record<string, number> = {
   // Compact cars
@@ -637,11 +640,12 @@ serve(async (req) => {
       contactId = existingConvo.contact_id;
       chatState = (existingConvo.chat_state as Record<string, unknown>) || {};
     } else {
-      // Create contact
+      // Create contact - ALWAYS include organization_id for RLS visibility
       const { data: newContact } = await supabase
         .from('contacts')
         .insert({
           name: `Website Visitor (${session_id.substring(0, 8)})`,
+          organization_id: WPW_ORGANIZATION_ID,
           source: 'website_chat',
           tags: ['website', 'chat', 'luigi_lead', mode === 'test' ? 'test_mode' : 'live'],
           metadata: { session_id, first_page: page_url, referrer, created_via: 'luigi_concierge' }
@@ -651,12 +655,13 @@ serve(async (req) => {
 
       contactId = newContact?.id || null;
 
-      // Create conversation
+      // Create conversation - ALWAYS include organization_id for RLS visibility
       const { data: newConvo } = await supabase
         .from('conversations')
         .insert({
           channel: 'website',
           contact_id: contactId,
+          organization_id: WPW_ORGANIZATION_ID,
           subject: 'Website Chat - Luigi',
           status: 'open',
           priority: 'normal',
