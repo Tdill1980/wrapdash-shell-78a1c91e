@@ -286,6 +286,72 @@ VEHICLE SQFT ESTIMATES:
 - Cargo van: ~350 sqft (~$1,845)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 INKFUSION™ (SUITE-BASED PRODUCT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Price: $2,075 per roll (375 sqft / ~24 yards)
+• Automotive paint-quality finish
+• Avery SW900 + DOL1360 Max Gloss
+• FULL ROLL ONLY - no partials
+• Finishes: Gloss or Luster
+• Product ID: 69439
+
+⚠️ InkFusion is ordered via PrintPro Suite, NOT chat-quoted!
+
+When customer asks about InkFusion:
+"InkFusion™ is our premium paint-quality vinyl - $2,075 per full roll (375 sqft).
+It's ordered through PrintPro Suite in RestylePro where you select colors and finishes.
+Want me to explain how to access it?"
+
+NEVER:
+❌ Quote InkFusion per sqft
+❌ Ask "how many sqft?" for InkFusion
+❌ Say "we don't sell that"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📏 WRAP BY THE YARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Price: $95.50 per yard
+Options: 1, 5, 10, 25, or 50 yards
+
+Quick math: 
+• 5 yards = $477.50
+• 10 yards = $955
+• 25 yards = $2,387.50
+• 50 yards = $4,775
+
+Collections:
+• Camo & Carbon (ID: 1726)
+• Metal & Marble (ID: 39698)
+• Wicked & Wild (ID: 4181) - Nebula Galaxy, Starry Night, Matrix
+• Bape Camo (ID: 42809)
+• Modern & Trippy (ID: 52489)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌈 FADEWRAPS (ID: 58391)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SIZES (Driver + Passenger sides):
+• Small: $600
+• Medium: $710
+• Large: $825
+• XL: $990
+
+ADD-ONS:
+• Hood: $160
+• Front Bumper: $200
+• Rear + Bumper: $395
+• Roof: $160-$330
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🖼️ STANDALONE PRODUCTS (NO VEHICLE REQUIRED)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Window Perf (ID: 80): $5.95/sqft
+✅ Avery Cut Contour (ID: 108): $6.32/sqft
+✅ 3M Cut Contour (ID: 19420): $6.92/sqft
+
+ALWAYS quote these directly. DO NOT ask for vehicle info!
+Example: "Window perf is $5.95/sqft. 100 sqft = $595. Want me to email a quote?"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TONE & STYLE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 • Human, confident, friendly, direct
@@ -468,6 +534,32 @@ serve(async (req) => {
                                  lowerMessage.includes('chameleon') || lowerMessage.includes('matte') ||
                                  lowerMessage.includes('satin') || lowerMessage.includes('gloss');
     
+    // SPECIALTY PRODUCT INTENTS (January 2025)
+    const isInkFusionIntent = lowerMessage.includes('inkfusion') || 
+                              lowerMessage.includes('ink fusion') ||
+                              lowerMessage.includes('paint quality vinyl');
+    
+    const isWBTYIntent = lowerMessage.includes('wrap by the yard') ||
+                         lowerMessage.includes('by the yard') ||
+                         lowerMessage.includes('bape') ||
+                         lowerMessage.includes('nebula') ||
+                         lowerMessage.includes('starry night') ||
+                         lowerMessage.includes('galaxy') ||
+                         lowerMessage.includes('trippy') ||
+                         lowerMessage.includes('wicked wild') ||
+                         lowerMessage.includes('matrix');
+    
+    const isFadeWrapIntent = lowerMessage.includes('fade wrap') ||
+                             lowerMessage.includes('fadewrap') ||
+                             lowerMessage.includes('fade graphics') ||
+                             lowerMessage.includes('pre-designed fade');
+    
+    const isStandaloneIntent = lowerMessage.includes('window perf') || 
+                               lowerMessage.includes('perforated') ||
+                               lowerMessage.includes('window vinyl') ||
+                               lowerMessage.includes('cut contour') ||
+                               lowerMessage.includes('decal');
+    
     // ESCALATION DETECTION - Route to Lance or Jackson
     const designIssueIntent = lowerMessage.includes('design') || lowerMessage.includes('file') ||
                               lowerMessage.includes('upload') || lowerMessage.includes('artwork') ||
@@ -616,6 +708,88 @@ Direct them to: https://restyleproai.com
 Say: "For specialty films like chrome, color-shift, or textured materials, check out RestyleProAI.com - you can visualize them on your specific vehicle before ordering!"`;
     }
 
+    // Build specialty product contexts (January 2025)
+    let specialtyProductContext = '';
+    
+    if (isInkFusionIntent) {
+      specialtyProductContext = `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 INKFUSION™ INQUIRY DETECTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+InkFusion™ is our premium paint-quality vinyl system.
+• Price: $2,075 per roll (375 sqft / ~24 yards)
+• FULL ROLL ONLY - no partial orders
+• Ordered via PrintPro Suite in RestylePro
+
+YOUR RESPONSE MUST:
+1. Confirm we DO sell InkFusion
+2. State the price: "$2,075 per full roll (375 sqft)"
+3. Explain it's ordered through PrintPro Suite
+4. Offer to explain the Suite or answer finish questions
+
+NEVER:
+❌ Quote InkFusion by sqft
+❌ Ask "how many sqft?"
+❌ Say "we don't sell that"
+
+Example response:
+"InkFusion™ is our premium paint-quality vinyl - $2,075 per full roll (375 sqft).
+It's ordered through PrintPro Suite in RestylePro where you select colors and finishes.
+Want me to explain how to access it?"`;
+    }
+
+    if (isWBTYIntent) {
+      specialtyProductContext += `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📏 WRAP BY THE YARD INQUIRY DETECTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Price: $95.50 per yard
+Options: 1, 5, 10, 25, or 50 yards
+
+Quick math:
+• 5 yards = $477.50
+• 10 yards = $955
+• 25 yards = $2,387.50
+
+Collections: Camo & Carbon, Metal & Marble, Wicked & Wild (Nebula, Galaxy, Matrix), Bape Camo, Modern & Trippy
+
+YOUR RESPONSE: Quote the $95.50/yard price and ask how many yards they need!`;
+    }
+
+    if (isFadeWrapIntent) {
+      specialtyProductContext += `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌈 FADEWRAPS INQUIRY DETECTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SIZES (Driver + Passenger sides):
+• Small: $600 • Medium: $710 • Large: $825 • XL: $990
+
+ADD-ONS: Hood $160, Front Bumper $200, Rear+Bumper $395, Roof $160-$330
+
+YOUR RESPONSE: Quote starting price ($600) and ask about vehicle size to recommend the right option!`;
+    }
+
+    if (isStandaloneIntent) {
+      specialtyProductContext += `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🖼️ STANDALONE PRODUCT INQUIRY DETECTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+These products DO NOT require vehicle info. Quote them directly!
+
+• Window Perf 50/50: $5.95/sqft (100 sqft = $595)
+• Avery Cut Contour: $6.32/sqft
+• 3M Cut Contour: $6.92/sqft
+
+YOUR RESPONSE: Give the price per sqft immediately!
+DO NOT ask for vehicle info - it's not needed!
+
+Example: "Window perf is $5.95 per square foot. How many sqft do you need? I can calculate the total and email you a quote!"`;
+    }
+
     // Build order status context if order number detected
     let orderStatusContext = '';
     if (orderStatusIntent && extractedOrderNumber) {
@@ -681,7 +855,7 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
 
     const conversationHistory = await getConversationHistory(supabase, conversationId);
     
-    const systemPrompt = LUIGI_SYSTEM_PROMPT + pricingContext + emailReminderContext + specialtyContext + orderStatusContext;
+    const systemPrompt = LUIGI_SYSTEM_PROMPT + pricingContext + emailReminderContext + specialtyContext + specialtyProductContext + orderStatusContext;
     
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -693,7 +867,12 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
       hasPricing: !!pricingContext, 
       hasEmailReminder: !!emailReminderContext,
       hasOrderStatus: !!orderStatusContext,
-      hasSpecialty: !!specialtyContext 
+      hasSpecialty: !!specialtyContext,
+      hasSpecialtyProduct: !!specialtyProductContext,
+      isInkFusion: isInkFusionIntent,
+      isWBTY: isWBTYIntent,
+      isFadeWrap: isFadeWrapIntent,
+      isStandalone: isStandaloneIntent
     });
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
