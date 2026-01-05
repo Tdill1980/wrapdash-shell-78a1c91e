@@ -894,8 +894,30 @@ Ask them for their order number (usually 4-6 digits from their confirmation emai
 DO NOT guess or make up any order information!`;
     } else if (escalationType && escalationSent) {
       contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
+    } else if (pricingIntent && !chatState.customer_email) {
+      // ============================================
+      // HARD GATE: NO PRICING WITHOUT EMAIL
+      // ============================================
+      // Must collect name + email FIRST, then give price, then auto-email quote
+      const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
+      const hasAnyVehicleInfo = existingVehicle?.make || existingVehicle?.model || extractedVehicle.make || extractedVehicle.model;
+      
+      if (hasAnyVehicleInfo) {
+        contextNotes = `EMAIL REQUIRED BEFORE PRICING: Customer wants a price but hasn't given their email yet.
+WHAT YOU HAVE: ${existingVehicle?.year || extractedVehicle.year || '?'} ${existingVehicle?.make || extractedVehicle.make || '?'} ${existingVehicle?.model || extractedVehicle.model || '?'}
+        
+SAY SOMETHING LIKE: "I can absolutely get you an exact price for that! What's your name and email? I'll calculate your quote and send it right over so you have it in writing." 
+
+DO NOT give any price numbers yet - collect name + email first, THEN give the price in the next message.`;
+      } else {
+        contextNotes = `NEED VEHICLE + EMAIL: Customer wants pricing but hasn't provided vehicle OR email.
+        
+SAY SOMETHING LIKE: "I'd love to get you an exact price! What vehicle are you looking to wrap? Give me the year, make, and model, plus your name and email - I'll calculate your quote and send it right over!"
+
+DO NOT give any price numbers or ranges - get vehicle + email first.`;
+      }
     } else if (pricingIntent && !vehicleIsComplete) {
-      // CRITICAL: Don't give any price without complete vehicle info
+      // Has email but missing vehicle info
       const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
       const missingParts: string[] = [];
       if (!existingVehicle?.year) missingParts.push('year');
@@ -903,17 +925,20 @@ DO NOT guess or make up any order information!`;
       if (!existingVehicle?.model) missingParts.push('model');
       
       if (existingVehicle && (existingVehicle.make || existingVehicle.model)) {
-        contextNotes = `NEED MORE VEHICLE INFO: Customer mentioned ${existingVehicle.make || ''} ${existingVehicle.model || ''} but we need the FULL year, make, and model to calculate an accurate price. Ask for the missing: ${missingParts.join(', ')}. DO NOT give any price estimate yet!`;
+        contextNotes = `NEED MORE VEHICLE INFO (have email: ${chatState.customer_email}): Customer mentioned ${existingVehicle.make || ''} ${existingVehicle.model || ''} but we need the FULL year, make, and model. Ask for: ${missingParts.join(', ')}. Once we have it, give price + auto-email quote.`;
       } else {
-        contextNotes = `NEED VEHICLE INFO: Customer wants pricing but hasn't provided a vehicle yet. Ask them for their vehicle's YEAR, MAKE, and MODEL so you can calculate a specific price. DO NOT give generic ranges - we calculate exact prices based on vehicle SQFT.`;
+        contextNotes = `NEED VEHICLE INFO (have email: ${chatState.customer_email}): Got the email, now need vehicle year, make, and model to calculate their price.`;
       }
     } else if (pricingIntent && vehicleIsComplete && vehicleSqft === 0) {
       // Vehicle info is complete but we don't have sqft data - PRICING BLOCKED
       const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
       contextNotes = `PRICING BLOCKED for ${vehicleStr}: This vehicle isn't in our database and we don't have a reliable sqft estimate. 
-Tell the customer: "I don't have pricing data for that specific ${currentVehicle?.model} in my system. Let me connect you with our team for an accurate quote. What's your email so I can have someone reach out with exact pricing?"
+Tell the customer: "I don't have pricing data for that specific ${currentVehicle?.model} in my system. I've flagged this for our team - they'll email you at ${chatState.customer_email} with accurate pricing shortly!"
 DO NOT give any price estimate or guess!`;
-    } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0) {
+    } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0 && chatState.customer_email) {
+      // ============================================
+      // GOLDEN PATH: Has email + vehicle + sqft = GIVE PRICE + AUTO-EMAIL QUOTE
+      // ============================================
       const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
       
       // Build pricing info with with/without roof if available
@@ -928,38 +953,34 @@ WITH ROOF: ${vehicleSqftWithRoof} sqft = ~$${estimatedCostWithRoof}
       }
       
       if (closestMatch && !vehicleFromDb) {
-        // We used a close match, not exact
-        contextNotes = `CLOSE MATCH FOUND: We don't have exact data for a ${vehicleStr}, but the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} is a close match.
-PRICING (ballpark based on similar vehicle):${pricingInfo}
-At $5.27/sqft, explain this is a ballpark based on a similar vehicle. Ask for email to send formal quote.`;
+        contextNotes = `🎯 GIVE PRICE NOW + QUOTE WILL AUTO-EMAIL to ${chatState.customer_email}:
+Vehicle: ${vehicleStr} (based on similar ${closestMatch.make} ${closestMatch.model})
+PRICING:${pricingInfo}
+At $5.27/sqft for both Avery AND 3M (3M just dropped!).
+
+Give them the price! Tell them "I'm sending this quote to your email right now!" The quote email will be sent automatically.`;
       } else {
-        contextNotes = `VEHICLE FOUND IN DATABASE: ${vehicleStr}
+        contextNotes = `🎯 GIVE PRICE NOW + QUOTE WILL AUTO-EMAIL to ${chatState.customer_email}:
+Vehicle: ${vehicleStr}
 PRICING FROM DATABASE:${pricingInfo}
-GIVE THESE SPECIFIC PRICES! Explain the difference between with/without roof. Also mention both Avery and 3M are now $5.27/sqft.${!chatState.customer_email ? ' Ask for email to send formal quote.' : ''}`;
+Both Avery AND 3M are $5.27/sqft (3M just dropped!).
+
+Give them the specific price! Tell them "I'm sending this quote to your email right now!" The quote email will be sent automatically.`;
       }
-    } else if (pricingIntent && chatState.customer_email && vehicleIsComplete) {
-      contextNotes = `QUOTE ROUTED: You've sent this to our quoting team. Confirm the customer will receive an email with full pricing at ${chatState.customer_email}.`;
+    } else if (vehicleIsComplete && vehicleSqft > 0 && !chatState.customer_email) {
+      // Has vehicle but no email - need to collect email before giving price
+      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
+      contextNotes = `EMAIL REQUIRED: Have complete vehicle (${vehicleStr}) but NO EMAIL yet.
+
+SAY: "I've got the ${vehicleStr} - great choice! What's your name and email? I'll calculate your exact price and send over a formal quote!"
+
+DO NOT give the price yet - get email first, then price + auto-email.`;
     } else if (partnershipSignal) {
       contextNotes = `PARTNERSHIP ROUTED: You've looped in the partnerships team. Tell the customer someone will follow up shortly.`;
-    } else if (vehicleIsComplete && vehicleSqft > 0 && !chatState.customer_email) {
-      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
-      
-      let pricingInfo = '';
-      if (vehicleSqftWithRoof > 0 && vehicleSqftWithoutRoof > 0) {
-        pricingInfo = `WITHOUT ROOF: ${vehicleSqftWithoutRoof} sqft = ~$${estimatedCostWithoutRoof}, WITH ROOF: ${vehicleSqftWithRoof} sqft = ~$${estimatedCostWithRoof}`;
-      } else {
-        pricingInfo = `${vehicleSqft} sqft = ~$${estimatedCost}`;
-      }
-      
-      if (closestMatch && !vehicleFromDb) {
-        contextNotes = `CLOSE MATCH - READY FOR QUOTE: Based on the ${closestMatch.year} ${closestMatch.make} ${closestMatch.model} (close match for ${vehicleStr}). ${pricingInfo}. Give the ballpark estimate and ask for email to send formal quote!`;
-      } else {
-        contextNotes = `READY FOR QUOTE: Customer gave complete vehicle info - ${vehicleStr}. ${pricingInfo}. Give them the price estimate and ask for email to send formal quote!`;
-      }
     } else if (hasPartialVehicle && !vehicleIsComplete) {
       // Customer gave partial vehicle info but not complete
       const partialInfo = extractedVehicle.make || extractedVehicle.model || '';
-      contextNotes = `PARTIAL VEHICLE: Customer mentioned "${partialInfo}" but we need the COMPLETE vehicle info (year, make, and model) to calculate an accurate price. Ask specifically what year and full model they have.`;
+      contextNotes = `PARTIAL VEHICLE: Customer mentioned "${partialInfo}" - need the COMPLETE vehicle (year, make, model) + their name and email to give a price.`;
     }
 
     // ============================================
