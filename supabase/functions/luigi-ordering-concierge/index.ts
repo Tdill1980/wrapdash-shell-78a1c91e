@@ -579,6 +579,10 @@ serve(async (req) => {
     const pricingIntent = lowerMessage.includes('price') || lowerMessage.includes('cost') || 
                           lowerMessage.includes('how much') || lowerMessage.includes('quote') ||
                           lowerMessage.includes('pricing') || lowerMessage.includes('estimate');
+    
+    // 🔒 EXPLICIT CONSENT FLAG: User must say "yes" to get a formal quote emailed
+    const userExplicitlyAcceptedQuote = /^(yes|yeah|yep|sure|please|send it|email it|go ahead)$/i.test(message_text.trim());
+    
     const orderStatusIntent = extractedOrderNumber !== null || (lowerMessage.includes('order') && 
                               (lowerMessage.includes('status') || lowerMessage.includes('where') || lowerMessage.includes('track')));
     const specialtyFilmIntent = lowerMessage.includes('chrome') || lowerMessage.includes('color shift') ||
@@ -673,6 +677,12 @@ serve(async (req) => {
 
       conversationId = newConvo!.id;
       chatState = { stage: 'initial', agent: 'luigi' };
+    }
+
+    // 🔒 Set wants_formal_quote flag when user explicitly accepts
+    if (userExplicitlyAcceptedQuote) {
+      chatState.wants_formal_quote = true;
+      console.log('[Luigi] User explicitly accepted formal quote offer');
     }
 
     // Update chat state with extracted info
@@ -947,18 +957,15 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
     // Get saved pricing from state
     const hadPricingGiven = !!(chatState.pricing_given_at || chatState.calculated_price);
     
-    // Trigger quote creation if:
-    // 1. We have customer email (current message or saved)
-    // 2. We have vehicle info (current message or saved)  
-    // 3. We have sqft calculated
-    // 4. Quote not already sent
-    // 5. Either current message has pricing intent OR we previously gave pricing
-    const shouldAttemptQuote = 
-      chatState.customer_email && 
-      hasEffectiveVehicle && 
-      sqft > 0 && 
-      !chatState.quote_sent &&
-      (pricingIntent || hadPricingGiven || extractedEmail);
+    // 🔒 LOCKED QUOTE TRIGGER:
+    // Only send formal quote when user EXPLICITLY said yes (wants_formal_quote = true)
+    // This prevents premature quote sends when user just provides email
+    const shouldAttemptQuote =
+      chatState.wants_formal_quote === true &&
+      !!chatState.customer_email &&
+      hasEffectiveVehicle &&
+      sqft > 0 &&
+      !chatState.quote_sent;
     
     console.log('[Luigi] Quote trigger check:', {
       hasEmail: !!chatState.customer_email,
