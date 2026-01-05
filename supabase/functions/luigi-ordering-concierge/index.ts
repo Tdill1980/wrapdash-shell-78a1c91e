@@ -909,7 +909,114 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
 
     const conversationHistory = await getConversationHistory(supabase, conversationId);
     
-    const systemPrompt = LUIGI_SYSTEM_PROMPT + pricingContext + emailReminderContext + specialtyContext + specialtyProductContext + orderStatusContext;
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🔒 CRITICAL FIX: Create quote BEFORE AI response so we know if it succeeded
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let quoteResultContext = '';
+    const modelKey = (extractedVehicle.model || '').toLowerCase().replace(/[-\s]/g, '');
+    const sqft = VEHICLE_SQFT[modelKey] || 0;
+    
+    // Only attempt quote if we have email + vehicle + pricing intent + sqft
+    if (pricingIntent && chatState.customer_email && hasVehicle && sqft > 0 && !chatState.quote_sent) {
+      console.log('[Luigi] Attempting quote creation BEFORE AI response...');
+      try {
+        const { data: quoteData, error: quoteError } = await supabase.functions.invoke("create-quote-from-chat", {
+          body: {
+            conversation_id: conversationId,
+            customer_email: chatState.customer_email,
+            customer_name: null,
+            vehicle_year: extractedVehicle.year,
+            vehicle_make: extractedVehicle.make,
+            vehicle_model: extractedVehicle.model,
+            product_type: "avery",
+            send_email: true,
+          },
+        });
+
+        if (quoteError) {
+          console.error("[Luigi] Quote creation failed:", quoteError);
+          quoteResultContext = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 QUOTE CREATION FAILED - BE HONEST!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The system tried to create and email a quote but FAILED.
+Error: ${quoteError.message || 'Unknown error'}
+
+YOUR RESPONSE MUST:
+- NOT claim the quote was sent
+- Say: "I hit a small snag generating that quote. Let me flag this for the team - you'll hear from them shortly!"
+- DO NOT say "check your inbox" or "sent to your email"
+`;
+        } else if (quoteData?.email_sent === true) {
+          console.log("[Luigi] Quote created and emailed successfully:", quoteData?.quote_number);
+          chatState.quote_sent = true;
+          chatState.quote_number = quoteData?.quote_number;
+          chatState.quote_email_confirmed = true;
+          
+          // Update conversation with quote info immediately
+          await supabase
+            .from("conversations")
+            .update({ chat_state: chatState })
+            .eq("id", conversationId);
+          
+          quoteResultContext = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ QUOTE EMAIL CONFIRMED - NOW YOU CAN SAY IT!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Quote #${quoteData.quote_number} was SUCCESSFULLY emailed to ${chatState.customer_email}.
+Email delivery: CONFIRMED
+
+YOUR RESPONSE MUST:
+- Confirm the quote was sent: "Your quote just landed in your inbox at ${chatState.customer_email}!"
+- Include the quote number: Quote #${quoteData.quote_number}
+- Suggest checking spam/junk just in case
+`;
+        } else if (quoteData?.quote_id) {
+          // Quote created but email may not have sent
+          console.log("[Luigi] Quote created but email status unclear:", quoteData);
+          chatState.quote_sent = false;
+          chatState.quote_number = quoteData?.quote_number;
+          
+          quoteResultContext = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ QUOTE CREATED BUT EMAIL UNCLEAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Quote #${quoteData.quote_number} was created.
+But email delivery was NOT confirmed.
+
+YOUR RESPONSE MUST:
+- Say: "I generated your quote, but I'm not 100% sure the email went through. Let me flag this for follow-up - the team will make sure you get it!"
+- DO NOT claim it was definitely sent
+`;
+        } else {
+          console.warn("[Luigi] Quote response unexpected:", quoteData);
+          quoteResultContext = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ QUOTE STATUS UNKNOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The quote system returned an unclear response.
+
+YOUR RESPONSE MUST:
+- NOT claim the quote was sent
+- Say: "I'm setting up your quote now - the team will follow up to make sure you get it!"
+`;
+        }
+      } catch (quoteErr) {
+        console.error("[Luigi] Quote creation exception:", quoteErr);
+        quoteResultContext = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 QUOTE SYSTEM ERROR - BE HONEST!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The quote system encountered an error.
+
+YOUR RESPONSE MUST:
+- NOT claim the quote was sent
+- Say: "I hit a technical snag with the quote. Let me route this to the team and they'll get it to you shortly!"
+`;
+      }
+    }
+    
+    const systemPrompt = LUIGI_SYSTEM_PROMPT + pricingContext + emailReminderContext + specialtyContext + specialtyProductContext + orderStatusContext + quoteResultContext;
     
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -923,6 +1030,7 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
       hasOrderStatus: !!orderStatusContext,
       hasSpecialty: !!specialtyContext,
       hasSpecialtyProduct: !!specialtyProductContext,
+      hasQuoteResult: !!quoteResultContext,
       isInkFusion: isInkFusionIntent,
       isWBTY: isWBTYIntent,
       isFadeWrap: isFadeWrapIntent,
@@ -966,40 +1074,9 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
     // Log interaction
     console.log('[Luigi] Response sent:', assistantMessage.substring(0, 100));
 
-    // Create quote and send email if we have email + vehicle + pricing intent
-    if (pricingIntent && chatState.customer_email && hasVehicle) {
-      try {
-        // Use functions.invoke instead of raw HTTP
-        const { data: quoteData, error: quoteError } = await supabase.functions.invoke("create-quote-from-chat", {
-          body: {
-            conversation_id: conversationId,
-            customer_email: chatState.customer_email,
-            customer_name: null,
-            vehicle_year: extractedVehicle.year,
-            vehicle_make: extractedVehicle.make,
-            vehicle_model: extractedVehicle.model,
-            product_type: "avery",
-            send_email: true,
-          },
-        });
-
-        if (quoteError) {
-          console.error("[Luigi] Failed to create/email quote:", quoteError);
-        } else {
-          console.log("[Luigi] Quote created and emailed:", quoteData?.quote_number);
-          chatState.quote_sent = true;
-          chatState.quote_number = quoteData?.quote_number;
-
-          // Update conversation with quote info
-          await supabase
-            .from("conversations")
-            .update({ chat_state: chatState })
-            .eq("id", conversationId);
-        }
-      } catch (quoteErr) {
-        console.error("[Luigi] Quote creation error:", quoteErr);
-      }
-    } else if (pricingIntent && chatState.customer_email && !hasVehicle) {
+    // Quote creation now happens BEFORE AI response (see above)
+    // Only create task if we have email but no vehicle info
+    if (pricingIntent && chatState.customer_email && !hasVehicle && !chatState.quote_sent) {
       // No vehicle yet - create task for manual follow-up
       await supabase.from('tasks').insert({
         title: `Quote Request (Need Vehicle Info): ${chatState.customer_email}`,
@@ -1007,13 +1084,7 @@ Ask the customer: "I'd be happy to check your order status! Could you provide yo
         assigned_to: 'Alex Morgan',
         status: 'todo',
         priority: 'high',
-        category: 'quote',
-        metadata: {
-          source: 'luigi_concierge',
-          conversation_id: conversationId,
-          customer_email: chatState.customer_email,
-          needs_vehicle_info: true
-        }
+        organization_id: WPW_ORGANIZATION_ID
       });
       console.log('[Luigi] Created quote task (needs vehicle info)');
     }
