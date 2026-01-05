@@ -207,99 +207,160 @@ serve(async (req) => {
       console.error('[CreateQuoteFromChat] Task creation error:', taskError);
     }
 
+    // ============================================
+    // CANONICAL QUOTE EMAIL - Claude-style with rotating upsells
+    // ============================================
+    
+    // Rotating upsell helper (50/50 based on quote ID)
+    function getRotatingUpsell(quoteId?: string) {
+      const even = quoteId
+        ? parseInt(quoteId.slice(-2), 16) % 2 === 0
+        : Date.now() % 2 === 0;
+
+      if (even) {
+        return {
+          title: "Need window coverage?",
+          body: "Window Perf is available at $5.95 / sq ft.",
+          link: "https://weprintwraps.com/product/perforated-window-vinyl/",
+        };
+      }
+
+      return {
+        title: "Need logos or decals to match?",
+        body: "Cut Contour graphics start at $6.32 / sq ft.",
+        link: "https://weprintwraps.com/product/avery-cut-contour-vehicle-wrap/",
+      };
+    }
+
+    // Build canonical email HTML
+    function buildQuoteEmailHTML({
+      quoteNumber,
+      vehicleLabel,
+      sqft,
+      rate,
+      total,
+      cartUrl,
+      quoteId,
+    }: {
+      quoteNumber: string;
+      vehicleLabel: string;
+      sqft: number;
+      rate: number;
+      total: number;
+      cartUrl: string;
+      quoteId?: string;
+    }) {
+      const upsell = getRotatingUpsell(quoteId);
+
+      return `
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:Inter,Arial,sans-serif;">
+  <div style="max-width:640px;margin:0 auto;background:#ffffff;">
+
+    <!-- BLACK HEADER -->
+    <div style="background:#000;color:#fff;padding:18px 24px;">
+      <div style="font-size:18px;font-weight:600;">
+        WePrintWraps.com Quote
+      </div>
+    </div>
+
+    <!-- ADD TO CART (TOP CTA) -->
+    <div style="padding:24px;">
+      <a href="${cartUrl}"
+         style="display:inline-block;padding:14px 20px;
+                background:#0ea5e9;color:#fff;
+                text-decoration:none;border-radius:8px;
+                font-weight:600;">
+        Add This Quote to Cart
+      </a>
+    </div>
+
+    <!-- PRICE SUMMARY -->
+    <div style="padding:0 24px 24px 24px;">
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:20px;">
+        <div style="font-size:14px;color:#64748b;">Estimated Total</div>
+        <div style="font-size:28px;font-weight:700;color:#0f172a;">
+          $${total.toLocaleString()}
+        </div>
+        <div style="font-size:14px;color:#64748b;margin-top:6px;">
+          ~${sqft} sq ft × $${rate.toFixed(2)} / sq ft
+        </div>
+      </div>
+    </div>
+
+    <!-- PROJECT DETAILS -->
+    <div style="padding:0 24px 24px 24px;">
+      <div style="font-size:14px;color:#334155;">
+        <strong>Project:</strong> ${vehicleLabel}<br/>
+        <em>Printed wrap material only. Installation not included.</em>
+      </div>
+    </div>
+
+    <!-- ROTATING UPSELL -->
+    <div style="padding:0 24px 24px 24px;border-top:1px solid #e5e7eb;">
+      <div style="margin-top:16px;">
+        <strong>${upsell.title}</strong><br/>
+        ${upsell.body}<br/>
+        <a href="${upsell.link}" style="color:#0ea5e9;text-decoration:none;">
+          Learn more →
+        </a>
+      </div>
+    </div>
+
+    <!-- VOLUME PRICING -->
+    <div style="padding:0 24px 24px 24px;">
+      <strong>Volume & Fleet Pricing</strong>
+      <ul style="margin:8px 0 0 18px;color:#334155;font-size:14px;">
+        <li>500–999 sq ft → 5% off</li>
+        <li>1,000–2,499 sq ft → 10% off</li>
+        <li>2,500–4,999 sq ft → 15% off</li>
+        <li>5,000+ sq ft → 20% off</li>
+      </ul>
+    </div>
+
+    <!-- COMMERCIALPRO CTA -->
+    <div style="padding:0 24px 24px 24px;border-top:1px solid #e5e7eb;">
+      <p style="font-size:14px;color:#334155;margin-top:16px;">
+        Are you a wrap professional or managing fleet volume?<br/>
+        <a href="https://weprintwraps.com/commercialpro"
+           style="color:#0ea5e9;text-decoration:none;">
+          Learn more about CommercialPro™ →
+        </a>
+      </p>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="padding:16px 24px 32px 24px;font-size:13px;color:#64748b;">
+      Questions? Reply to this email or contact
+      <a href="mailto:hello@weprintwraps.com">hello@weprintwraps.com</a><br/><br/>
+      — The WePrintWraps.com Team<br/>
+      <span style="font-size:11px;color:#94a3b8;">Quote #${quoteNumber}</span>
+    </div>
+
+  </div>
+</body>
+</html>
+`;
+    }
+
     // Send quote email
     let emailSent = false;
     if (send_email && resendKey) {
       const vehicleDisplay = `${vehicle_year || ''} ${vehicle_make || ''} ${vehicle_model || ''}`.trim() || 'Your Vehicle';
-      const productDisplay = product_type.toLowerCase().includes('3m') ? '3M IJ180Cv3' : 'Avery MPI 1105';
+      
+      // Cart URL - link to products page (can be enhanced with WooCommerce cart URL later)
+      const cartUrl = 'https://weprintwraps.com/our-products/';
 
-      const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
-  <div style="max-width:600px;margin:0 auto;padding:20px;">
-    <div style="background:#0066cc;padding:30px;text-align:center;border-radius:8px 8px 0 0;">
-      <h1 style="color:white;margin:0;font-size:28px;">WePrintWraps</h1>
-      <p style="color:#cce5ff;margin:10px 0 0;font-size:14px;">Wholesale Vehicle Wrap Printing</p>
-    </div>
-    
-    <div style="background:white;padding:30px;border-radius:0 0 8px 8px;">
-      <h2 style="color:#333;margin:0 0 20px;">Your Quote is Ready!</h2>
-      
-      <p style="color:#666;line-height:1.6;">
-        Hey${customer_name ? ` ${customer_name.split(' ')[0]}` : ''}! 👋
-      </p>
-      
-      <p style="color:#666;line-height:1.6;">
-        Thanks for chatting with us! Here's your wrap quote for the <strong>${vehicleDisplay}</strong>:
-      </p>
-      
-      <div style="background:#f8f9fa;border-radius:8px;padding:20px;margin:20px 0;">
-        <table style="width:100%;border-collapse:collapse;">
-          <tr>
-            <td style="padding:10px 0;color:#666;">Vehicle:</td>
-            <td style="padding:10px 0;text-align:right;font-weight:bold;color:#333;">${vehicleDisplay}</td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;color:#666;">Square Footage:</td>
-            <td style="padding:10px 0;text-align:right;font-weight:bold;color:#333;">${sqft} sqft</td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;color:#666;">Material:</td>
-            <td style="padding:10px 0;text-align:right;font-weight:bold;color:#333;">${productDisplay}</td>
-          </tr>
-          <tr>
-            <td style="padding:10px 0;color:#666;">Price per sqft:</td>
-            <td style="padding:10px 0;text-align:right;font-weight:bold;color:#333;">$${pricePerSqft.toFixed(2)}</td>
-          </tr>
-          <tr style="border-top:2px solid #dee2e6;">
-            <td style="padding:15px 0;color:#333;font-size:18px;font-weight:bold;">Material Total:</td>
-            <td style="padding:15px 0;text-align:right;font-size:24px;font-weight:bold;color:#0066cc;">$${materialCost.toFixed(2)}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div style="background:#e8f4fd;border-left:4px solid #0066cc;padding:15px;margin:20px 0;">
-        <p style="margin:0;color:#0066cc;font-weight:bold;">🔥 Both Avery AND 3M are now $5.27/sqft!</p>
-        <p style="margin:5px 0 0;color:#666;font-size:14px;">3M just dropped their price to match Avery - you get premium quality at the same great price!</p>
-      </div>
-      
-      <p style="color:#666;line-height:1.6;">
-        <strong>What's included:</strong>
-      </p>
-      <ul style="color:#666;line-height:1.8;padding-left:20px;">
-        <li>Printed wrap film with lamination</li>
-        <li>Pre-paneled and ready to install</li>
-        <li>FREE shipping on orders over $750</li>
-        <li>1-2 business day production</li>
-        <li>100% quality guarantee</li>
-      </ul>
-      
-      <div style="text-align:center;margin:30px 0;">
-        <a href="https://weprintwraps.com/our-products/" style="display:inline-block;background:#0066cc;color:white;padding:15px 40px;text-decoration:none;border-radius:5px;font-weight:bold;font-size:16px;">View Our Products</a>
-      </div>
-      
-      <p style="color:#666;line-height:1.6;">
-        Ready to order? Just reply to this email with your design files, or hit us up on Instagram <a href="https://instagram.com/weprintwraps" style="color:#0066cc;">@weprintwraps</a>!
-      </p>
-      
-      <p style="color:#666;line-height:1.6;">
-        Talk soon,<br>
-        <strong>The WePrintWraps Team</strong>
-      </p>
-    </div>
-    
-    <div style="text-align:center;padding:20px;color:#999;font-size:12px;">
-      <p>Quote #${quoteNumber}</p>
-      <p>WePrintWraps • <a href="https://weprintwraps.com" style="color:#999;">weprintwraps.com</a></p>
-    </div>
-  </div>
-</body>
-</html>`;
+      const emailHtml = buildQuoteEmailHTML({
+        quoteNumber,
+        vehicleLabel: vehicleDisplay,
+        sqft,
+        rate: pricePerSqft,
+        total: materialCost,
+        cartUrl,
+        quoteId: quote.id,
+      });
 
       try {
         const emailResponse = await fetch('https://api.resend.com/emails', {

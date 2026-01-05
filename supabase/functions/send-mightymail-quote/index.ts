@@ -137,13 +137,36 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 function getSubjectLine(tone: string, quoteData: any): string {
-  const templates: Record<string, string> = {
-    installer: `Your Vehicle Wrap Quote for ${quoteData.vehicle_make || "Your Vehicle"} ${quoteData.vehicle_model || ""}`,
-    luxury: "Your Premium Wrap Experience Awaits",
-    hype: "🔥 Your Wrap Quote is Ready — Let's Transform This Ride!",
-  };
+  const vehicleDisplay = [quoteData.vehicle_year, quoteData.vehicle_make, quoteData.vehicle_model]
+    .filter(Boolean)
+    .join(' ') || 'Your Vehicle';
   
-  return templates[tone] || templates.installer;
+  return `Your Wrap Quote: ${vehicleDisplay} - $${Number(quoteData.quote_total).toFixed(2)}`;
+}
+
+// ============================================
+// CANONICAL QUOTE EMAIL - Claude-style with rotating upsells
+// Unified template matching create-quote-from-chat
+// ============================================
+
+function getRotatingUpsell(quoteId?: string) {
+  const even = quoteId
+    ? parseInt(quoteId.slice(-2), 16) % 2 === 0
+    : Date.now() % 2 === 0;
+
+  if (even) {
+    return {
+      title: "Need window coverage?",
+      body: "Window Perf is available at $5.95 / sq ft.",
+      link: "https://weprintwraps.com/product/perforated-window-vinyl/",
+    };
+  }
+
+  return {
+    title: "Need logos or decals to match?",
+    body: "Cut Contour graphics start at $6.32 / sq ft.",
+    link: "https://weprintwraps.com/product/avery-cut-contour-vehicle-wrap/",
+  };
 }
 
 function renderEmailTemplate(
@@ -152,343 +175,130 @@ function renderEmailTemplate(
   data: Record<string, any>,
   offersInstallation: boolean = true
 ): string {
-  const styles = getDesignStyles(design);
-  const tonePreset = getTonePreset(tone, offersInstallation);
-  
   const vehicleDisplay = [data.vehicle_year, data.vehicle_make, data.vehicle_model]
     .filter(Boolean)
-    .join(' ');
+    .join(' ') || 'Your Vehicle';
 
-  const orderLink = data.portal_url || 'https://weprintwraps.com';
-  const commercialLink = 'https://weprintwraps.com/pages/commercialpro';
+  const cartUrl = data.portal_url || 'https://weprintwraps.com/our-products/';
+  const total = Number(data.quote_total) || 0;
+  const sqft = Number(data.sqft) || 0;
+  const rate = sqft > 0 ? total / sqft : 5.27;
+  const quoteNumber = data.quote_number || '';
+  
+  const upsell = getRotatingUpsell(data.quote_id);
 
   return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-        <style>
-          body { 
-            font-family: 'Montserrat', 'Poppins', Arial, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background-color: ${styles.backgroundColor}; 
-            -webkit-font-smoothing: antialiased;
-          }
-          .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background-color: ${styles.containerColor}; 
-          }
-          .header { 
-            background: ${styles.headerGradient}; 
-            padding: 32px 20px; 
-            text-align: center; 
-          }
-          .header-brand { 
-            color: white; 
-            margin: 0; 
-            font-size: 28px; 
-            font-weight: 700;
-            font-family: 'Poppins', Arial, sans-serif;
-            letter-spacing: -0.5px;
-          }
-          .header-tagline {
-            color: rgba(255,255,255,0.9);
-            font-size: 14px;
-            margin-top: 8px;
-            font-weight: 400;
-          }
-          .content { 
-            padding: 32px 24px; 
-            color: ${styles.textColor}; 
-          }
-          .section-title {
-            font-family: 'Poppins', Arial, sans-serif;
-            font-size: 22px;
-            font-weight: 700;
-            color: ${styles.headingColor};
-            margin: 0 0 8px 0;
-          }
-          .quote-number {
-            color: ${styles.bodyColor};
-            font-size: 14px;
-            margin-bottom: 24px;
-          }
-          .quote-table {
-            width: 100%;
-            background-color: ${styles.cardColor};
-            border-radius: 8px;
-            border-collapse: collapse;
-            margin: 20px 0;
-          }
-          .quote-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid ${styles.borderColor};
-            font-size: 14px;
-          }
-          .quote-table tr:last-child td {
-            border-bottom: none;
-          }
-          .quote-table .label {
-            color: ${styles.bodyColor};
-            font-weight: 500;
-          }
-          .quote-table .value {
-            color: ${styles.headingColor};
-            font-weight: 600;
-            text-align: right;
-          }
-          .price-box {
-            background: ${styles.priceBoxGradient || 'linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)'};
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-            margin: 24px 0;
-          }
-          .price-label {
-            color: rgba(255,255,255,0.9);
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-          }
-          .price-amount {
-            color: white;
-            font-size: 42px;
-            font-weight: 700;
-            font-family: 'Poppins', Arial, sans-serif;
-          }
-          .price-note {
-            color: rgba(255,255,255,0.8);
-            font-size: 12px;
-            margin-top: 8px;
-          }
-          .cta-button { 
-            display: block;
-            width: 100%;
-            max-width: 280px;
-            margin: 24px auto;
-            padding: 16px 32px; 
-            background: ${tonePreset.buttonColor}; 
-            color: white !important; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            font-weight: 700; 
-            font-size: 16px;
-            text-align: center;
-            font-family: 'Poppins', Arial, sans-serif;
-          }
-          .benefits-box {
-            background-color: ${styles.cardColor};
-            border-radius: 8px;
-            padding: 20px 24px;
-            margin: 24px 0;
-          }
-          .benefits-title {
-            font-family: 'Poppins', Arial, sans-serif;
-            font-size: 16px;
-            font-weight: 700;
-            color: ${styles.headingColor};
-            margin: 0 0 16px 0;
-          }
-          .benefit-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 12px;
-            font-size: 14px;
-            color: ${styles.bodyColor};
-          }
-          .benefit-check {
-            color: #10B981;
-            margin-right: 10px;
-            font-weight: bold;
-          }
-          .commercial-box {
-            background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(184,134,11,0.1) 100%);
-            border: 1px solid rgba(212,175,55,0.3);
-            border-radius: 8px;
-            padding: 20px 24px;
-            margin: 24px 0;
-            text-align: center;
-          }
-          .commercial-title {
-            font-family: 'Poppins', Arial, sans-serif;
-            font-size: 16px;
-            font-weight: 700;
-            color: ${styles.headingColor};
-            margin: 0 0 8px 0;
-          }
-          .commercial-text {
-            font-size: 14px;
-            color: ${styles.bodyColor};
-            margin-bottom: 12px;
-          }
-          .commercial-link {
-            color: #D4AF37;
-            font-weight: 600;
-            text-decoration: none;
-          }
-          .faq-section {
-            margin: 32px 0 24px 0;
-          }
-          .faq-title {
-            font-family: 'Poppins', Arial, sans-serif;
-            font-size: 18px;
-            font-weight: 700;
-            color: ${styles.headingColor};
-            margin: 0 0 16px 0;
-          }
-          .faq-item {
-            margin-bottom: 16px;
-          }
-          .faq-question {
-            font-size: 14px;
-            font-weight: 600;
-            color: ${styles.headingColor};
-            margin-bottom: 4px;
-          }
-          .faq-answer {
-            font-size: 13px;
-            color: ${styles.bodyColor};
-            line-height: 1.5;
-          }
-          .footer { 
-            padding: 24px; 
-            text-align: center; 
-            color: ${styles.footerColor}; 
-            font-size: 12px; 
-            border-top: 1px solid ${styles.borderColor}; 
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container" style="max-width: 600px; margin: 0 auto; background-color: ${styles.containerColor};">
-          <div class="header" style="background-color: #0f172a; padding: 32px 20px; text-align: center;">
-            <div class="header-brand" style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; font-family: 'Poppins', Arial, sans-serif; letter-spacing: -0.5px;">
-              WePrintWraps.com
-            </div>
-            <div class="header-tagline" style="color: rgba(255,255,255,0.9); font-size: 14px; margin-top: 8px; font-weight: 400;">
-              Print-Only Wholesale Wrap Pricing
-            </div>
-          </div>
-          
-          <div class="content" style="padding: 32px 24px; color: ${styles.textColor};">
-            <div class="section-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 22px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 8px 0;">Your Wrap Quote</div>
-            ${data.quote_number ? `<div class="quote-number" style="color: ${styles.bodyColor}; font-size: 14px; margin-bottom: 24px;">Quote #: ${data.quote_number}</div>` : ''}
-            
-            <table class="quote-table" style="width: 100%; background-color: ${styles.cardColor}; border-radius: 8px; border-collapse: collapse; margin: 20px 0;">
-              ${vehicleDisplay ? `<tr><td class="label" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Vehicle</td><td class="value" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">${vehicleDisplay}</td></tr>` : ''}
-              <tr><td class="label" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Coverage</td><td class="value" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">Full Wrap</td></tr>
-              ${data.product_name ? `<tr><td class="label" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Material</td><td class="value" style="padding: 12px 16px; border-bottom: 1px solid ${styles.borderColor}; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">${data.product_name}</td></tr>` : ''}
-              ${data.sqft ? `<tr><td class="label" style="padding: 12px 16px; font-size: 14px; color: ${styles.bodyColor}; font-weight: 500;">Square Footage</td><td class="value" style="padding: 12px 16px; font-size: 14px; color: ${styles.headingColor}; font-weight: 600; text-align: right;">${data.sqft} sq ft</td></tr>` : ''}
-            </table>
-            
-            <div class="price-box" style="background: ${styles.priceBoxGradient || 'linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)'}; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
-              <div class="price-label" style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Print-Only Total</div>
-              <div class="price-amount" style="color: #ffffff; font-size: 42px; font-weight: 700; font-family: 'Poppins', Arial, sans-serif;">$${Number(data.quote_total).toFixed(2)}</div>
-              <div class="price-note" style="color: rgba(255,255,255,0.8); font-size: 12px; margin-top: 8px;">Installation not included</div>
-            </div>
-            
-            <div style="text-align:center;">
-              <a href="${orderLink}" class="cta-button" style="display: inline-block; width: 100%; max-width: 280px; margin: 24px auto; padding: 16px 32px; background: ${tonePreset.buttonColor}; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; text-align: center; font-family: 'Poppins', Arial, sans-serif;">
-                ORDER NOW
-              </a>
-            </div>
-            
-            <div class="benefits-box" style="background-color: ${styles.cardColor}; border-radius: 8px; padding: 20px 24px; margin: 24px 0;">
-              <div class="benefits-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 16px 0;">Why WePrintWraps?</div>
-              <div class="benefit-item" style="margin-bottom: 12px; font-size: 14px; color: ${styles.bodyColor};">✓ <strong>Premium Wrap Guarantee</strong> – color accuracy & print quality</div>
-              <div class="benefit-item" style="margin-bottom: 12px; font-size: 14px; color: ${styles.bodyColor};">✓ <strong>Fast 1–2 Day Production</strong></div>
-              <div class="benefit-item" style="margin-bottom: 0; font-size: 14px; color: ${styles.bodyColor};">✓ <strong>Free Shipping</strong> on orders $750+</div>
-            </div>
-            
-            <div class="commercial-box" style="background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(184,134,11,0.1) 100%); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 20px 24px; margin: 24px 0; text-align: center;">
-              <div class="commercial-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 16px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 8px 0;">Need a bulk or fleet order?</div>
-              <div class="commercial-text" style="font-size: 14px; color: ${styles.bodyColor}; margin-bottom: 12px;">Volume discounts available for multiple vehicles or repeat production.</div>
-              <a href="${commercialLink}" class="commercial-link" style="color: #D4AF37; font-weight: 600; text-decoration: none;">View CommercialPro →</a>
-            </div>
-            
-            <div class="faq-section" style="margin: 32px 0 24px 0;">
-              <div class="faq-title" style="font-family: 'Poppins', Arial, sans-serif; font-size: 18px; font-weight: 700; color: ${styles.headingColor}; margin: 0 0 16px 0;">FAQs</div>
-              <div class="faq-item" style="margin-bottom: 16px;">
-                <div class="faq-question" style="font-size: 14px; font-weight: 600; color: ${styles.headingColor}; margin-bottom: 4px;">Is installation included?</div>
-                <div class="faq-answer" style="font-size: 13px; color: ${styles.bodyColor}; line-height: 1.5;">No — WePrintWraps.com provides print-only wholesale wrap material.</div>
-              </div>
-              <div class="faq-item" style="margin-bottom: 16px;">
-                <div class="faq-question" style="font-size: 14px; font-weight: 600; color: ${styles.headingColor}; margin-bottom: 4px;">How fast is production?</div>
-                <div class="faq-answer" style="font-size: 13px; color: ${styles.bodyColor}; line-height: 1.5;">Most orders ship within 1–2 business days.</div>
-              </div>
-              <div class="faq-item" style="margin-bottom: 0;">
-                <div class="faq-question" style="font-size: 14px; font-weight: 600; color: ${styles.headingColor}; margin-bottom: 4px;">Can I reorder this wrap?</div>
-                <div class="faq-answer" style="font-size: 13px; color: ${styles.bodyColor}; line-height: 1.5;">Yes — your quote number allows easy reorders.</div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="footer" style="padding: 24px; text-align: center; color: ${styles.footerColor}; font-size: 12px; border-top: 1px solid ${styles.borderColor};">
-            <p style="margin: 0 0 8px;">© ${new Date().getFullYear()} WePrintWraps.com - Premium Vehicle Wrap Printing</p>
-            ${data.footer_text ? `<p style="margin: 0;">${data.footer_text}</p>` : ''}
-          </div>
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:Inter,Arial,sans-serif;">
+  <div style="max-width:640px;margin:0 auto;background:#ffffff;">
+
+    <!-- BLACK HEADER -->
+    <div style="background:#000;color:#fff;padding:18px 24px;">
+      <div style="font-size:18px;font-weight:600;">
+        WePrintWraps.com Quote
+      </div>
+    </div>
+
+    <!-- ADD TO CART (TOP CTA) -->
+    <div style="padding:24px;">
+      <a href="${cartUrl}"
+         style="display:inline-block;padding:14px 20px;
+                background:#0ea5e9;color:#fff;
+                text-decoration:none;border-radius:8px;
+                font-weight:600;">
+        Add This Quote to Cart
+      </a>
+    </div>
+
+    <!-- PRICE SUMMARY -->
+    <div style="padding:0 24px 24px 24px;">
+      <div style="border:1px solid #e5e7eb;border-radius:10px;padding:20px;">
+        <div style="font-size:14px;color:#64748b;">Estimated Total</div>
+        <div style="font-size:28px;font-weight:700;color:#0f172a;">
+          $${total.toLocaleString()}
         </div>
-      </body>
-    </html>
-  `;
+        ${sqft > 0 ? `
+        <div style="font-size:14px;color:#64748b;margin-top:6px;">
+          ~${sqft} sq ft × $${rate.toFixed(2)} / sq ft
+        </div>
+        ` : ''}
+      </div>
+    </div>
+
+    <!-- PROJECT DETAILS -->
+    <div style="padding:0 24px 24px 24px;">
+      <div style="font-size:14px;color:#334155;">
+        <strong>Project:</strong> ${vehicleDisplay}<br/>
+        <em>Printed wrap material only. Installation not included.</em>
+      </div>
+    </div>
+
+    <!-- ROTATING UPSELL -->
+    <div style="padding:0 24px 24px 24px;border-top:1px solid #e5e7eb;">
+      <div style="margin-top:16px;">
+        <strong>${upsell.title}</strong><br/>
+        ${upsell.body}<br/>
+        <a href="${upsell.link}" style="color:#0ea5e9;text-decoration:none;">
+          Learn more →
+        </a>
+      </div>
+    </div>
+
+    <!-- VOLUME PRICING -->
+    <div style="padding:0 24px 24px 24px;">
+      <strong>Volume & Fleet Pricing</strong>
+      <ul style="margin:8px 0 0 18px;color:#334155;font-size:14px;">
+        <li>500–999 sq ft → 5% off</li>
+        <li>1,000–2,499 sq ft → 10% off</li>
+        <li>2,500–4,999 sq ft → 15% off</li>
+        <li>5,000+ sq ft → 20% off</li>
+      </ul>
+    </div>
+
+    <!-- COMMERCIALPRO CTA -->
+    <div style="padding:0 24px 24px 24px;border-top:1px solid #e5e7eb;">
+      <p style="font-size:14px;color:#334155;margin-top:16px;">
+        Are you a wrap professional or managing fleet volume?<br/>
+        <a href="https://weprintwraps.com/commercialpro"
+           style="color:#0ea5e9;text-decoration:none;">
+          Learn more about CommercialPro™ →
+        </a>
+      </p>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="padding:16px 24px 32px 24px;font-size:13px;color:#64748b;">
+      Questions? Reply to this email or contact
+      <a href="mailto:hello@weprintwraps.com">hello@weprintwraps.com</a><br/><br/>
+      — The WePrintWraps.com Team<br/>
+      ${quoteNumber ? `<span style="font-size:11px;color:#94a3b8;">Quote #${quoteNumber}</span>` : ''}
+    </div>
+
+  </div>
+</body>
+</html>
+`;
 }
 
+// Legacy functions kept for compatibility but not used in new template
 function getTonePreset(tone: string, offersInstallation: boolean) {
-  const presets: Record<string, { buttonColor: string; accentColor: string }> = {
-    installer: { buttonColor: "#00AFFF", accentColor: "#60A5FA" },
-    luxury: { buttonColor: "#D4AF37", accentColor: "#F59E0B" },
-    hype: { buttonColor: "#00AFFF", accentColor: "#4EEAFF" },
-  };
-  return presets[tone] || presets.installer;
+  return { buttonColor: "#0ea5e9", accentColor: "#60A5FA" };
 }
 
 function getDesignStyles(design: string) {
-  const themes: Record<string, any> = {
-    clean: {
-      backgroundColor: "#F7F7F7",
-      containerColor: "#FFFFFF",
-      headerGradient: "linear-gradient(135deg, #1A1A2E 0%, #16213E 100%)",
-      textColor: "#111827",
-      headingColor: "#111827",
-      bodyColor: "#6B7280",
-      cardColor: "#F9FAFB",
-      borderColor: "#E5E7EB",
-      footerColor: "#6B7280",
-      priceBoxGradient: "linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)",
-    },
-    luxury: {
-      backgroundColor: "#0A0A0F",
-      containerColor: "#16161E",
-      headerGradient: "linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)",
-      textColor: "#E7E7EF",
-      headingColor: "#FFFFFF",
-      bodyColor: "#B8B8C7",
-      cardColor: "#1A1A1F",
-      borderColor: "rgba(255,255,255,0.08)",
-      footerColor: "#6B7280",
-      priceBoxGradient: "linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)",
-    },
-    performance: {
-      backgroundColor: "#0A0A0F",
-      containerColor: "#16161E",
-      headerGradient: "linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)",
-      textColor: "#E7E7EF",
-      headingColor: "#FFFFFF",
-      bodyColor: "#B8B8C7",
-      cardColor: "#101016",
-      borderColor: "rgba(255,255,255,0.08)",
-      footerColor: "#6B7280",
-      priceBoxGradient: "linear-gradient(135deg, #00AFFF 0%, #0066CC 100%)",
-    },
+  return {
+    backgroundColor: "#f6f7f9",
+    containerColor: "#FFFFFF",
+    headerGradient: "#000000",
+    textColor: "#334155",
+    headingColor: "#0f172a",
+    bodyColor: "#64748b",
+    cardColor: "#FFFFFF",
+    borderColor: "#e5e7eb",
+    footerColor: "#64748b",
+    priceBoxGradient: "#0ea5e9",
   };
-
-  return themes[design] || themes.performance;
 }
 
 serve(handler);
