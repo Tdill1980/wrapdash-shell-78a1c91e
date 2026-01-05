@@ -1,11 +1,40 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
+// ============================================================
+// PAID GATE: Only these statuses indicate a PAID order
+// ============================================================
+const PAID_STATUSES = ['processing', 'completed'];
+
+// UNPAID statuses - NEVER create new ShopFlow records for these
+const UNPAID_STATUSES = ['pending', 'pending-payment', 'on-hold', 'failed', 'cancelled', 'refunded'];
+
+/**
+ * Check if a WooCommerce order is PAID
+ * An order is considered paid if:
+ * 1. Status is 'processing' or 'completed', OR
+ * 2. date_paid is not null
+ */
+function isOrderPaid(wooStatus: string, datePaid: string | null): boolean {
+  const normalizedStatus = normalizeStatus(wooStatus);
+  
+  // Check if status indicates payment
+  if (PAID_STATUSES.includes(normalizedStatus)) {
+    return true;
+  }
+  
+  // Check if date_paid exists (fallback check)
+  if (datePaid && datePaid.trim() !== '') {
+    return true;
+  }
+  
+  return false;
+}
+
 // Status mapping layer (internal staff view)
+// NOTE: These mappings are ONLY used for PAID orders now
 const wooToInternalStatus: Record<string, string> = {
-  "pending": "order_received",
   "processing": "order_received",
-  "on-hold": "order_received",
   "waiting-to-place-order": "order_received",
   "waiting-on-email-response": "order_received",
   "add-on": "order_received",
@@ -28,9 +57,7 @@ const wooToInternalStatus: Record<string, string> = {
 
 // Customer-facing stage mapping (for public tracker)
 const wooToCustomerStage: Record<string, string> = {
-  "pending": "order_received",
   "processing": "order_received",
-  "on-hold": "order_received",
   "waiting-to-place-order": "order_received",
   "waiting-on-email-response": "order_received",
   "add-on": "order_received",
@@ -330,6 +357,31 @@ serve(async (req) => {
       );
     }
 
+    // ============================================================
+    // PAID GATE: Block NEW unpaid orders from entering ShopFlow
+    // ============================================================
+    const datePaid = payload.date_paid;
+    const isPaid = isOrderPaid(wooStatus, datePaid);
+    
+    if (!isPaid) {
+      console.log(`⛔ PAID GATE BLOCKED: Order ${orderNumber} is UNPAID`);
+      console.log(`   Status: "${wooStatus}", date_paid: "${datePaid}"`);
+      console.log(`   This is likely a quote tool checkout or abandoned cart - NOT creating ShopFlow record`);
+      
+      return new Response(
+        JSON.stringify({ 
+          message: 'Order not synced - not paid (quote/checkout started but not completed)', 
+          order_number: orderNumber,
+          woo_status: wooStatus,
+          date_paid: datePaid,
+          blocked_by: 'PAID_GATE'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log(`✅ PAID GATE PASSED: Order ${orderNumber} is PAID (status: ${wooStatus}, date_paid: ${datePaid})`);
+
     // Check if there's a matching ApproveFlow project
     const { data: approveflowProject } = await supabase
       .from('approveflow_projects')
@@ -351,7 +403,7 @@ serve(async (req) => {
       initialTimeline[initialCustomerStage] = new Date().toISOString();
     }
     
-    // Create new ShopFlow order
+    // Create new ShopFlow order - PAID orders only reach this point
     const { data: newOrder, error: insertError } = await supabase
       .from('shopflow_orders')
       .insert({
@@ -371,6 +423,11 @@ serve(async (req) => {
         priority: 'normal',
         affiliate_ref_code: affiliateRefCode,
         order_total: parseFloat(payload.total || '0'),
+        // Payment tracking fields
+        is_paid: true,
+        hidden: false,
+        woo_status_raw: wooStatus,
+        woo_date_paid: datePaid || new Date().toISOString(),
       })
       .select()
       .single();
