@@ -11,6 +11,7 @@ import {
   Briefcase,
   ShoppingCart,
   FolderOpen,
+  Film,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -129,10 +130,19 @@ export default function Dashboard() {
   return (
     <MainLayout userName="Admin">
       <div className="w-full space-y-6 max-w-6xl mx-auto">
-        {/* Page Header */}
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Operational overview</p>
+        {/* Page Header with Primary CTA */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Operational overview</p>
+          </div>
+          <Button
+            onClick={() => navigate("/organic/reel-builder")}
+            className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF5252] hover:to-[#FF7043] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            <Film className="w-4 h-4 mr-2" />
+            Create Video Ad
+          </Button>
         </div>
 
         {/* Section 1: Today - Operational Status */}

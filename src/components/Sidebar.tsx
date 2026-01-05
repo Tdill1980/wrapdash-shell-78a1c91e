@@ -20,6 +20,7 @@ import {
   Dna,
   FileText,
   Palette,
+  Film,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -80,6 +81,19 @@ const coreItems: NavigationItem[] = [
 
 // STUDIO: Content creation workspace
 const studioItems: NavigationItem[] = [
+  { 
+    name: "Reel Builder", 
+    path: "/organic/reel-builder", 
+    icon: Film,
+    roles: ["beta_shop", "admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Reel </span>
+        <span className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] bg-clip-text text-transparent">Builder</span>
+        <span className="text-[8px] align-super text-muted-foreground ml-1">⭐</span>
+      </span>
+    )
+  },
   { 
     name: "Content Studio", 
     path: "/studio", 
