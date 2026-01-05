@@ -22,7 +22,18 @@ export const WPW_TEAM: Record<string, TeamMember> = {
     name: 'Lance',
     role: 'Graphics Manager',
     customerFacing: true,
-    triggers: ['bubble', 'defect', 'reprint', 'quality', 'blurry', 'color match', 'wrong color', 'damaged', 'issue with']
+    triggers: [
+      // Print quality issues
+      'bubble', 'defect', 'reprint', 'quality', 'blurry', 'color match', 'wrong color', 'damaged', 'issue with',
+      // Roller/print marks
+      'roller', 'roller mark', 'mark', 'line', 'stripe', 'band', 'banding', 'streak', 'artifact',
+      // Surface defects
+      'scratch', 'tear', 'rip', 'ripped', 'torn', 'smear', 'smudge', 'flaw', 'imperfection',
+      // Print issues
+      'print issue', 'print problem', 'print quality', 'misprinted', 'misaligned', 'crooked',
+      // General problem indicators
+      'problem with my', 'issue with my', 'something wrong', 'not right', 'looks off', 'visible defect'
+    ]
   },
   design: {
     email: 'Design@WePrintWraps.com',

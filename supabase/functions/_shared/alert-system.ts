@@ -63,8 +63,8 @@ export const UNHAPPY_CUSTOMER_PATTERNS = /\b(unhappy|frustrated|angry|upset|comp
 // Bulk/commercial inquiry patterns
 export const BULK_INQUIRY_PATTERNS = /\b(fleet|bulk|wholesale|commercial|multiple|business|company|franchise|dealer|dealership|car lot|10\+|20\+|50\+|100\+|quantity discount)\b/i;
 
-// Quality issue patterns  
-export const QUALITY_ISSUE_PATTERNS = /\b(quality|defect|wrong|mistake|error|reprint|redo|color.*(wrong|off|different)|damaged|torn|ripped|bubbl|peel|fade)\b/i;
+// Quality issue patterns - EXPANDED to catch more issues
+export const QUALITY_ISSUE_PATTERNS = /\b(quality|defect|wrong|mistake|error|reprint|redo|color.*(wrong|off|different)|damaged|torn|ripped|bubbl|peel|fade|roller|mark|line|stripe|band|banding|streak|artifact|scratch|smear|smudge|flaw|imperfection|misprinted|misaligned|crooked|problem.*(order|wrap|print)|issue.*(order|wrap|print)|not right|looks off|visible)\b/i;
 
 // Alert configuration matrix
 const ALERT_CONFIG: Record<AlertType, {
