@@ -82,20 +82,20 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
     const loadOrganization = async () => {
       try {
         const subdomain = getSubdomain();
-        
-        // First try by subdomain
-        let { data, error } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('subdomain', subdomain)
-          .maybeSingle();
+        let orgId: string | null = null;
+        let orgData: any = null;
 
-        if (error) {
-          console.error('Error loading organization by subdomain:', error);
-        }
+        // For unauthenticated users, use RPC to get org ID by subdomain
+        if (!user) {
+          const { data: rpcData, error: rpcError } = await supabase
+            .rpc('get_organization_id_by_subdomain', { subdomain_param: subdomain });
 
-        // If no org found by subdomain and user is logged in, try by membership
-        if (!data && user) {
+          if (rpcError) {
+            console.error('Error looking up organization by subdomain:', rpcError);
+          }
+          orgId = rpcData;
+        } else {
+          // For authenticated users, try membership first
           const { data: memberData, error: memberError } = await supabase
             .from('organization_members')
             .select('organization_id')
@@ -108,29 +108,42 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
           }
 
           if (memberData?.organization_id) {
-            const { data: orgData, error: orgError } = await supabase
+            orgId = memberData.organization_id;
+          } else {
+            // Fall back to subdomain lookup via RPC
+            const { data: rpcData } = await supabase
+              .rpc('get_organization_id_by_subdomain', { subdomain_param: subdomain });
+            orgId = rpcData;
+          }
+
+          // If we have an org ID, fetch the full org data (user must be member)
+          if (orgId) {
+            const { data, error } = await supabase
               .from('organizations')
               .select('*')
-              .eq('id', memberData.organization_id)
+              .eq('id', orgId)
               .maybeSingle();
 
-            if (orgError) {
-              console.error('Error loading organization by id:', orgError);
+            if (error) {
+              console.error('Error loading organization:', error);
             }
-            data = orgData;
+            orgData = data;
           }
         }
 
-        if (data) {
-          setOrganizationId(data.id);
-          setSubscriptionTier(data.subscription_tier as "free" | "pro" | "enterprise");
+        if (orgId) {
+          setOrganizationId(orgId);
+        }
+
+        if (orgData) {
+          setSubscriptionTier(orgData.subscription_tier as "free" | "pro" | "enterprise");
           setOrganizationSettings({
-            name: data.name,
-            subdomain: data.subdomain,
-            branding: data.branding as OrganizationBranding,
-            subscriptionTier: data.subscription_tier as "free" | "pro" | "enterprise",
-            affiliateFounderId: data.affiliate_founder_id,
-            offersInstallation: data.offers_installation ?? true,
+            name: orgData.name,
+            subdomain: orgData.subdomain,
+            branding: orgData.branding as OrganizationBranding,
+            subscriptionTier: orgData.subscription_tier as "free" | "pro" | "enterprise",
+            affiliateFounderId: orgData.affiliate_founder_id,
+            offersInstallation: orgData.offers_installation ?? true,
           });
         }
       } catch (error) {

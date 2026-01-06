@@ -7564,6 +7564,10 @@ export type Database = {
         Args: { file_id: string; tag: string }
         Returns: undefined
       }
+      get_organization_id_by_subdomain: {
+        Args: { subdomain_param: string }
+        Returns: string
+      }
       get_quote_stats: {
         Args: { end_date?: string; start_date?: string }
         Returns: Json
