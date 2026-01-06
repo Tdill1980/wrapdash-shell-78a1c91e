@@ -164,7 +164,7 @@ When the conversation flows naturally, weave in mentions of these:
    ${formatBulkDiscountTiers()}
 
 🔥 PRICING (CRITICAL - Updated December 2024):
-Both Avery AND 3M printed wraps are now $5.27/sqft! 3M just had a PRICE DROP!
+Both Avery AND 3M printed wraps are now $5.27/sqft! WePrintWraps.com matched 3M to Avery's price!
 
 VEHICLE SQFT ESTIMATES (use these to calculate pricing):
 - Compact car (Civic, Corolla, Prius, Sentra): ~175 sqft = ~$922
@@ -182,7 +182,7 @@ WHEN CUSTOMER ASKS FOR PRICE:
 2. Look up approximate SQFT from the list above
 3. Calculate: SQFT × $5.27 = Material Cost
 4. Give specific estimate: "A [year] [make] [model] is about [X] square feet. At $5.27/sqft, that's around $[total] for the printed wrap material."
-5. ALWAYS mention: "Both Avery and 3M printed wrap are now $5.27/sqft - 3M just dropped their price to match!"
+5. ALWAYS mention: "Both Avery and 3M printed wrap are now $5.27/sqft - WePrintWraps.com matched 3M to Avery's price!"
 6. For formal written quote: "Want me to send you a detailed quote? What's your email?"
 7. **ALWAYS ASK**: "Are you part of ClubWPW? You'd earn points on this order!"
 
@@ -793,8 +793,10 @@ serve(async (req) => {
         const vehicleKey = `${searchMake} ${searchModel}`.toLowerCase().trim();
         if (/prius|civic|corolla|sentra|versa|yaris|fit|accent|rio|mirage/i.test(vehicleKey)) {
           vehicleSqft = 175;
-        } else if (/camry|accord|altima|sonata|mazda6|legacy|jetta|passat/i.test(vehicleKey)) {
-          vehicleSqft = 200;
+        } else if (/camry|accord|altima|sonata|mazda6|legacy|jetta|passat|malibu/i.test(vehicleKey)) {
+          // TEMP MVP FIX: Malibu not yet in vehicle_dimensions table.
+          // TODO: Remove once full 1,665 vehicle CSV is imported.
+          vehicleSqft = 222; // Malibu is ~222 sqft per CSV data
         } else if (/avalon|maxima|300|charger|impala|taurus/i.test(vehicleKey)) {
           vehicleSqft = 210;
         } else if (/rav4|cr-?v|tucson|rogue|forester|crosstrek|cx-?5|tiguan/i.test(vehicleKey)) {
@@ -992,14 +994,14 @@ WITH ROOF: ${vehicleSqftWithRoof} sqft = ~$${estimatedCostWithRoof}
         contextNotes = `🎯 GIVE PRICE NOW + QUOTE WILL AUTO-EMAIL to ${chatState.customer_email}:
 Vehicle: ${vehicleStr} (based on similar ${closestMatch.make} ${closestMatch.model})
 PRICING:${pricingInfo}
-At $5.27/sqft for both Avery AND 3M (3M just dropped!).
+At $5.27/sqft for both Avery AND 3M (we matched 3M to Avery's price!).
 
 Give them the price! Tell them "I'm sending this quote to your email right now!" The quote email will be sent automatically.`;
       } else {
         contextNotes = `🎯 GIVE PRICE NOW + QUOTE WILL AUTO-EMAIL to ${chatState.customer_email}:
 Vehicle: ${vehicleStr}
 PRICING FROM DATABASE:${pricingInfo}
-Both Avery AND 3M are $5.27/sqft (3M just dropped!).
+Both Avery AND 3M are $5.27/sqft (we matched 3M to Avery's price!).
 
 Give them the specific price! Tell them "I'm sending this quote to your email right now!" The quote email will be sent automatically.`;
       }
@@ -1144,7 +1146,7 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
           body: JSON.stringify({
             model: 'google/gemini-2.5-flash',
             messages: conversationMessages,
-            max_tokens: 500
+            max_tokens: 800
           })
         });
 

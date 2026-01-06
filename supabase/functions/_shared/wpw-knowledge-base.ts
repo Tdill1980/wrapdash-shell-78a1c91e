@@ -227,7 +227,7 @@ ROUTING:
 
 WHAT JORDAN SHOULD SAY:
 - "A [vehicle] is about [X] square feet. At $5.27/sqft, that's around $[total] for material."
-- "Both Avery and 3M printed wrap are now $5.27/sqft - 3M just dropped their price!"
+- "Both Avery and 3M printed wrap are now $5.27/sqft - WePrintWraps.com matched 3M to Avery's price!"
 - "Want me to send you a formal quote? What's your email?"
 `,
 };
