@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Package } from "lucide-react";
 import { format } from "date-fns";
 
@@ -17,6 +18,8 @@ interface OrderInfoCardProps {
 }
 
 export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <div className="bg-[#111317] border border-white/10 rounded-xl p-3 sm:p-4 w-full">
       {/* Mobile: Stack vertically */}
@@ -24,15 +27,12 @@ export const OrderInfoCard = ({ order }: OrderInfoCardProps) => {
         {/* Product Thumbnail & Basic Info */}
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 bg-[#1a1a24] flex items-center justify-center">
-            {order.product_image_url ? (
+            {order.product_image_url && !imageError ? (
               <img
                 src={order.product_image_url}
                 alt={order.product_type}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = '<div class="text-[#2F81F7]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>';
-                }}
+                onError={() => setImageError(true)}
               />
             ) : (
               <Package className="w-6 h-6 sm:w-8 sm:h-8 text-[#2F81F7]" />
