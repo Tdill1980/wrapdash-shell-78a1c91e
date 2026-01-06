@@ -194,201 +194,89 @@ function renderEmailTemplate(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:Inter,Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:Inter,Arial,sans-serif;">
   <div style="max-width:640px;margin:0 auto;background:#ffffff;">
 
     <!-- BLACK HEADER -->
-    <div style="background:#000;color:#fff;padding:24px 32px;text-align:center;">
-      <div style="font-size:20px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
-        WEPRINTWRAPS.COM
+    <div style="background:#000000;padding:16px 24px;">
+      <div style="font-size:16px;font-weight:600;color:#ffffff;">
+        WePrintWraps.com Quote
       </div>
     </div>
 
-    <!-- GREETING -->
-    <div style="padding:32px 32px 16px 32px;">
-      <p style="margin:0 0 8px 0;font-size:16px;font-weight:600;color:#1a1a1a;">
-        Hi${data.customer_name ? ' ' + data.customer_name.split(' ')[0] : ''},
-      </p>
-      <p style="margin:0;font-size:15px;color:#4a4a4a;line-height:1.6;">
-        Thank you for requesting a quote. Here's your custom estimate:
-      </p>
-    </div>
+    <!-- BODY RESET -->
+    <div style="background:#ffffff;color:#111827;font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.5;">
 
-    <!-- QUOTE HEADER -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="font-size:18px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;">
-        ${data.product_name ? data.product_name.toUpperCase() + ' QUOTE' : 'VEHICLE WRAP QUOTE'}
+      <!-- ADD TO CART -->
+      <div style="padding:24px;">
+        <a href="${cartUrl}"
+           style="display:inline-block;padding:12px 18px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">
+          Add This Quote to Cart
+        </a>
       </div>
-      <div style="height:3px;width:80px;background:#0066cc;margin-top:8px;"></div>
-      ${quoteNumber ? `<div style="font-size:13px;color:#666;margin-top:12px;">Quote #${quoteNumber} • Generated on ${today}</div>` : ''}
-    </div>
 
-    <!-- PROJECT DETAILS -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="font-size:14px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
-        PROJECT DETAILS
-      </div>
-      <div style="height:1px;background:#e5e5e5;margin-bottom:16px;"></div>
-      
-      <div style="margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:600;color:#1a1a1a;">Project Type:</div>
-        <div style="font-size:14px;color:#4a4a4a;">${data.product_name || 'Vehicle Wrap'}</div>
-      </div>
-      ${vehicleDisplay !== 'Your Vehicle' ? `
-      <div style="margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:600;color:#1a1a1a;">Vehicle:</div>
-        <div style="font-size:14px;color:#4a4a4a;">${vehicleDisplay}</div>
-      </div>
-      ` : ''}
-      ${sqft > 0 ? `
-      <div style="margin-bottom:12px;">
-        <div style="font-size:13px;font-weight:600;color:#1a1a1a;">Total Area:</div>
-        <div style="font-size:14px;color:#4a4a4a;">${sqft} sq ft</div>
-      </div>
-      ` : ''}
-      <div>
-        <div style="font-size:13px;font-weight:600;color:#1a1a1a;">Material:</div>
-        <div style="font-size:14px;color:#0066cc;">Premium Cast Vinyl with Lamination</div>
-      </div>
-    </div>
-
-    <!-- PRICING BREAKDOWN -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="font-size:14px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
-        PRICING BREAKDOWN
-      </div>
-      <div style="height:1px;background:#e5e5e5;margin-bottom:16px;"></div>
-      
-      <div style="background:#f8f8f8;border-radius:8px;padding:16px;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <tr style="border-bottom:1px solid #e5e5e5;">
-            <td style="padding:8px 0;font-weight:600;color:#666;">ITEM</td>
-            <td style="padding:8px 0;text-align:center;font-weight:600;color:#666;">QTY</td>
-            <td style="padding:8px 0;text-align:center;font-weight:600;color:#666;">UNIT PRICE</td>
-            <td style="padding:8px 0;text-align:right;font-weight:600;color:#666;">AMOUNT</td>
-          </tr>
-          <tr>
-            <td style="padding:12px 0;color:#1a1a1a;">${data.product_name || 'Printed Wrap Material'}</td>
-            <td style="padding:12px 0;text-align:center;color:#4a4a4a;">${sqft > 0 ? sqft + ' sq ft' : '1'}</td>
-            <td style="padding:12px 0;text-align:center;color:#4a4a4a;">${sqft > 0 ? '$' + rate.toFixed(2) + '/sq ft' : '-'}</td>
-            <td style="padding:12px 0;text-align:right;font-weight:600;color:#1a1a1a;">$${total.toFixed(2)}</td>
-          </tr>
-        </table>
-      </div>
-    </div>
-
-    <!-- ESTIMATED TOTAL BOX -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="border:2px solid #e5e5e5;border-radius:8px;padding:24px;text-align:center;">
-        <div style="font-size:12px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
-          ESTIMATED TOTAL
-        </div>
-        <div style="font-size:36px;font-weight:700;color:#1a1a1a;">
+      <!-- PRICE -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="font-size:13px;color:#6b7280;">Estimated Total</div>
+        <div style="font-size:26px;font-weight:700;color:#111827;">
           $${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
-        ${sqft > 0 ? `
-        <div style="font-size:13px;color:#666;margin-top:8px;">
-          ${sqft} sq ft × $${rate.toFixed(2)}/sq ft<br/>
-          Material: Premium Cast Vinyl
+        <div style="font-size:13px;color:#6b7280;">
+          ~${sqft} sq ft × $${rate.toFixed(2)} / sq ft
         </div>
-        ` : ''}
+      </div>
+
+      <!-- PROJECT DETAILS -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="font-size:13px;color:#111827;font-weight:600;margin-bottom:4px;">Project Details</div>
+        <div style="font-size:13px;color:#6b7280;">
+          ${vehicleDisplay !== 'Your Vehicle' ? `<strong>Vehicle:</strong> ${vehicleDisplay}<br/>` : ''}
+          ${sqft > 0 ? `<strong>Coverage:</strong> ${sqft} sq ft<br/>` : ''}
+          <strong>Material:</strong> Premium Cast Vinyl<br/>
+          <em style="color:#9ca3af;">Printed wrap material only. Installation not included.</em>
+        </div>
+      </div>
+
+      <!-- UPSELL -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="background:#f9fafb;border-radius:8px;padding:16px;">
+          <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:4px;">${upsell.title}</div>
+          <div style="font-size:13px;color:#6b7280;margin-bottom:8px;">${upsell.body}</div>
+          <a href="${upsell.link}" style="font-size:13px;color:#2563eb;text-decoration:none;">Learn more →</a>
+        </div>
+      </div>
+
+      <!-- VOLUME PRICING -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:8px;">Volume & Fleet Pricing</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;color:#6b7280;line-height:1.8;">
+          <li>500–999 sq ft → 5% off</li>
+          <li>1,000–2,499 sq ft → 10% off</li>
+          <li>2,500–4,999 sq ft → 15% off</li>
+          <li>5,000+ sq ft → 20% off</li>
+        </ul>
+      </div>
+
+      <!-- COMMERCIALPRO -->
+      <div style="padding:0 24px 24px 24px;border-top:1px solid #e5e7eb;">
+        <div style="padding-top:16px;font-size:13px;color:#6b7280;">
+          Are you a wrap professional or managing fleet volume?<br/>
+          <a href="https://weprintwraps.com/commercialpro" style="color:#2563eb;text-decoration:none;font-weight:600;">
+            Learn more about CommercialPro™ →
+          </a>
+        </div>
       </div>
     </div>
 
-    <!-- ADD TO CART CTA -->
-    <div style="padding:0 32px 32px 32px;text-align:center;">
-      <a href="${cartUrl}"
-         style="display:inline-block;padding:16px 48px;
-                background:#0066cc;color:#fff;
-                text-decoration:none;border-radius:6px;
-                font-weight:600;font-size:15px;text-transform:uppercase;letter-spacing:0.5px;">
-        Add to Cart
-      </a>
-    </div>
-
-    <!-- QUALITY GUARANTEE -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="border-left:4px solid #0066cc;padding:16px 20px;background:#f8f9fa;">
-        <div style="font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:4px;">
-          ✓ Premium Wrap Guarantee
-        </div>
-        <div style="font-size:13px;color:#4a4a4a;line-height:1.5;">
-          Industry-leading print quality on certified materials. Every wrap is inspected before shipping to ensure flawless results for your project.
-        </div>
+      <!-- FOOTER -->
+      <div style="padding:24px;background:#f6f7f9;font-size:12px;color:#6b7280;text-align:center;">
+        Questions? Reply to this email or contact
+        <a href="mailto:hello@weprintwraps.com" style="color:#2563eb;">hello@weprintwraps.com</a><br/><br/>
+        — The WePrintWraps.com Team${quoteNumber ? `<br/><span style="font-size:11px;color:#9ca3af;">Quote #${quoteNumber}</span>` : ''}
       </div>
-    </div>
 
-    <!-- ROTATING UPSELL -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="font-size:14px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
-        RECOMMENDED ADD-ONS
-      </div>
-      <div style="height:1px;background:#e5e5e5;margin-bottom:16px;"></div>
-      
-      <div style="border:1px solid #e5e5e5;border-radius:8px;padding:20px;">
-        <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:8px;">
-          ${upsell.title.replace('?', '')}
-        </div>
-        <div style="font-size:13px;color:#4a4a4a;line-height:1.5;margin-bottom:12px;">
-          ${upsell.body}
-        </div>
-        <a href="${upsell.link}" style="font-size:13px;color:#0066cc;text-decoration:none;font-weight:600;">
-          Learn more →
-        </a>
-      </div>
     </div>
-
-    <!-- VOLUME PRICING -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="font-size:14px;font-weight:700;color:#1a1a1a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">
-        VOLUME & FLEET PRICING
-      </div>
-      <div style="height:1px;background:#e5e5e5;margin-bottom:16px;"></div>
-      <ul style="margin:0;padding-left:20px;color:#4a4a4a;font-size:13px;line-height:1.8;">
-        <li>500–999 sq ft → 5% off</li>
-        <li>1,000–2,499 sq ft → 10% off</li>
-        <li>2,500–4,999 sq ft → 15% off</li>
-        <li>5,000+ sq ft → 20% off</li>
-      </ul>
-    </div>
-
-    <!-- NEXT STEPS -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="border:1px solid #e5e5e5;border-radius:8px;padding:20px;">
-        <div style="font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:12px;">
-          Next Steps:
-        </div>
-        <ol style="margin:0;padding-left:20px;color:#4a4a4a;font-size:13px;line-height:1.8;">
-          <li><strong>Review your quote</strong> — Confirm all details</li>
-          <li><strong>Add to cart</strong> — Click the button above</li>
-          <li><strong>Upload artwork</strong> — We'll review and confirm</li>
-        </ol>
-      </div>
-    </div>
-
-    <!-- COMMERCIALPRO CTA -->
-    <div style="padding:0 32px 24px 32px;">
-      <div style="background:#f8f9fa;border-radius:8px;padding:20px;text-align:center;">
-        <div style="font-size:14px;color:#4a4a4a;margin-bottom:8px;">
-          Are you a wrap professional or managing fleet volume?
-        </div>
-        <a href="https://weprintwraps.com/commercialpro"
-           style="font-size:13px;color:#0066cc;text-decoration:none;font-weight:600;">
-          Learn more about CommercialPro™ →
-        </a>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <div style="padding:24px 32px;background:#f5f5f5;font-size:12px;color:#666;text-align:center;">
-      Questions? Reply to this email or contact
-      <a href="mailto:hello@weprintwraps.com" style="color:#0066cc;">hello@weprintwraps.com</a><br/><br/>
-      — The WePrintWraps.com Team<br/>
-      ${quoteNumber ? `<span style="font-size:11px;color:#999;">Quote #${quoteNumber}</span>` : ''}
-    </div>
-
   </div>
 </body>
 </html>
