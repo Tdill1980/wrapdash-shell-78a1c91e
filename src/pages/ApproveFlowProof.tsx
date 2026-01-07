@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProofHeader } from "@/components/approveflow/ProofHeader";
-import { ProofSideBySide } from "@/components/approveflow/ProofSideBySide";
-import { ProofActions } from "@/components/approveflow/ProofActions";
+import { ProofPageHeader } from "@/components/approveflow/ProofPageHeader";
+import { ProofSixViewGrid } from "@/components/approveflow/ProofSixViewGrid";
+import { ProductionSpecsBar } from "@/components/approveflow/ProductionSpecsBar";
+import { CustomerApprovalSection } from "@/components/approveflow/CustomerApprovalSection";
 
 interface ApproveFlowProject {
   id: string;
@@ -46,6 +47,8 @@ export default function ApproveFlowProof() {
   const [latestVersion, setLatestVersion] = useState<ApproveFlowVersion | null>(null);
   const [renders3D, setRenders3D] = useState<ApproveFlow3D | null>(null);
   const [approvedAt, setApprovedAt] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [includeFullTerms, setIncludeFullTerms] = useState(true);
 
   useEffect(() => {
     if (!projectId) {
@@ -69,6 +72,7 @@ export default function ApproveFlowProof() {
         }
 
         setProject(projectData);
+        setCustomerName(projectData.customer_name || "");
 
         // Fetch latest version
         const { data: versionsData } = await supabase
@@ -115,6 +119,35 @@ export default function ApproveFlowProof() {
     };
 
     fetchData();
+
+    // Set up realtime subscription for 3D renders
+    const channel = supabase
+      .channel(`approveflow-proof-${projectId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'approveflow_3d',
+        filter: `project_id=eq.${projectId}`
+      }, (payload) => {
+        if (payload.new) {
+          setRenders3D(payload.new as ApproveFlow3D);
+        }
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'approveflow_projects',
+        filter: `id=eq.${projectId}`
+      }, (payload) => {
+        if (payload.new) {
+          setProject(payload.new as ApproveFlowProject);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [projectId, navigate]);
 
   const handleApprove = async () => {
@@ -131,7 +164,7 @@ export default function ApproveFlowProof() {
       await supabase.from("approveflow_actions").insert({
         project_id: projectId,
         action_type: "approved",
-        payload: { approved_by: "customer" },
+        payload: { approved_by: "customer", customer_name: customerName },
       });
 
       // Update local state
@@ -193,12 +226,38 @@ export default function ApproveFlowProof() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!projectId) return;
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-approveflow-proof-pdf', {
+        body: { proof_version_id: projectId }
+      });
+
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error: any) {
+      toast({
+        title: "PDF Generation",
+        description: "PDF generation is being prepared. Please try again shortly.",
+        variant: "default",
+      });
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground">Loading your proof...</p>
+          <p className="text-white/60">Loading your proof...</p>
         </div>
       </div>
     );
@@ -206,10 +265,10 @@ export default function ApproveFlowProof() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md px-4">
-          <h1 className="text-2xl font-bold">Proof Not Found</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold text-white">Proof Not Found</h1>
+          <p className="text-white/60">
             We couldn't find the design proof you're looking for. Please check your link or contact support.
           </p>
         </div>
@@ -218,56 +277,60 @@ export default function ApproveFlowProof() {
   }
 
   const vehicleInfo = project.vehicle_info as any;
+  const colorInfo = project.color_info as any;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
       {/* Header */}
-      <ProofHeader
-        orderNumber={project.order_number}
+      <ProofPageHeader
+        toolName="ApproveFlow™"
         vehicleYear={vehicleInfo?.year}
         vehicleMake={vehicleInfo?.make}
         vehicleModel={vehicleInfo?.model}
-        versionNumber={latestVersion?.version_number || project.current_version || 1}
-        status={project.status}
+        customerName={customerName}
+        onCustomerNameChange={setCustomerName}
+        includeFullTerms={includeFullTerms}
+        onIncludeFullTermsChange={setIncludeFullTerms}
+        onPrint={handlePrint}
+        onDownloadPdf={handleDownloadPdf}
       />
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        <div className="space-y-8">
-          {/* Side-by-Side Proofs */}
-          {latestVersion ? (
-            <ProofSideBySide
-              designProofUrl={latestVersion.file_url}
-              renderUrls={renders3D?.render_urls}
-            />
-          ) : (
-            <div className="text-center py-12 space-y-3">
-              <p className="text-lg text-muted-foreground">
-                Your design proof is being prepared
-              </p>
-              <p className="text-sm text-muted-foreground/70">
-                You'll receive an email when it's ready for review
-              </p>
-            </div>
-          )}
+      <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl space-y-6">
+        {/* 6-View Grid - Professional Layout */}
+        <ProofSixViewGrid
+          renderUrls={renders3D?.render_urls}
+          vehicleYear={vehicleInfo?.year}
+          vehicleMake={vehicleInfo?.make}
+          vehicleModel={vehicleInfo?.model}
+        />
 
-          {/* Divider */}
-          <div className="border-t border-border/50" />
+        {/* Production Specs Bar */}
+        <ProductionSpecsBar
+          manufacturer={colorInfo?.manufacturer || "3M"}
+          colorName={colorInfo?.color}
+          colorCode={colorInfo?.code}
+          finishType={colorInfo?.finish}
+          colorHex={colorInfo?.color_hex}
+        />
 
-          {/* Actions */}
-          <ProofActions
-            status={project.status}
-            approvedAt={approvedAt}
-            onApprove={handleApprove}
-            onRequestRevision={handleRequestRevision}
-          />
-        </div>
+        {/* Customer Approval Section */}
+        <CustomerApprovalSection
+          status={project.status}
+          approvedAt={approvedAt}
+          customerName={customerName}
+          onApprove={handleApprove}
+          onRequestRevision={handleRequestRevision}
+          onPrint={handlePrint}
+          onDownloadPdf={handleDownloadPdf}
+          showPrintActions={false}
+        />
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          Powered by WrapCommand AI • Questions? Reply to your proof email.
+      <footer className="border-t border-white/10 py-4 text-center">
+        <p className="text-xs text-white/40">
+          Powered by WrapCommand AI™ • Questions? Reply to your proof email.
         </p>
       </footer>
     </div>
