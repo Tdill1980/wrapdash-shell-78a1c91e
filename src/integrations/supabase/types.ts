@@ -1328,27 +1328,39 @@ export type Database = {
           file_type: string | null
           file_url: string
           id: string
+          original_filename: string | null
           project_id: string
           sort_order: number | null
+          source: string | null
+          uploaded_at: string | null
           view_type: string | null
+          visibility: string | null
         }
         Insert: {
           created_at?: string | null
           file_type?: string | null
           file_url: string
           id?: string
+          original_filename?: string | null
           project_id: string
           sort_order?: number | null
+          source?: string | null
+          uploaded_at?: string | null
           view_type?: string | null
+          visibility?: string | null
         }
         Update: {
           created_at?: string | null
           file_type?: string | null
           file_url?: string
           id?: string
+          original_filename?: string | null
           project_id?: string
           sort_order?: number | null
+          source?: string | null
+          uploaded_at?: string | null
           view_type?: string | null
+          visibility?: string | null
         }
         Relationships: [
           {

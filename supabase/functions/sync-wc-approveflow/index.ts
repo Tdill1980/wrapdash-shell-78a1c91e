@@ -99,42 +99,116 @@ serve(async (req) => {
     
     console.log('✅ Design product found in order:', orderNumber, '- Product:', productType);
 
-    // Extract design requirements from meta_data (more flexible search)
+    // Extract design requirements from BOTH order meta_data AND line_items meta_data
+    // WooCommerce Extra Product Options stores data in line_items[].meta_data
     let designRequirements = webhook.customer_note || '';
+    const customerUploadedFiles: string[] = [];
     
-    console.log('🔍 Extracting design requirements from meta_data:', webhook.meta_data?.length || 0, 'fields');
+    console.log('🔍 Extracting design requirements...');
     console.log('🔍 Customer note:', webhook.customer_note?.substring(0, 100) || 'None');
+    console.log('🔍 Order meta_data fields:', webhook.meta_data?.length || 0);
+    console.log('🔍 Line items:', webhook.line_items?.length || 0);
     
-    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
-      // Log all meta_data keys for debugging
-      webhook.meta_data.forEach((meta: any) => {
-        console.log('  📋 Meta key:', meta.key, '| Value:', typeof meta.value === 'string' ? meta.value.substring(0, 50) : meta.value);
-      });
-      
-      // Look for design requirements field (expanded search)
-      const designField = webhook.meta_data.find((meta: any) => 
-        meta.key && (
-          meta.key.toLowerCase().includes('describe') ||
-          meta.key.toLowerCase().includes('design') ||
-          meta.key.toLowerCase().includes('project') ||
-          meta.key.toLowerCase().includes('requirements') ||
-          meta.key.toLowerCase().includes('instructions') ||
-          meta.key.toLowerCase().includes('details') ||
-          meta.key.toLowerCase().includes('notes') ||
-          meta.key.toLowerCase().includes('description') ||
-          meta.key.toLowerCase().includes('request') ||
-          meta.key.toLowerCase().includes('specs') ||
-          meta.key.toLowerCase().includes('specifications')
-        )
-      );
-      
-      if (designField && designField.value) {
-        designRequirements = designField.value;
-        console.log('✅ Found design requirements in meta_data field:', designField.key);
-        console.log('✅ Content:', designRequirements.substring(0, 200) + '...');
-      } else {
-        console.log('⚠️ No design requirements found in meta_data');
+    // FIRST: Check line_items meta_data (Extra Product Options - THIS IS WHERE THE DATA ACTUALLY IS)
+    if (webhook.line_items && Array.isArray(webhook.line_items)) {
+      for (const item of webhook.line_items) {
+        console.log(`📦 Line item: ${item.name} (ID: ${item.product_id})`);
+        
+        if (item.meta_data && Array.isArray(item.meta_data)) {
+          console.log(`   📋 Line item meta_data: ${item.meta_data.length} fields`);
+          
+          for (const meta of item.meta_data) {
+            const key = meta.key?.toLowerCase() || '';
+            const displayKey = meta.display_key || meta.key || '';
+            const value = meta.display_value || meta.value || '';
+            
+            console.log(`   📋 Meta: "${displayKey}" = ${typeof value === 'string' ? value.substring(0, 80) : JSON.stringify(value)}`);
+            
+            // Extract design requirements/instructions
+            if (
+              key.includes('describe') ||
+              key.includes('design') ||
+              key.includes('project') ||
+              key.includes('requirements') ||
+              key.includes('instructions') ||
+              key.includes('details') ||
+              key.includes('notes') ||
+              key.includes('description') ||
+              key.includes('request') ||
+              key.includes('information') ||
+              displayKey.toLowerCase().includes('describe') ||
+              displayKey.toLowerCase().includes('project') ||
+              displayKey.toLowerCase().includes('vehicle') ||
+              displayKey.toLowerCase().includes('wrap')
+            ) {
+              if (typeof value === 'string' && value.length > 20) {
+                designRequirements = value;
+                console.log('✅ Found design requirements in line_item meta_data:', displayKey);
+              }
+            }
+            
+            // Extract uploaded files (URLs)
+            if (
+              key.includes('file') ||
+              key.includes('upload') ||
+              displayKey.toLowerCase().includes('file') ||
+              displayKey.toLowerCase().includes('upload')
+            ) {
+              const fileValue = typeof value === 'string' ? value : '';
+              // Check if it's a URL (could be direct URL or in HTML anchor tag)
+              const urlMatch = fileValue.match(/https?:\/\/[^\s<>"]+/);
+              if (urlMatch) {
+                customerUploadedFiles.push(urlMatch[0]);
+                console.log('✅ Found uploaded file:', urlMatch[0]);
+              } else if (fileValue.startsWith('http')) {
+                customerUploadedFiles.push(fileValue);
+                console.log('✅ Found uploaded file:', fileValue);
+              }
+            }
+          }
+        }
       }
+    }
+    
+    // SECOND: Also check order-level meta_data as fallback
+    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
+      console.log('🔍 Checking order-level meta_data...');
+      
+      for (const meta of webhook.meta_data) {
+        const key = meta.key?.toLowerCase() || '';
+        const value = meta.value || '';
+        
+        // Only use order-level if we didn't find in line_items
+        if (!designRequirements || designRequirements === webhook.customer_note) {
+          if (
+            key.includes('describe') ||
+            key.includes('design') ||
+            key.includes('project') ||
+            key.includes('requirements')
+          ) {
+            if (typeof value === 'string' && value.length > 20) {
+              designRequirements = value;
+              console.log('✅ Found design requirements in order meta_data:', meta.key);
+            }
+          }
+        }
+        
+        // Check for files at order level too
+        if (key.includes('file') || key.includes('upload')) {
+          const urlMatch = (typeof value === 'string' ? value : '').match(/https?:\/\/[^\s<>"]+/);
+          if (urlMatch && !customerUploadedFiles.includes(urlMatch[0])) {
+            customerUploadedFiles.push(urlMatch[0]);
+            console.log('✅ Found uploaded file in order meta:', urlMatch[0]);
+          }
+        }
+      }
+    }
+    
+    console.log('📊 EXTRACTION SUMMARY:');
+    console.log('   Design requirements length:', designRequirements?.length || 0);
+    console.log('   Uploaded files found:', customerUploadedFiles.length);
+    if (designRequirements) {
+      console.log('   Design preview:', designRequirements.substring(0, 150) + '...');
     }
 
     // Extract vehicle info from meta_data OR parse from design requirements text
@@ -245,24 +319,36 @@ serve(async (req) => {
 
     console.log('Created ApproveFlow project:', newProject.id);
 
-    // Extract uploaded files from order meta data
+    // Insert uploaded files that were already extracted from line_items meta_data
     const uploadedFiles: any[] = [];
-    if (webhook.meta_data && Array.isArray(webhook.meta_data)) {
-      const fileUploads = webhook.meta_data.filter((meta: any) => 
-        meta.key && meta.key.includes('file') && meta.value
-      );
-
-      for (const fileUpload of fileUploads) {
-        const fileUrl = fileUpload.value;
-        const fileType = fileUrl.split('.').pop()?.toLowerCase() || 'unknown';
-
-        await supabase.from('approveflow_assets').insert({
-          project_id: newProject.id,
-          file_url: fileUrl,
-          file_type: fileType,
-        });
-        
-        uploadedFiles.push({ url: fileUrl, type: fileType });
+    
+    console.log('📁 Processing', customerUploadedFiles.length, 'uploaded files...');
+    
+    for (const fileUrl of customerUploadedFiles) {
+      // Extract filename from URL
+      const urlParts = fileUrl.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      const extension = filename.split('.').pop()?.toLowerCase() || '';
+      
+      // Map to allowed file_type values: 'reference', 'logo', 'example'
+      // PDFs and general files are 'reference', image files could be 'logo' or 'example'
+      const fileType = ['png', 'jpg', 'jpeg', 'svg', 'ai', 'eps'].includes(extension) ? 'logo' : 'reference';
+      
+      // Insert as customer-visible asset with source = woocommerce
+      const { error: assetError } = await supabase.from('approveflow_assets').insert({
+        project_id: newProject.id,
+        file_url: fileUrl,
+        file_type: fileType,
+        original_filename: decodeURIComponent(filename),
+        source: 'woocommerce',
+        visibility: 'customer',
+      });
+      
+      if (assetError) {
+        console.error('Error inserting asset:', assetError);
+      } else {
+        console.log('✅ Inserted asset:', filename, '(type:', fileType + ')');
+        uploadedFiles.push({ url: fileUrl, type: fileType, filename });
       }
     }
 
