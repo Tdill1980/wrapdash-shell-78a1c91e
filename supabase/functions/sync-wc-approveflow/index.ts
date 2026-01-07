@@ -336,9 +336,9 @@ serve(async (req) => {
       const filename = urlParts[urlParts.length - 1];
       const extension = filename.split('.').pop()?.toLowerCase() || '';
       
-      // Map to allowed file_type values: 'reference', 'logo', 'example'
-      // PDFs and general files are 'reference', image files could be 'logo' or 'example'
-      const fileType = ['png', 'jpg', 'jpeg', 'svg', 'ai', 'eps'].includes(extension) ? 'logo' : 'reference';
+      // OS-TRUE file roles: Use 'customer_upload' for all WooCommerce files
+      // This replaces the old 'reference' generic type with proper asset role
+      const fileType = 'customer_upload';
       
       // Insert as customer-visible asset with source = woocommerce
       const { error: assetError } = await supabase.from('approveflow_assets').insert({

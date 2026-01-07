@@ -1,11 +1,35 @@
 // ============================================
 // ApproveFlow — Designer Internal Page
 // ============================================
+// OS ARCHITECTURE — 4 FIXED ZONES:
+// 
+// ZONE 1: Mode Bar (top, always visible)
+//   - Shows "DESIGNER MODE" badge
+//   - Order number, customer name, status
+//   - Never scrolls away
+//
+// ZONE 2: Source of Truth (left column, pinned)
+//   - Customer Instructions from WooCommerce
+//   - Customer Uploaded Files with timestamps
+//   - READ-ONLY — this data is immutable
+//
+// ZONE 3: Design Workspace (center, 2 cols wide)
+//   - Tabs: Design Drafts | 3D Renders | Compare
+//   - Version history
+//   - This is the primary work area
+//
+// ZONE 4: Actions + Validation (right column, fixed)
+//   - Production Specs form
+//   - Validation status (with colored indicators)
+//   - Generate Approval Proof button
+//   - Upload 2D Proof
+//
 // OS RULES:
-// 1. Designers CREATE proofs, customers APPROVE them
-// 2. Approval proof requires: 6 views + Total SQ FT + Wrap Scope
-// 3. "Generate Approval Proof" button ONLY appears after 3D renders exist
-// 4. All approval authority lives in edge functions, not UI
+// 1. WooCommerce data is canonical — never edit, only display
+// 2. File roles are typed, not generic "reference"
+// 3. Validation gates the Generate button (server-validated)
+// 4. UI renders truth, never decides truth
+// 5. Source of Truth stays ABOVE THE FOLD always
 // ============================================
 
 import { useState, useRef, useEffect } from "react";
@@ -13,33 +37,28 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { 
-  Upload, 
   MessageSquare, 
   CheckCircle2, 
   Clock,
   Send,
   Eye,
-  Box,
-  Image as ImageIcon,
   Loader2,
-  Truck,
   ExternalLink,
   ZoomIn,
-  Mail,
   Sparkles,
-  FileText,
-  Paperclip,
-  History,
   Package,
-  Car,
   User,
-  ArrowLeft
+  ArrowLeft,
+  Upload,
+  Box,
+  Image as ImageIcon,
+  Mail
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
 import { formatFullDateTime, formatShortDate, formatTimeOnly } from "@/lib/timezone-utils";
@@ -49,6 +68,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
 import { DesignerProductionSpecs, ProductionSpecsData } from "@/components/approveflow/DesignerProductionSpecs";
+import { ApproveFlowModeBar } from "@/components/approveflow/ApproveFlowModeBar";
+import { ApproveFlowSourceOfTruth } from "@/components/approveflow/ApproveFlowSourceOfTruth";
 
 export default function ApproveFlow() {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
@@ -529,7 +550,7 @@ export default function ApproveFlow() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 w-full">
+      <div className="space-y-4 w-full">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -559,6 +580,17 @@ export default function ApproveFlow() {
           )}
         </div>
       </div>
+
+      {/* ============================================ */}
+      {/* ZONE 1: MODE BAR — Always visible at top */}
+      {/* ============================================ */}
+      <ApproveFlowModeBar
+        orderNumber={project.order_number}
+        productType={project.product_type}
+        customerName={project.customer_name}
+        customerEmail={project.customer_email || undefined}
+        status={project.status}
+      />
 
       {/* Progress Bar */}
       <div className="py-3 px-4 bg-card border border-border rounded-lg">
@@ -653,63 +685,28 @@ export default function ApproveFlow() {
       </Card>
 
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {/* LEFT: Design Requirements, Chat & Upload */}
+        {/* ============================================ */}
+        {/* ZONE 2: SOURCE OF TRUTH (Left Column) */}
+        {/* ============================================ */}
         <div className="space-y-4">
-          {/* Design Requirements */}
-          <Card className="p-3 bg-card border-border">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-gradient">Design Requirements</h3>
-              <span className="text-[9px] text-muted-foreground">
-                {formatTimeOnly(project.created_at)} {formatShortDate(project.created_at)}
-              </span>
-            </div>
-            {project.design_instructions ? (
-              <p className="text-[11px] text-muted-foreground whitespace-pre-wrap leading-relaxed">{project.design_instructions}</p>
-            ) : (
-              <p className="text-[11px] text-muted-foreground/60 italic">No specific design requirements provided</p>
-            )}
-          </Card>
-
-          {/* Customer Uploaded Files */}
-          {assets.length > 0 && (
-            <Card className="p-3 bg-card border-border">
-              <h3 className="text-xs font-semibold mb-2 text-gradient">Customer Uploaded Files</h3>
-              <div className="space-y-1">
-                {assets.map((asset) => (
-                  <Dialog key={asset.id}>
-                    <div className="flex items-center justify-between p-1.5 rounded hover:bg-white/5 transition-colors">
-                      <DialogTrigger asChild>
-                        <button className="flex items-center gap-2 text-[11px] group flex-1 text-left">
-                          <ImageIcon className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
-                          <span className="flex-1 truncate group-hover:text-primary">
-                            {asset.file_type || 'File'}
-                          </span>
-                          <ZoomIn className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
-                        </button>
-                      </DialogTrigger>
-                      <span className="text-[9px] text-muted-foreground ml-2">
-                        {formatTimeOnly(asset.created_at)} {formatShortDate(asset.created_at)}
-                      </span>
-                    </div>
-                    <DialogContent className="max-w-4xl">
-                      <img src={asset.file_url} alt="Customer file" className="w-full h-auto" />
-                    </DialogContent>
-                  </Dialog>
-                ))}
-              </div>
-            </Card>
-          )}
+          {/* Source of Truth - Immutable WooCommerce Data */}
+          <ApproveFlowSourceOfTruth
+            orderNumber={project.order_number}
+            orderCreatedAt={project.created_at}
+            designInstructions={project.design_instructions || undefined}
+            assets={assets}
+          />
 
           {/* Chat Panel */}
           <Card className="p-4 bg-card border-border">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Chat with {activeRole === "designer" ? "Customer" : "Design Team"}
+              Chat with Customer
             </h3>
             
-            <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
+            <div className="space-y-3 mb-4 max-h-[250px] overflow-y-auto">
               {chatMessages.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-8">
+                <p className="text-xs text-muted-foreground text-center py-6">
                   No messages yet. Start the conversation!
                 </p>
               ) : (
@@ -749,110 +746,6 @@ export default function ApproveFlow() {
               </Button>
             </div>
           </Card>
-
-          {/* Upload Section - Designer Only */}
-          {activeRole === "designer" && (
-            <Card className="p-4 bg-card border-border">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Upload 2D Proof
-              </h3>
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Version notes (optional)"
-                  value={uploadNotes}
-                  onChange={(e) => setUploadNotes(e.target.value)}
-                  className="text-xs h-16"
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="w-full"
-                  size="sm"
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-3 h-3 mr-2" />
-                      Select File
-                    </>
-                  )}
-                </Button>
-                {latestVersion && (
-                  <>
-                    <Button
-                      onClick={handleGenerate3D}
-                      disabled={isGenerating3D}
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-2"
-                    >
-                      {isGenerating3D ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Generating 3D...
-                        </>
-                      ) : (
-                        <>
-                          <Box className="w-3 h-3" />
-                          Generate 3D Render
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full gap-2 border-primary/50 hover:bg-primary/10"
-                      onClick={async () => {
-                        try {
-                          const portalUrl = `${window.location.origin}/approveflow/${urlProjectId}`;
-                          const { error } = await supabase.functions.invoke('send-approveflow-proof', {
-                            body: {
-                              projectId: urlProjectId,
-                              customerEmail: project.customer_email,
-                              customerName: project.customer_name,
-                              orderNumber: project.order_number,
-                              proofUrl: latestVersion.file_url,
-                              renderUrls: latestRenderUrls,
-                              portalUrl: portalUrl,
-                            }
-                          });
-                          
-                          if (error) throw error;
-                          
-                          toast({
-                            title: "Proof sent!",
-                            description: `Email sent to ${project.customer_email}`,
-                          });
-                        } catch (error: any) {
-                          console.error('Error sending proof:', error);
-                          toast({
-                            title: "Failed to send proof",
-                            description: error.message || "Please try again",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                    >
-                      <Mail className="w-3 h-3" />
-                      Email Proof to Customer
-                    </Button>
-                  </>
-                )}
-              </div>
-            </Card>
-          )}
         </div>
 
         {/* CENTER: Design Proof Viewer */}
@@ -1137,7 +1030,9 @@ export default function ApproveFlow() {
           </Card>
         </div>
 
-        {/* RIGHT: Designer Production Specs + Approval Proof */}
+        {/* ============================================ */}
+        {/* ZONE 4: ACTIONS + VALIDATION (Right Column) */}
+        {/* ============================================ */}
         <div className="lg:col-span-1 space-y-4">
           {activeRole === "designer" && (
             <DesignerProductionSpecs
@@ -1148,6 +1043,39 @@ export default function ApproveFlow() {
               existingProofVersionId={existingProofVersionId}
               onGenerateProof={handleGenerateApprovalProof}
               isGenerating={isGeneratingProof}
+              onUpload={async (file, notes) => {
+                setUploading(true);
+                try {
+                  await uploadVersion(file, notes, activeRole);
+                } finally {
+                  setUploading(false);
+                }
+              }}
+              onGenerate3D={handleGenerate3D}
+              onEmailProof={async () => {
+                if (!latestVersion) return;
+                try {
+                  const portalUrl = `${window.location.origin}/approveflow/${urlProjectId}`;
+                  const { error } = await supabase.functions.invoke('send-approveflow-proof', {
+                    body: {
+                      projectId: urlProjectId,
+                      customerEmail: project.customer_email,
+                      customerName: project.customer_name,
+                      orderNumber: project.order_number,
+                      proofUrl: latestVersion.file_url,
+                      renderUrls: latestRenderUrls,
+                      portalUrl: portalUrl,
+                    }
+                  });
+                  if (error) throw error;
+                  toast({ title: "Proof sent!", description: `Email sent to ${project.customer_email}` });
+                } catch (error: any) {
+                  toast({ title: "Failed to send proof", description: error.message, variant: "destructive" });
+                }
+              }}
+              isUploading={uploading}
+              isGenerating3D={isGenerating3D}
+              hasVersions={versions.length > 0}
             />
           )}
         </div>
