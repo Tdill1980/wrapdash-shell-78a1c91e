@@ -43,12 +43,16 @@ const coreItems: NavigationItem[] = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard, roles: ["beta_shop", "affiliate", "admin"] },
   { name: "ApproveFlow", path: "/approveflow", icon: CheckCircle, roles: ["beta_shop", "admin"] },
   { 
-    name: "ShopFlow", 
+    name: "MyShopFlow", 
     path: "/my-shopflow", 
     icon: ShoppingCart,
     roles: ["beta_shop", "admin"],
     customRender: (
-      <span className="font-medium text-gradient">ShopFlow</span>
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">My</span>
+        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">ShopFlow</span>
+        <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
     )
   },
   { 
