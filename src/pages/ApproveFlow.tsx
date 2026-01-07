@@ -749,7 +749,7 @@ export default function ApproveFlow() {
         </div>
 
         {/* CENTER: Design Proof Viewer */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-h-[600px] flex flex-col">
           <Card className="p-4 bg-card border-border">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -1039,7 +1039,7 @@ export default function ApproveFlow() {
         {/* ============================================ */}
         {/* ZONE 4: ACTIONS + VALIDATION (Right Column) */}
         {/* ============================================ */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto">
           {activeRole === "designer" && (
             <DesignerProductionSpecs
               projectId={urlProjectId || ""}
