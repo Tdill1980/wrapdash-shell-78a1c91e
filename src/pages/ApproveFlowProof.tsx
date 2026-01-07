@@ -3,38 +3,60 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ProofPageHeader } from "@/components/approveflow/ProofPageHeader";
+import { ProofHeader } from "@/components/approveflow/ProofHeader";
 import { ProofSixViewGrid } from "@/components/approveflow/ProofSixViewGrid";
 import { ProductionSpecsBar } from "@/components/approveflow/ProductionSpecsBar";
 import { CustomerApprovalSection } from "@/components/approveflow/CustomerApprovalSection";
 
+/**
+ * ApproveFlow OS Rule:
+ * "Designers create proofs. Customers approve artifacts."
+ * 
+ * This customer-facing page is READ-ONLY except for approve/revision actions.
+ * - Customers NEVER generate proofs
+ * - Customers NEVER edit specs
+ * - Approval calls approve-approveflow-proof edge function ONLY
+ */
+
+interface ProofVersion {
+  id: string;
+  project_id: string;
+  order_number: string;
+  status: string;
+  vehicle_year: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  total_sq_ft: number | null;
+  wrap_scope: string | null;
+  proof_pdf_url: string | null;
+  approved_at: string | null;
+  created_at: string;
+}
+
+interface ProofView {
+  id: string;
+  view_key: string;
+  label: string;
+  image_url: string;
+}
+
+interface ProductionSpecs {
+  wheelbase: string | null;
+  wheelbase_is_na: boolean;
+  roof_height: string | null;
+  roof_height_is_na: boolean;
+  body_length: string | null;
+  body_length_is_na: boolean;
+  panel_count: number | null;
+  panel_count_is_na: boolean;
+  scale_reference: string | null;
+  scale_reference_is_na: boolean;
+}
+
 interface ApproveFlowProject {
   id: string;
-  order_number: string;
   customer_name: string;
-  customer_email: string | null;
-  product_type: string;
-  status: string;
-  current_version: number | null;
-  vehicle_info: any;
   color_info: any;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ApproveFlowVersion {
-  id: string;
-  version_number: number;
-  file_url: string;
-  notes: string | null;
-  created_at: string;
-}
-
-interface ApproveFlow3D {
-  id: string;
-  render_urls: Record<string, string>;
-  version_id: string | null;
-  created_at: string;
 }
 
 export default function ApproveFlowProof() {
@@ -43,12 +65,11 @@ export default function ApproveFlowProof() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
+  const [proofVersion, setProofVersion] = useState<ProofVersion | null>(null);
+  const [proofViews, setProofViews] = useState<ProofView[]>([]);
+  const [productionSpecs, setProductionSpecs] = useState<ProductionSpecs | null>(null);
   const [project, setProject] = useState<ApproveFlowProject | null>(null);
-  const [latestVersion, setLatestVersion] = useState<ApproveFlowVersion | null>(null);
-  const [renders3D, setRenders3D] = useState<ApproveFlow3D | null>(null);
-  const [approvedAt, setApprovedAt] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
-  const [includeFullTerms, setIncludeFullTerms] = useState(true);
 
   useEffect(() => {
     if (!projectId) {
@@ -56,59 +77,63 @@ export default function ApproveFlowProof() {
       return;
     }
 
-    const fetchData = async () => {
+    const fetchProofData = async () => {
       try {
-        // Fetch project
-        const { data: projectData, error: projectError } = await supabase
+        // First, fetch the project for customer name and color info
+        const { data: projectData } = await supabase
           .from("approveflow_projects")
-          .select("*")
+          .select("id, customer_name, color_info")
           .eq("id", projectId)
           .single();
 
-        if (projectError || !projectData) {
-          console.error("Error fetching project:", projectError);
+        if (projectData) {
+          setProject(projectData);
+          setCustomerName(projectData.customer_name || "");
+        }
+
+        // Fetch the latest ready/approved proof version for this project
+        const { data: proofData, error: proofError } = await supabase
+          .from("approveflow_proof_versions")
+          .select("*")
+          .eq("project_id", projectId)
+          .in("status", ["ready", "sent", "approved"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (proofError || !proofData) {
+          // No proof version exists yet - check if project exists at all
+          if (!projectData) {
+            console.error("Project not found");
+            setLoading(false);
+            return;
+          }
+          // Project exists but no proof generated yet
           setLoading(false);
           return;
         }
 
-        setProject(projectData);
-        setCustomerName(projectData.customer_name || "");
+        setProofVersion(proofData);
 
-        // Fetch latest version
-        const { data: versionsData } = await supabase
-          .from("approveflow_versions")
+        // Fetch proof views (6 required angles)
+        const { data: viewsData } = await supabase
+          .from("approveflow_proof_views")
           .select("*")
-          .eq("project_id", projectId)
-          .order("version_number", { ascending: false })
-          .limit(1);
+          .eq("proof_version_id", proofData.id);
 
-        if (versionsData && versionsData.length > 0) {
-          setLatestVersion(versionsData[0]);
+        if (viewsData) {
+          setProofViews(viewsData);
         }
 
-        // Fetch latest 3D renders
-        const { data: rendersData } = await supabase
-          .from("approveflow_3d")
+        // Fetch production specs
+        const { data: specsData } = await supabase
+          .from("approveflow_production_specs")
           .select("*")
-          .eq("project_id", projectId)
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .eq("proof_version_id", proofData.id)
+          .single();
 
-        if (rendersData && rendersData.length > 0) {
-          setRenders3D(rendersData[0] as ApproveFlow3D);
-        }
-
-        // Fetch approved action timestamp
-        const { data: actionsData } = await supabase
-          .from("approveflow_actions")
-          .select("created_at")
-          .eq("project_id", projectId)
-          .eq("action_type", "approved")
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (actionsData && actionsData.length > 0) {
-          setApprovedAt(actionsData[0].created_at);
+        if (specsData) {
+          setProductionSpecs(specsData);
         }
 
         setLoading(false);
@@ -118,29 +143,19 @@ export default function ApproveFlowProof() {
       }
     };
 
-    fetchData();
+    fetchProofData();
 
-    // Set up realtime subscription for 3D renders
+    // Realtime subscription for proof updates
     const channel = supabase
-      .channel(`approveflow-proof-${projectId}`)
+      .channel(`proof-customer-${projectId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'approveflow_3d',
+        table: 'approveflow_proof_versions',
         filter: `project_id=eq.${projectId}`
       }, (payload) => {
         if (payload.new) {
-          setRenders3D(payload.new as ApproveFlow3D);
-        }
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'approveflow_projects',
-        filter: `id=eq.${projectId}`
-      }, (payload) => {
-        if (payload.new) {
-          setProject(payload.new as ApproveFlowProject);
+          setProofVersion(payload.new as ProofVersion);
         }
       })
       .subscribe();
@@ -150,26 +165,25 @@ export default function ApproveFlowProof() {
     };
   }, [projectId, navigate]);
 
+  /**
+   * OS RULE: Customer approval MUST go through edge function only
+   * Never update approveflow_projects directly for approval
+   */
   const handleApprove = async () => {
-    if (!projectId) return;
+    if (!proofVersion?.id || !customerName.trim()) return;
 
     try {
-      // Update project status
-      await supabase
-        .from("approveflow_projects")
-        .update({ status: "approved" })
-        .eq("id", projectId);
-
-      // Log the action
-      await supabase.from("approveflow_actions").insert({
-        project_id: projectId,
-        action_type: "approved",
-        payload: { approved_by: "customer", customer_name: customerName },
+      const { data, error } = await supabase.functions.invoke('approve-approveflow-proof', {
+        body: {
+          proof_version_id: proofVersion.id,
+          customer_name: customerName.trim(),
+        }
       });
 
-      // Update local state
-      setProject((prev) => (prev ? { ...prev, status: "approved" } : null));
-      setApprovedAt(new Date().toISOString());
+      if (error) throw error;
+
+      // Update local state to reflect approval
+      setProofVersion(prev => prev ? { ...prev, status: 'approved', approved_at: new Date().toISOString() } : null);
 
       toast({
         title: "Design Approved!",
@@ -179,27 +193,21 @@ export default function ApproveFlowProof() {
       console.error("Error approving:", error);
       toast({
         title: "Error",
-        description: "Failed to approve design. Please try again.",
+        description: error.message || "Failed to approve design. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   const handleRequestRevision = async (notes: string) => {
-    if (!projectId) return;
+    if (!proofVersion?.id || !notes.trim()) return;
 
     try {
-      // Update project status
-      await supabase
-        .from("approveflow_projects")
-        .update({ status: "revision_requested" })
-        .eq("id", projectId);
-
-      // Log the action
+      // Log revision request action
       await supabase.from("approveflow_actions").insert({
         project_id: projectId,
         action_type: "revision_requested",
-        payload: { revision_notes: notes, requested_by: "customer" },
+        payload: { revision_notes: notes, requested_by: "customer", proof_version_id: proofVersion.id },
       });
 
       // Add chat message with revision notes
@@ -209,8 +217,13 @@ export default function ApproveFlowProof() {
         message: `📝 Revision Request:\n\n${notes}`,
       });
 
-      // Update local state
-      setProject((prev) => (prev ? { ...prev, status: "revision_requested" } : null));
+      // Update proof version status
+      await supabase
+        .from("approveflow_proof_versions")
+        .update({ status: "revision_requested" })
+        .eq("id", proofVersion.id);
+
+      setProofVersion(prev => prev ? { ...prev, status: 'revision_requested' } : null);
 
       toast({
         title: "Revision Requested",
@@ -230,106 +243,106 @@ export default function ApproveFlowProof() {
     window.print();
   };
 
-  const handleDownloadPdf = async () => {
-    if (!projectId) return;
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-approveflow-proof-pdf', {
-        body: { proof_version_id: projectId }
-      });
-
-      if (error) throw error;
-      
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (error: any) {
+  /**
+   * OS RULE: Customer downloads existing PDF only - never generates
+   */
+  const handleDownloadPdf = () => {
+    if (proofVersion?.proof_pdf_url) {
+      window.open(proofVersion.proof_pdf_url, '_blank');
+    } else {
       toast({
-        title: "PDF Generation",
-        description: "PDF generation is being prepared. Please try again shortly.",
+        title: "PDF Not Available",
+        description: "The proof PDF is being prepared. Please check back shortly.",
         variant: "default",
       });
     }
   };
 
+  // Convert proof views to render_urls format for ProofSixViewGrid
+  const renderUrls = proofViews.reduce((acc, view) => {
+    acc[view.view_key] = view.image_url;
+    return acc;
+  }, {} as Record<string, string>);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-white/60">Loading your proof...</p>
+          <p className="text-muted-foreground">Loading your proof...</p>
         </div>
       </div>
     );
   }
 
-  if (!project) {
+  // No proof version exists yet
+  if (!proofVersion) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md px-4">
-          <h1 className="text-2xl font-bold text-white">Proof Not Found</h1>
-          <p className="text-white/60">
-            We couldn't find the design proof you're looking for. Please check your link or contact support.
+          <h1 className="text-2xl font-bold text-foreground">Proof Not Ready</h1>
+          <p className="text-muted-foreground">
+            {project 
+              ? "Your design proof is being prepared. You'll receive an email when it's ready for review."
+              : "We couldn't find the design proof you're looking for. Please check your link or contact support."}
           </p>
         </div>
       </div>
     );
   }
 
-  const vehicleInfo = project.vehicle_info as any;
-  const colorInfo = project.color_info as any;
+  const colorInfo = project?.color_info as any;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
-      {/* Header */}
-      <ProofPageHeader
-        toolName="ApproveFlow™"
-        vehicleYear={vehicleInfo?.year}
-        vehicleMake={vehicleInfo?.make}
-        vehicleModel={vehicleInfo?.model}
-        customerName={customerName}
-        onCustomerNameChange={setCustomerName}
-        includeFullTerms={includeFullTerms}
-        onIncludeFullTermsChange={setIncludeFullTerms}
-        onPrint={handlePrint}
-        onDownloadPdf={handleDownloadPdf}
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header - Read-only display */}
+      <ProofHeader
+        orderNumber={proofVersion.order_number}
+        vehicleYear={proofVersion.vehicle_year || undefined}
+        vehicleMake={proofVersion.vehicle_make || undefined}
+        vehicleModel={proofVersion.vehicle_model || undefined}
+        versionNumber={1}
+        status={proofVersion.status}
       />
 
-      {/* Main Content */}
+      {/* Main Content - All read-only */}
       <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl space-y-6">
         {/* 6-View Grid - Professional Layout */}
         <ProofSixViewGrid
-          renderUrls={renders3D?.render_urls}
-          vehicleYear={vehicleInfo?.year}
-          vehicleMake={vehicleInfo?.make}
-          vehicleModel={vehicleInfo?.model}
+          renderUrls={renderUrls}
+          vehicleYear={proofVersion.vehicle_year || undefined}
+          vehicleMake={proofVersion.vehicle_make || undefined}
+          vehicleModel={proofVersion.vehicle_model || undefined}
         />
 
-        {/* Production Specs Bar */}
+        {/* Production Specs Bar - Read-only display */}
         <ProductionSpecsBar
-          manufacturer={colorInfo?.manufacturer || "3M"}
+          manufacturer={colorInfo?.manufacturer}
           colorName={colorInfo?.color}
           colorCode={colorInfo?.code}
           finishType={colorInfo?.finish}
           colorHex={colorInfo?.color_hex}
+          totalSqFt={proofVersion.total_sq_ft}
+          wrapScope={proofVersion.wrap_scope}
         />
 
-        {/* Customer Approval Section */}
+        {/* Customer Approval Section - Only action area */}
         <CustomerApprovalSection
-          status={project.status}
-          approvedAt={approvedAt}
+          status={proofVersion.status}
+          approvedAt={proofVersion.approved_at}
           customerName={customerName}
+          onCustomerNameChange={setCustomerName}
           onApprove={handleApprove}
           onRequestRevision={handleRequestRevision}
           onPrint={handlePrint}
           onDownloadPdf={handleDownloadPdf}
-          showPrintActions={false}
+          hasPdf={!!proofVersion.proof_pdf_url}
         />
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-4 text-center">
-        <p className="text-xs text-white/40">
+      <footer className="border-t border-border py-4 text-center">
+        <p className="text-xs text-muted-foreground">
           Powered by WrapCommand AI™ • Questions? Reply to your proof email.
         </p>
       </footer>

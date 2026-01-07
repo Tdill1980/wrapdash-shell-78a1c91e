@@ -53,7 +53,7 @@ export function ProofHeader({
   const vehicleString = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(" ");
 
   return (
-    <header className="w-full border-b border-border/50 bg-card/80 backdrop-blur-sm">
+    <header className="w-full border-b border-border bg-card/80 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Brand Logo */}
@@ -66,7 +66,7 @@ export function ProofHeader({
                 e.currentTarget.style.display = 'none';
               }}
             />
-            <div className="h-6 w-px bg-border/50 hidden sm:block" />
+            <div className="h-6 w-px bg-border hidden sm:block" />
             <span className="text-sm font-medium text-muted-foreground hidden sm:block">
               Design Proof
             </span>
