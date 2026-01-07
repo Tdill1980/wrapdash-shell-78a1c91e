@@ -1584,9 +1584,45 @@ export type Database = {
           },
         ]
       }
+      approveflow_proof_events: {
+        Row: {
+          actor: string
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          proof_id: string
+        }
+        Insert: {
+          actor?: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          proof_id: string
+        }
+        Update: {
+          actor?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          proof_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_proof_events_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_proof_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approveflow_proof_versions: {
         Row: {
           approved_at: string | null
+          branding_template_version: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -1594,8 +1630,12 @@ export type Database = {
           internal_notes: string | null
           locked_at: string | null
           order_number: string
+          pdf_template_version: string | null
           project_id: string
           proof_pdf_url: string | null
+          render_spec_version: string | null
+          revision: number | null
+          sent_at: string | null
           status: string
           system_name: string
           tool_name: string
@@ -1608,6 +1648,7 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          branding_template_version?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1615,8 +1656,12 @@ export type Database = {
           internal_notes?: string | null
           locked_at?: string | null
           order_number: string
+          pdf_template_version?: string | null
           project_id: string
           proof_pdf_url?: string | null
+          render_spec_version?: string | null
+          revision?: number | null
+          sent_at?: string | null
           status?: string
           system_name?: string
           tool_name?: string
@@ -1629,6 +1674,7 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          branding_template_version?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1636,8 +1682,12 @@ export type Database = {
           internal_notes?: string | null
           locked_at?: string | null
           order_number?: string
+          pdf_template_version?: string | null
           project_id?: string
           proof_pdf_url?: string | null
+          render_spec_version?: string | null
+          revision?: number | null
+          sent_at?: string | null
           status?: string
           system_name?: string
           tool_name?: string
