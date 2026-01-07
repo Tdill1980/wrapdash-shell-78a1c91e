@@ -505,23 +505,41 @@ export default function ApproveFlow() {
     }
   };
 
+  // ============================================
+  // OS RULE (LOCKED):
+  // Designer UI shows PRODUCTION FLOW
+  // Customer UI shows APPROVAL FLOW
+  // These steppers must NEVER overlap
+  // ============================================
   const getProgressSteps = () => {
-    const status = project?.status || 'design_requested';
-    const statusMap: Record<string, number> = {
-      'design_requested': 0,
-      'proof_delivered': 1,
-      'awaiting_feedback': 2,
-      'revision_sent': 3,
-      'approved': 4,
-    };
-    const currentStep = statusMap[status] ?? 0;
+    const has2DDraft = versions.length > 0;
+    const has3DRenders = renders3D.length > 0;
+    const hasProofBuilt = !!existingProofVersionId;
+    const proofSent = project?.status === 'proof_delivered' || 
+                      project?.status === 'awaiting_feedback' ||
+                      project?.status === 'approved';
 
     return [
-      { label: "Design Requested", status: currentStep === 0 ? "current" : currentStep > 0 ? "complete" : "pending" },
-      { label: "Proof Delivered", status: currentStep === 1 ? "current" : currentStep > 1 ? "complete" : "pending" },
-      { label: "Awaiting Feedback", status: currentStep === 2 ? "current" : currentStep > 2 ? "complete" : "pending" },
-      { label: "Revision Sent", status: currentStep === 3 ? "current" : currentStep > 3 ? "complete" : "pending" },
-      { label: "Approved", status: currentStep === 4 ? "current" : currentStep > 4 ? "complete" : "pending" },
+      { 
+        label: "Order Received", 
+        status: "complete" as const
+      },
+      { 
+        label: "2D Uploaded", 
+        status: has2DDraft ? "complete" as const : "current" as const
+      },
+      { 
+        label: "3D Generated", 
+        status: has3DRenders ? "complete" as const : (has2DDraft ? "current" as const : "pending" as const)
+      },
+      { 
+        label: "Proof Built", 
+        status: hasProofBuilt ? "complete" as const : (has3DRenders ? "current" as const : "pending" as const)
+      },
+      { 
+        label: "Sent to Customer", 
+        status: proofSent ? "complete" as const : (hasProofBuilt ? "current" as const : "pending" as const)
+      },
     ];
   };
   const latestVersion = versions[0];

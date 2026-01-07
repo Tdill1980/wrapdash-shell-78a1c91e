@@ -3,13 +3,14 @@
 // ============================================
 // OS ARCHITECTURE — ACTION + VALIDATION PANEL
 //
-// OS RULES:
-// 1. Validation status appears FIRST (top of card)
-// 2. Colored indicators: 🔵 cyan = met, 🟣 indigo = missing (premium, not punishing)
-// 3. "Generate Approval Proof" button state is DERIVED from validation
-// 4. Required fields: Total SQ FT, Wrap Scope, 3D Renders
-// 5. Optional fields have N/A toggles
-// 6. Upload 2D Proof section included in this panel
+// OS RULES (LOCKED — DO NOT REORDER):
+// 1. Validation Status — ALWAYS FIRST (shows requirements)
+// 2. Upload 2D Proof — SECOND (first designer action)
+// 3. Action Buttons — THIRD (Generate 3D → Generate Proof → Email)
+// 4. Production Specs Form — LAST (inputs that feed validation)
+//
+// DESIGNER WORKFLOW:
+// Order Received → Upload 2D → Generate 3D → Fill Specs → Generate Proof → Send
 // ============================================
 
 import { useState, useEffect, useRef } from "react";
@@ -183,7 +184,7 @@ export function DesignerProductionSpecs({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* ============================================ */}
-        {/* VALIDATION STATUS — OS RULE: ALWAYS FIRST */}
+        {/* 1️⃣ VALIDATION STATUS — OS RULE: ALWAYS FIRST */}
         {/* ============================================ */}
         <div className="bg-muted/30 rounded-lg p-3 border border-border">
           <div className="flex items-center justify-between mb-2">
@@ -218,7 +219,152 @@ export function DesignerProductionSpecs({
         </div>
 
         {/* ============================================ */}
-        {/* PRODUCTION SPECS FORM — OS RULE: INPUTS BEFORE ACTIONS */}
+        {/* 2️⃣ UPLOAD 2D PROOF — OS RULE: FIRST DESIGNER ACTION */}
+        {/* ============================================ */}
+        {onUpload && (
+          <div className="pt-4 border-t border-border space-y-3">
+            <h4 className="text-xs font-semibold flex items-center gap-2">
+              <Upload className="w-3.5 h-3.5" />
+              Upload 2D Proof
+            </h4>
+            <Textarea
+              placeholder="Version notes (optional)"
+              value={uploadNotes}
+              onChange={(e) => setUploadNotes(e.target.value)}
+              className="text-xs h-14 resize-none"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-full"
+              size="sm"
+              variant="outline"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="w-3 h-3 mr-2" />
+                  Select File
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* 3️⃣ ACTION BUTTONS — OS RULE: GENERATE 3D → PROOF → EMAIL */}
+        {/* ============================================ */}
+        <div className="pt-4 border-t border-border space-y-3">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase">Actions</h4>
+          
+          {/* Generate 3D Render */}
+          {hasVersions && onGenerate3D && (
+            <Button
+              onClick={onGenerate3D}
+              disabled={isGenerating3D}
+              size="sm"
+              variant="outline"
+              className="w-full gap-2"
+            >
+              {isGenerating3D ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Generating 3D...
+                </>
+              ) : (
+                <>
+                  <Box className="w-3 h-3" />
+                  Generate 3D Render
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* Generate Approval Proof Button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    onClick={handleGenerateProof}
+                    disabled={!isValid || isGenerating}
+                    className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 hover:opacity-90 disabled:opacity-50"
+                    size="sm"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating Proof...
+                      </>
+                    ) : existingProofVersionId ? (
+                      <>
+                        <Rocket className="w-4 h-4 mr-2" />
+                        Regenerate Approval Proof
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="w-4 h-4 mr-2" />
+                        Generate Approval Proof
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!isValid && (
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-xs">Missing requirements:</p>
+                    <ul className="text-xs space-y-0.5">
+                      {validationItems.filter(v => !v.met).map((item, i) => (
+                        <li key={i} className="flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+
+          {/* Existing Proof Status */}
+          {existingProofVersionId && (
+            <div className="text-center">
+              <Badge variant="outline" className="text-[10px] border-cyan-500/50 text-cyan-400">
+                <CheckCircle2 className="w-3 h-3 mr-1" />
+                Approval proof generated
+              </Badge>
+            </div>
+          )}
+
+          {/* Email Proof to Customer */}
+          {hasVersions && onEmailProof && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full gap-2 border-primary/50 hover:bg-primary/10"
+              onClick={onEmailProof}
+            >
+              <Mail className="w-3 h-3" />
+              Email Proof to Customer
+            </Button>
+          )}
+        </div>
+
+        {/* ============================================ */}
+        {/* 4️⃣ PRODUCTION SPECS FORM — OS RULE: LAST (SUPPORTS VALIDATION) */}
         {/* ============================================ */}
         <div className="pt-3 border-t border-border">
           <h4 className="text-xs font-semibold mb-3">Production Specifications</h4>
@@ -442,151 +588,6 @@ export function DesignerProductionSpecs({
             />
           </div>
         </div>
-
-        {/* ============================================ */}
-        {/* ACTION BUTTONS — OS RULE: AFTER INPUTS */}
-        {/* ============================================ */}
-        <div className="pt-4 border-t border-border space-y-3">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase">Actions</h4>
-          
-          {/* Generate 3D Render */}
-          {hasVersions && onGenerate3D && (
-            <Button
-              onClick={onGenerate3D}
-              disabled={isGenerating3D}
-              size="sm"
-              variant="outline"
-              className="w-full gap-2"
-            >
-              {isGenerating3D ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Generating 3D...
-                </>
-              ) : (
-                <>
-                  <Box className="w-3 h-3" />
-                  Generate 3D Render
-                </>
-              )}
-            </Button>
-          )}
-
-          {/* Generate Approval Proof Button */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-full">
-                  <Button
-                    onClick={handleGenerateProof}
-                    disabled={!isValid || isGenerating}
-                    className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 hover:opacity-90 disabled:opacity-50"
-                    size="sm"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Generating Proof...
-                      </>
-                    ) : existingProofVersionId ? (
-                      <>
-                        <Rocket className="w-4 h-4 mr-2" />
-                        Regenerate Approval Proof
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="w-4 h-4 mr-2" />
-                        Generate Approval Proof
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {!isValid && (
-                <TooltipContent side="top" className="max-w-xs">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-xs">Missing requirements:</p>
-                    <ul className="text-xs space-y-0.5">
-                      {validationItems.filter(v => !v.met).map((item, i) => (
-                        <li key={i} className="flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {item.label}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* Existing Proof Status */}
-          {existingProofVersionId && (
-            <div className="text-center">
-              <Badge variant="outline" className="text-[10px] border-cyan-500/50 text-cyan-400">
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Approval proof generated
-              </Badge>
-            </div>
-          )}
-
-          {/* Email Proof to Customer */}
-          {hasVersions && onEmailProof && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full gap-2 border-primary/50 hover:bg-primary/10"
-              onClick={onEmailProof}
-            >
-              <Mail className="w-3 h-3" />
-              Email Proof to Customer
-            </Button>
-          )}
-        </div>
-
-        {/* ============================================ */}
-        {/* UPLOAD 2D PROOF — OS RULE: LAST (FREQUENT BUT NOT GATING) */}
-        {/* ============================================ */}
-        {onUpload && (
-          <div className="pt-4 border-t border-border space-y-3">
-            <h4 className="text-xs font-semibold flex items-center gap-2">
-              <Upload className="w-3.5 h-3.5" />
-              Upload 2D Proof
-            </h4>
-            <Textarea
-              placeholder="Version notes (optional)"
-              value={uploadNotes}
-              onChange={(e) => setUploadNotes(e.target.value)}
-              className="text-xs h-14 resize-none"
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="w-full"
-              size="sm"
-              variant="outline"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <ImageIcon className="w-3 h-3 mr-2" />
-                  Select File
-                </>
-              )}
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
