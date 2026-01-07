@@ -255,7 +255,7 @@ serve(async (req) => {
       }
     }
 
-    // Save to approveflow_3d table
+    // Save to approveflow_3d table with upsert
     const { error: dbError } = await supabase
       .from('approveflow_3d')
       .upsert({
@@ -269,15 +269,30 @@ serve(async (req) => {
 
     if (dbError) {
       console.error('[StudioRenderOS] DB save error:', dbError);
+      throw new Error(`Failed to save renders to database: ${dbError.message}`);
+    }
+
+    // Read-after-write verification (CRITICAL - ensures data was persisted)
+    const { data: verify, error: verifyErr } = await supabase
+      .from('approveflow_3d')
+      .select('id, render_urls')
+      .eq('project_id', projectId)
+      .eq('version_id', versionId)
+      .maybeSingle();
+
+    if (verifyErr || !verify?.render_urls) {
+      console.error('[StudioRenderOS] Verification failed:', verifyErr);
+      throw new Error('3D render was generated but could not be persisted to approveflow_3d');
     }
 
     const successCount = Object.keys(renderUrls).length;
-    console.log(`[StudioRenderOS] Complete: ${successCount}/6 views generated`);
+    const verifiedCount = Object.keys(verify.render_urls as Record<string, string>).length;
+    console.log(`[StudioRenderOS] Complete: ${successCount}/6 views generated, ${verifiedCount} verified in DB`);
 
     return new Response(JSON.stringify({ 
       success: true,
-      renderUrls,
-      generatedViews: successCount,
+      renderUrls: verify.render_urls, // Return verified data from DB
+      generatedViews: verifiedCount,
       errors: errors.length > 0 ? errors : undefined
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
