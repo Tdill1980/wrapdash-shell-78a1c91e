@@ -1,7 +1,7 @@
 // Voice Engine Layer - Shared TradeDNA & Brand Voice Loader
 // Used by all edge functions to load per-org/per-brand voice profiles
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from "./supabase-client.ts";
 
 export interface BrandVoice {
   tone: string;
