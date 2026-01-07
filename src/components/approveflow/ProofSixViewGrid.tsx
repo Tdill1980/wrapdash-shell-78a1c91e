@@ -9,20 +9,20 @@ interface ProofSixViewGridProps {
   vehicleModel?: string;
 }
 
-// Standard 6-view layout matching RestylePro/ColorPro reference
+// Standard 6-view layout matching StudioRenderOS output
 const VIEW_ORDER = [
-  { key: "driver", label: "Driver Side" },
+  { key: "driver_side", label: "Driver Side" },
   { key: "front", label: "Front" },
   { key: "rear", label: "Rear" },
-  { key: "passenger", label: "Passenger Side" },
+  { key: "passenger_side", label: "Passenger Side" },
   { key: "top", label: "Top" },
   { key: "detail", label: "Detail" },
 ] as const;
 
 // Fallback mappings for different key formats
 const KEY_ALIASES: Record<string, string[]> = {
-  driver: ["driver", "driver_side", "left", "side_left"],
-  passenger: ["passenger", "passenger_side", "right", "side_right"],
+  driver_side: ["driver_side", "driver", "left", "side_left"],
+  passenger_side: ["passenger_side", "passenger", "right", "side_right"],
   front: ["front", "front_34", "hero"],
   rear: ["rear", "rear_34", "back"],
   top: ["top", "overhead", "birds_eye"],

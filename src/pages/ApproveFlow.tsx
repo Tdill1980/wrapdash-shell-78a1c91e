@@ -309,56 +309,47 @@ export default function ApproveFlow() {
       // Always use the latest version (first in array)
       const latestProof = versions[0];
       const vehicleInfo = project?.vehicle_info as any;
-      const colorInfo = project?.color_info as any;
 
-      const { data, error } = await supabase.functions.invoke('generate-color-render', {
+      toast({
+        title: "Generating Studio Renders",
+        description: "Creating 6 photorealistic views... This may take 30-60 seconds.",
+      });
+
+      // Use StudioRenderOS for locked 6-view generation
+      const { data, error } = await supabase.functions.invoke('generate-studio-renders', {
         body: {
-          designUrl: latestProof.file_url,
-          vehicleMake: vehicleInfo?.make,
-          vehicleModel: vehicleInfo?.model,
+          projectId: urlProjectId,
+          versionId: latestProof.id,
+          panelUrl: latestProof.file_url,
+          vehicle: `${vehicleInfo?.year || ''} ${vehicleInfo?.make || ''} ${vehicleInfo?.model || ''}`.trim() || project?.product_type || 'vehicle',
           vehicleYear: vehicleInfo?.year,
-          vehicleType: vehicleInfo?.type || project?.product_type || 'sedan',
-          colorHex: colorInfo?.color_hex,
-          colorName: colorInfo?.color || 'Custom Design',
-          finishType: colorInfo?.finish || 'gloss',
-          angle: 'hero'
+          vehicleMake: vehicleInfo?.make,
+          vehicleModel: vehicleInfo?.model
         }
       });
 
       if (error) {
-        console.error('Edge function error:', error);
+        console.error('StudioRenderOS error:', error);
         throw error;
       }
 
-      if (!data?.imageUrl) {
-        throw new Error('No image URL returned from render');
+      if (!data?.success) {
+        throw new Error(data?.error || 'Studio render generation failed');
       }
 
-      if (urlProjectId) {
-        const renderUrls: Record<string, string> = {
-          hero: data.imageUrl
-          // Only store actual image URLs - angle metadata not needed in render_urls
-        };
-
-        await save3DRendersToApproveFlow(
-          urlProjectId,
-          latestProof.id,
-          renderUrls
-        );
-      }
-
-      // Refetch to update UI with new 3D render
+      // Refetch to update UI with new 3D renders
       refetch();
 
+      const viewCount = data?.generatedViews || 0;
       toast({
-        title: "3D render generated",
-        description: "View it in the 3D View tab",
+        title: "Studio Renders Complete",
+        description: `${viewCount}/6 views generated successfully`,
       });
     } catch (error: any) {
-      console.error('Error generating 3D:', error);
+      console.error('Error generating studio renders:', error);
       toast({
         title: "Generation failed",
-        description: error.message || "Unable to generate 3D render",
+        description: error.message || "Unable to generate studio renders",
         variant: "destructive",
       });
     } finally {
