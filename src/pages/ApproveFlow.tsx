@@ -114,6 +114,7 @@ export default function ApproveFlow() {
     sendMessage,
     approveDesign,
     requestRevision,
+    refetch,
   } = useApproveFlow(urlProjectId);
 
   // Fetch tracking info, assets, and existing proof version
@@ -345,6 +346,9 @@ export default function ApproveFlow() {
           renderUrls
         );
       }
+
+      // Refetch to update UI with new 3D render
+      refetch();
 
       toast({
         title: "3D render generated",
