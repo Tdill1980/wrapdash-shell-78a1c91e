@@ -1,3 +1,13 @@
+// ============================================
+// ApproveFlow — Designer Internal Page
+// ============================================
+// OS RULES:
+// 1. Designers CREATE proofs, customers APPROVE them
+// 2. Approval proof requires: 6 views + Total SQ FT + Wrap Scope
+// 3. "Generate Approval Proof" button ONLY appears after 3D renders exist
+// 4. All approval authority lives in edge functions, not UI
+// ============================================
+
 import { useState, useRef, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +48,7 @@ import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { ApproveFlowTimeline } from "@/components/tracker/ApproveFlowTimeline";
+import { DesignerProductionSpecs, ProductionSpecsData } from "@/components/approveflow/DesignerProductionSpecs";
 
 export default function ApproveFlow() {
   const { projectId: urlProjectId } = useParams<{ projectId: string }>();
@@ -50,6 +61,8 @@ export default function ApproveFlow() {
   const [isGenerating3D, setIsGenerating3D] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [isGeneratingProof, setIsGeneratingProof] = useState(false);
+  const [existingProofVersionId, setExistingProofVersionId] = useState<string | undefined>();
   const [trackingInfo, setTrackingInfo] = useState<{
     tracking_number?: string;
     tracking_url?: string;
@@ -82,7 +95,7 @@ export default function ApproveFlow() {
     requestRevision,
   } = useApproveFlow(urlProjectId);
 
-  // Fetch tracking info and assets
+  // Fetch tracking info, assets, and existing proof version
   useEffect(() => {
     const fetchData = async () => {
       if (!project?.order_number) return;
@@ -108,6 +121,19 @@ export default function ApproveFlow() {
 
         if (!assetsError && assetsData) {
           setAssets(assetsData);
+        }
+
+        // Fetch existing proof version
+        const { data: proofVersionData } = await supabase
+          .from('approveflow_proof_versions')
+          .select('id')
+          .eq('project_id', urlProjectId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (proofVersionData) {
+          setExistingProofVersionId(proofVersionData.id);
         }
       }
     };
@@ -312,6 +338,149 @@ export default function ApproveFlow() {
       });
     } finally {
       setIsGenerating3D(false);
+    }
+  };
+
+  // OS RULE: Generate Approval Proof creates proof_version + views + specs records
+  const handleGenerateApprovalProof = async (specs: ProductionSpecsData) => {
+    if (!urlProjectId || !project) {
+      toast({
+        title: "Error",
+        description: "Project not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const latestRenderEntry = renders3D[0];
+    const latestRenderUrls = latestRenderEntry?.render_urls as Record<string, string> | undefined;
+
+    if (!latestRenderUrls) {
+      toast({
+        title: "Error",
+        description: "3D renders are required before generating approval proof",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingProof(true);
+    try {
+      // Step 1: Create approveflow_proof_versions record
+      const { data: proofVersion, error: proofVersionError } = await supabase
+        .from('approveflow_proof_versions')
+        .insert({
+          project_id: urlProjectId,
+          order_number: project.order_number,
+          vehicle_year: specs.vehicleYear || null,
+          vehicle_make: specs.vehicleMake || null,
+          vehicle_model: specs.vehicleModel || null,
+          total_sq_ft: specs.totalSqFt,
+          wrap_scope: specs.wrapScope,
+          internal_notes: specs.internalNotes || null,
+          status: 'draft',
+          system_name: 'WrapCommandAI',
+          tool_name: 'ApproveFlow',
+          include_full_terms: false,
+        })
+        .select()
+        .single();
+
+      if (proofVersionError) throw proofVersionError;
+
+      // Step 2: Create approveflow_proof_views records (map 3D renders to 6 views)
+      const viewMappings: { view_key: string; label: string; url_key: string }[] = [
+        { view_key: 'driver', label: 'Driver Side', url_key: 'hero' },
+        { view_key: 'passenger', label: 'Passenger Side', url_key: 'passenger' },
+        { view_key: 'front', label: 'Front', url_key: 'front' },
+        { view_key: 'rear', label: 'Rear', url_key: 'rear' },
+        { view_key: 'top', label: 'Top', url_key: 'top' },
+        { view_key: 'detail', label: 'Detail', url_key: 'detail' },
+      ];
+
+      // Get the hero/default image URL for views that don't have specific renders
+      const defaultImageUrl = latestRenderUrls.hero || Object.values(latestRenderUrls)[0];
+
+      const viewInserts = viewMappings.map((mapping) => ({
+        proof_version_id: proofVersion.id,
+        view_key: mapping.view_key,
+        label: mapping.label,
+        image_url: latestRenderUrls[mapping.url_key] || defaultImageUrl,
+      }));
+
+      const { error: viewsError } = await supabase
+        .from('approveflow_proof_views')
+        .insert(viewInserts);
+
+      if (viewsError) throw viewsError;
+
+      // Step 3: Create approveflow_production_specs record
+      const { error: specsError } = await supabase
+        .from('approveflow_production_specs')
+        .insert({
+          proof_version_id: proofVersion.id,
+          wheelbase: specs.wheelbase || null,
+          wheelbase_is_na: specs.wheelbaseIsNa,
+          roof_height: specs.roofHeight || null,
+          roof_height_is_na: specs.roofHeightIsNa,
+          body_length: specs.bodyLength || null,
+          body_length_is_na: specs.bodyLengthIsNa,
+          scale_reference: specs.scaleReference || null,
+          scale_reference_is_na: specs.scaleReferenceIsNa,
+          panel_count: specs.panelCount,
+          panel_count_is_na: specs.panelCountIsNa,
+        });
+
+      if (specsError) throw specsError;
+
+      // Step 4: Call validate-approveflow-proof
+      const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+        'validate-approveflow-proof',
+        { body: { proof_version_id: proofVersion.id } }
+      );
+
+      if (validationError) throw validationError;
+
+      if (!validationResult.ok) {
+        toast({
+          title: "Validation failed",
+          description: `Missing: ${validationResult.missing?.map((m: any) => m.label).join(', ')}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Step 5: Call generate-approveflow-proof-pdf
+      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke(
+        'generate-approveflow-proof-pdf',
+        { body: { proof_version_id: proofVersion.id } }
+      );
+
+      if (pdfError) throw pdfError;
+
+      setExistingProofVersionId(proofVersion.id);
+
+      toast({
+        title: "Approval proof generated!",
+        description: "PDF is ready. Customer can now view and approve.",
+      });
+
+      // Log action
+      await supabase.from('approveflow_actions').insert({
+        project_id: urlProjectId,
+        action_type: 'approval_proof_generated',
+        payload: { proof_version_id: proofVersion.id, pdf_url: pdfResult?.pdf_url },
+      });
+
+    } catch (error: any) {
+      console.error('Error generating approval proof:', error);
+      toast({
+        title: "Failed to generate proof",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingProof(false);
     }
   };
 
@@ -968,9 +1137,19 @@ export default function ApproveFlow() {
           </Card>
         </div>
 
-        {/* RIGHT: Designer Tools */}
+        {/* RIGHT: Designer Production Specs + Approval Proof */}
         <div className="lg:col-span-1 space-y-4">
-          {/* Designer tools can be added here if needed */}
+          {activeRole === "designer" && (
+            <DesignerProductionSpecs
+              projectId={urlProjectId || ""}
+              orderNumber={project.order_number}
+              vehicleInfo={project.vehicle_info as { year?: string; make?: string; model?: string } | undefined}
+              has3DRenders={renders3D.length > 0}
+              existingProofVersionId={existingProofVersionId}
+              onGenerateProof={handleGenerateApprovalProof}
+              isGenerating={isGeneratingProof}
+            />
+          )}
         </div>
       </div>
 
