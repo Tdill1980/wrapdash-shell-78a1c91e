@@ -213,7 +213,6 @@ verify_jwt = false
 [functions.agent-chat]
 verify_jwt = false
 
-
 [functions.ai-generate-winback-email]
 verify_jwt = false
 
@@ -323,4 +322,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.sync-all-vehicles]
+verify_jwt = false
+
+[functions.validate-approveflow-proof]
+verify_jwt = false
+
+[functions.generate-approveflow-proof-pdf]
+verify_jwt = false
+
+[functions.approve-approveflow-proof]
 verify_jwt = false

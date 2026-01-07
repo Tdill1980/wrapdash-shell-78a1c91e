@@ -1451,6 +1451,62 @@ export type Database = {
           },
         ]
       }
+      approveflow_production_specs: {
+        Row: {
+          body_length: string | null
+          body_length_is_na: boolean
+          created_at: string
+          id: string
+          panel_count: number | null
+          panel_count_is_na: boolean
+          proof_version_id: string
+          roof_height: string | null
+          roof_height_is_na: boolean
+          scale_reference: string | null
+          scale_reference_is_na: boolean
+          wheelbase: string | null
+          wheelbase_is_na: boolean
+        }
+        Insert: {
+          body_length?: string | null
+          body_length_is_na?: boolean
+          created_at?: string
+          id?: string
+          panel_count?: number | null
+          panel_count_is_na?: boolean
+          proof_version_id: string
+          roof_height?: string | null
+          roof_height_is_na?: boolean
+          scale_reference?: string | null
+          scale_reference_is_na?: boolean
+          wheelbase?: string | null
+          wheelbase_is_na?: boolean
+        }
+        Update: {
+          body_length?: string | null
+          body_length_is_na?: boolean
+          created_at?: string
+          id?: string
+          panel_count?: number | null
+          panel_count_is_na?: boolean
+          proof_version_id?: string
+          roof_height?: string | null
+          roof_height_is_na?: boolean
+          scale_reference?: string | null
+          scale_reference_is_na?: boolean
+          wheelbase?: string | null
+          wheelbase_is_na?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_production_specs_proof_version_id_fkey"
+            columns: ["proof_version_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_proof_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approveflow_projects: {
         Row: {
           color_info: Json | null
@@ -1512,6 +1568,122 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approveflow_proof_versions: {
+        Row: {
+          approved_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          include_full_terms: boolean
+          internal_notes: string | null
+          locked_at: string | null
+          order_number: string
+          project_id: string
+          proof_pdf_url: string | null
+          status: string
+          system_name: string
+          tool_name: string
+          total_sq_ft: number | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_year: string | null
+          version_id: string | null
+          wrap_scope: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          include_full_terms?: boolean
+          internal_notes?: string | null
+          locked_at?: string | null
+          order_number: string
+          project_id: string
+          proof_pdf_url?: string | null
+          status?: string
+          system_name?: string
+          tool_name?: string
+          total_sq_ft?: number | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+          version_id?: string | null
+          wrap_scope?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          include_full_terms?: boolean
+          internal_notes?: string | null
+          locked_at?: string | null
+          order_number?: string
+          project_id?: string
+          proof_pdf_url?: string | null
+          status?: string
+          system_name?: string
+          tool_name?: string
+          total_sq_ft?: number | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: string | null
+          version_id?: string | null
+          wrap_scope?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_proof_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approveflow_proof_versions_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approveflow_proof_views: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          label: string
+          proof_version_id: string
+          view_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          label: string
+          proof_version_id: string
+          view_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          label?: string
+          proof_version_id?: string
+          view_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approveflow_proof_views_proof_version_id_fkey"
+            columns: ["proof_version_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_proof_versions"
             referencedColumns: ["id"]
           },
         ]
