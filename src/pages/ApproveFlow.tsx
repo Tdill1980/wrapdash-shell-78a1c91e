@@ -338,12 +338,17 @@ export default function ApproveFlow() {
       }
 
       // Refetch to update UI with new 3D renders
-      refetch();
+      await refetch();
 
+      // Verify the data is actually there after refetch
       const viewCount = data?.generatedViews || 0;
+      if (viewCount === 0) {
+        throw new Error("Render generated but no views were saved - please retry");
+      }
+
       toast({
         title: "Studio Renders Complete",
-        description: `${viewCount}/6 views generated successfully`,
+        description: `${viewCount}/6 views generated and verified`,
       });
     } catch (error: any) {
       console.error('Error generating studio renders:', error);
@@ -405,17 +410,18 @@ export default function ApproveFlow() {
       if (proofVersionError) throw proofVersionError;
 
       // Step 2: Create approveflow_proof_views records (map 3D renders to 6 views)
+      // Keys match StudioRenderOS output: driver_side, passenger_side, front, rear, top, detail
       const viewMappings: { view_key: string; label: string; url_key: string }[] = [
-        { view_key: 'driver', label: 'Driver Side', url_key: 'hero' },
-        { view_key: 'passenger', label: 'Passenger Side', url_key: 'passenger' },
+        { view_key: 'driver', label: 'Driver Side', url_key: 'driver_side' },
+        { view_key: 'passenger', label: 'Passenger Side', url_key: 'passenger_side' },
         { view_key: 'front', label: 'Front', url_key: 'front' },
         { view_key: 'rear', label: 'Rear', url_key: 'rear' },
         { view_key: 'top', label: 'Top', url_key: 'top' },
         { view_key: 'detail', label: 'Detail', url_key: 'detail' },
       ];
 
-      // Get the hero/default image URL for views that don't have specific renders
-      const defaultImageUrl = latestRenderUrls.hero || Object.values(latestRenderUrls)[0];
+      // Get the driver_side/default image URL for views that don't have specific renders
+      const defaultImageUrl = latestRenderUrls.driver_side || latestRenderUrls.front || Object.values(latestRenderUrls)[0];
 
       const viewInserts = viewMappings.map((mapping) => ({
         proof_version_id: proofVersion.id,
@@ -874,7 +880,7 @@ export default function ApproveFlow() {
                       <p className="text-xs font-semibold mb-2 text-cyan-400">3D Render</p>
                       <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                         <img 
-                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                          src={latestRenderUrls.driver_side || latestRenderUrls.front || Object.values(latestRenderUrls)[0]} 
                           alt="3D Render"
                           className="w-full h-full object-contain"
                         />
@@ -891,7 +897,7 @@ export default function ApproveFlow() {
                       <DialogTrigger asChild>
                         <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all group relative">
                           <img 
-                            src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                            src={latestRenderUrls.driver_side || latestRenderUrls.front || Object.values(latestRenderUrls)[0]} 
                             alt="3D Render"
                             className="w-full h-full object-contain"
                           />
@@ -902,7 +908,7 @@ export default function ApproveFlow() {
                       </DialogTrigger>
                       <DialogContent className="max-w-[90vw] max-h-[90vh] p-2">
                         <img 
-                          src={latestRenderUrls.hero || latestRenderUrls.side || Object.values(latestRenderUrls)[0]} 
+                          src={latestRenderUrls.driver_side || latestRenderUrls.front || Object.values(latestRenderUrls)[0]} 
                           alt="3D Render"
                           className="w-full h-full object-contain"
                         />
