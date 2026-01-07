@@ -58,11 +58,28 @@ interface MessageMetadata {
   ai_mode?: string;
 }
 
+// Hook to get total conversation count in DB (OS transparency)
+export function useConversationTotalCount() {
+  return useQuery({
+    queryKey: ['conversations-total-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 30000
+  });
+}
+
 export function useWebsiteChats() {
   const query = useQuery({
     queryKey: ['website-page-chats'],
     queryFn: async (): Promise<ChatConversation[]> => {
-      // Fetch ALL website channel conversations (channel = wall, not agent)
+      // ADMIN OS: Fetch ALL conversations - NO filters, NO limits
+      // Filters belong in UI controls, not in the query
       const { data: conversations, error } = await supabase
         .from('conversations')
         .select(`
@@ -78,9 +95,7 @@ export function useWebsiteChats() {
           chat_state,
           metadata
         `)
-        .eq('channel', 'website')
-        .order('last_message_at', { ascending: false })
-        .limit(200);
+        .order('last_message_at', { ascending: false });
 
       if (error) throw error;
 

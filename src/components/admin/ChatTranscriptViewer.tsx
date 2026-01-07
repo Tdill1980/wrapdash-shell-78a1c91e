@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useWebsiteChats, useWebsiteChatStats } from "@/hooks/useWebsiteChats";
+import { useWebsiteChats, useWebsiteChatStats, useConversationTotalCount } from "@/hooks/useWebsiteChats";
 import { ChatTranscriptRow } from "./ChatTranscriptRow";
 import { ChatDetailModal } from "./ChatDetailModal";
 import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin } from "lucide-react";
@@ -15,6 +15,8 @@ import type { ChatConversation } from "@/hooks/useWebsiteChats";
 export function ChatTranscriptViewer() {
   const { conversations, isLoading, refetch } = useWebsiteChats();
   const { data: stats } = useWebsiteChatStats();
+  const { data: totalDbCount } = useConversationTotalCount();
+  const [channelFilter, setChannelFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [escalationFilter, setEscalationFilter] = useState<string>("all");
@@ -22,9 +24,14 @@ export function ChatTranscriptViewer() {
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Filter conversations
+  // Filter conversations - ALL filters are optional UI controls, not defaults
   const filteredConversations = conversations.filter((convo) => {
-    // Today filter
+    // Channel filter (optional - defaults to "all")
+    if (channelFilter !== "all" && convo.channel !== channelFilter) {
+      return false;
+    }
+
+    // Today filter (optional - defaults to false)
     if (todayOnly && convo.created_at && !isToday(new Date(convo.created_at))) {
       return false;
     }
@@ -135,7 +142,7 @@ export function ChatTranscriptViewer() {
         {/* Left: Session List */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Website Page Chat Sessions</h2>
+            <h2 className="text-xl font-bold">All Conversations</h2>
             <div className="flex items-center gap-2">
               <Button 
                 variant={todayOnly ? "default" : "outline"} 
@@ -149,15 +156,30 @@ export function ChatTranscriptViewer() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 Refresh
               </Button>
-              <span className="text-sm text-muted-foreground">
-                Total: {filteredConversations.length} Sessions
-              </span>
             </div>
           </div>
+          
+          {/* OS Transparency: Total DB count badge */}
+          <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-lg border">
+            <Badge variant="outline" className="text-sm font-mono">
+              DB Total: {totalDbCount ?? '...'}
+            </Badge>
+            <Badge variant="secondary" className="text-sm">
+              Loaded: {conversations.length}
+            </Badge>
+            <Badge variant={filteredConversations.length === conversations.length ? "default" : "destructive"} className="text-sm">
+              Showing: {filteredConversations.length}
+            </Badge>
+            {filteredConversations.length < conversations.length && (
+              <span className="text-xs text-muted-foreground">
+                (filters active)
+              </span>
+            )}
+          </div>
 
-          <h3 className="text-lg font-semibold mb-3">Recent Website Conversations</h3>
+          <h3 className="text-lg font-semibold mb-3">Conversations</h3>
 
-          {/* Filters */}
+          {/* Filters - ALL optional, no defaults hide data */}
           <div className="flex flex-wrap gap-3 mb-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -169,23 +191,36 @@ export function ChatTranscriptViewer() {
               />
             </div>
 
+            <Select value={channelFilter} onValueChange={setChannelFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Channel" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Channels</SelectItem>
+                <SelectItem value="website">Website</SelectItem>
+                <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="sms">SMS</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="open">Open</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={escalationFilter} onValueChange={setEscalationFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Escalations" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Website Chats</SelectItem>
+                <SelectItem value="all">All Escalations</SelectItem>
                 <SelectItem value="any">Has Escalation</SelectItem>
                 <SelectItem value="jackson">Jackson</SelectItem>
                 <SelectItem value="lance">Lance</SelectItem>
