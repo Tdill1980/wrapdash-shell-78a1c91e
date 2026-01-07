@@ -4299,6 +4299,60 @@ export type Database = {
           },
         ]
       }
+      film_catalog: {
+        Row: {
+          chart_version: string | null
+          created_at: string
+          finish: string | null
+          id: string
+          is_active: boolean
+          manufacturer: string
+          needs_review: boolean
+          official_code: string
+          official_name: string
+          series: string
+          source_file: string | null
+          swatch_hex: string | null
+          swatch_image_url: string | null
+          swatch_lab: Json | null
+          updated_at: string
+        }
+        Insert: {
+          chart_version?: string | null
+          created_at?: string
+          finish?: string | null
+          id?: string
+          is_active?: boolean
+          manufacturer: string
+          needs_review?: boolean
+          official_code: string
+          official_name: string
+          series: string
+          source_file?: string | null
+          swatch_hex?: string | null
+          swatch_image_url?: string | null
+          swatch_lab?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          chart_version?: string | null
+          created_at?: string
+          finish?: string | null
+          id?: string
+          is_active?: boolean
+          manufacturer?: string
+          needs_review?: boolean
+          official_code?: string
+          official_name?: string
+          series?: string
+          source_file?: string | null
+          swatch_hex?: string | null
+          swatch_image_url?: string | null
+          swatch_lab?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inspo_analyses: {
         Row: {
           analysis_data: Json
@@ -7597,6 +7651,42 @@ export type Database = {
       }
     }
     Views: {
+      film_catalog_public: {
+        Row: {
+          finish: string | null
+          id: string | null
+          manufacturer: string | null
+          needs_review: boolean | null
+          official_code: string | null
+          official_name: string | null
+          series: string | null
+          swatch_hex: string | null
+          swatch_image_url: string | null
+        }
+        Insert: {
+          finish?: string | null
+          id?: string | null
+          manufacturer?: string | null
+          needs_review?: boolean | null
+          official_code?: string | null
+          official_name?: string | null
+          series?: string | null
+          swatch_hex?: string | null
+          swatch_image_url?: string | null
+        }
+        Update: {
+          finish?: string | null
+          id?: string | null
+          manufacturer?: string | null
+          needs_review?: boolean | null
+          official_code?: string | null
+          official_name?: string | null
+          series?: string | null
+          swatch_hex?: string | null
+          swatch_image_url?: string | null
+        }
+        Relationships: []
+      }
       instagram_leads_with_emails: {
         Row: {
           conversation_id: string | null
