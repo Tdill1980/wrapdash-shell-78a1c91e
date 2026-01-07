@@ -826,8 +826,14 @@ export default function ApproveFlow() {
                     </div>
                   </div>
                 ) : (
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-sm text-muted-foreground">No design uploaded yet</p>
+                  <div className="aspect-video bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-lg flex items-center justify-center border border-indigo-500/20">
+                    <div className="text-center max-w-xs px-4">
+                      <Sparkles className="w-8 h-8 mx-auto mb-3 text-indigo-400" />
+                      <h4 className="text-sm font-semibold text-foreground mb-1">Design in Progress</h4>
+                      <p className="text-xs text-muted-foreground">
+                        The design team will upload drafts here once work begins. This space will populate automatically.
+                      </p>
+                    </div>
                   </div>
                 )}
               </TabsContent>

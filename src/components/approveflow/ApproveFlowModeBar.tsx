@@ -35,16 +35,16 @@ export function ApproveFlowModeBar({
   };
 
   return (
-    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-4">
+    <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-3 mb-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         {/* Left: Mode Badge + Context */}
         <div className="flex items-center gap-3">
-          <Badge className="bg-amber-500 text-amber-950 hover:bg-amber-500 font-bold text-xs px-3 py-1">
+          <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:opacity-90 font-bold text-xs px-3 py-1">
             <Wrench className="w-3 h-3 mr-1.5" />
             DESIGNER MODE
           </Badge>
-          <div className="hidden sm:block h-4 w-px bg-amber-500/30" />
-          <span className="text-xs text-amber-200/80">
+          <div className="hidden sm:block h-4 w-px bg-indigo-500/30" />
+          <span className="text-xs text-indigo-200/80">
             Order #{orderNumber}
           </span>
         </div>
@@ -52,7 +52,7 @@ export function ApproveFlowModeBar({
         {/* Right: Status */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Status:</span>
-          <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">
+          <Badge variant="outline" className="text-[10px] border-cyan-500/50 text-cyan-400">
             ● {formatStatus(status)}
           </Badge>
         </div>
