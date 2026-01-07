@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power, Instagram } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power, Instagram, Loader2, AlertTriangle } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { AgenticAITab } from "@/components/admin/jordan-dashboard/AgenticAITab";
 import { WrapGuruTab } from "@/components/admin/jordan-dashboard/WrapGuruTab";
@@ -18,6 +19,7 @@ import { EmailTrackingTab } from "@/components/admin/jordan-dashboard/EmailTrack
 import { ToolsTab } from "@/components/admin/jordan-dashboard/ToolsTab";
 import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
 import { RecoveredLeadsTab } from "@/components/admin/jordan-dashboard/RecoveredLeadsTab";
+import { Session } from "@supabase/supabase-js";
 
 const TABS = [
   { id: "control", label: "Agent Control", icon: Power, color: "bg-red-500" },
@@ -37,8 +39,59 @@ const TABS = [
 
 export default function JordanLeeAdminDashboard() {
   const [activeTab, setActiveTab] = useState("control");
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [orgMembership, setOrgMembership] = useState<{
+    organizationId: string;
+    organizationName: string;
+    role: string;
+  } | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Auth state management
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Organization membership check
+  useEffect(() => {
+    if (!session) return;
+
+    const checkMembership = async () => {
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("organization_id, role, organizations(name)")
+        .eq("user_id", session.user.id)
+        .limit(1)
+        .single();
+
+      if (!membership) {
+        setAccessDenied(true);
+      } else {
+        const orgData = membership.organizations as { name: string } | null;
+        setOrgMembership({
+          organizationId: membership.organization_id,
+          organizationName: orgData?.name || "Unknown Organization",
+          role: membership.role
+        });
+      }
+    };
+
+    checkMembership();
+  }, [session]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -52,6 +105,40 @@ export default function JordanLeeAdminDashboard() {
       navigate("/auth");
     }
   };
+
+  // Loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // No session - redirect to auth
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Access denied - no org membership
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground mb-4">
+              You are not a member of any organization. Contact an administrator for access.
+            </p>
+            <Button onClick={handleLogout} variant="outline">
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,7 +155,12 @@ export default function JordanLeeAdminDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
-              Welcome, <span className="font-medium text-foreground">Trish@WePrintWraps.com</span>
+              Logged in as: <span className="font-medium text-foreground">{session.user.email}</span>
+              {orgMembership && (
+                <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                  {orgMembership.organizationName} ({orgMembership.role})
+                </span>
+              )}
             </span>
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-2" />
