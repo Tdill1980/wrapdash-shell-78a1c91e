@@ -5,7 +5,7 @@
 //
 // OS RULES:
 // 1. Validation status appears FIRST (top of card)
-// 2. Colored indicators: 🟢 green = met, 🔴 red = missing
+// 2. Colored indicators: 🔵 cyan = met, 🟣 indigo = missing (premium, not punishing)
 // 3. "Generate Approval Proof" button state is DERIVED from validation
 // 4. Required fields: Total SQ FT, Wrap Scope, 3D Renders
 // 5. Optional fields have N/A toggles
@@ -192,7 +192,7 @@ export function DesignerProductionSpecs({
             </span>
             <Badge 
               variant={isValid ? "default" : "outline"} 
-              className={`text-[10px] ${isValid ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'border-amber-500/50 text-amber-400'}`}
+              className={`text-[10px] ${isValid ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50' : 'border-indigo-500/50 text-indigo-300'}`}
             >
               {metCount} of {totalRequired} requirements met
             </Badge>
@@ -201,15 +201,15 @@ export function DesignerProductionSpecs({
             {validationItems.map((item, idx) => (
               <div key={idx} className="flex items-center gap-2 text-xs">
                 {item.met ? (
-                  <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                  <div className="w-4 h-4 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-3 h-3 text-cyan-500" />
                   </div>
                 ) : (
-                  <div className="w-4 h-4 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <XCircle className="w-3 h-3 text-red-500" />
+                  <div className="w-4 h-4 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                    <XCircle className="w-3 h-3 text-indigo-400" />
                   </div>
                 )}
-                <span className={item.met ? "text-green-400" : "text-red-400"}>
+                <span className={item.met ? "text-cyan-400" : "text-indigo-300"}>
                   {item.label} {item.met ? "✓" : "required"}
                 </span>
               </div>
@@ -226,7 +226,7 @@ export function DesignerProductionSpecs({
                   <Button
                     onClick={handleGenerateProof}
                     disabled={!isValid || isGenerating}
-                    className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 hover:opacity-90 disabled:opacity-50"
                     size="sm"
                   >
                     {isGenerating ? (
