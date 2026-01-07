@@ -332,3 +332,6 @@ verify_jwt = false
 
 [functions.approve-approveflow-proof]
 verify_jwt = false
+
+[functions.generate-colorpro-render]
+verify_jwt = false
