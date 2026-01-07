@@ -3115,6 +3115,72 @@ export type Database = {
           },
         ]
       }
+      conversation_events: {
+        Row: {
+          actor: string
+          conversation_id: string
+          created_at: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          subtype: string | null
+        }
+        Insert: {
+          actor?: string
+          conversation_id: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          payload?: Json | null
+          subtype?: string | null
+        }
+        Update: {
+          actor?: string
+          conversation_id?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          subtype?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           ai_paused: boolean

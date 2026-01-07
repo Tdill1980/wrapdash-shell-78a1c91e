@@ -5,12 +5,24 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWebsiteChats, useWebsiteChatStats, useConversationTotalCount } from "@/hooks/useWebsiteChats";
+import { useEscalationStats } from "@/hooks/useConversationEvents";
 import { ChatTranscriptRow } from "./ChatTranscriptRow";
 import { ChatDetailModal } from "./ChatDetailModal";
-import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin } from "lucide-react";
+import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, isToday } from "date-fns";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
+
+// Escalation type quick filters
+const ESCALATION_QUICK_FILTERS = [
+  { value: 'all', label: 'All', color: 'bg-muted' },
+  { value: 'any', label: 'Has Escalation', color: 'bg-orange-500/10 text-orange-500' },
+  { value: 'jackson', label: 'Jackson', color: 'bg-red-500/10 text-red-500' },
+  { value: 'lance', label: 'Lance', color: 'bg-blue-500/10 text-blue-500' },
+  { value: 'design', label: 'Design', color: 'bg-purple-500/10 text-purple-500' },
+  { value: 'bulk', label: 'Bulk', color: 'bg-green-500/10 text-green-500' },
+  { value: 'none', label: 'No Escalation', color: 'bg-muted text-muted-foreground' },
+];
 
 export function ChatTranscriptViewer() {
   const { conversations, isLoading, refetch } = useWebsiteChats();
@@ -55,8 +67,9 @@ export function ChatTranscriptViewer() {
     // Escalation filter
     if (escalationFilter !== "all") {
       const escalations = convo.chat_state?.escalations_sent || [];
+      if (escalationFilter === "none" && escalations.length > 0) return false;
       if (escalationFilter === "any" && escalations.length === 0) return false;
-      if (escalationFilter !== "any" && !escalations.includes(escalationFilter)) return false;
+      if (!['any', 'none'].includes(escalationFilter) && !escalations.includes(escalationFilter)) return false;
     }
 
     return true;
@@ -71,6 +84,9 @@ export function ChatTranscriptViewer() {
   const escalationCount = conversations.filter(c => 
     (c.chat_state?.escalations_sent?.length || 0) > 0
   ).length;
+
+  // Escalation stats from events table
+  const { data: escalationStats } = useEscalationStats();
 
   // Get selected conversation details for right panel
   const selectedGeo = selectedConversation?.metadata?.geo;
@@ -115,8 +131,10 @@ export function ChatTranscriptViewer() {
                 <AlertCircle className="h-5 w-5 text-orange-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{escalationCount}</p>
-                <p className="text-xs text-muted-foreground">Escalations</p>
+                <p className="text-2xl font-bold">{escalationStats?.total || escalationCount}</p>
+                <p className="text-xs text-muted-foreground">
+                  Escalations ({escalationStats?.today || 0} today)
+                </p>
               </div>
             </div>
           </CardContent>
@@ -135,6 +153,30 @@ export function ChatTranscriptViewer() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Escalation Quick Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+          <Zap className="h-4 w-4" />
+          Escalations:
+        </span>
+        {ESCALATION_QUICK_FILTERS.map((filter) => (
+          <Button
+            key={filter.value}
+            variant={escalationFilter === filter.value ? "default" : "outline"}
+            size="sm"
+            className={escalationFilter === filter.value ? "" : filter.color}
+            onClick={() => setEscalationFilter(filter.value)}
+          >
+            {filter.label}
+            {filter.value !== 'all' && filter.value !== 'none' && escalationStats?.byType?.[filter.value] && (
+              <Badge variant="secondary" className="ml-1 px-1.5">
+                {escalationStats.byType[filter.value]}
+              </Badge>
+            )}
+          </Button>
+        ))}
       </div>
 
       {/* Main Content - Split View */}
@@ -215,18 +257,6 @@ export function ChatTranscriptViewer() {
               </SelectContent>
             </Select>
 
-            <Select value={escalationFilter} onValueChange={setEscalationFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Escalations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Escalations</SelectItem>
-                <SelectItem value="any">Has Escalation</SelectItem>
-                <SelectItem value="jackson">Jackson</SelectItem>
-                <SelectItem value="lance">Lance</SelectItem>
-                <SelectItem value="design">Design</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Session List */}
