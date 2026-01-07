@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "./supabase-client.ts";
 
 /**
  * Helper function to log email sends to the approveflow_email_logs table
