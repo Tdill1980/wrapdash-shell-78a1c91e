@@ -9,6 +9,12 @@ const corsHeaders = {
 // Email kill switch - set to true when ready for production
 const SEND_CUSTOMER_EMAILS = false;
 
+// ============================================
+// OS CONSTANT — DO NOT DUPLICATE TEXT
+// All customer-facing timelines must derive from this single source.
+// ============================================
+const FIRST_PROOF_TIMELINE_DAYS = 10;
+
 // Design product IDs that should go to ApproveFlow
 const DESIGN_PRODUCT_IDS = [
   234,   // Custom Vehicle Wrap Design
@@ -355,25 +361,55 @@ serve(async (req) => {
     // designRequirements already extracted above - no need to re-extract
 
     // Create automatic welcome chat message
+    // OS RULE: Message content is deterministic based on ingested state
     const hasArtwork = uploadedFiles.length > 0;
+    const hasDesignInstructions = designRequirements && designRequirements.trim().length > 0;
+    const hasIntakeData = hasArtwork || hasDesignInstructions;
     
-    let welcomeMessage = `👋 Welcome to ApproveFlow! Your order #${orderNumber} has been received.\n\n`;
+    let welcomeMessage = '';
     
-    // Add file status
-    if (hasArtwork) {
-      welcomeMessage += `✅ **Artwork Received:** We've received ${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''} from you. Thank you!\n\n`;
+    if (hasIntakeData) {
+      // DATA RECEIVED MESSAGE
+      welcomeMessage = `👋 Welcome to ApproveFlow!
+
+Your order #${orderNumber} has been received successfully.
+
+✅ **Files received:** ${hasArtwork ? `We've received ${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''} you uploaded during checkout.` : 'No files uploaded yet.'}
+📝 **Design instructions received:** ${hasDesignInstructions ? 'Your design details have been added to your project.' : 'No specific instructions provided.'}
+
+Our design team is now reviewing everything and getting started.
+
+👉 **Next steps:**
+You'll receive access to your **MyApproveFlow** page, where you can:
+• View all design proofs and updates
+• Send messages or additional details
+• Upload more files, examples, or reference material
+• Review, request revisions, and approve your design when ready
+
+You can also track your order anytime through **MyShopFlow**.
+
+⏱️ **Timeline:** Your first design proof is typically delivered within **${FIRST_PROOF_TIMELINE_DAYS} business days**.
+
+If you think of anything else you'd like to add, just send us a message in MyApproveFlow — we're excited to work on your project!`;
     } else {
-      welcomeMessage += `⚠️ **Artwork Missing:** We haven't received any design files yet. Please upload your artwork or email it to us to get started.\n\n`;
+      // DATA MISSING MESSAGE
+      welcomeMessage = `👋 Welcome to ApproveFlow!
+
+Your order #${orderNumber} has been received successfully.
+
+⚠️ **Next step needed:** We haven't received design files or detailed instructions yet.
+
+👉 Please visit your **MyApproveFlow** page to:
+• Upload files, logos, or examples
+• Share design instructions or notes
+• Message our design team directly
+
+Once intake is complete, our team will get started right away.
+
+⏱️ **Timeline:** Your first design proof is typically delivered within **${FIRST_PROOF_TIMELINE_DAYS} business days** after intake is complete.
+
+You can also track your order anytime through **MyShopFlow**.`;
     }
-    
-    // Add design requirements
-    if (designRequirements && designRequirements.trim()) {
-      welcomeMessage += `📋 **Design Requirements:**\n${designRequirements}\n\n`;
-    } else {
-      welcomeMessage += `📋 **Design Requirements:** No specific requirements provided.\n\n`;
-    }
-    
-    welcomeMessage += `Our design team will review your order and get started right away. We'll keep you updated here on your progress!`;
     
     // Insert welcome message into chat
     await supabase.from('approveflow_chat').insert({
