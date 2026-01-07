@@ -21,6 +21,7 @@ import ShopFlowInternalList from "./pages/ShopFlowInternalList";
 import ShopFlowBulkAdmin from "./pages/ShopFlowBulkAdmin";
 import { TrackJob } from "./modules/shopflow";
 import MyShopFlow from "./pages/MyShopFlow";
+import MyApproveFlow from "./pages/MyApproveFlow";
 import MightyCustomer from "./pages/MightyCustomer";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
@@ -134,6 +135,7 @@ const App = () => (
             <Route path="/approveflow/:projectId" element={<ApproveFlow />} />
             <Route path="/approveflow/:projectId/proof" element={<ApproveFlowProof />} />
             <Route path="/customer/:projectId" element={<CustomerPortal />} />
+            <Route path="/myapproveflow/:orderNumber" element={<MyApproveFlow />} />
             <Route path="/email-campaigns" element={<MightyMail />} />
             <Route path="/admin/mightymail" element={<MightyMailAdmin />} />
             <Route path="/admin/mightymail/quotes" element={<MightyMailQuotes />} />
