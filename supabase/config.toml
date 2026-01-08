@@ -332,3 +332,6 @@ verify_jwt = false
 
 [functions.approve-approveflow-proof]
 verify_jwt = false
+
+[functions.send-admin-reply]
+verify_jwt = false
