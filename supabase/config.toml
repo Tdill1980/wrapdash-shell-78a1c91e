@@ -356,3 +356,6 @@ verify_jwt = false
 
 [functions.resync-woocommerce-order]
 verify_jwt = false
+
+[functions.process-woocommerce-resync]
+verify_jwt = false

@@ -80,6 +80,8 @@ export function ApproveFlowSourceOfTruth({
   };
 
   // Handle re-sync from WooCommerce
+  // Uses woo-proxy to fetch (browser → woo-proxy → WooCommerce) to avoid Cloudflare blocks
+  // Then processes the data via process-woocommerce-resync edge function
   const handleResync = async () => {
     if (!projectId) {
       toast({
@@ -92,22 +94,44 @@ export function ApproveFlowSourceOfTruth({
 
     setIsResyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('resync-woocommerce-order', {
-        body: { projectId },
+      // Step 1: Fetch order data from WooCommerce via woo-proxy
+      // Browser requests aren't blocked by Cloudflare like edge function IPs
+      const { data: orderData, error: proxyError } = await supabase.functions.invoke('woo-proxy', {
+        body: { 
+          action: 'getOrder',
+          orderNumber: orderNumber,
+        },
       });
 
-      if (error) throw error;
+      if (proxyError) throw proxyError;
+      
+      if (!orderData || (Array.isArray(orderData) && orderData.length === 0)) {
+        throw new Error(`Order #${orderNumber} not found in WooCommerce`);
+      }
 
-      if (data?.success) {
+      // woo-proxy returns an array for getOrder
+      const order = Array.isArray(orderData) ? orderData[0] : orderData;
+
+      // Step 2: Process the order data and update ApproveFlow
+      const { data: processResult, error: processError } = await supabase.functions.invoke('process-woocommerce-resync', {
+        body: { 
+          projectId,
+          orderData: order,
+        },
+      });
+
+      if (processError) throw processError;
+
+      if (processResult?.success) {
         toast({
           title: "Re-sync complete",
-          description: data.message || "Order data refreshed from WooCommerce",
+          description: processResult.message || "Order data refreshed from WooCommerce",
         });
         
         // Trigger parent refresh
         onResync?.();
       } else {
-        throw new Error(data?.error || "Re-sync failed");
+        throw new Error(processResult?.error || "Re-sync failed");
       }
     } catch (error: any) {
       console.error('[ResyncWC] Error:', error);
