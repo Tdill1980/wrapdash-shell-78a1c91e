@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { MapPin, Mail, Phone, Clock, Globe, Car, AlertCircle, User, MessageSquare, FileText, Download, Receipt, CheckCircle, XCircle, Reply } from "lucide-react";
+import { MapPin, Mail, Phone, Clock, Globe, Car, AlertCircle, User, MessageSquare, FileText, Download, Receipt, CheckCircle, XCircle, Reply, Upload } from "lucide-react";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 import { useConversationEvents } from "@/hooks/useConversationEvents";
 import { useConversationQuotes } from "@/hooks/useConversationQuotes";
@@ -14,6 +14,7 @@ import { EscalationTimeline } from "./EscalationTimeline";
 import { EmailReceiptViewer } from "./EmailReceiptViewer";
 import { EscalationStatusCard } from "./EscalationStatusCard";
 import { InternalReplyPanel } from "./InternalReplyPanel";
+import { QuoteUploadPanel } from "./QuoteUploadPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ interface ChatDetailModalProps {
 export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetailModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReplyPanel, setShowReplyPanel] = useState(false);
+  const [showQuoteUpload, setShowQuoteUpload] = useState(false);
   const queryClient = useQueryClient();
   const { data: events, isLoading: eventsLoading } = useConversationEvents(conversation?.id || null);
   const { data: quotes, isLoading: quotesLoading } = useConversationQuotes(conversation?.id || null);
@@ -446,17 +448,51 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
               </Card>
             )}
 
-            {/* Reply to Customer Button */}
-            {contact?.email && !contact.email.includes('@capture.local') && (
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => setShowReplyPanel(true)}
-              >
-                <Reply className="h-4 w-4" />
-                Reply to Customer
-              </Button>
-            )}
+            {/* Quick Actions Card */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {/* Reply to Customer */}
+                {contact?.email && !contact.email.includes('@capture.local') && (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 justify-start"
+                    size="sm"
+                    onClick={() => {
+                      setShowReplyPanel(true);
+                      setShowQuoteUpload(false);
+                    }}
+                  >
+                    <Reply className="h-4 w-4" />
+                    Reply to Customer
+                  </Button>
+                )}
+
+                {/* Upload Quote */}
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 justify-start"
+                  size="sm"
+                  onClick={() => {
+                    setShowQuoteUpload(true);
+                    setShowReplyPanel(false);
+                  }}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload Quote
+                </Button>
+
+                {/* Download Assets (if any) */}
+                {assetEvents.length > 0 && (
+                  <div className="text-xs text-muted-foreground pt-1 border-t">
+                    <span className="font-medium">{assetEvents.length} file(s) attached</span>
+                    <span className="ml-1">- see Assets tab</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Internal Reply Panel */}
             {showReplyPanel && contact?.email && !contact.email.includes('@capture.local') && (
@@ -468,6 +504,21 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                 onEmailSent={() => {
                   setShowReplyPanel(false);
                   queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
+                }}
+              />
+            )}
+
+            {/* Quote Upload Panel */}
+            {showQuoteUpload && (
+              <QuoteUploadPanel
+                conversation={conversation}
+                customerEmail={contact?.email && !contact.email.includes('@capture.local') ? contact.email : null}
+                customerName={contact?.name || null}
+                onClose={() => setShowQuoteUpload(false)}
+                onQuoteUploaded={() => {
+                  setShowQuoteUpload(false);
+                  queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
+                  queryClient.invalidateQueries({ queryKey: ['conversation-quotes', conversation.id] });
                 }}
               />
             )}
