@@ -182,20 +182,12 @@ serve(async (req) => {
       color: gray
     });
 
-    // Right: Order info (from data)
-    const orderStr = `Order #${pv.order_number}`;
-    page.drawText(orderStr, {
-      x: width - margin - fontBold.widthOfTextAtSize(orderStr, 14),
-      y: height - 48,
-      size: 14,
-      font: fontBold,
-      color: black
-    });
+    // Right: Tagline only (order number moves to footer)
     page.drawText(BRANDING.tagline, {
-      x: width - margin - font.widthOfTextAtSize(BRANDING.tagline, 10),
-      y: height - 66,
-      size: 10,
-      font,
+      x: width - margin - fontBold.widthOfTextAtSize(BRANDING.tagline, 12),
+      y: height - 48,
+      size: 12,
+      font: fontBold,
       color: gray
     });
 
@@ -486,8 +478,28 @@ serve(async (req) => {
     }
 
     // ============================================
-    // PAGE 2: FULL TERMS (Optional)
+    // FOOTER - ORDER NUMBER (BOTTOM RIGHT)
     // ============================================
+    const footerY = 18;
+    
+    // Left: Branding
+    page.drawText(`${BRANDING.systemName} | ${BRANDING.toolName}`, {
+      x: margin,
+      y: footerY,
+      size: 8,
+      font,
+      color: gray
+    });
+
+    // Right: Order number
+    const orderFooterStr = `Order #${pv.order_number}`;
+    page.drawText(orderFooterStr, {
+      x: width - margin - fontBold.widthOfTextAtSize(orderFooterStr, 10),
+      y: footerY,
+      size: 10,
+      font: fontBold,
+      color: black
+    });
 
     if (pv.include_full_terms) {
       const p2 = pdf.addPage([612, 792]); // Portrait letter
