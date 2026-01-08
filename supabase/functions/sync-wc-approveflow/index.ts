@@ -68,7 +68,13 @@ serve(async (req) => {
     console.log('WooCommerce webhook received:', webhook);
 
     // Parse WooCommerce order data
-    const orderNumber = webhook.number?.toString() || webhook.id?.toString() || webhook.order_key;
+    // CRITICAL: Always use customer-facing order number (webhook.number), NEVER fall back to internal ID (webhook.id)
+    const orderNumber = webhook.number?.toString();
+    if (!orderNumber) {
+      console.error('CRITICAL: webhook.number missing - cannot sync without customer-facing order number');
+      console.error('webhook.id was:', webhook.id, '- this is NOT the customer order number');
+      throw new Error('WooCommerce webhook missing required order number field');
+    }
     const customerName = `${webhook.billing?.first_name || ''} ${webhook.billing?.last_name || ''}`.trim();
     const orderTotal = parseFloat(webhook.total || '0');
     const customerEmail = webhook.billing?.email;
