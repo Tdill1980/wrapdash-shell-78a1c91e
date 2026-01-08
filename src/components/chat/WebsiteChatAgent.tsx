@@ -109,10 +109,11 @@ export function WebsiteChatAgent() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-xl 
-        bg-gradient-to-br from-primary via-primary/80 to-accent
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full 
+        shadow-[0_8px_30px_rgba(236,72,153,0.4)]
+        bg-gradient-to-br from-pink-500 via-pink-600 to-rose-600
         flex items-center justify-center text-white 
-        hover:scale-110 transition-all animate-pulse"
+        hover:scale-110 hover:shadow-[0_12px_40px_rgba(236,72,153,0.5)] transition-all"
       >
         <MessageCircle className="w-7 h-7" />
       </button>
@@ -122,37 +123,41 @@ export function WebsiteChatAgent() {
   // Open chat window
   return (
     <div
-      className="fixed bottom-6 right-6 z-50 w-[360px] max-w-full
-      bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl 
+      className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-48px)]
+      bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] 
       flex flex-col overflow-hidden animate-fade-in"
     >
-      {/* HEADER */}
-      <div className="p-4 border-b border-border bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-foreground font-bold">
-            WPW AI TEAM
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          </div>
-          <p className="text-xs text-muted-foreground">Online now</p>
+      {/* HEADER - Vibrant Pink Gradient */}
+      <div className="px-5 py-4 bg-gradient-to-r from-pink-500 via-pink-600 to-rose-500 flex items-center gap-3">
+        <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg backdrop-blur-sm">
+          J
         </div>
-
+        <div className="flex-1">
+          <div className="flex items-center gap-2 text-white font-bold text-lg">
+            Jordan
+          </div>
+          <div className="flex items-center gap-1.5 text-white/80 text-xs">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]" />
+            WPW Live Chat Agent • Online
+          </div>
+        </div>
         <button
           onClick={() => setIsOpen(false)}
-          className="text-muted-foreground hover:text-foreground transition"
+          className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition"
         >
-          <X />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* MESSAGES */}
-      <div className="p-4 space-y-3 h-80 overflow-y-auto">
+      <div className="p-4 space-y-3 h-80 overflow-y-auto bg-gray-50">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm ${
+            className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
               msg.role === "assistant"
-                ? "bg-gradient-to-br from-primary to-accent text-primary-foreground self-start"
-                : "bg-muted text-foreground self-end ml-auto"
+                ? "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 text-white rounded-2xl rounded-tl-md self-start shadow-[0_4px_15px_rgba(59,130,246,0.3)]"
+                : "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-md self-end ml-auto shadow-[0_4px_15px_rgba(37,99,235,0.3)]"
             }`}
           >
             {msg.content}
@@ -161,13 +166,13 @@ export function WebsiteChatAgent() {
 
         {/* Quick Actions */}
         {showQuick && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 pt-2">
             {QUICK_ACTIONS.map((qa) => (
               <button
                 key={qa.label}
                 onClick={() => sendMessage(qa.message)}
-                className="px-3 py-2 text-xs rounded-xl border border-primary/30
-                bg-primary/10 text-primary hover:bg-primary/20 transition flex items-center gap-2"
+                className="px-3 py-2.5 text-xs rounded-xl border-2 border-pink-200
+                bg-white text-pink-600 font-medium hover:bg-pink-50 hover:border-pink-300 transition-all shadow-sm"
               >
                 {qa.label}
               </button>
@@ -177,9 +182,9 @@ export function WebsiteChatAgent() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            WPW AI TEAM is typing…
+          <div className="flex items-center gap-2 text-gray-500 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin text-pink-500" />
+            Jordan is typing…
           </div>
         )}
 
@@ -187,24 +192,30 @@ export function WebsiteChatAgent() {
       </div>
 
       {/* INPUT BAR */}
-      <div className="p-3 flex gap-2 items-center border-t border-border">
+      <div className="p-3 flex gap-2 items-center border-t border-gray-100 bg-white">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleEnter}
-          placeholder="Type your message…"
-          className="flex-1 px-4 py-2 rounded-full bg-muted text-foreground 
-          placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary"
+          placeholder="Type a message..."
+          className="flex-1 px-4 py-3 rounded-full bg-gray-100 text-gray-900 
+          placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-pink-300 focus:bg-white transition-all"
         />
 
         <button
           disabled={isLoading || !input.trim()}
           onClick={() => sendMessage()}
-          className="w-10 h-10 rounded-full flex items-center justify-center
-          bg-gradient-to-br from-primary to-accent text-primary-foreground hover:opacity-90 transition disabled:opacity-50"
+          className="w-11 h-11 rounded-full flex items-center justify-center
+          bg-gradient-to-br from-pink-500 to-rose-500 text-white 
+          hover:shadow-[0_4px_20px_rgba(236,72,153,0.4)] transition-all disabled:opacity-50"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-5 h-5" />
         </button>
+      </div>
+
+      {/* Footer */}
+      <div className="py-2 text-center text-xs text-gray-400 bg-white border-t border-gray-50">
+        Powered by <span className="text-pink-500 font-medium">weprintwraps.com</span>
       </div>
     </div>
   );
