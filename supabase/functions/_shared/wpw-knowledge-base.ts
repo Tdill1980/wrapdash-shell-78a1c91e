@@ -48,8 +48,10 @@ PRICING CALCULATION:
 - Example: Ford F-150 (~250 sqft) = $1,318 for material
 
 SHIPPING:
-- FREE shipping on orders over $750
+- Orders $750+: FREE shipping
+- Orders under $750: $30 flat rate ground shipping
 - Standard shipping: 1-3 business days
+- No order minimums - order any quantity!
 
 All prices include lamination. No hidden fees.
 `,

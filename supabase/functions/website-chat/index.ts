@@ -246,9 +246,16 @@ COMMUNICATION STYLE:
 
 WPW GROUND TRUTH:
 - Turnaround: 1-2 business days for print
-- FREE shipping over $750
+- Shipping: Orders $750+ = FREE | Orders under $750 = $30 flat rate ground
+- No order minimums - you can order any quantity!
 - All wraps include lamination
 - Quality guarantee: 100% - we reprint at no cost
+
+📦 SHIPPING FAQ (KNOW THIS):
+- "$30 for shipping" = Standard ground shipping for orders under $750
+- "Did shipping go up?" = No, $30 flat rate has been our standard for orders under $750
+- "Job minimum?" = No minimums - order any amount! The $30 is just shipping, not a minimum fee
+- "FREE shipping?" = Yes, on orders $750 or more
 
 ${getApprovedLinksForPrompt()}
 
