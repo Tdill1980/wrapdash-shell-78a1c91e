@@ -821,46 +821,50 @@ Return JSON ONLY:
 
     console.log(`Found ${videos.length} videos, applying deterministic tag-based selection...`);
 
-    // Filter out already-edited content
+    // Filter out already-edited content (prefer raw, but don't be too strict)
     const rawVideos = videosWithTags.filter(v => {
       const filename = (v.original_filename || "").toLowerCase();
-      return !filename.includes("reel") && 
-             !filename.includes("edited") && 
-             !filename.includes("final") &&
-             !filename.includes("ai-") &&
-             !filename.includes("render");
+      // Only filter out obviously edited content
+      return !filename.includes("edited") && 
+             !filename.includes("final_export") &&
+             !filename.includes("ai-reel-") &&
+             !filename.includes("render_output");
     });
 
-    // FAIL-LOUD: Not enough raw clips
-    if (rawVideos.length < 3) {
-      console.warn(`FAIL-LOUD: Only ${rawVideos.length} raw clips available.`);
+    // If strict filter leaves us with less than 2 clips, use ALL videos as fallback
+    const workingVideos = rawVideos.length >= 2 ? rawVideos : videosWithTags;
+    
+    if (workingVideos.length < 2) {
+      console.warn(`FAIL-LOUD: Only ${workingVideos.length} clips available total.`);
       return new Response(JSON.stringify({
-        error: "INSUFFICIENT_RAW_CLIPS",
-        message: `Only ${rawVideos.length} raw clips available after filtering.`,
-        suggestion: "Upload more source footage or adjust filters."
+        error: "INSUFFICIENT_CLIPS",
+        message: `Only ${workingVideos.length} clips available.`,
+        suggestion: "Upload more source footage to your library."
       }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
+    
+    console.log(`Using ${workingVideos.length} clips (${rawVideos.length} passed raw filter, ${videosWithTags.length} total)`)
 
     // ═══════════════════════════════════════════════════════════════
     // DETERMINISTIC TAG-BASED FILTERING (NEW ARCHITECTURE)
     // Use media_tags for precise filtering - AI annotates, system decides
     // ═══════════════════════════════════════════════════════════════
-    let tagFilteredVideos = rawVideos;
+    let tagFilteredVideos = workingVideos;
     let tagFilterApplied = false;
 
     if (requiredTags.length > 0) {
-      const tagMatched = rawVideos.filter(v => {
+      const tagMatched = workingVideos.filter(v => {
         const videoTags = v.mediaTags || [];
         // Must have at least one required tag
         return requiredTags.some(rt => videoTags.includes(rt));
       });
       
-      console.log(`Tag filter: ${tagMatched.length}/${rawVideos.length} clips match required tags [${requiredTags.join(", ")}]`);
+      console.log(`Tag filter: ${tagMatched.length}/${workingVideos.length} clips match required tags [${requiredTags.join(", ")}]`);
       
-      if (tagMatched.length >= 3) {
+      if (tagMatched.length >= 2) {
         tagFilteredVideos = tagMatched;
         tagFilterApplied = true;
         console.log(`✅ Using ${tagMatched.length} tag-matched clips`);
@@ -869,7 +873,7 @@ Return JSON ONLY:
         // Prioritize tag-matched, then include others
         tagFilteredVideos = [
           ...tagMatched,
-          ...rawVideos.filter(v => !tagMatched.includes(v))
+          ...workingVideos.filter(v => !tagMatched.includes(v))
         ];
       }
     }
@@ -885,7 +889,7 @@ Return JSON ONLY:
       const styleMatched = filterByStyleTags(tagFilteredVideos, dara_format);
       console.log(`Style filter "${dara_format}": ${styleMatched.length}/${tagFilteredVideos.length} clips match tags`);
       
-      if (styleMatched.length >= 3) {
+      if (styleMatched.length >= 2) {
         styleFilteredVideos = styleMatched;
         styleFilterApplied = true;
         console.log(`✅ Using ${styleMatched.length} style-matched clips for ${dara_format}`);
