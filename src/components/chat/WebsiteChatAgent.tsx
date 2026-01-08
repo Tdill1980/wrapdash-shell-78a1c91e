@@ -104,16 +104,16 @@ export function WebsiteChatAgent() {
     }
   };
 
-  // Closed bubble
+  // Closed bubble - Purple/Magenta gradient
   if (!isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full 
-        shadow-[0_8px_30px_rgba(236,72,153,0.4)]
-        bg-gradient-to-br from-pink-500 via-pink-600 to-rose-600
+        shadow-[0_8px_30px_rgba(168,85,247,0.5)]
+        bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500
         flex items-center justify-center text-white 
-        hover:scale-110 hover:shadow-[0_12px_40px_rgba(236,72,153,0.5)] transition-all"
+        hover:scale-110 hover:shadow-[0_12px_40px_rgba(168,85,247,0.6)] transition-all"
       >
         <MessageCircle className="w-7 h-7" />
       </button>
@@ -124,11 +124,11 @@ export function WebsiteChatAgent() {
   return (
     <div
       className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-48px)]
-      bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] 
-      flex flex-col overflow-hidden animate-fade-in"
+      bg-[#1a1a2e] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.4)] 
+      flex flex-col overflow-hidden animate-fade-in border border-white/10"
     >
-      {/* HEADER - Vibrant Pink Gradient */}
-      <div className="px-5 py-4 bg-gradient-to-r from-pink-500 via-pink-600 to-rose-500 flex items-center gap-3">
+      {/* HEADER - Purple/Blue/Magenta Gradient */}
+      <div className="px-5 py-4 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 flex items-center gap-3">
         <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg backdrop-blur-sm">
           J
         </div>
@@ -149,15 +149,15 @@ export function WebsiteChatAgent() {
         </button>
       </div>
 
-      {/* MESSAGES */}
-      <div className="p-4 space-y-3 h-80 overflow-y-auto bg-gray-50">
+      {/* MESSAGES - Dark background */}
+      <div className="p-4 space-y-3 h-80 overflow-y-auto bg-[#16162a]">
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
               msg.role === "assistant"
-                ? "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 text-white rounded-2xl rounded-tl-md self-start shadow-[0_4px_15px_rgba(59,130,246,0.3)]"
-                : "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-md self-end ml-auto shadow-[0_4px_15px_rgba(37,99,235,0.3)]"
+                ? "bg-gradient-to-br from-fuchsia-500 via-purple-500 to-pink-500 text-white rounded-2xl rounded-tl-md self-start shadow-[0_4px_15px_rgba(168,85,247,0.4)]"
+                : "bg-[#2a2a4a] text-white rounded-2xl rounded-tr-md self-end ml-auto border border-white/10"
             }`}
           >
             {msg.content}
@@ -171,8 +171,8 @@ export function WebsiteChatAgent() {
               <button
                 key={qa.label}
                 onClick={() => sendMessage(qa.message)}
-                className="px-3 py-2.5 text-xs rounded-xl border-2 border-pink-200
-                bg-white text-pink-600 font-medium hover:bg-pink-50 hover:border-pink-300 transition-all shadow-sm"
+                className="px-3 py-2.5 text-xs rounded-xl border border-purple-500/30
+                bg-[#2a2a4a] text-white font-medium hover:bg-purple-500/20 hover:border-purple-400 transition-all"
               >
                 {qa.label}
               </button>
@@ -182,8 +182,8 @@ export function WebsiteChatAgent() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center gap-2 text-gray-500 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-pink-500" />
+          <div className="flex items-center gap-2 text-purple-300 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin text-fuchsia-400" />
             Jordan is typing…
           </div>
         )}
@@ -191,31 +191,31 @@ export function WebsiteChatAgent() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* INPUT BAR */}
-      <div className="p-3 flex gap-2 items-center border-t border-gray-100 bg-white">
+      {/* INPUT BAR - Dark */}
+      <div className="p-3 flex gap-2 items-center border-t border-white/10 bg-[#1a1a2e]">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleEnter}
           placeholder="Type a message..."
-          className="flex-1 px-4 py-3 rounded-full bg-gray-100 text-gray-900 
-          placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-pink-300 focus:bg-white transition-all"
+          className="flex-1 px-4 py-3 rounded-full bg-[#2a2a4a] text-white 
+          placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-purple-500 transition-all border border-white/10"
         />
 
         <button
           disabled={isLoading || !input.trim()}
           onClick={() => sendMessage()}
           className="w-11 h-11 rounded-full flex items-center justify-center
-          bg-gradient-to-br from-pink-500 to-rose-500 text-white 
-          hover:shadow-[0_4px_20px_rgba(236,72,153,0.4)] transition-all disabled:opacity-50"
+          bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-500 text-white 
+          hover:shadow-[0_4px_20px_rgba(168,85,247,0.5)] transition-all disabled:opacity-50"
         >
           <Send className="w-5 h-5" />
         </button>
       </div>
 
-      {/* Footer */}
-      <div className="py-2 text-center text-xs text-gray-400 bg-white border-t border-gray-50">
-        Powered by <span className="text-pink-500 font-medium">weprintwraps.com</span>
+      {/* Footer - Dark */}
+      <div className="py-2 text-center text-xs text-gray-500 bg-[#1a1a2e] border-t border-white/5">
+        Powered by <span className="text-fuchsia-400 font-medium">weprintwraps.com</span>
       </div>
     </div>
   );
