@@ -225,7 +225,7 @@ You may suggest:
 Example suggestion:
 "We're getting a lot of 'how fast can you print?' questions today. Want me to flag this to Emily for content?"`,
     responseStyle: {
-      maxLength: 250,
+      maxLength: 800,
       emojiLevel: "minimal",
       formality: "friendly",
       signOff: "",

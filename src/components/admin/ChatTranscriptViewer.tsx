@@ -11,8 +11,17 @@ import { ChatDetailModal } from "./ChatDetailModal";
 import { NeedsActionQueue } from "./NeedsActionQueue";
 import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format, isToday } from "date-fns";
+import { format, isToday, isYesterday, parseISO } from "date-fns";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
+
+// Helper function to format date headers
+function formatDateHeader(dateKey: string): string {
+  if (dateKey === 'unknown') return 'Unknown Date';
+  const date = parseISO(dateKey);
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+  return format(date, 'EEEE, MMMM d, yyyy');
+}
 
 // Escalation type quick filters
 const ESCALATION_QUICK_FILTERS = [
@@ -75,6 +84,21 @@ export function ChatTranscriptViewer() {
 
     return true;
   });
+
+  // Group conversations by date
+  const groupedConversations = filteredConversations.reduce((groups, convo) => {
+    const date = convo.created_at 
+      ? format(new Date(convo.created_at), 'yyyy-MM-dd') 
+      : 'unknown';
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(convo);
+    return groups;
+  }, {} as Record<string, ChatConversation[]>);
+
+  // Sort dates (newest first)
+  const sortedDates = Object.keys(groupedConversations).sort((a, b) => 
+    b.localeCompare(a)
+  );
 
   const handleRowClick = (convo: ChatConversation) => {
     setSelectedConversation(convo);
@@ -286,13 +310,29 @@ export function ChatTranscriptViewer() {
             </div>
           ) : (
             <ScrollArea className="h-[600px] pr-4">
-              {filteredConversations.map((convo) => (
-                <ChatTranscriptRow
-                  key={convo.id}
-                  conversation={convo}
-                  onClick={() => handleRowClick(convo)}
-                  isSelected={selectedConversation?.id === convo.id}
-                />
+              {sortedDates.map((dateKey) => (
+                <div key={dateKey} className="mb-4">
+                  {/* Date Header */}
+                  <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 mb-2 border-b">
+                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {formatDateHeader(dateKey)}
+                      <Badge variant="secondary" className="ml-auto">
+                        {groupedConversations[dateKey].length}
+                      </Badge>
+                    </h4>
+                  </div>
+                  
+                  {/* Conversations for this date */}
+                  {groupedConversations[dateKey].map((convo) => (
+                    <ChatTranscriptRow
+                      key={convo.id}
+                      conversation={convo}
+                      onClick={() => handleRowClick(convo)}
+                      isSelected={selectedConversation?.id === convo.id}
+                    />
+                  ))}
+                </div>
               ))}
             </ScrollArea>
           )}
