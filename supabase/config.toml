@@ -350,3 +350,6 @@ verify_jwt = false
 
 [functions.backfill-approveflow-order-numbers]
 verify_jwt = false
+
+[functions.apply-render-branding]
+verify_jwt = false

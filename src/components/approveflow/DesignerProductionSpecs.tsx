@@ -263,35 +263,46 @@ export function DesignerProductionSpecs({
         )}
 
         {/* ============================================ */}
-        {/* 3️⃣ ACTION BUTTONS — OS RULE: GENERATE 3D → PROOF → EMAIL */}
+        {/* 3️⃣ ACTION BUTTONS — OS RULE: ALWAYS VISIBLE, DISABLED WHEN NOT READY */}
         {/* ============================================ */}
         <div className="pt-4 border-t border-border space-y-3">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase">Actions</h4>
           
-          {/* Generate 3D Render */}
-          {hasVersions && onGenerate3D && (
-            <Button
-              onClick={onGenerate3D}
-              disabled={isGenerating3D}
-              size="sm"
-              variant="outline"
-              className="w-full gap-2"
-            >
-              {isGenerating3D ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Generating 3D...
-                </>
-              ) : (
-                <>
-                  <Box className="w-3 h-3" />
-                  Generate 3D Render
-                </>
+          {/* Generate 3D Render — ALWAYS VISIBLE */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    onClick={onGenerate3D}
+                    disabled={!hasVersions || isGenerating3D || !onGenerate3D}
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-2"
+                  >
+                    {isGenerating3D ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Generating 3D...
+                      </>
+                    ) : (
+                      <>
+                        <Box className="w-3 h-3" />
+                        Generate 3D Render
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!hasVersions && (
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs">Upload a 2D proof first to enable 3D generation</p>
+                </TooltipContent>
               )}
-            </Button>
-          )}
+            </Tooltip>
+          </TooltipProvider>
 
-          {/* Generate Approval Proof Button */}
+          {/* Generate Approval Proof Button — ALWAYS VISIBLE */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -349,18 +360,30 @@ export function DesignerProductionSpecs({
             </div>
           )}
 
-          {/* Email Proof to Customer */}
-          {hasVersions && onEmailProof && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full gap-2 border-primary/50 hover:bg-primary/10"
-              onClick={onEmailProof}
-            >
-              <Mail className="w-3 h-3" />
-              Email Proof to Customer
-            </Button>
-          )}
+          {/* Email Proof to Customer — ALWAYS VISIBLE */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-2 border-primary/50 hover:bg-primary/10"
+                    onClick={onEmailProof}
+                    disabled={!existingProofVersionId || !onEmailProof}
+                  >
+                    <Mail className="w-3 h-3" />
+                    Email Proof to Customer
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {!existingProofVersionId && (
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs">Generate an approval proof first to enable email</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* ============================================ */}
