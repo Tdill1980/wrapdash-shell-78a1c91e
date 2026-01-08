@@ -122,6 +122,27 @@ serve(async (req) => {
         wooMetaData._approveflow_status = 'revision_requested';
         if (notes) wooMetaData._approveflow_revision_notes = notes;
         orderNote = 'Customer requested revision via ApproveFlow';
+        
+        // Send team notification email for revision request
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/notify-approveflow-team`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              projectId,
+              notificationType: 'revision_requested',
+              customerName: project.customer_name,
+              orderNumber: project.order_number,
+              notes: notes || undefined,
+            }),
+          });
+          console.log(`[approveflow-event] Team notification sent for revision request on order ${project.order_number}`);
+        } catch (notifyErr) {
+          console.error(`[approveflow-event] Failed to send team notification:`, notifyErr);
+        }
         break;
       case 'design_approved':
         wooMetaData._approveflow_status = 'approved';
