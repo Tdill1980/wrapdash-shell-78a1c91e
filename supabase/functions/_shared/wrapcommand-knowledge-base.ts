@@ -1,0 +1,392 @@
+// WrapCommand Knowledge Base - All features and usage documentation
+// Used by Admin Jordan Chat for context-aware help
+
+export interface FeatureDoc {
+  title: string;
+  path: string;
+  category: string;
+  description: string;
+  howToUse: string[];
+  tips?: string[];
+  relatedFeatures?: string[];
+}
+
+export const WRAPCOMMAND_FEATURES: Record<string, FeatureDoc> = {
+  // ═══════════════════════════════════════════════════════════════
+  // AFFILIATE / PARTNER TOOLS
+  // ═══════════════════════════════════════════════════════════════
+  mightyaffiliate: {
+    title: "MightyAffiliate",
+    path: "/affiliate/admin",
+    category: "affiliate",
+    description: "Affiliate program management dashboard - onboard affiliates, track commissions, manage payments",
+    howToUse: [
+      "Use the Affiliates tab to see all registered affiliates",
+      "Click 'Add Affiliate' to onboard a new partner via wizard",
+      "Track affiliate commissions (2.5% on WePrintWraps orders)",
+      "Manage affiliate codes and referral links",
+      "Review Content Creator submissions in the Content tab",
+      "Process payouts in the Payments section"
+    ],
+    tips: [
+      "Affiliates earn 2.5% on WePrintWraps product orders",
+      "Software/Apps pay 20% commission at launch",
+      "Use the Content tab to review UGC from affiliates"
+    ],
+    relatedFeatures: ["affiliate_payments", "affiliate_content"]
+  },
+  
+  affiliate_payments: {
+    title: "Affiliate Payments",
+    path: "/affiliate/payments",
+    category: "affiliate",
+    description: "Process and track affiliate commission payouts",
+    howToUse: [
+      "View pending commissions that need approval",
+      "Approve commissions after verifying orders shipped",
+      "Generate payout invoices for approved commissions",
+      "Track payment history and totals by affiliate"
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // CONTENT & CREATIVE TOOLS
+  // ═══════════════════════════════════════════════════════════════
+  reel_builder: {
+    title: "Reel Builder",
+    path: "/organic/reel-builder",
+    category: "content",
+    description: "AI-powered video reel creation tool - auto-generates social media reels from your media library",
+    howToUse: [
+      "Select a Dara Format (Text Heavy, B-Roll Heavy, Transformation, etc.)",
+      "Enter a Topic/Directive for the AI to guide content selection",
+      "Optionally add Required Tags to filter clips",
+      "Click 'Auto-Create' to generate a timeline",
+      "Review and adjust clips in the timeline editor",
+      "Click 'Render' to create the final video"
+    ],
+    tips: [
+      "Best for Instagram Reels and TikTok content",
+      "Requires video clips uploaded to your Media Library",
+      "Use tags to organize clips for better auto-selection",
+      "Dara Formats determine the visual style and pacing"
+    ],
+    relatedFeatures: ["media_library", "reel_vault", "content_calendar"]
+  },
+
+  content_studio: {
+    title: "Content Studio",
+    path: "/studio",
+    category: "content",
+    description: "Central hub for managing all content creation and scheduling",
+    howToUse: [
+      "View content calendar with scheduled posts",
+      "Create new content projects",
+      "Manage drafts and approvals",
+      "Schedule content across platforms"
+    ],
+    relatedFeatures: ["content_calendar", "content_drafts", "reel_builder"]
+  },
+
+  content_calendar: {
+    title: "Content Calendar",
+    path: "/content-calendar",
+    category: "content",
+    description: "30-day view of scheduled content across all platforms",
+    howToUse: [
+      "View upcoming posts by date",
+      "Click on a day to see scheduled content",
+      "Drag and drop to reschedule posts",
+      "Filter by platform or content type",
+      "Mark posts as published after they go live"
+    ],
+    relatedFeatures: ["content_studio", "content_drafts"]
+  },
+
+  content_drafts: {
+    title: "Content Drafts",
+    path: "/content-drafts",
+    category: "content",
+    description: "Review and approve AI-generated content before publishing",
+    howToUse: [
+      "View pending content drafts",
+      "Preview video/image with caption",
+      "Approve to schedule for publishing",
+      "Reject with feedback for regeneration",
+      "Edit captions and hashtags before approval"
+    ]
+  },
+
+  media_library: {
+    title: "Media Library",
+    path: "/organic/tag-manager",
+    category: "content",
+    description: "Centralized storage for all video clips and images with tagging",
+    howToUse: [
+      "Upload videos and images via drag-and-drop",
+      "AI auto-tags content with relevant labels",
+      "Filter by tags to find specific clips",
+      "Use 'Bulk Tag' to organize multiple files",
+      "Clips are automatically available in Reel Builder"
+    ],
+    tips: [
+      "Tagged clips get better auto-selection in Reel Builder",
+      "Use consistent tagging for better AI matching"
+    ]
+  },
+
+  reel_vault: {
+    title: "Reel Vault",
+    path: "/organic/reel-vault",
+    category: "content",
+    description: "Archive of all rendered reels and their performance",
+    howToUse: [
+      "View all previously rendered reels",
+      "Download reels in various formats",
+      "Track engagement metrics after publishing",
+      "Re-use successful reels for other platforms"
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // CUSTOMER / SALES TOOLS
+  // ═══════════════════════════════════════════════════════════════
+  mightycustomer: {
+    title: "MightyCustomer",
+    path: "/mighty-customer",
+    category: "sales",
+    description: "Customer relationship management - track leads, quotes, and customer history",
+    howToUse: [
+      "View all customers and leads",
+      "See conversation history with each customer",
+      "Track quote status and conversion",
+      "View order history per customer",
+      "Add notes and tags to customers"
+    ]
+  },
+
+  jordan_control: {
+    title: "Jordan Control (Website Chat Admin)",
+    path: "/jordan-lee-admin",
+    category: "sales",
+    description: "Manage and monitor the Jordan Lee website chat agent",
+    howToUse: [
+      "View all website chat conversations",
+      "See escalation queue and respond to urgent issues",
+      "Upload quotes and artwork for customers",
+      "Reply directly to chat conversations",
+      "Mark conversations as resolved",
+      "View chat analytics and metrics"
+    ],
+    tips: [
+      "Escalations appear in the Needs Action tab",
+      "Use Quick Quote to send pricing fast",
+      "Download conversation transcripts for review"
+    ],
+    relatedFeatures: ["website_chat", "quote_drafts"]
+  },
+
+  website_chat: {
+    title: "Website Chat (Jordan Lee)",
+    path: "/embed/chat",
+    category: "sales",
+    description: "AI chat widget embedded on WePrintWraps.com - handles customer inquiries, quotes, and support",
+    howToUse: [
+      "Chat is embedded on WePrintWraps.com (not WrapCommand)",
+      "Jordan handles: pricing questions, vehicle quotes, order status",
+      "Escalates to team when: design files needed, special requests, complaints",
+      "Collects customer info: name, email, phone, vehicle details",
+      "Automatically routes leads to the quoting team"
+    ],
+    tips: [
+      "Monitor chats in Jordan Control dashboard",
+      "Directives given here affect Jordan's behavior on the website"
+    ]
+  },
+
+  quote_drafts: {
+    title: "Quote Drafts",
+    path: "/quote-drafts",
+    category: "sales",
+    description: "Manage and send customer quotes generated from chat",
+    howToUse: [
+      "View pending quotes from website chat",
+      "Review and edit quote details",
+      "Approve quotes for sending",
+      "Track quote status (sent, viewed, converted)"
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ORDER MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════
+  shopflow: {
+    title: "ShopFlow",
+    path: "/shopflow",
+    category: "orders",
+    description: "Order management system - track orders from creation to delivery",
+    howToUse: [
+      "View all orders in a kanban or list view",
+      "Filter by status: processing, printing, shipped, etc.",
+      "Click an order to see full details",
+      "Update order status as it progresses",
+      "Add internal notes for the team"
+    ],
+    relatedFeatures: ["approveflow", "mightyportfolio"]
+  },
+
+  approveflow: {
+    title: "ApproveFlow",
+    path: "/approveflow",
+    category: "orders",
+    description: "Design proof approval system - send proofs and collect customer approvals",
+    howToUse: [
+      "Create a proof for an order",
+      "Upload design files and renders",
+      "Send proof link to customer",
+      "Customer can approve or request changes",
+      "Track approval status and history"
+    ],
+    tips: [
+      "Approved proofs trigger production",
+      "Changes requested creates a new revision"
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // PORTFOLIO & SHOWCASE
+  // ═══════════════════════════════════════════════════════════════
+  mightyportfolio: {
+    title: "MightyPortfolio",
+    path: "/portfolio",
+    category: "portfolio",
+    description: "Showcase completed wrap work - manage before/after photos and project details",
+    howToUse: [
+      "View all portfolio projects",
+      "Upload before/after photos for completed jobs",
+      "Tag by vehicle type, wrap style, and color",
+      "Share portfolio with potential customers",
+      "Feature best work on your public portfolio page"
+    ],
+    tips: [
+      "Great photos lead to more conversions",
+      "Tag everything for easy filtering"
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // DESIGN TOOLS
+  // ═══════════════════════════════════════════════════════════════
+  designvault: {
+    title: "DesignVault",
+    path: "/designvault",
+    category: "design",
+    description: "Template library for wrap designs - browse, customize, and purchase designs",
+    howToUse: [
+      "Browse design templates by category",
+      "Preview designs on different vehicles",
+      "Purchase and download design files",
+      "Upload and sell your own designs"
+    ]
+  },
+
+  designpanel: {
+    title: "DesignPanelPro",
+    path: "/designpanel",
+    category: "design",
+    description: "Vehicle dimension and panel sizing tool for accurate wrap production",
+    howToUse: [
+      "Select vehicle year, make, and model",
+      "View accurate panel dimensions",
+      "Generate cut files for production",
+      "Export specifications for printing"
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // ANALYTICS & REPORTING
+  // ═══════════════════════════════════════════════════════════════
+  revenue_health: {
+    title: "Revenue Health",
+    path: "/revenue-health",
+    category: "analytics",
+    description: "Monitor business performance - revenue trends, customer health, and key metrics",
+    howToUse: [
+      "View daily/weekly/monthly revenue",
+      "Track customer retention and churn",
+      "Monitor quote-to-order conversion",
+      "See revenue by product category"
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // BRAND & SETTINGS
+  // ═══════════════════════════════════════════════════════════════
+  tradedna: {
+    title: "TradeDNA Wizard",
+    path: "/tradedna",
+    category: "settings",
+    description: "Brand voice and personality configuration - define how AI represents your brand",
+    howToUse: [
+      "Complete the TradeDNA wizard to set brand voice",
+      "Define tone, vocabulary, and sales style",
+      "Set signature phrases and words to avoid",
+      "Configure customer pain points and triggers",
+      "AI agents use this to match your brand"
+    ],
+    tips: [
+      "More detail = better AI alignment",
+      "Update periodically as your brand evolves"
+    ]
+  }
+};
+
+// Map URL paths to feature keys
+export function getFeatureFromPath(path: string): FeatureDoc | null {
+  const cleanPath = path.toLowerCase().replace(/\/$/, '');
+  
+  for (const [key, feature] of Object.entries(WRAPCOMMAND_FEATURES)) {
+    if (cleanPath === feature.path.toLowerCase() || cleanPath.startsWith(feature.path.toLowerCase())) {
+      return feature;
+    }
+  }
+  
+  return null;
+}
+
+// Get all features by category
+export function getFeaturesByCategory(category: string): FeatureDoc[] {
+  return Object.values(WRAPCOMMAND_FEATURES).filter(f => f.category === category);
+}
+
+// Format feature for AI prompt
+export function formatFeatureForPrompt(feature: FeatureDoc): string {
+  let prompt = `**${feature.title}** (${feature.path})\n`;
+  prompt += `${feature.description}\n\n`;
+  prompt += `HOW TO USE:\n${feature.howToUse.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n`;
+  
+  if (feature.tips && feature.tips.length > 0) {
+    prompt += `\nTIPS:\n${feature.tips.map(t => `• ${t}`).join('\n')}\n`;
+  }
+  
+  return prompt;
+}
+
+// Get complete knowledge base as a string for AI context
+export function getFullKnowledgeBase(): string {
+  const categories = ['affiliate', 'content', 'sales', 'orders', 'portfolio', 'design', 'analytics', 'settings'];
+  
+  let kb = '# WRAPCOMMAND KNOWLEDGE BASE\n\n';
+  
+  for (const category of categories) {
+    const features = getFeaturesByCategory(category);
+    if (features.length === 0) continue;
+    
+    kb += `## ${category.toUpperCase()}\n\n`;
+    for (const feature of features) {
+      kb += formatFeatureForPrompt(feature) + '\n';
+    }
+  }
+  
+  return kb;
+}

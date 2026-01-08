@@ -4525,6 +4525,36 @@ export type Database = {
           },
         ]
       }
+      jordan_directives: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          created_by: string | null
+          directive: string
+          expires_at: string | null
+          id: string
+          scope: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          directive: string
+          expires_at?: string | null
+          id?: string
+          scope?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          directive?: string
+          expires_at?: string | null
+          id?: string
+          scope?: string | null
+        }
+        Relationships: []
+      }
       klaviyo_campaigns: {
         Row: {
           ai_generated: boolean | null

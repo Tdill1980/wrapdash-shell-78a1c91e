@@ -292,6 +292,19 @@ serve(async (req) => {
     const voiceProfile = await loadVoiceProfile(orgId);
     console.log('[JordanLee] Loaded TradeDNA voice:', { tone: voiceProfile.merged.tone, persona: voiceProfile.merged.persona });
 
+    // Load active directives from jordan_directives table
+    const { data: activeDirectives } = await supabase
+      .from('jordan_directives')
+      .select('directive')
+      .eq('active', true)
+      .or('expires_at.is.null,expires_at.gt.now()')
+      .order('created_at', { ascending: false });
+    
+    const directivesContext = activeDirectives && activeDirectives.length > 0
+      ? `\n\n═══ ACTIVE ADMIN DIRECTIVES ═══\nFollow these special instructions from your admin team:\n${activeDirectives.map(d => `• ${d.directive}`).join('\n')}\n═══════════════════════════════\n`
+      : '';
+    console.log('[JordanLee] Active directives:', activeDirectives?.length || 0);
+
     // Load knowledge context for grounding (Jordan Lee agent)
     const knowledgeContext = await loadKnowledgeContext(supabase, "jordan_lee", message_text);
 
@@ -1229,7 +1242,7 @@ ${proactiveNotes}`;
         conversationMessages.push({
           role: 'system',
           content: `${buildJordanPersona(voiceProfile)}
-
+${directivesContext}
 CURRENT CONTEXT:
 ${contextNotes}
 

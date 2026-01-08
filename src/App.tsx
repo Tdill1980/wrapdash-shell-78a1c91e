@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrganizationProvider } from "@/contexts/OrganizationContext";
-import { LuigiWebsiteWidget } from "@/components/chat/LuigiWebsiteWidget";
+import { AdminJordanChat } from "@/components/admin/AdminJordanChat";
 import { IssueReporter } from "@/components/IssueReporter";
 import Dashboard from "./pages/Dashboard";
 import IssuesDashboard from "./pages/IssuesDashboard";
@@ -213,7 +213,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <LuigiWebsiteWidget />
+          <AdminJordanChat />
           <IssueReporter />
         </BrowserRouter>
       </TooltipProvider>
