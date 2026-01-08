@@ -18,7 +18,41 @@ interface ProofEmailRequest {
   proofUrl: string;
   renderUrls?: Record<string, string>;
   portalUrl: string;
+  productType?: string;
+  vehicleInfo?: {
+    year?: string;
+    make?: string;
+    model?: string;
+  };
 }
+
+// Shared branded header
+const getBrandedHeader = () => `
+  <div style="padding: 20px 30px; background: #1a1a2e;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td>
+          <span style="font-size: 11px; font-weight: 600; color: #a78bfa; letter-spacing: 0.5px;">
+            WrapCommandAI™ for WPW
+          </span>
+          <span style="color: #4b5563; margin: 0 8px;">|</span>
+          <span style="font-size: 11px; font-weight: 500; color: #60a5fa; letter-spacing: 0.3px;">
+            ApproveFlow™
+          </span>
+        </td>
+      </tr>
+    </table>
+  </div>
+`;
+
+// Shared branded footer
+const getBrandedFooter = () => `
+  <div style="text-align: center; padding: 24px; background: #1a1a2e; border-top: 1px solid #374151;">
+    <p style="font-size: 11px; color: #6b7280; margin: 0;">
+      Powered by <span style="color: #a78bfa;">WrapCommand AI</span>
+    </p>
+  </div>
+`;
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -33,20 +67,30 @@ const handler = async (req: Request): Promise<Response> => {
       orderNumber, 
       proofUrl, 
       renderUrls,
-      portalUrl 
+      portalUrl,
+      productType,
+      vehicleInfo
     }: ProofEmailRequest = await req.json();
 
     console.log('Sending proof email to:', customerEmail);
+
+    // Build vehicle info string if available
+    let vehicleString = '';
+    if (vehicleInfo && (vehicleInfo.year || vehicleInfo.make || vehicleInfo.model)) {
+      vehicleString = [vehicleInfo.year, vehicleInfo.make, vehicleInfo.model].filter(Boolean).join(' ');
+    }
 
     // Build render images HTML if available
     let renderImagesHtml = '';
     if (renderUrls && Object.keys(renderUrls).length > 0) {
       renderImagesHtml = `
-        <h2 style="color: #2F81F7; margin-top: 30px; margin-bottom: 15px;">3D Renders</h2>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
-          ${Object.entries(renderUrls).map(([angle, url]) => `
-            <img src="${url}" alt="${angle} view" style="width: 200px; height: auto; border-radius: 8px; border: 1px solid #e5e7eb;" />
-          `).join('')}
+        <div style="margin-top: 24px;">
+          <h2 style="color: #a78bfa; margin-bottom: 16px; font-size: 16px; font-weight: 600;">3D Renders</h2>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            ${Object.entries(renderUrls).map(([angle, url]) => `
+              <img src="${url}" alt="${angle} view" style="width: 180px; height: auto; border-radius: 8px; border: 1px solid #374151;" />
+            `).join('')}
+          </div>
         </div>
       `;
     }
@@ -59,52 +103,63 @@ const handler = async (req: Request): Promise<Response> => {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Your Design Proof is Ready</title>
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-          <div style="background: linear-gradient(135deg, #2F81F7 0%, #15D1FF 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Design Proof Ready!</h1>
-          </div>
-          
-          <div style="background: white; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <p style="font-size: 16px; margin-bottom: 20px;">Hi ${customerName},</p>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #e5e7eb; margin: 0; padding: 0; background-color: #0f0f1a;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: #1a1a2e;">
+            ${getBrandedHeader()}
             
-            <p style="font-size: 16px; margin-bottom: 20px;">
-              Your design proof for <strong>Order #${orderNumber}</strong> is ready for review!
-            </p>
-
-            <h2 style="color: #2F81F7; margin-top: 30px; margin-bottom: 15px;">2D Design Proof</h2>
-            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-              <img src="${proofUrl}" alt="Design Proof" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid #e5e7eb;" />
+            <!-- Blue Banner -->
+            <div style="background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%); padding: 30px; text-align: center;">
+              <div style="font-size: 32px; margin-bottom: 8px;">🎨</div>
+              <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">DESIGN PROOF READY</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Order #${orderNumber}</p>
             </div>
+            
+            <div style="padding: 30px;">
+              <p style="font-size: 16px; margin-bottom: 20px; color: #e5e7eb;">Hi ${customerName},</p>
+              
+              <p style="font-size: 16px; margin-bottom: 24px; color: #d1d5db;">
+                Your design proof is ready for review!
+              </p>
 
-            ${renderImagesHtml}
+              ${(productType || vehicleString) ? `
+              <!-- Order Details -->
+              <div style="background: #0f0f1a; border: 1px solid #374151; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                ${productType ? `<p style="color: #9ca3af; font-size: 13px; margin: 0 0 4px 0;"><strong>Product:</strong> ${productType}</p>` : ''}
+                ${vehicleString ? `<p style="color: #9ca3af; font-size: 13px; margin: 0;"><strong>Vehicle:</strong> ${vehicleString}</p>` : ''}
+              </div>
+              ` : ''}
 
-            <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid #2F81F7; margin: 30px 0;">
-              <p style="margin: 0; font-size: 14px; color: #1e40af;">
-                <strong>Next Steps:</strong><br>
-                Review the design and let us know if you'd like to approve it or request any changes.
+              <!-- 2D Design Proof -->
+              <h2 style="color: #60a5fa; margin-bottom: 16px; font-size: 16px; font-weight: 600;">2D Design Proof</h2>
+              <div style="background: #0f0f1a; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <img src="${proofUrl}" alt="Design Proof" style="width: 100%; height: auto; border-radius: 8px; border: 1px solid #374151;" />
+              </div>
+
+              ${renderImagesHtml}
+
+              <!-- Next Steps -->
+              <div style="background: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%); border-left: 4px solid #60a5fa; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
+                <p style="margin: 0; font-size: 14px; color: #93c5fd;">
+                  <strong>Next Steps:</strong><br>
+                  Review the design and let us know if you'd like to approve it or request any changes.
+                </p>
+              </div>
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${portalUrl}/proof" style="display: inline-block; background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                  View & Approve Design
+                </a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #374151; margin: 30px 0;" />
+
+              <p style="font-size: 14px; color: #9ca3af; margin: 0;">
+                Have questions? Simply reply to this email or chat with us in your portal.
               </p>
             </div>
 
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${portalUrl}/proof" style="display: inline-block; background: linear-gradient(135deg, #2F81F7 0%, #15D1FF 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-                View & Approve Design
-              </a>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-
-            <p style="font-size: 14px; color: #6b7280; margin: 0;">
-              Have questions? Simply reply to this email or chat with us in your portal.
-            </p>
-
-            <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
-              Best regards,<br>
-              <strong>The Design Team</strong>
-            </p>
-          </div>
-
-          <div style="text-align: center; padding: 20px; font-size: 12px; color: #9ca3af;">
-            <p>This email was sent regarding your order with us. If you have any questions, please contact support.</p>
+            ${getBrandedFooter()}
           </div>
         </body>
       </html>
