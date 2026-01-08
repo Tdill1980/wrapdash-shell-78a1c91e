@@ -2,6 +2,7 @@
 // Handles website chat via WePrintWraps chat widget
 // Routes all execution through Ops Desk
 // Now with TradeDNA integration for dynamic brand voice
+// OS SPINE: All escalations and quotes log to conversation_events
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -15,6 +16,7 @@ import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-ro
 import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
 import { getApprovedLinksForPrompt, LINK_AWARE_RULES, APPROVED_LINKS } from "../_shared/wpw-links.ts";
 import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType, formatBulkDiscountTiers } from "../_shared/alert-system.ts";
+import { logConversationEvent, logQuoteEvent } from "../_shared/conversation-events.ts";
 
 // Proactive selling detection patterns
 const FADEWRAP_DESIGN_PATTERNS = /\b(fadewrap|fade.*wrap|design|visualize|preview|color.*change|restyle|what.*would.*look|see.*before|mock.*up|mockup)\b/i;
@@ -585,6 +587,45 @@ serve(async (req) => {
           escalationSent = true;
           chatState.escalations_sent = [...escalationsSent, escalationType];
           console.log('[JordanLee] Escalation email sent');
+          
+          // ============================================
+          // OS SPINE: Log escalation event
+          // ============================================
+          await logConversationEvent(
+            supabase,
+            conversationId,
+            'escalation_sent',
+            'jordan_lee',
+            {
+              customer_email: String(chatState.customer_email) || undefined,
+              customer_name: chatState.customer_name as string || undefined,
+              message_excerpt: message_text.substring(0, 200),
+              escalation_target: teamMember.email,
+              email_sent_to: [teamMember.email, ...SILENT_CC],
+              email_subject: `${mode === 'test' ? '[TEST] ' : ''}Customer Request: ${teamMember.role}`,
+              email_sent_at: new Date().toISOString(),
+              priority: 'high',
+            },
+            escalationType
+          );
+          
+          // Also log the email receipt
+          await logConversationEvent(
+            supabase,
+            conversationId,
+            'email_sent',
+            'jordan_lee',
+            {
+              email_sent_to: [teamMember.email, ...SILENT_CC],
+              email_subject: `${mode === 'test' ? '[TEST] ' : ''}Customer Request: ${teamMember.role}`,
+              email_body: escalationHtml.substring(0, 2000),
+              email_sent_at: new Date().toISOString(),
+              customer_email: String(chatState.customer_email) || undefined,
+            },
+            escalationType
+          );
+          
+          console.log('[JordanLee] Escalation events logged to conversation_events');
         } catch (emailErr) {
           console.error('[JordanLee] Escalation email error:', emailErr);
         }
@@ -1205,6 +1246,24 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
           chatState.quote_id = quoteResponse.data.quote_id;
           chatState.quote_number = quoteResponse.data.quote_number;
           console.log('[JordanLee] Quote created:', quoteResponse.data.quote_number);
+          
+          // ============================================
+          // OS SPINE: Log quote_attached event
+          // ============================================
+          await logQuoteEvent(
+            supabase,
+            conversationId,
+            'quote_attached',
+            {
+              quoteId: quoteResponse.data.quote_id,
+              quoteNumber: quoteResponse.data.quote_number,
+              total: quoteResponse.data.material_cost,
+              customerEmail: String(chatState.customer_email) || undefined,
+              customerName: chatState.customer_name as string || undefined,
+              vehicleInfo: currentVehicle ? `${currentVehicle.year} ${currentVehicle.make} ${currentVehicle.model}` : undefined,
+            }
+          );
+          console.log('[JordanLee] Quote event logged to conversation_events');
           
           // Update conversation with quote state
           await supabase
