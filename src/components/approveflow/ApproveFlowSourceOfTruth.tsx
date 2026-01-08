@@ -9,12 +9,15 @@
 // 5. This data is IMMUTABLE — UI never edits it
 // ============================================
 
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Lock, FileText, Download, ExternalLink, Clock } from "lucide-react";
+import { Lock, FileText, Download, ExternalLink, Clock, RefreshCw } from "lucide-react";
 import { formatFullDateTime, formatShortDate, formatTimeOnly } from "@/lib/timezone-utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // OS-TRUE file role labels
 const FILE_ROLE_LABELS: Record<string, string> = {
@@ -46,6 +49,8 @@ interface ApproveFlowSourceOfTruthProps {
   orderCreatedAt: string;
   designInstructions?: string;
   assets: Asset[];
+  projectId?: string;
+  onResync?: () => void;
 }
 
 export function ApproveFlowSourceOfTruth({
@@ -53,7 +58,12 @@ export function ApproveFlowSourceOfTruth({
   orderCreatedAt,
   designInstructions,
   assets,
+  projectId,
+  onResync,
 }: ApproveFlowSourceOfTruthProps) {
+  const [isResyncing, setIsResyncing] = useState(false);
+  const { toast } = useToast();
+  
   // Filter to only customer-uploaded files (from WooCommerce)
   const customerAssets = assets.filter(a => a.source === 'woocommerce');
 
@@ -69,6 +79,55 @@ export function ApproveFlowSourceOfTruth({
     return ext || 'FILE';
   };
 
+  // Handle re-sync from WooCommerce
+  const handleResync = async () => {
+    if (!projectId) {
+      toast({
+        title: "Error",
+        description: "Project ID not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resync-woocommerce-order', {
+        body: { projectId },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Re-sync complete",
+          description: data.message || "Order data refreshed from WooCommerce",
+        });
+        
+        // Trigger parent refresh
+        onResync?.();
+      } else {
+        throw new Error(data?.error || "Re-sync failed");
+      }
+    } catch (error: any) {
+      console.error('[ResyncWC] Error:', error);
+      toast({
+        title: "Re-sync failed",
+        description: error.message || "Unable to fetch data from WooCommerce",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResyncing(false);
+    }
+  };
+
+  // Show re-sync button if data appears incomplete
+  const showResyncButton = projectId && (
+    !designInstructions || 
+    designInstructions.trim().length === 0 || 
+    customerAssets.length === 0
+  );
+
   return (
     <Card className="p-4 bg-card border-border">
       {/* Header with lock icon */}
@@ -79,9 +138,23 @@ export function ApproveFlowSourceOfTruth({
             Source of Truth — Order Intake
           </h3>
         </div>
-        <Badge variant="outline" className="text-[9px] border-muted-foreground/30 text-muted-foreground">
-          READ ONLY
-        </Badge>
+        <div className="flex items-center gap-2">
+          {showResyncButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-[9px] text-muted-foreground hover:text-foreground"
+              onClick={handleResync}
+              disabled={isResyncing}
+            >
+              <RefreshCw className={`w-3 h-3 mr-1 ${isResyncing ? 'animate-spin' : ''}`} />
+              {isResyncing ? 'Syncing...' : 'Re-sync'}
+            </Button>
+          )}
+          <Badge variant="outline" className="text-[9px] border-muted-foreground/30 text-muted-foreground">
+            READ ONLY
+          </Badge>
+        </div>
       </div>
 
       {/* Source + Timestamp */}
@@ -108,6 +181,7 @@ export function ApproveFlowSourceOfTruth({
           ) : (
             <p className="text-xs text-muted-foreground italic">
               No instructions were provided at checkout.
+              {showResyncButton && " Click 'Re-sync' to fetch from WooCommerce."}
             </p>
           )}
         </div>
@@ -184,6 +258,7 @@ export function ApproveFlowSourceOfTruth({
           <div className="bg-muted/20 rounded-lg p-3 border border-border">
             <p className="text-xs text-muted-foreground italic">
               No files were uploaded at checkout.
+              {showResyncButton && " Click 'Re-sync' to fetch from WooCommerce."}
             </p>
           </div>
         )}

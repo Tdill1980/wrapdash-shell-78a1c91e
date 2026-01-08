@@ -725,6 +725,19 @@ export default function ApproveFlow() {
             orderCreatedAt={project.created_at}
             designInstructions={project.design_instructions || undefined}
             assets={assets}
+            projectId={urlProjectId}
+            onResync={async () => {
+              // Refetch project and assets after re-sync
+              await refetch();
+              if (urlProjectId) {
+                const { data: assetsData } = await supabase
+                  .from('approveflow_assets')
+                  .select('*')
+                  .eq('project_id', urlProjectId)
+                  .order('created_at', { ascending: false });
+                if (assetsData) setAssets(assetsData);
+              }
+            }}
           />
 
           {/* Chat Panel */}
