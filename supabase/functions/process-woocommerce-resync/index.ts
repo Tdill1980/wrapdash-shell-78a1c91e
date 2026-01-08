@@ -12,22 +12,262 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ============================================
+// EPO Parser Utilities
+// ============================================
+
+const EPO_KEYS = new Set(["_tmcartepo_data", "_tmpost_data", "_tmdata"]);
+
+// Placeholders to treat as empty (force overwrite)
+const EMPTY_PLACEHOLDERS = new Set([
+  "",
+  "n/a",
+  "none",
+  "—",
+  "-",
+  "no instructions were provided at checkout.",
+  "no instructions provided",
+]);
+
+function isEmptyOrPlaceholder(s: string | null | undefined): boolean {
+  if (!s) return true;
+  const normalized = s.trim().toLowerCase();
+  return EMPTY_PLACEHOLDERS.has(normalized) || normalized.length === 0;
+}
+
+function safeJsonPreview(v: any, n = 4000): string {
+  try {
+    return JSON.stringify(v).slice(0, n);
+  } catch {
+    return String(v).slice(0, n);
+  }
+}
+
+function tryParseJsonString(s: string): any | null {
+  const t = s.trim();
+  if (!t) return null;
+  if (!(t.startsWith("{") || t.startsWith("["))) return null;
+  try {
+    return JSON.parse(t);
+  } catch {
+    return null;
+  }
+}
+
+function extractUrlsFromString(s: string): string[] {
+  const re = /https?:\/\/[^\s"'<>]+/g;
+  return (s.match(re) || []).map((u) => u.replace(/[)\]"',.]+$/, ""));
+}
+
+function firstNonEmpty(...vals: any[]): string {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+// Generic recursive walker for fallback extraction
+function walk(
+  v: any,
+  out: { urls: Set<string>; texts: string[] },
+  depth = 0
+): void {
+  if (depth > 8 || v == null) return;
+  if (typeof v === "string") {
+    extractUrlsFromString(v).forEach((u) => out.urls.add(u));
+    const s = v.trim();
+    if (s.length >= 30 && !s.startsWith("http")) out.texts.push(s);
+    const parsed = tryParseJsonString(s);
+    if (parsed) walk(parsed, out, depth + 1);
+    return;
+  }
+  if (Array.isArray(v)) {
+    v.forEach((x) => walk(x, out, depth + 1));
+    return;
+  }
+  if (typeof v === "object") {
+    Object.values(v).forEach((x) => walk(x, out, depth + 1));
+    return;
+  }
+}
+
+// Parse EPO container (_tmcartepo_data, etc.)
+function parseEpoContainer(value: any): {
+  urls: Set<string>;
+  instructionParts: string[];
+  vehicleInfo: { year?: string; make?: string; model?: string };
+} {
+  const out = {
+    urls: new Set<string>(),
+    instructionParts: [] as string[],
+    vehicleInfo: {} as { year?: string; make?: string; model?: string },
+  };
+
+  // Handle stringified JSON
+  const parsed =
+    typeof value === "string" ? tryParseJsonString(value) ?? value : value;
+
+  console.log(
+    `[EPO Parser] Parsed type: ${typeof parsed}, isArray: ${Array.isArray(parsed)}`
+  );
+
+  if (Array.isArray(parsed)) {
+    console.log(`[EPO Parser] Processing ${parsed.length} entries`);
+
+    for (let i = 0; i < parsed.length; i++) {
+      const entry = parsed[i];
+      if (!entry || typeof entry !== "object") continue;
+
+      // Log entry keys for debugging (first 3 entries)
+      if (i < 3) {
+        console.log(
+          `[EPO Parser] Entry ${i} keys: ${Object.keys(entry).join(", ")}`
+        );
+      }
+
+      // Extract label and answer
+      const label = firstNonEmpty(
+        entry.name,
+        entry.label,
+        entry.title,
+        entry.section,
+        entry.header,
+        entry.field_label
+      );
+      const answer = firstNonEmpty(
+        entry.value_raw,
+        entry.value,
+        entry.display_value,
+        entry.text,
+        entry.user_value
+      );
+
+      console.log(
+        `[EPO Parser] Entry ${i}: label="${label.substring(0, 50)}", answer="${answer.substring(0, 80)}..."`
+      );
+
+      // Extract URLs from known URL fields
+      const urlFields = [
+        "url",
+        "uploaded_url",
+        "file_url",
+        "attachment",
+        "file",
+      ];
+      for (const k of urlFields) {
+        const vv = entry[k];
+        if (typeof vv === "string") {
+          extractUrlsFromString(vv).forEach((u) => out.urls.add(u));
+        }
+      }
+
+      // Walk entry to catch nested urls/text
+      const w = { urls: new Set<string>(), texts: [] as string[] };
+      walk(entry, w);
+      w.urls.forEach((u) => out.urls.add(u));
+
+      // Determine if this is instruction content
+      const labelLower = label.toLowerCase();
+      const labelHit =
+        /describe|instruction|notes|project|design|brief|details|wrap|required|information|please|color|style|brand/i.test(
+          labelLower
+        );
+      const answerHit = answer.length >= 30;
+
+      // Skip short toggles (Yes, No, N/A) and prices
+      const isToggle = /^(yes|no|n\/a|na)$/i.test(answer);
+      const isPrice = /^\$?\d+(\.\d{2})?$/.test(answer);
+      const isInternalId = /^(tmcp_|_tm|tc_|\d{6,})/.test(answer);
+
+      if ((labelHit || answerHit) && !isToggle && !isPrice && !isInternalId) {
+        const block = label
+          ? `${label}\n${answer || w.texts[0] || ""}`
+          : answer || w.texts[0] || "";
+        if (block.trim() && block.trim().length > 10) {
+          out.instructionParts.push(block.trim());
+          console.log(
+            `[EPO Parser] Added instruction block (${block.length} chars)`
+          );
+        }
+      }
+
+      // Extract vehicle info from entry
+      if (
+        /year/i.test(label) ||
+        /vehicle.*year/i.test(label) ||
+        entry.element_type === "year"
+      ) {
+        const yearMatch = answer.match(/\b(19|20)\d{2}\b/);
+        if (yearMatch) out.vehicleInfo.year = yearMatch[0];
+      }
+      if (
+        /\bmake\b/i.test(label) ||
+        /vehicle.*make/i.test(label) ||
+        entry.element_type === "make"
+      ) {
+        if (answer.length > 1 && answer.length < 50 && !isToggle) {
+          out.vehicleInfo.make = answer;
+        }
+      }
+      if (
+        /\bmodel\b/i.test(label) ||
+        /vehicle.*model/i.test(label) ||
+        entry.element_type === "model"
+      ) {
+        if (answer.length > 1 && answer.length < 100 && !isToggle) {
+          out.vehicleInfo.model = answer;
+        }
+      }
+    }
+  } else if (typeof parsed === "object" && parsed !== null) {
+    // Fallback: walk arbitrary structure
+    console.log("[EPO Parser] Falling back to recursive walk");
+    const w = { urls: new Set<string>(), texts: [] as string[] };
+    walk(parsed, w);
+    w.urls.forEach((u) => out.urls.add(u));
+    out.instructionParts.push(...w.texts.slice(0, 50)); // Cap at 50 texts
+  } else if (typeof parsed === "string" && parsed.length >= 30) {
+    // Plain string fallback
+    out.instructionParts.push(parsed);
+    extractUrlsFromString(parsed).forEach((u) => out.urls.add(u));
+  }
+
+  return out;
+}
+
+// Normalize URL for deduplication
+function normalizeUrl(url: string): string {
+  return url.trim().replace(/&amp;/g, "&").replace(/[)\]"',.]+$/, "");
+}
+
+// ============================================
+// Main Handler
+// ============================================
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { projectId, orderData } = await req.json();
+    const { projectId, orderData, force = false } = await req.json();
 
     if (!projectId || !orderData) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing projectId or orderData" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          success: false,
+          error: "Missing projectId or orderData",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    console.log(`[ProcessResync] Processing order data for projectId: ${projectId}`);
+    console.log(
+      `[ProcessResync] Processing order for projectId: ${projectId}, force=${force}`
+    );
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -49,109 +289,160 @@ Deno.serve(async (req) => {
       console.error("[ProcessResync] Project not found", projectErr);
       return new Response(
         JSON.stringify({ success: false, error: "Project not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
     const order = orderData;
-    console.log(`[ProcessResync] Processing order #${order.number || project.order_number} with ${order.line_items?.length || 0} line items`);
+    console.log(
+      `[ProcessResync] Processing order #${order.number || project.order_number} with ${order.line_items?.length || 0} line items`
+    );
 
-    // Extract data from line_items[].meta_data (WooCommerce Extra Product Options)
-    let designInstructions = "";
-    const fileUrls: { url: string; filename: string; fileType: string }[] = [];
-    let vehicleInfo: { year?: string; make?: string; model?: string } = {};
-
-    // Collect all text values for design instructions
+    // Collected data
     const instructionParts: string[] = [];
-    
+    const fileUrls: Set<string> = new Set();
+    let vehicleInfo: { year?: string; make?: string; model?: string } = {};
+    const metaContainersSeen: string[] = [];
+    const keysSeenSample: string[] = [];
+
     // Iterate through all line items and their meta_data
     for (const item of order.line_items || []) {
       console.log(`[ProcessResync] Processing line item: ${item.name}`);
-      
+
       for (const meta of item.meta_data || []) {
-        const key = (meta.key || "").toLowerCase();
+        const key = meta.key || "";
+        const keyLower = key.toLowerCase();
         const displayKey = meta.display_key || meta.key || "";
-        const value = meta.display_value || meta.value || "";
-        
-        // Log all meta for debugging
-        console.log(`[ProcessResync] Meta: key="${meta.key}", display_key="${displayKey}", value_preview="${String(value).substring(0, 100)}..."`);
-        
-        // Skip internal WooCommerce fields
-        if (key.startsWith("_") || key.startsWith("pa_")) continue;
-        
-        // WooCommerce Extra Product Options stores customer text in various ways
-        // Check if this is a meaningful text field (not just a product option label)
-        const valueStr = String(value);
-        
-        // Design instructions - look for common field patterns OR any long text response
-        const isInstructionField = 
-          key.includes("describe") ||
-          key.includes("design") ||
-          key.includes("project") ||
-          key.includes("instructions") ||
-          key.includes("notes") ||
-          key.includes("details") ||
-          key.includes("requirements") ||
-          key.includes("information") ||
-          key.includes("please") ||
+        const value = meta.value;
+
+        // Track keys for debugging
+        if (keysSeenSample.length < 20 && !keysSeenSample.includes(key)) {
+          keysSeenSample.push(key);
+        }
+
+        // ============================================
+        // EPO Container Handling (CRITICAL FIX)
+        // ============================================
+        if (EPO_KEYS.has(key)) {
+          metaContainersSeen.push(key);
+          console.log(`[ProcessResync] Found EPO container: ${key}`);
+          console.log(
+            `[ProcessResync] EPO value type: ${typeof value}, isArray: ${Array.isArray(value)}`
+          );
+          console.log(
+            `[ProcessResync] EPO preview: ${safeJsonPreview(value, 2000)}`
+          );
+
+          // Parse EPO container
+          const epoResult = parseEpoContainer(value);
+
+          console.log(
+            `[ProcessResync] EPO parsed: ${epoResult.instructionParts.length} instructions, ${epoResult.urls.size} URLs`
+          );
+
+          // Merge results
+          epoResult.instructionParts.forEach((p) => instructionParts.push(p));
+          epoResult.urls.forEach((u) => fileUrls.add(normalizeUrl(u)));
+          if (epoResult.vehicleInfo.year && !vehicleInfo.year)
+            vehicleInfo.year = epoResult.vehicleInfo.year;
+          if (epoResult.vehicleInfo.make && !vehicleInfo.make)
+            vehicleInfo.make = epoResult.vehicleInfo.make;
+          if (epoResult.vehicleInfo.model && !vehicleInfo.model)
+            vehicleInfo.model = epoResult.vehicleInfo.model;
+
+          continue; // EPO handled, skip normal processing
+        }
+
+        // Skip other internal WooCommerce fields
+        if (keyLower.startsWith("_") || keyLower.startsWith("pa_")) continue;
+
+        // ============================================
+        // Standard meta_data handling (non-EPO)
+        // ============================================
+        const valueStr = String(value ?? "");
+
+        // Design instructions from standard fields
+        const isInstructionField =
+          keyLower.includes("describe") ||
+          keyLower.includes("design") ||
+          keyLower.includes("project") ||
+          keyLower.includes("instructions") ||
+          keyLower.includes("notes") ||
+          keyLower.includes("details") ||
+          keyLower.includes("requirements") ||
+          keyLower.includes("information") ||
+          keyLower.includes("please") ||
           displayKey.toLowerCase().includes("describe") ||
           displayKey.toLowerCase().includes("project") ||
           displayKey.toLowerCase().includes("information");
-        
-        // Also capture any substantial text that looks like customer input
-        // (more than 50 chars and contains spaces = likely a description)
-        const isLongCustomerText = valueStr.length > 50 && valueStr.includes(" ") && !valueStr.startsWith("http");
-        
+
+        const isLongCustomerText =
+          valueStr.length > 50 &&
+          valueStr.includes(" ") &&
+          !valueStr.startsWith("http");
+
         if (isInstructionField || isLongCustomerText) {
           if (valueStr.length > 10) {
             instructionParts.push(valueStr);
-            console.log(`[ProcessResync] Found instruction text (${valueStr.length} chars): "${valueStr.substring(0, 80)}..."`);
+            console.log(
+              `[ProcessResync] Found instruction from standard meta (${valueStr.length} chars)`
+            );
           }
         }
 
-        // File uploads - extract URLs
-        if (key.includes("file") || key.includes("upload") || key.includes("logo") || key.includes("artwork")) {
-          const urlMatch = String(value).match(/https?:\/\/[^\s<>"']+/);
-          if (urlMatch) {
-            const url = urlMatch[0];
-            const filename = url.split("/").pop()?.split("?")[0] || "customer_file";
-            const extension = filename.split(".").pop()?.toLowerCase() || "";
-            
-            let fileType = "customer_upload";
-            if (key.includes("logo")) fileType = "customer_logo";
-            else if (key.includes("brand")) fileType = "customer_brand_guide";
-            else if (extension === "ai" || extension === "eps" || extension === "pdf") fileType = "customer_design_file";
-            
-            fileUrls.push({ url, filename, fileType });
-            console.log(`[ProcessResync] Found file: ${filename} (${fileType})`);
-          }
+        // File uploads from standard fields
+        if (
+          keyLower.includes("file") ||
+          keyLower.includes("upload") ||
+          keyLower.includes("logo") ||
+          keyLower.includes("artwork")
+        ) {
+          extractUrlsFromString(valueStr).forEach((u) =>
+            fileUrls.add(normalizeUrl(u))
+          );
         }
 
-        // Vehicle info
-        if (key.includes("year") || displayKey.toLowerCase().includes("year")) {
-          const yearMatch = String(value).match(/\d{4}/);
-          if (yearMatch) vehicleInfo.year = yearMatch[0];
+        // Vehicle info from standard fields
+        if (
+          keyLower.includes("year") ||
+          displayKey.toLowerCase().includes("year")
+        ) {
+          const yearMatch = valueStr.match(/\b(19|20)\d{2}\b/);
+          if (yearMatch && !vehicleInfo.year) vehicleInfo.year = yearMatch[0];
         }
-        if (key.includes("make") || displayKey.toLowerCase().includes("make")) {
-          if (typeof value === "string" && value.length > 1 && value.length < 50) {
-            vehicleInfo.make = value;
+        if (
+          keyLower.includes("make") ||
+          displayKey.toLowerCase().includes("make")
+        ) {
+          if (valueStr.length > 1 && valueStr.length < 50 && !vehicleInfo.make) {
+            vehicleInfo.make = valueStr;
           }
         }
-        if (key.includes("model") || displayKey.toLowerCase().includes("model")) {
-          if (typeof value === "string" && value.length > 1 && value.length < 100) {
-            vehicleInfo.model = value;
+        if (
+          keyLower.includes("model") ||
+          displayKey.toLowerCase().includes("model")
+        ) {
+          if (
+            valueStr.length > 1 &&
+            valueStr.length < 100 &&
+            !vehicleInfo.model
+          ) {
+            vehicleInfo.model = valueStr;
           }
         }
       }
     }
 
-    // Also check order-level meta_data
+    // Also check order-level meta_data for vehicle info
     for (const meta of order.meta_data || []) {
       const key = (meta.key || "").toLowerCase();
       const value = meta.value || "";
 
       if (key.includes("year")) {
-        const yearMatch = String(value).match(/\d{4}/);
+        const yearMatch = String(value).match(/\b(19|20)\d{2}\b/);
         if (yearMatch && !vehicleInfo.year) vehicleInfo.year = yearMatch[0];
       }
       if (key.includes("make") && !vehicleInfo.make) {
@@ -160,47 +451,73 @@ Deno.serve(async (req) => {
         }
       }
       if (key.includes("model") && !vehicleInfo.model) {
-        if (typeof value === "string" && value.length > 1 && value.length < 100) {
+        if (
+          typeof value === "string" &&
+          value.length > 1 &&
+          value.length < 100
+        ) {
           vehicleInfo.model = value;
         }
       }
     }
 
-    // Combine all instruction parts into one string
-    if (instructionParts.length > 0) {
-      designInstructions = instructionParts.join("\n\n");
-    }
+    // Dedupe instruction parts
+    const uniqueInstructions = [...new Set(instructionParts)];
+    const designInstructions = uniqueInstructions.join("\n\n");
 
-    console.log(`[ProcessResync] Extracted: instructions=${designInstructions.length} chars, files=${fileUrls.length}, vehicle=${JSON.stringify(vehicleInfo)}`);
+    console.log(
+      `[ProcessResync] Final extracted: ${uniqueInstructions.length} instruction blocks (${designInstructions.length} chars), ${fileUrls.size} files, vehicle=${JSON.stringify(vehicleInfo)}`
+    );
+    console.log(
+      `[ProcessResync] Meta containers seen: ${metaContainersSeen.join(", ") || "none"}`
+    );
+    console.log(`[ProcessResync] Keys sample: ${keysSeenSample.join(", ")}`);
 
     // Track what was synced
     const synced = {
       designInstructions: false,
+      instructionPartsFound: uniqueInstructions.length,
+      instructionChars: designInstructions.length,
       vehicleInfo: null as { year?: string; make?: string; model?: string } | null,
-      filesCount: 0,
+      filesDetected: fileUrls.size,
+      filesInserted: 0,
+      metaContainersSeen,
+      keysSeenSample,
     };
 
-    // Update approveflow_projects if fields are empty
+    // Update approveflow_projects
     const updates: Record<string, any> = {};
-    
-    if (designInstructions && (!project.design_instructions || project.design_instructions.trim().length === 0)) {
+
+    // Check if we should update instructions
+    const existingInstructionsEmpty = isEmptyOrPlaceholder(
+      project.design_instructions
+    );
+    const shouldUpdateInstructions =
+      designInstructions.length > 0 && (force || existingInstructionsEmpty);
+
+    if (shouldUpdateInstructions) {
       updates.design_instructions = designInstructions;
       synced.designInstructions = true;
+      console.log(
+        `[ProcessResync] Will update instructions (force=${force}, existingEmpty=${existingInstructionsEmpty})`
+      );
     }
 
-    const existingVehicle = project.vehicle_info as any || {};
+    // Vehicle info handling
+    const existingVehicle = (project.vehicle_info as any) || {};
     if (Object.keys(vehicleInfo).length > 0) {
       const mergedVehicle = {
-        year: existingVehicle.year || vehicleInfo.year,
-        make: existingVehicle.make || vehicleInfo.make,
-        model: existingVehicle.model || vehicleInfo.model,
+        year: vehicleInfo.year || existingVehicle.year,
+        make: vehicleInfo.make || existingVehicle.make,
+        model: vehicleInfo.model || existingVehicle.model,
       };
-      
-      if (
+
+      const hasNewVehicleData =
         (vehicleInfo.year && !existingVehicle.year) ||
         (vehicleInfo.make && !existingVehicle.make) ||
-        (vehicleInfo.model && !existingVehicle.model)
-      ) {
+        (vehicleInfo.model && !existingVehicle.model);
+
+      if (hasNewVehicleData || force) {
         updates.vehicle_info = mergedVehicle;
         synced.vehicleInfo = vehicleInfo;
       }
@@ -208,7 +525,7 @@ Deno.serve(async (req) => {
 
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();
-      
+
       const { error: updateErr } = await supabase
         .from("approveflow_projects")
         .update(updates)
@@ -222,47 +539,70 @@ Deno.serve(async (req) => {
     }
 
     // Insert new assets (with deduplication)
-    for (const file of fileUrls) {
+    for (const url of fileUrls) {
       const { data: existing } = await supabase
         .from("approveflow_assets")
         .select("id")
         .eq("project_id", projectId)
-        .eq("file_url", file.url)
+        .eq("file_url", url)
         .maybeSingle();
 
       if (existing) {
-        console.log(`[ProcessResync] Asset already exists: ${file.filename}`);
+        console.log(`[ProcessResync] Asset already exists: ${url.substring(0, 60)}...`);
         continue;
+      }
+
+      // Determine file type from URL
+      const filename = url.split("/").pop()?.split("?")[0] || "customer_file";
+      const extension = filename.split(".").pop()?.toLowerCase() || "";
+
+      let fileType = "customer_upload";
+      if (["ai", "eps", "pdf", "psd"].includes(extension)) {
+        fileType = "customer_design_file";
+      } else if (["jpg", "jpeg", "png", "webp", "gif"].includes(extension)) {
+        fileType = "customer_reference";
       }
 
       const { error: insertErr } = await supabase
         .from("approveflow_assets")
         .insert({
           project_id: projectId,
-          file_url: file.url,
-          file_type: file.fileType,
-          original_filename: file.filename,
+          file_url: url,
+          file_type: fileType,
+          original_filename: filename,
           source: "woocommerce",
           visibility: "internal",
         });
 
       if (insertErr) {
-        console.error(`[ProcessResync] Failed to insert asset: ${file.filename}`, insertErr);
+        console.error(
+          `[ProcessResync] Failed to insert asset: ${filename}`,
+          insertErr
+        );
       } else {
-        synced.filesCount++;
-        console.log(`[ProcessResync] Inserted asset: ${file.filename}`);
+        synced.filesInserted++;
+        console.log(`[ProcessResync] Inserted asset: ${filename}`);
       }
     }
 
     // Build summary message
     const parts: string[] = [];
-    if (synced.filesCount > 0) parts.push(`${synced.filesCount} file${synced.filesCount > 1 ? "s" : ""}`);
-    if (synced.designInstructions) parts.push("design instructions");
+    if (synced.filesInserted > 0) {
+      parts.push(
+        `${synced.filesInserted} file${synced.filesInserted > 1 ? "s" : ""}`
+      );
+    }
+    if (synced.designInstructions) {
+      parts.push(`instructions (${synced.instructionChars} chars)`);
+    }
     if (synced.vehicleInfo) parts.push("vehicle info");
-    
-    const message = parts.length > 0 
-      ? `Synced: ${parts.join(", ")}`
-      : "No new data found to sync";
+
+    const message =
+      parts.length > 0
+        ? `Synced: ${parts.join(", ")}`
+        : synced.instructionPartsFound > 0
+          ? `Detected ${synced.instructionPartsFound} instruction blocks (${synced.instructionChars} chars) but project already has instructions. Use force=true to overwrite.`
+          : "No new data found to sync";
 
     console.log(`[ProcessResync] Complete: ${message}`);
 
@@ -279,7 +619,10 @@ Deno.serve(async (req) => {
     console.error("[ProcessResync] Error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });
