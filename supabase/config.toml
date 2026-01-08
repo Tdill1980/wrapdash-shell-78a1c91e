@@ -341,3 +341,9 @@ verify_jwt = false
 
 [functions.notify-approveflow-team]
 verify_jwt = false
+
+[functions.send-approveflow-welcome]
+verify_jwt = false
+
+[functions.send-approveflow-proof]
+verify_jwt = false

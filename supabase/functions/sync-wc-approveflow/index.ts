@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Email kill switch - set to true when ready for production
-const SEND_CUSTOMER_EMAILS = false;
+// Email kill switch - enabled for production
+const SEND_CUSTOMER_EMAILS = true;
 
 // ============================================
 // OS CONSTANT — DO NOT DUPLICATE TEXT
@@ -420,38 +420,39 @@ You can also track your order anytime through **MyShopFlow**.`;
     
     console.log('Created welcome chat message for project:', newProject.id);
 
-    // Send customer welcome email via Klaviyo (DISABLED until production ready)
+    // Send customer welcome email via ApproveFlow branded email
     if (SEND_CUSTOMER_EMAILS && customerEmail) {
-      const customerPortalUrl = `${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://').split('.supabase.co')[0]}.lovable.app/customer/${newProject.id}`;
+      const customerPortalUrl = `https://weprintwraps.com/my-approveflow/${orderNumber}`;
       
-      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-klaviyo-event`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-        },
-        body: JSON.stringify({
-          eventName: 'approveflow_customer_welcome',
-          customerEmail: customerEmail,
-          properties: {
-            project_id: newProject.id,
-            order_number: orderNumber,
-            customer_name: customerName || 'Valued Customer',
-            product_type: productType,
-            portal_url: customerPortalUrl,
-            order_total: orderTotal,
-            design_requirements: designRequirements || 'No specific requirements provided',
-            has_artwork: hasArtwork,
-            artwork_count: uploadedFiles.length,
-            uploaded_files: uploadedFiles,
-            artwork_message: hasArtwork 
-              ? `Thank you for uploading ${uploadedFiles.length} file${uploadedFiles.length > 1 ? 's' : ''}! We have received your artwork and will begin working on your design.`
-              : 'We noticed you haven\'t uploaded any artwork yet. Please upload your files through your customer portal or email them to us to get started.',
+      try {
+        const welcomeResponse = await fetch(`${supabaseUrl}/functions/v1/send-approveflow-welcome`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
           },
-        }),
-      });
-      
-      console.log('Customer welcome email sent to:', customerEmail);
+          body: JSON.stringify({
+            projectId: newProject.id,
+            customerEmail: customerEmail,
+            customerName: customerName || 'Valued Customer',
+            orderNumber: orderNumber,
+            hasArtwork: hasArtwork,
+            artworkCount: uploadedFiles.length,
+            designInstructions: designRequirements,
+            portalUrl: customerPortalUrl,
+          }),
+        });
+        
+        if (welcomeResponse.ok) {
+          console.log('✅ Welcome email sent successfully to:', customerEmail);
+        } else {
+          const errorData = await welcomeResponse.json();
+          console.error('❌ Welcome email failed:', errorData);
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending welcome email:', emailError);
+        // Don't throw - email failure shouldn't fail the order sync
+      }
     } else if (!SEND_CUSTOMER_EMAILS && customerEmail) {
       console.log('Customer emails disabled - skipping welcome email for:', customerEmail);
     }
