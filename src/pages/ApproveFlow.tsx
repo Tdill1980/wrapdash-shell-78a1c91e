@@ -304,6 +304,16 @@ export default function ApproveFlow() {
       return;
     }
 
+    // OS RULE: Order number is required for branding
+    if (!project?.order_number) {
+      toast({
+        title: "Order Number Required",
+        description: "This project is missing an order number. Please ensure the order is properly linked.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating3D(true);
     try {
       // Always use the latest version (first in array)
@@ -321,6 +331,7 @@ export default function ApproveFlow() {
           projectId: urlProjectId,
           versionId: latestProof.id,
           panelUrl: latestProof.file_url,
+          orderNumber: project.order_number, // Required for branding
           vehicle: `${vehicleInfo?.year || ''} ${vehicleInfo?.make || ''} ${vehicleInfo?.model || ''}`.trim() || project?.product_type || 'vehicle',
           vehicleYear: vehicleInfo?.year,
           vehicleMake: vehicleInfo?.make,
