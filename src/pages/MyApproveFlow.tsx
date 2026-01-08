@@ -330,10 +330,13 @@ export default function MyApproveFlow() {
       />
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* 6-View Grid - Read Only */}
+        {/* 6-View Grid - Read Only with Branding */}
         <MyApproveFlowViewGrid
           views={proofViews}
           isApproved={isApproved}
+          orderNumber={proofVersion.order_number}
+          brandLine1="WrapCommandAI™ for WPW"
+          brandLine2="ApproveFlow™"
         />
 
         {/* Production Specs - Read Only */}
