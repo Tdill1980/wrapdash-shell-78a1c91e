@@ -9,7 +9,8 @@
 // ============================================
 
 import { Badge } from "@/components/ui/badge";
-import { Wrench } from "lucide-react";
+import { Wrench, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface ApproveFlowModeBarProps {
   orderNumber: string;
@@ -49,12 +50,22 @@ export function ApproveFlowModeBar({
           </span>
         </div>
 
-        {/* Right: Status */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Status:</span>
-          <Badge variant="outline" className="text-[10px] border-cyan-500/50 text-cyan-400">
-            ● {formatStatus(status)}
-          </Badge>
+        {/* Right: MyApproveFlow Link + Status */}
+        <div className="flex items-center gap-4">
+          <Link 
+            to={`/myapproveflow/${orderNumber}`}
+            target="_blank"
+            className="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            <span>MyApproveFlow</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Status:</span>
+            <Badge variant="outline" className="text-[10px] border-cyan-500/50 text-cyan-400">
+              ● {formatStatus(status)}
+            </Badge>
+          </div>
         </div>
       </div>
 
