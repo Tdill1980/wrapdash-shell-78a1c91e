@@ -39,6 +39,12 @@ const VEHICLE_PATTERNS = {
 // Email extraction pattern
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 
+// Phone number extraction pattern (US phone formats)
+const PHONE_PATTERN = /(\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})/;
+
+// Name extraction patterns (when explicitly given)
+const NAME_PATTERNS = /(?:my name is|i'm|i am|this is|call me|name'?s?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i;
+
 // Order number extraction pattern (4-6 digits typically)
 const ORDER_NUMBER_PATTERN = /\b(\d{4,6})\b/;
 
@@ -112,10 +118,49 @@ ${emotionalTriggers.length > 0 ? `- Emotional triggers that resonate: ${emotiona
 YOUR ROLE:
 - Educate visitors about wrap options and materials
 - Calculate and provide SPECIFIC pricing based on vehicle SQFT
-- Collect email addresses for formal written quotes
+- **COLLECT COMPLETE LEAD INFO** (name, email, phone) before giving detailed pricing
 - Identify partnership/sponsorship opportunities
 - Route formal quote requests to the quoting team
 - **PROACTIVELY** offer value through our ecosystem products (see below)
+
+🎯 LEAD QUALIFICATION PROTOCOL (CRITICAL - FOLLOW THIS FLOW):
+
+**STEP 1 - GREETING + PURPOSE** (First response):
+- Greet warmly and ask WHAT they're looking for
+- "Hey! I'm Jordan from WePrintWraps. What kind of wrap project are you working on?"
+
+**STEP 2 - UNDERSTAND THE NEED** (Before any pricing):
+- What type of wrap? (Full, partial, commercial, personal, color change, graphics?)
+- What vehicle(s)? (Year, make, model)
+- What's the goal? (Advertising, color change, protection, resale?)
+- Any timeline constraints?
+
+**STEP 3 - COLLECT CONTACT INFO** (BEFORE giving detailed pricing):
+Always ask for ALL of these:
+- "What's your name?"
+- "Best email for the quote?"
+- "Phone number in case we need to call?"
+
+SAY: "To get you an accurate quote, I'll need your name, email, and phone number - what's the best way to reach you?"
+
+**STEP 4 - CALCULATE + QUOTE** (Only AFTER step 3):
+- Give specific price based on vehicle sqft
+- Mention both Avery AND 3M at $5.27/sqft
+- Offer to email formal quote: "I'm sending this to your email right now!"
+
+**STEP 5 - UPSELL + CLOSE** (Always at end):
+- First-time buyer → WRAPREWARDS code (5% off)
+- Enthusiast → WrapRewards loyalty program
+- Multiple vehicles → Bulk discounts (share tiers!)
+- Design needs → RestylePro for visualization
+
+⚠️ HARD RULES:
+- DO NOT GIVE PRICING until you have at LEAST:
+  1. Vehicle year, make, model (for calculation)
+  2. Customer name AND email (for quote delivery)
+  
+IF customer jumps straight to "how much?":
+SAY: "I can definitely get you pricing! What vehicle is this for? And what's your name and email so I can send the quote?"
 
 YOUR TEAM (mention naturally when routing):
 - Alex (Quoting Team) - handles formal quotes and pricing
@@ -251,11 +296,20 @@ serve(async (req) => {
       model: message_text.match(VEHICLE_PATTERNS.model)?.[0] || null,
     };
     const extractedEmail = message_text.match(EMAIL_PATTERN)?.[0] || null;
+    const extractedPhone = message_text.match(PHONE_PATTERN)?.[1] || null;
+    const extractedName = message_text.match(NAME_PATTERNS)?.[1] || null;
     const hasCompleteVehicle = extractedVehicle.year && extractedVehicle.make && extractedVehicle.model;
     // Partial vehicle info (like just "sprinter" or "ford f150") - need to ask for more details
     const hasPartialVehicle = (extractedVehicle.make || extractedVehicle.model) && !hasCompleteVehicle;
     
-    console.log('[JordanLee] Extracted:', { vehicle: extractedVehicle, email: extractedEmail, complete: hasCompleteVehicle, partial: hasPartialVehicle });
+    console.log('[JordanLee] Extracted:', { 
+      vehicle: extractedVehicle, 
+      email: extractedEmail, 
+      phone: extractedPhone,
+      name: extractedName,
+      complete: hasCompleteVehicle, 
+      partial: hasPartialVehicle 
+    });
 
     // Detect intent signals
     const pricingIntent = lowerMessage.includes('price') || 
@@ -400,6 +454,36 @@ serve(async (req) => {
     console.log('[JordanLee] Loaded message history:', messageHistory?.length || 0, 'messages');
 
     // Update chat state with extracted info
+    
+    // Capture customer name
+    if (extractedName && !chatState.customer_name) {
+      chatState.customer_name = extractedName;
+      console.log('[JordanLee] Captured name:', extractedName);
+      
+      // Update contact with name
+      if (contactId) {
+        await supabase
+          .from('contacts')
+          .update({ name: extractedName })
+          .eq('id', contactId);
+      }
+    }
+    
+    // Capture customer phone
+    if (extractedPhone && !chatState.customer_phone) {
+      chatState.customer_phone = extractedPhone;
+      console.log('[JordanLee] Captured phone:', extractedPhone);
+      
+      // Update contact with phone
+      if (contactId) {
+        await supabase
+          .from('contacts')
+          .update({ phone: extractedPhone })
+          .eq('id', contactId);
+      }
+    }
+    
+    // Capture customer email
     if (extractedEmail && !chatState.customer_email) {
       chatState.customer_email = extractedEmail;
       chatState.stage = 'email_captured';
@@ -975,9 +1059,9 @@ DO NOT guess or make up any order information!`;
       contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
     } else if (pricingIntent && !chatState.customer_email) {
       // ============================================
-      // HARD GATE: NO PRICING WITHOUT EMAIL
+      // HARD GATE: NO PRICING WITHOUT EMAIL + NAME + PHONE
       // ============================================
-      // Must collect name + email FIRST, then give price, then auto-email quote
+      // Must collect name + email + phone FIRST, then give price, then auto-email quote
       const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
       const hasAnyVehicleInfo = existingVehicle?.make || existingVehicle?.model || extractedVehicle.make || extractedVehicle.model;
       

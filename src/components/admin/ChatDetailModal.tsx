@@ -1,10 +1,11 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { MapPin, Mail, Phone, Clock, Globe, Car, AlertCircle, User, MessageSquare, FileText, Download, Receipt, CheckCircle, XCircle } from "lucide-react";
+import { MapPin, Mail, Phone, Clock, Globe, Car, AlertCircle, User, MessageSquare, FileText, Download, Receipt, CheckCircle, XCircle, Reply } from "lucide-react";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 import { useConversationEvents } from "@/hooks/useConversationEvents";
 import { useConversationQuotes } from "@/hooks/useConversationQuotes";
@@ -12,6 +13,7 @@ import { useEscalationStatus } from "@/hooks/useEscalationStatus";
 import { EscalationTimeline } from "./EscalationTimeline";
 import { EmailReceiptViewer } from "./EmailReceiptViewer";
 import { EscalationStatusCard } from "./EscalationStatusCard";
+import { InternalReplyPanel } from "./InternalReplyPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -34,6 +36,7 @@ interface ChatDetailModalProps {
 
 export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetailModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showReplyPanel, setShowReplyPanel] = useState(false);
   const queryClient = useQueryClient();
   const { data: events, isLoading: eventsLoading } = useConversationEvents(conversation?.id || null);
   const { data: quotes, isLoading: quotesLoading } = useConversationQuotes(conversation?.id || null);
@@ -441,6 +444,32 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                   ))}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Reply to Customer Button */}
+            {contact?.email && !contact.email.includes('@capture.local') && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setShowReplyPanel(true)}
+              >
+                <Reply className="h-4 w-4" />
+                Reply to Customer
+              </Button>
+            )}
+
+            {/* Internal Reply Panel */}
+            {showReplyPanel && contact?.email && !contact.email.includes('@capture.local') && (
+              <InternalReplyPanel
+                conversation={conversation}
+                customerEmail={contact.email}
+                customerName={contact.name || null}
+                onClose={() => setShowReplyPanel(false)}
+                onEmailSent={() => {
+                  setShowReplyPanel(false);
+                  queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
+                }}
+              />
             )}
 
             {/* Escalation Status Card - THE KEY UI */}
