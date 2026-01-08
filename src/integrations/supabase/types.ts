@@ -5628,6 +5628,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          notification_email: string | null
           offers_installation: boolean | null
           owner_id: string | null
           role: Database["public"]["Enums"]["organization_role"] | null
@@ -5642,6 +5643,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          notification_email?: string | null
           offers_installation?: boolean | null
           owner_id?: string | null
           role?: Database["public"]["Enums"]["organization_role"] | null
@@ -5656,6 +5658,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          notification_email?: string | null
           offers_installation?: boolean | null
           owner_id?: string | null
           role?: Database["public"]["Enums"]["organization_role"] | null

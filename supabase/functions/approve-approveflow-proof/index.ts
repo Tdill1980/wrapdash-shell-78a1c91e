@@ -140,6 +140,30 @@ serve(async (req) => {
             pdf_url: pv.proof_pdf_url
           }
         });
+
+      // Send team notification email
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        
+        await fetch(`${supabaseUrl}/functions/v1/notify-approveflow-team`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            projectId: pv.project_id,
+            notificationType: 'approved',
+            customerName: customer_name || 'Customer',
+            orderNumber: pv.order_number,
+          }),
+        });
+        console.log(`[approve-approveflow-proof] Team notification sent for order ${pv.order_number}`);
+      } catch (notifyErr) {
+        console.error(`[approve-approveflow-proof] Failed to send team notification:`, notifyErr);
+        // Don't throw - approval is already complete
+      }
     }
 
     return new Response(

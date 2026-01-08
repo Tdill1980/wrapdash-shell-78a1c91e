@@ -338,3 +338,6 @@ verify_jwt = false
 
 [functions.admin-jordan-chat]
 verify_jwt = false
+
+[functions.notify-approveflow-team]
+verify_jwt = false
