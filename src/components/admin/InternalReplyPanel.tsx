@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Sparkles, X, Mail, CheckCircle } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Send, Sparkles, X, Mail, CheckCircle, MessageCircle, Bot, User } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
@@ -16,6 +18,11 @@ interface InternalReplyPanelProps {
   customerName: string | null;
   onClose: () => void;
   onEmailSent: () => void;
+}
+
+interface AIMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export function InternalReplyPanel({
@@ -30,18 +37,97 @@ export function InternalReplyPanel({
   const [isDrafting, setIsDrafting] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  
+  // AI Chat state
+  const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
+  const [aiInput, setAiInput] = useState("");
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<'jordan' | 'alex'>('jordan');
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const messages = conversation.messages || [];
+
+  // Scroll to bottom of AI chat when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [aiMessages]);
+
+  // Build conversation context for AI
+  const getConversationContext = () => {
+    return messages
+      .slice(-10)
+      .map((msg) => `${msg.direction === 'inbound' ? 'Customer' : 'Jordan'}: ${msg.content}`)
+      .join('\n');
+  };
+
+  // Ask AI for advice
+  const handleAskAI = async () => {
+    if (!aiInput.trim()) return;
+
+    const userMessage = aiInput.trim();
+    setAiInput("");
+    setAiMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsAiThinking(true);
+
+    try {
+      const conversationContext = getConversationContext();
+      const currentDraft = body.trim();
+
+      const agentName = selectedAgent === 'jordan' ? 'Jordan Lee' : 'Alex Morgan';
+      const agentPersonality = selectedAgent === 'jordan' 
+        ? 'You are Jordan Lee, a friendly and knowledgeable wrap specialist. You speak casually but professionally, with enthusiasm about vehicle wraps.'
+        : 'You are Alex Morgan, a senior customer success manager. You speak professionally and are excellent at de-escalation and problem-solving.';
+
+      const { data, error } = await supabase.functions.invoke('agent-chat', {
+        body: {
+          agent: selectedAgent === 'jordan' ? 'jordan_lee' : 'alex_morgan',
+          prompt: `${agentPersonality}
+
+You are helping an admin reply to a customer. The admin is asking for your advice.
+
+Customer Name: ${customerName || 'Unknown'}
+Customer Email: ${customerEmail || 'Unknown'}
+
+Recent conversation with customer:
+${conversationContext}
+
+${currentDraft ? `Current draft response the admin is working on:\n${currentDraft}\n` : ''}
+
+Admin's question to you: ${userMessage}
+
+Provide helpful, concise advice. If they ask you to rephrase or write something, give them the exact text they can use. Keep responses short and actionable.`,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.reply) {
+        setAiMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      }
+    } catch (err) {
+      console.error('Failed to get AI advice:', err);
+      setAiMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, I had trouble processing that. Please try again.' 
+      }]);
+    } finally {
+      setIsAiThinking(false);
+    }
+  };
+
+  // Use AI suggestion in draft
+  const useInDraft = (text: string) => {
+    setBody(text);
+    toast.success('Added to draft!');
+  };
 
   // Generate AI draft based on conversation context
   const handleAIDraft = async () => {
     setIsDrafting(true);
     try {
-      // Build conversation summary for AI
-      const conversationSummary = messages
-        .slice(-10)
-        .map((msg) => `${msg.direction === 'inbound' ? 'Customer' : 'Jordan'}: ${msg.content}`)
-        .join('\n');
+      const conversationSummary = getConversationContext();
 
       const { data, error } = await supabase.functions.invoke('agent-chat', {
         body: {
@@ -151,60 +237,218 @@ Keep it concise (2-3 short paragraphs max). Do NOT include the subject line, jus
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="subject">Subject</Label>
-          <Input
-            id="subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Email subject..."
-          />
-        </div>
+        <Tabs defaultValue="compose" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="compose" className="gap-2">
+              <Mail className="h-3 w-3" />
+              Compose
+            </TabsTrigger>
+            <TabsTrigger value="ai-help" className="gap-2">
+              <MessageCircle className="h-3 w-3" />
+              Ask AI
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="body">Message</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAIDraft}
-              disabled={isDrafting}
-              className="gap-2"
-            >
-              {isDrafting ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+          {/* Compose Tab */}
+          <TabsContent value="compose" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Email subject..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="body">Message</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAIDraft}
+                  disabled={isDrafting}
+                  className="gap-2"
+                >
+                  {isDrafting ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3" />
+                  )}
+                  AI Draft
+                </Button>
+              </div>
+              <Textarea
+                id="body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Type your message or click 'AI Draft' to generate one..."
+                className="min-h-[150px] resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendEmail}
+                disabled={isSending || !body.trim() || !customerEmail}
+                className="gap-2"
+              >
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Send Email
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* AI Help Tab */}
+          <TabsContent value="ai-help" className="space-y-3 mt-4">
+            {/* Agent Selector */}
+            <div className="flex gap-2">
+              <Button
+                variant={selectedAgent === 'jordan' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedAgent('jordan')}
+                className="flex-1 gap-2"
+              >
+                <Bot className="h-3 w-3" />
+                Jordan
+              </Button>
+              <Button
+                variant={selectedAgent === 'alex' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedAgent('alex')}
+                className="flex-1 gap-2"
+              >
+                <Bot className="h-3 w-3" />
+                Alex
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {selectedAgent === 'jordan' 
+                ? 'Jordan is friendly & casual — great for product questions'
+                : 'Alex is professional — great for escalations & problem-solving'}
+            </p>
+
+            {/* AI Chat Messages */}
+            <ScrollArea className="h-[180px] border rounded-lg bg-muted/20 p-3" ref={scrollRef}>
+              {aiMessages.length === 0 ? (
+                <div className="text-center text-muted-foreground text-sm py-6">
+                  <MessageCircle className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                  <p>Ask {selectedAgent === 'jordan' ? 'Jordan' : 'Alex'} for help!</p>
+                  <p className="text-xs mt-1">
+                    e.g. "How should I respond to this?" or "Rephrase this more professionally"
+                  </p>
+                </div>
               ) : (
-                <Sparkles className="h-3 w-3" />
+                <div className="space-y-3">
+                  {aiMessages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {msg.role === 'assistant' && (
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Bot className="h-3 w-3 text-primary" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[85%] rounded-lg p-2 text-sm ${
+                          msg.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                        {msg.role === 'assistant' && msg.content.length > 50 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 h-6 text-xs gap-1"
+                            onClick={() => useInDraft(msg.content)}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            Use in draft
+                          </Button>
+                        )}
+                      </div>
+                      {msg.role === 'user' && (
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <User className="h-3 w-3" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {isAiThinking && (
+                    <div className="flex gap-2 items-center">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Bot className="h-3 w-3 text-primary" />
+                      </div>
+                      <div className="bg-muted rounded-lg p-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
-              AI Draft
-            </Button>
-          </div>
-          <Textarea
-            id="body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Type your message or click 'AI Draft' to generate one..."
-            className="min-h-[200px] resize-none"
-          />
-        </div>
+            </ScrollArea>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSendEmail}
-            disabled={isSending || !body.trim() || !customerEmail}
-            className="gap-2"
-          >
-            {isSending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            Send Email
-          </Button>
-        </div>
+            {/* AI Input */}
+            <div className="flex gap-2">
+              <Input
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                placeholder={`Ask ${selectedAgent === 'jordan' ? 'Jordan' : 'Alex'} for advice...`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAskAI();
+                  }
+                }}
+                disabled={isAiThinking}
+              />
+              <Button
+                size="icon"
+                onClick={handleAskAI}
+                disabled={isAiThinking || !aiInput.trim()}
+              >
+                {isAiThinking ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* Quick prompts */}
+            <div className="flex flex-wrap gap-1">
+              {[
+                'Rephrase professionally',
+                'How should I respond?',
+                'Write a polite decline',
+              ].map((prompt) => (
+                <Button
+                  key={prompt}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-6"
+                  onClick={() => {
+                    setAiInput(prompt);
+                  }}
+                >
+                  {prompt}
+                </Button>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
