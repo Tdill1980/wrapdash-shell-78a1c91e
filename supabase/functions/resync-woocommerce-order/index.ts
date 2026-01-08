@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const WOO_CONSUMER_KEY = Deno.env.get("WOO_CONSUMER_KEY");
     const WOO_CONSUMER_SECRET = Deno.env.get("WOO_CONSUMER_SECRET");
-    const WOO_STORE_URL = "https://wrapitright.com";
+    const WOO_STORE_URL = "https://weprintwraps.com";
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error("Missing Supabase credentials");
