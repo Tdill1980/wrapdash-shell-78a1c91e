@@ -23,6 +23,7 @@ export interface ConversationEvent {
     quote_id?: string;
     quote_number?: string;
     reason?: string;
+    resolution_notes?: string;
     metadata?: Record<string, unknown>;
   };
   created_at: string;

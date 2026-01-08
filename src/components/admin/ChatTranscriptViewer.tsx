@@ -8,6 +8,7 @@ import { useWebsiteChats, useWebsiteChatStats, useConversationTotalCount } from 
 import { useEscalationStats } from "@/hooks/useConversationEvents";
 import { ChatTranscriptRow } from "./ChatTranscriptRow";
 import { ChatDetailModal } from "./ChatDetailModal";
+import { NeedsActionQueue } from "./NeedsActionQueue";
 import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, isToday } from "date-fns";
@@ -78,6 +79,15 @@ export function ChatTranscriptViewer() {
   const handleRowClick = (convo: ChatConversation) => {
     setSelectedConversation(convo);
     setModalOpen(true);
+  };
+
+  // Handle queue item selection
+  const handleQueueSelect = (conversationId: string) => {
+    const convo = conversations.find(c => c.id === conversationId);
+    if (convo) {
+      setSelectedConversation(convo);
+      setModalOpen(true);
+    }
   };
 
   // Count escalations
@@ -154,6 +164,9 @@ export function ChatTranscriptViewer() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Needs Action Queue - Global Control View */}
+      <NeedsActionQueue onSelectConversation={handleQueueSelect} />
 
       {/* Escalation Quick Filters */}
       <div className="flex flex-wrap items-center gap-2">
