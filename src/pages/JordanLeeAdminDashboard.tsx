@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power, Instagram, Loader2, AlertTriangle } from "lucide-react";
+import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power, Instagram, Loader2, AlertTriangle, Bell } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { AgenticAITab } from "@/components/admin/jordan-dashboard/AgenticAITab";
 import { WrapGuruTab } from "@/components/admin/jordan-dashboard/WrapGuruTab";
@@ -19,17 +19,19 @@ import { EmailTrackingTab } from "@/components/admin/jordan-dashboard/EmailTrack
 import { ToolsTab } from "@/components/admin/jordan-dashboard/ToolsTab";
 import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
 import { RecoveredLeadsTab } from "@/components/admin/jordan-dashboard/RecoveredLeadsTab";
+import { EscalationsDashboard } from "@/components/admin/EscalationsDashboard";
 import { Session } from "@supabase/supabase-js";
 
 const TABS = [
   { id: "control", label: "Agent Control", icon: Power, color: "bg-red-500" },
+  { id: "escalations", label: "Escalations", icon: Bell, color: "bg-orange-500", highlight: true },
   { id: "recovered", label: "Recovered IG Leads", icon: Instagram, color: "bg-pink-500" },
   { id: "analytics", label: "Analytics", icon: BarChart3, color: "bg-green-500" },
-  { id: "agentic", label: "Agentic AI", icon: Brain, color: "bg-orange-500" },
+  { id: "agentic", label: "Agentic AI", icon: Brain, color: "bg-amber-500" },
   { id: "wrapguru", label: "WrapGuru", icon: Car, color: "bg-purple-500" },
   { id: "corrections", label: "Corrections", icon: FileEdit, color: "bg-red-500" },
   { id: "knowledge", label: "Knowledge Base", icon: BookOpen, color: "bg-teal-500" },
-  { id: "chats", label: "Website Page Chat", icon: MessageSquare, color: "bg-blue-500" },
+  { id: "chats", label: "All Chats", icon: MessageSquare, color: "bg-blue-500" },
   { id: "quotes", label: "Quotes", icon: FileText, color: "bg-indigo-500" },
   { id: "files", label: "File Analysis", icon: FolderSearch, color: "bg-pink-500" },
   { id: "reviews", label: "Reviews", icon: Star, color: "bg-yellow-500" },
@@ -181,6 +183,7 @@ export default function JordanLeeAdminDashboard() {
           <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent p-0 justify-start">
             {TABS.map((tab) => {
               const Icon = tab.icon;
+              const isHighlight = (tab as any).highlight;
               return (
                 <TabsTrigger
                   key={tab.id}
@@ -190,6 +193,7 @@ export default function JordanLeeAdminDashboard() {
                     data-[state=active]:text-white data-[state=active]:${tab.color}
                     data-[state=inactive]:bg-muted data-[state=inactive]:text-muted-foreground
                     data-[state=inactive]:hover:bg-muted/80
+                    ${isHighlight && activeTab !== tab.id ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-background animate-pulse' : ''}
                   `}
                   style={{
                     backgroundColor: activeTab === tab.id ? undefined : undefined,
@@ -205,6 +209,10 @@ export default function JordanLeeAdminDashboard() {
           {/* Tab Contents */}
           <TabsContent value="control" className="mt-6">
             <AgentControlPanel />
+          </TabsContent>
+
+          <TabsContent value="escalations" className="mt-6">
+            <EscalationsDashboard />
           </TabsContent>
 
           <TabsContent value="recovered" className="mt-6">
