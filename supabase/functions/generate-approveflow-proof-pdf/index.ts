@@ -5,6 +5,7 @@
 // This function generates the immutable approval PDF.
 // Branding, disclaimer, and layout are HARDCODED - never AI-generated.
 // N/A fields are NEVER rendered.
+// OPTIMIZED: Parallel image fetching to prevent CPU timeout
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -82,16 +83,26 @@ interface ProductionSpecs {
   scale_reference_is_na?: boolean;
 }
 
-async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
+// Optimized image fetch with timeout
+async function fetchImageBytes(url: string, timeoutMs = 8000): Promise<Uint8Array | null> {
   try {
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
     if (!res.ok) {
       console.error(`[generate-approveflow-proof-pdf] Image fetch failed: ${url} - ${res.status}`);
       return null;
     }
     return new Uint8Array(await res.arrayBuffer());
   } catch (e) {
-    console.error(`[generate-approveflow-proof-pdf] Image fetch error: ${url}`, e);
+    if (e instanceof Error && e.name === 'AbortError') {
+      console.error(`[generate-approveflow-proof-pdf] Image fetch timeout: ${url}`);
+    } else {
+      console.error(`[generate-approveflow-proof-pdf] Image fetch error: ${url}`, e);
+    }
     return null;
   }
 }
@@ -100,6 +111,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const { proof_version_id } = await req.json();
@@ -111,7 +124,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[generate-approveflow-proof-pdf] Generating PDF for proof: ${proof_version_id}`);
+    console.log(`[generate-approveflow-proof-pdf] Starting PDF generation for: ${proof_version_id}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -128,6 +141,8 @@ serve(async (req) => {
     if (pvErr || !pv) {
       throw new Error(pvErr?.message || "Proof version not found");
     }
+
+    console.log(`[generate-approveflow-proof-pdf] Proof version loaded: ${pv.order_number} (${Date.now() - startTime}ms)`);
 
     // Fetch views
     const { data: views, error: viewsErr } = await supabase
@@ -150,6 +165,31 @@ serve(async (req) => {
 
     const viewMap = new Map<string, ViewRow>();
     (views || []).forEach((v: ViewRow) => viewMap.set(v.view_key, v));
+
+    console.log(`[generate-approveflow-proof-pdf] Found ${viewMap.size} views (${Date.now() - startTime}ms)`);
+
+    // ============================================
+    // PARALLEL IMAGE FETCHING (OPTIMIZATION)
+    // Fetch all images concurrently to reduce CPU time
+    // ============================================
+    
+    const imageUrls = VIEW_ORDER.map(entry => {
+      const v = viewMap.get(entry.key);
+      return { key: entry.key, url: v?.image_url || null, label: v?.label || entry.label };
+    });
+
+    console.log(`[generate-approveflow-proof-pdf] Fetching ${imageUrls.filter(i => i.url).length} images in parallel...`);
+    
+    const imagePromises = imageUrls.map(async (item) => {
+      if (!item.url) return { key: item.key, bytes: null, label: item.label };
+      const bytes = await fetchImageBytes(item.url);
+      return { key: item.key, bytes, label: item.label };
+    });
+
+    const fetchedImages = await Promise.all(imagePromises);
+    const imageMap = new Map(fetchedImages.map(img => [img.key, img]));
+
+    console.log(`[generate-approveflow-proof-pdf] Images fetched (${Date.now() - startTime}ms)`);
 
     // Create PDF
     const pdf = await PDFDocument.create();
@@ -215,7 +255,7 @@ serve(async (req) => {
     });
 
     // ============================================
-    // 6-VIEW GRID (FIXED LAYOUT)
+    // 6-VIEW GRID (FIXED LAYOUT) - Using pre-fetched images
     // ============================================
 
     const cols = 3;
@@ -227,6 +267,8 @@ serve(async (req) => {
 
     const cellW = (gridWidth - gap * (cols - 1)) / cols;
     const cellH = (gridHeight - gap * (rows - 1)) / rows;
+
+    console.log(`[generate-approveflow-proof-pdf] Embedding images into PDF...`);
 
     for (let i = 0; i < VIEW_ORDER.length; i++) {
       const col = i % cols;
@@ -246,41 +288,38 @@ serve(async (req) => {
       });
 
       const entry = VIEW_ORDER[i];
-      const v = viewMap.get(entry.key);
+      const imageData = imageMap.get(entry.key);
 
-      if (v?.image_url) {
-        const bytes = await fetchImageBytes(v.image_url);
-        if (bytes) {
+      if (imageData?.bytes) {
+        try {
+          let img;
           try {
-            let img;
-            try {
-              img = await pdf.embedJpg(bytes);
-            } catch {
-              img = await pdf.embedPng(bytes);
-            }
-
-            const imgAspect = img.width / img.height;
-            const cellAspect = cellW / cellH;
-            let dw = cellW - 4;
-            let dh = cellH - 4;
-            if (imgAspect > cellAspect) {
-              dh = dw / imgAspect;
-            } else {
-              dw = dh * imgAspect;
-            }
-
-            const ox = x + (cellW - dw) / 2;
-            const oy = y + (cellH - dh) / 2;
-
-            page.drawImage(img, { x: ox, y: oy, width: dw, height: dh });
-          } catch (e) {
-            console.error(`[generate-approveflow-proof-pdf] Failed to embed image: ${entry.key}`, e);
+            img = await pdf.embedJpg(imageData.bytes);
+          } catch {
+            img = await pdf.embedPng(imageData.bytes);
           }
+
+          const imgAspect = img.width / img.height;
+          const cellAspect = cellW / cellH;
+          let dw = cellW - 4;
+          let dh = cellH - 4;
+          if (imgAspect > cellAspect) {
+            dh = dw / imgAspect;
+          } else {
+            dw = dh * imgAspect;
+          }
+
+          const ox = x + (cellW - dw) / 2;
+          const oy = y + (cellH - dh) / 2;
+
+          page.drawImage(img, { x: ox, y: oy, width: dw, height: dh });
+        } catch (e) {
+          console.error(`[generate-approveflow-proof-pdf] Failed to embed image: ${entry.key}`, e);
         }
       }
 
       // Label below cell
-      const label = v?.label || entry.label;
+      const label = imageData?.label || entry.label;
       page.drawText(label, {
         x: x + cellW / 2 - font.widthOfTextAtSize(label, 9) / 2,
         y: y - 12,
@@ -289,6 +328,8 @@ serve(async (req) => {
         color: gray
       });
     }
+
+    console.log(`[generate-approveflow-proof-pdf] Images embedded (${Date.now() - startTime}ms)`);
 
     // ============================================
     // PRODUCTION SPECIFICATIONS BLOCK
@@ -567,6 +608,8 @@ serve(async (req) => {
     // UPLOAD PDF TO STORAGE
     // ============================================
 
+    console.log(`[generate-approveflow-proof-pdf] Saving PDF... (${Date.now() - startTime}ms)`);
+
     const pdfBytes = await pdf.save();
     const fileId = crypto.randomUUID();
     const filePath = `approveflow/proofs/${pv.order_number}/${proof_version_id}_${fileId}.pdf`;
@@ -600,7 +643,7 @@ serve(async (req) => {
       console.error(`[generate-approveflow-proof-pdf] Failed to update proof version:`, updateErr);
     }
 
-    console.log(`[generate-approveflow-proof-pdf] PDF generated successfully: ${publicUrl}`);
+    console.log(`[generate-approveflow-proof-pdf] PDF generated successfully in ${Date.now() - startTime}ms: ${publicUrl}`);
 
     return new Response(
       JSON.stringify({ success: true, url: publicUrl }),
@@ -608,7 +651,7 @@ serve(async (req) => {
     );
 
   } catch (e) {
-    console.error(`[generate-approveflow-proof-pdf] Error:`, e);
+    console.error(`[generate-approveflow-proof-pdf] Error after ${Date.now() - startTime}ms:`, e);
     return new Response(
       JSON.stringify({ success: false, error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
