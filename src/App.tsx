@@ -93,6 +93,7 @@ import TagManager from "./pages/TagManager";
 import Backlog from "./pages/Backlog";
 import ContentDrafts from "./pages/ContentDrafts";
 import ContentStudio from "./pages/ContentStudio";
+import EmbedChat from "./pages/EmbedChat";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -105,6 +106,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Embed route - no layout, for iframe embedding */}
+            <Route path="/embed/chat" element={<EmbedChat />} />
+            
             <Route path="/signup" element={<Signup />} />
             <Route path="/beta/signup" element={<BetaSignup />} />
             <Route path="/auth" element={<Auth />} />
