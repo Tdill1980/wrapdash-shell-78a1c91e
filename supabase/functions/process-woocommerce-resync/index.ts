@@ -1,12 +1,8 @@
 // ============================================
-// Resync WooCommerce Order — ApproveFlow
+// Process WooCommerce Resync — ApproveFlow
 // ============================================
-// OS RULES:
-// 1. Accepts projectId, resolves order_number internally
-// 2. Fetches complete order data from WooCommerce REST API
-// 3. Extracts design instructions, files, vehicle info from line_items[].meta_data
-// 4. Updates approveflow_projects and creates approveflow_assets
-// 5. Only fills empty fields, never overwrites existing data
+// This function processes order data fetched via woo-proxy
+// from the frontend, avoiding Cloudflare blocking issues
 // ============================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -16,93 +12,49 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Canonical WooCommerce store URL - never hardcode elsewhere
-const WOO_STORE_URL = "https://weprintwraps.com";
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { projectId } = await req.json();
+    const { projectId, orderData } = await req.json();
 
-    if (!projectId) {
+    if (!projectId || !orderData) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing projectId" }),
+        JSON.stringify({ success: false, error: "Missing projectId or orderData" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[ResyncWC] Starting resync for projectId: ${projectId}`);
+    console.log(`[ProcessResync] Processing order data for projectId: ${projectId}`);
 
-    // Get environment variables
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const WOO_CONSUMER_KEY = Deno.env.get("WOO_CONSUMER_KEY");
-    const WOO_CONSUMER_SECRET = Deno.env.get("WOO_CONSUMER_SECRET");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error("Missing Supabase credentials");
     }
-    if (!WOO_CONSUMER_KEY || !WOO_CONSUMER_SECRET) {
-      throw new Error("Missing WooCommerce credentials");
-    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 🔒 OS RULE: Resolve order_number from source of truth (approveflow_projects)
+    // Get current project state
     const { data: project, error: projectErr } = await supabase
       .from("approveflow_projects")
       .select("order_number, design_instructions, vehicle_info")
       .eq("id", projectId)
       .single();
 
-    if (projectErr || !project?.order_number) {
-      console.error("[ResyncWC] Project not found or missing order_number", projectErr);
+    if (projectErr || !project) {
+      console.error("[ProcessResync] Project not found", projectErr);
       return new Response(
-        JSON.stringify({ success: false, error: "Project not found or missing order number" }),
+        JSON.stringify({ success: false, error: "Project not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const orderNumber = project.order_number;
-    console.log(`[ResyncWC] Resolved order_number: ${orderNumber}`);
-
-    // Fetch order from WooCommerce REST API
-    // Using OAuth 1.0a query string authentication to avoid Cloudflare blocking
-    const wcUrl = new URL(`${WOO_STORE_URL}/wp-json/wc/v3/orders`);
-    wcUrl.searchParams.set("number", orderNumber);
-    wcUrl.searchParams.set("consumer_key", WOO_CONSUMER_KEY);
-    wcUrl.searchParams.set("consumer_secret", WOO_CONSUMER_SECRET);
-    
-    console.log(`[ResyncWC] Fetching from WooCommerce order #${orderNumber}`);
-    
-    const wcResponse = await fetch(wcUrl.toString(), {
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "WePrintWraps-ApproveFlow/1.0",
-      },
-    });
-
-    if (!wcResponse.ok) {
-      const errorText = await wcResponse.text();
-      console.error(`[ResyncWC] WooCommerce API error: ${wcResponse.status}`, errorText.substring(0, 500));
-      throw new Error(`WooCommerce API error: ${wcResponse.status}`);
-    }
-
-    const orders = await wcResponse.json();
-    
-    if (!orders || orders.length === 0) {
-      console.log(`[ResyncWC] Order #${orderNumber} not found in WooCommerce`);
-      return new Response(
-        JSON.stringify({ success: false, error: `Order #${orderNumber} not found in WooCommerce` }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const order = orders[0];
-    console.log(`[ResyncWC] Found order with ${order.line_items?.length || 0} line items`);
+    const order = orderData;
+    console.log(`[ProcessResync] Processing order #${order.number || project.order_number} with ${order.line_items?.length || 0} line items`);
 
     // Extract data from line_items[].meta_data (WooCommerce Extra Product Options)
     let designInstructions = "";
@@ -111,7 +63,7 @@ Deno.serve(async (req) => {
 
     // Iterate through all line items and their meta_data
     for (const item of order.line_items || []) {
-      console.log(`[ResyncWC] Processing line item: ${item.name}`);
+      console.log(`[ProcessResync] Processing line item: ${item.name}`);
       
       for (const meta of item.meta_data || []) {
         const key = (meta.key || "").toLowerCase();
@@ -133,7 +85,7 @@ Deno.serve(async (req) => {
         ) {
           if (typeof value === "string" && value.length > 20) {
             designInstructions = value;
-            console.log(`[ResyncWC] Found design instructions (${value.length} chars)`);
+            console.log(`[ProcessResync] Found design instructions (${value.length} chars)`);
           }
         }
 
@@ -142,18 +94,16 @@ Deno.serve(async (req) => {
           const urlMatch = String(value).match(/https?:\/\/[^\s<>"']+/);
           if (urlMatch) {
             const url = urlMatch[0];
-            // Extract filename from URL
             const filename = url.split("/").pop()?.split("?")[0] || "customer_file";
             const extension = filename.split(".").pop()?.toLowerCase() || "";
             
-            // Determine file type
             let fileType = "customer_upload";
             if (key.includes("logo")) fileType = "customer_logo";
             else if (key.includes("brand")) fileType = "customer_brand_guide";
             else if (extension === "ai" || extension === "eps" || extension === "pdf") fileType = "customer_design_file";
             
             fileUrls.push({ url, filename, fileType });
-            console.log(`[ResyncWC] Found file: ${filename} (${fileType})`);
+            console.log(`[ProcessResync] Found file: ${filename} (${fileType})`);
           }
         }
 
@@ -196,7 +146,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[ResyncWC] Extracted: instructions=${designInstructions.length} chars, files=${fileUrls.length}, vehicle=${JSON.stringify(vehicleInfo)}`);
+    console.log(`[ProcessResync] Extracted: instructions=${designInstructions.length} chars, files=${fileUrls.length}, vehicle=${JSON.stringify(vehicleInfo)}`);
 
     // Track what was synced
     const synced = {
@@ -208,13 +158,11 @@ Deno.serve(async (req) => {
     // Update approveflow_projects if fields are empty
     const updates: Record<string, any> = {};
     
-    // Only update design_instructions if currently empty
     if (designInstructions && (!project.design_instructions || project.design_instructions.trim().length === 0)) {
       updates.design_instructions = designInstructions;
       synced.designInstructions = true;
     }
 
-    // Only update vehicle_info if currently empty or incomplete
     const existingVehicle = project.vehicle_info as any || {};
     if (Object.keys(vehicleInfo).length > 0) {
       const mergedVehicle = {
@@ -223,7 +171,6 @@ Deno.serve(async (req) => {
         model: existingVehicle.model || vehicleInfo.model,
       };
       
-      // Check if we added new info
       if (
         (vehicleInfo.year && !existingVehicle.year) ||
         (vehicleInfo.make && !existingVehicle.make) ||
@@ -234,7 +181,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Apply updates if any
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();
       
@@ -244,15 +190,14 @@ Deno.serve(async (req) => {
         .eq("id", projectId);
 
       if (updateErr) {
-        console.error("[ResyncWC] Failed to update project", updateErr);
+        console.error("[ProcessResync] Failed to update project", updateErr);
       } else {
-        console.log("[ResyncWC] Updated project with:", Object.keys(updates));
+        console.log("[ProcessResync] Updated project with:", Object.keys(updates));
       }
     }
 
     // Insert new assets (with deduplication)
     for (const file of fileUrls) {
-      // Check if asset already exists
       const { data: existing } = await supabase
         .from("approveflow_assets")
         .select("id")
@@ -261,11 +206,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existing) {
-        console.log(`[ResyncWC] Asset already exists: ${file.filename}`);
+        console.log(`[ProcessResync] Asset already exists: ${file.filename}`);
         continue;
       }
 
-      // Insert new asset
       const { error: insertErr } = await supabase
         .from("approveflow_assets")
         .insert({
@@ -278,10 +222,10 @@ Deno.serve(async (req) => {
         });
 
       if (insertErr) {
-        console.error(`[ResyncWC] Failed to insert asset: ${file.filename}`, insertErr);
+        console.error(`[ProcessResync] Failed to insert asset: ${file.filename}`, insertErr);
       } else {
         synced.filesCount++;
-        console.log(`[ResyncWC] Inserted asset: ${file.filename}`);
+        console.log(`[ProcessResync] Inserted asset: ${file.filename}`);
       }
     }
 
@@ -295,19 +239,19 @@ Deno.serve(async (req) => {
       ? `Synced: ${parts.join(", ")}`
       : "No new data found to sync";
 
-    console.log(`[ResyncWC] Complete: ${message}`);
+    console.log(`[ProcessResync] Complete: ${message}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        orderNumber,
+        orderNumber: order.number || project.order_number,
         synced,
         message,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("[ResyncWC] Error:", error);
+    console.error("[ProcessResync] Error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
