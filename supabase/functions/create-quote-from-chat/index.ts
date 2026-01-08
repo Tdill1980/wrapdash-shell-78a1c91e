@@ -1,10 +1,12 @@
 // Create Quote from Chat - Generates and sends quote from website chat
 // Called when Jordan has collected email + vehicle info
 // Creates quote record, sends email, creates follow-up task
+// OS SPINE: Logs quote_drafted and email_sent events
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { WPW_PRICING, calculateQuickQuote } from "../_shared/wpw-pricing.ts";
+import { logConversationEvent, logQuoteEvent } from "../_shared/conversation-events.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -173,6 +175,26 @@ serve(async (req) => {
     }
 
     console.log('[CreateQuoteFromChat] Quote created:', quote.id);
+
+    // ============================================
+    // OS SPINE: Log quote_drafted event
+    // ============================================
+    if (conversation_id) {
+      await logQuoteEvent(
+        supabase,
+        conversation_id,
+        'quote_drafted',
+        {
+          quoteId: quote.id,
+          quoteNumber,
+          total: materialCost,
+          customerEmail: customer_email,
+          customerName: customer_name,
+          vehicleInfo: `${vehicle_year || ''} ${vehicle_make || ''} ${vehicle_model || ''}`.trim(),
+        }
+      );
+      console.log('[CreateQuoteFromChat] quote_drafted event logged');
+    }
 
     // Update conversation with quote info
     if (conversation_id) {
@@ -384,6 +406,28 @@ serve(async (req) => {
         if (emailResponse.ok) {
           emailSent = true;
           console.log('[CreateQuoteFromChat] Email sent successfully');
+          
+          // ============================================
+          // OS SPINE: Log email_sent event
+          // ============================================
+          if (conversation_id) {
+            await logConversationEvent(
+              supabase,
+              conversation_id,
+              'email_sent',
+              'jordan_lee',
+              {
+                email_sent_to: [customer_email],
+                email_sent_at: new Date().toISOString(),
+                email_subject: `Your Wrap Quote: ${vehicleDisplay} - $${materialCost.toFixed(2)}`,
+                quote_id: quote.id,
+                quote_number: quoteNumber,
+                customer_email: customer_email,
+              },
+              'quote'
+            );
+            console.log('[CreateQuoteFromChat] email_sent event logged');
+          }
           
           // Update quote record: email_sent = true AND status = 'sent'
           const { error: updateError } = await supabase

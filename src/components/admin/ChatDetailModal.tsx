@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { MapPin, Mail, Phone, Clock, Globe, Car, AlertCircle, User, MessageSquare, FileText, Download } from "lucide-react";
+import { MapPin, Mail, Phone, Clock, Globe, Car, AlertCircle, User, MessageSquare, FileText, Download, Receipt, CheckCircle, XCircle } from "lucide-react";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 import { useConversationEvents } from "@/hooks/useConversationEvents";
+import { useConversationQuotes } from "@/hooks/useConversationQuotes";
 import { EscalationTimeline } from "./EscalationTimeline";
 import { EmailReceiptViewer } from "./EmailReceiptViewer";
 
@@ -27,6 +28,7 @@ interface ChatDetailModalProps {
 
 export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetailModalProps) {
   const { data: events, isLoading: eventsLoading } = useConversationEvents(conversation?.id || null);
+  const { data: quotes, isLoading: quotesLoading } = useConversationQuotes(conversation?.id || null);
   
   if (!conversation) return null;
 
@@ -88,6 +90,10 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                   <Mail className="h-4 w-4" />
                   Emails ({emailEvents.length})
                 </TabsTrigger>
+                <TabsTrigger value="quotes" className="gap-2">
+                  <Receipt className="h-4 w-4" />
+                  Quotes ({quotes?.length || 0})
+                </TabsTrigger>
                 <TabsTrigger value="assets" className="gap-2">
                   <FileText className="h-4 w-4" />
                   Assets ({assetEvents.length})
@@ -142,6 +148,102 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
               {/* Emails Tab */}
               <TabsContent value="emails" className="flex-1 mt-0">
                 <EmailReceiptViewer emailEvents={emailEvents} />
+              </TabsContent>
+
+              {/* Quotes Tab */}
+              <TabsContent value="quotes" className="flex-1 mt-0">
+                {quotesLoading ? (
+                  <div className="p-6 text-center text-muted-foreground">
+                    Loading quotes...
+                  </div>
+                ) : !quotes || quotes.length === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground border border-dashed rounded-lg">
+                    <Receipt className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No quotes linked</p>
+                    <p className="text-xs mt-1">Quotes created from this chat will appear here</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[calc(90vh-200px)]">
+                    <div className="space-y-3">
+                      {quotes.map((quote) => (
+                        <Card key={quote.id} className="bg-card/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-mono text-sm font-semibold">
+                                    #{quote.quote_number}
+                                  </span>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={
+                                      quote.status === 'sent' 
+                                        ? 'bg-green-500/10 text-green-500' 
+                                        : quote.status === 'created'
+                                        ? 'bg-yellow-500/10 text-yellow-500'
+                                        : 'bg-muted text-muted-foreground'
+                                    }
+                                  >
+                                    {quote.status || 'draft'}
+                                  </Badge>
+                                  {quote.email_sent ? (
+                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 gap-1">
+                                      <CheckCircle className="h-3 w-3" />
+                                      Email Sent
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-muted text-muted-foreground gap-1">
+                                      <XCircle className="h-3 w-3" />
+                                      Not Emailed
+                                    </Badge>
+                                  )}
+                                </div>
+                                
+                                <div className="text-sm text-muted-foreground space-y-1">
+                                  {quote.vehicle_year || quote.vehicle_make || quote.vehicle_model ? (
+                                    <div className="flex items-center gap-2">
+                                      <Car className="h-4 w-4" />
+                                      <span>
+                                        {[quote.vehicle_year, quote.vehicle_make, quote.vehicle_model]
+                                          .filter(Boolean)
+                                          .join(' ')}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  
+                                  <div className="flex items-center gap-4">
+                                    {quote.sqft && (
+                                      <span>{quote.sqft} sqft</span>
+                                    )}
+                                    {quote.customer_email && (
+                                      <span className="flex items-center gap-1">
+                                        <Mail className="h-3 w-3" />
+                                        {quote.customer_email}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="text-xs">
+                                    {format(new Date(quote.created_at), 'MMM d, yyyy h:mm a')}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right">
+                                <div className="text-xl font-bold text-foreground">
+                                  ${(quote.total_price || quote.material_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Material Cost
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
               </TabsContent>
 
               {/* Assets Tab */}

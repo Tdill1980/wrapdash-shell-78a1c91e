@@ -1,8 +1,10 @@
 // Unified Alert System for Jordan Lee Agent
 // Email first, then Ops Desk task, then log to agent_alerts table
+// NOW ALSO: Logs to conversation_events for OS-level observability
 
 import { Resend } from "https://cdn.jsdelivr.net/npm/resend@2/+esm";
 import { routeToOpsDesk } from "./ops-desk-router.ts";
+import { logConversationEvent, logEscalationWithEmail } from "./conversation-events.ts";
 
 // Use any type for SupabaseClient to avoid esm.sh CDN issues
 type SupabaseClientType = any;
@@ -233,26 +235,91 @@ export async function sendAlertWithTracking(
   let alertId: string | undefined;
 
   // STEP 1: Send email FIRST (most urgent)
+  let emailSubject = '';
+  let emailHtmlBody = '';
+  
   if (resendKey) {
     try {
       const resend = new Resend(resendKey);
       
-      const subject = context.orderNumber
+      emailSubject = context.orderNumber
         ? `${config.subjectPrefix}: Order #${context.orderNumber}`
         : `${config.subjectPrefix} - Website Chat`;
+      
+      emailHtmlBody = getAlertEmailHtml(alertType, context);
 
       await resend.emails.send({
         from: "ShopFlow Alert <alerts@weprintwraps.com>",
         to: config.recipients.to,
         cc: config.recipients.cc,
-        subject,
-        html: getAlertEmailHtml(alertType, context),
+        subject: emailSubject,
+        html: emailHtmlBody,
       });
 
       emailSent = true;
       console.log(`[JordanAlert] Email sent to ${config.recipients.to.join(", ")}`);
+      
+      // ============================================
+      // OS SPINE: Log events to conversation_events
+      // ============================================
+      if (context.conversationId) {
+        const emailSentAt = new Date().toISOString();
+        
+        // Log escalation_sent event
+        await logConversationEvent(
+          supabase,
+          context.conversationId,
+          'escalation_sent',
+          'jordan_lee',
+          {
+            customer_email: context.customerEmail,
+            customer_name: context.customerName,
+            message_excerpt: context.messageExcerpt?.substring(0, 200),
+            order_number: context.orderNumber,
+            escalation_target: config.opsTarget,
+            priority: config.priority,
+            reason: `Alert type: ${alertType}`,
+          },
+          alertType
+        );
+        
+        // Log email_sent event (the receipt)
+        await logConversationEvent(
+          supabase,
+          context.conversationId,
+          'email_sent',
+          'jordan_lee',
+          {
+            email_sent_to: [...config.recipients.to, ...(config.recipients.cc || [])],
+            email_sent_at: emailSentAt,
+            email_subject: emailSubject,
+            email_body: emailHtmlBody.substring(0, 2000), // Limit body size
+            customer_email: context.customerEmail,
+            customer_name: context.customerName,
+            order_number: context.orderNumber,
+          },
+          alertType
+        );
+        
+        console.log(`[JordanAlert] Events logged to conversation_events`);
+      }
     } catch (emailError) {
       console.error("[JordanAlert] Failed to send email:", emailError);
+      
+      // Log failure event
+      if (context.conversationId) {
+        await logConversationEvent(
+          supabase,
+          context.conversationId,
+          'failed',
+          'jordan_lee',
+          {
+            error: emailError instanceof Error ? emailError.message : 'Email send failed',
+            reason: `Failed to send ${alertType} alert email`,
+          },
+          alertType
+        );
+      }
     }
   } else {
     console.warn("[JordanAlert] No RESEND_API_KEY, skipping email");
