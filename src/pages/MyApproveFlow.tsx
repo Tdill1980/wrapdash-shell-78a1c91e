@@ -21,6 +21,7 @@ import { MyApproveFlowViewGrid } from "@/components/myapproveflow/MyApproveFlowV
 import { MyApproveFlowSpecs } from "@/components/myapproveflow/MyApproveFlowSpecs";
 import { MyApproveFlowActions } from "@/components/myapproveflow/MyApproveFlowActions";
 import { MyApproveFlowMessages } from "@/components/myapproveflow/MyApproveFlowMessages";
+import { MyApproveFlowHistory } from "@/components/myapproveflow/MyApproveFlowHistory";
 import { Loader2 } from "lucide-react";
 
 interface ProofVersion {
@@ -68,6 +69,20 @@ interface ChatMessage {
   created_at: string;
 }
 
+interface CustomerAsset {
+  id: string;
+  file_url: string;
+  original_filename: string | null;
+  uploaded_at: string | null;
+  file_type: string | null;
+}
+
+interface ProjectData {
+  design_instructions: string | null;
+  product_type: string;
+  created_at: string | null;
+}
+
 export default function MyApproveFlow() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const [loading, setLoading] = useState(true);
@@ -78,6 +93,8 @@ export default function MyApproveFlow() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [customerName, setCustomerName] = useState("");
   const [approving, setApproving] = useState(false);
+  const [projectData, setProjectData] = useState<ProjectData | null>(null);
+  const [customerAssets, setCustomerAssets] = useState<CustomerAsset[]>([]);
 
   // Fetch proof data on mount
   useEffect(() => {
@@ -143,6 +160,29 @@ export default function MyApproveFlow() {
 
       if (chatData) {
         setMessages(chatData);
+      }
+
+      // Fetch project data for original request
+      const { data: projectDataResult } = await supabase
+        .from("approveflow_projects")
+        .select("design_instructions, product_type, created_at")
+        .eq("id", pvData.project_id)
+        .single();
+
+      if (projectDataResult) {
+        setProjectData(projectDataResult);
+      }
+
+      // Fetch customer uploads (assets with source = 'customer')
+      const { data: assetsData } = await supabase
+        .from("approveflow_assets")
+        .select("id, file_url, original_filename, uploaded_at, file_type")
+        .eq("project_id", pvData.project_id)
+        .eq("source", "customer")
+        .order("uploaded_at", { ascending: true });
+
+      if (assetsData) {
+        setCustomerAssets(assetsData);
       }
 
     } catch (err) {
@@ -301,6 +341,14 @@ export default function MyApproveFlow() {
           wrapScope={proofVersion.wrap_scope}
           totalSqFt={proofVersion.total_sq_ft}
           specs={productionSpecs}
+        />
+
+        {/* Original Request History - Single Source of Truth */}
+        <MyApproveFlowHistory
+          designInstructions={projectData?.design_instructions || null}
+          productType={projectData?.product_type || null}
+          projectCreatedAt={projectData?.created_at || null}
+          customerAssets={customerAssets}
         />
 
         {/* Approval Actions */}

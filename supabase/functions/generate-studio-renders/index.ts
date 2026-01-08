@@ -30,15 +30,16 @@ interface StudioRenderRequest {
 // Locked studio environment - NEVER changes
 const STUDIO_ENVIRONMENT = `
 STUDIO ENVIRONMENT (LOCKED - DO NOT DEVIATE):
-- Background: Seamless charcoal gray cyclorama studio
-- Floor: Polished dark concrete with subtle reflections
+- Background: Seamless LIGHT GRAY cyclorama studio walls (specifically #D1D5DB - not white, not charcoal)
+- Floor: Dark textured concrete with subtle grain and realistic contact shadows
 - Lighting: Professional 3-point automotive photography setup
-  - Key light: Large softbox front-left at 45°, soft warm white
+  - Key light: Large softbox front-left at 45°, soft neutral white
   - Fill light: Diffused front-right, 50% intensity
   - Rim light: Behind vehicle, subtle edge highlight
-- Shadows: Realistic contact shadows under tires and body
-- No props, no scenery, no sky, no text overlays
-- Clean, professional automotive studio aesthetic
+  - NO VISIBLE LIGHT FIXTURES - lights are implied, never rendered in the image
+- Shadows: Realistic contact shadows under tires and body, soft ambient occlusion
+- FORBIDDEN: No props, no scenery, no sky, no text overlays, no visible light fixtures or studio equipment
+- Clean, professional automotive studio aesthetic - showroom quality
 `;
 
 // Locked camera positions for each view
