@@ -178,21 +178,21 @@ export function WebsiteChatWidget() {
         "fixed bottom-6 right-6 z-50",
         "w-[380px] max-w-[calc(100vw-48px)]",
         "h-[520px] max-h-[calc(100vh-100px)]",
-        "bg-white backdrop-blur-xl",
-        "border border-slate-200 rounded-2xl",
+        "bg-[#1a1a2e] backdrop-blur-xl",
+        "border border-white/10 rounded-2xl",
         "shadow-2xl flex flex-col overflow-hidden",
         "animate-in slide-in-from-bottom-5 duration-300"
       )}
       style={{
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 60px rgba(131, 58, 180, 0.1)"
+        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 60px rgba(168, 85, 247, 0.2)"
       }}
     >
-      {/* Header with enhanced blue-purple gradient */}
-      <div className="relative bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7] px-4 py-4">
+      {/* Header with purple-magenta gradient */}
+      <div className="relative bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 px-4 py-4">
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#3B82F6] via-[#8B5CF6] to-[#A855F7] flex items-center justify-center ring-2 ring-white/30 text-lg font-bold text-white shadow-lg">
+            <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30 text-lg font-bold text-white shadow-lg backdrop-blur-sm">
               J
             </div>
             <div>
@@ -212,8 +212,8 @@ export function WebsiteChatWidget() {
         </div>
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-3 bg-slate-50 scrollbar-thin scrollbar-thumb-slate-300">
+      {/* Messages area - Dark background */}
+      <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-3 bg-[#16162a] scrollbar-thin scrollbar-thumb-purple-500/30">
         {messages.map((message, index) => (
           <div 
             key={message.id}
@@ -225,8 +225,8 @@ export function WebsiteChatWidget() {
                 "max-w-[85%] px-4 py-3 rounded-2xl text-sm",
                 "transition-all duration-200",
                 message.role === "user"
-                  ? "bg-gradient-to-r from-[#405DE6] to-[#833AB4] text-white ml-auto rounded-br-sm shadow-lg"
-                  : "bg-slate-100 border border-slate-200 text-slate-800 rounded-bl-sm"
+                  ? "bg-[#2a2a4a] text-white ml-auto rounded-br-sm border border-white/10"
+                  : "bg-gradient-to-br from-fuchsia-500 via-purple-500 to-pink-500 text-white rounded-bl-sm shadow-[0_4px_15px_rgba(168,85,247,0.4)]"
               )}
             >
               {message.content}
@@ -234,7 +234,7 @@ export function WebsiteChatWidget() {
           </div>
         ))}
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Dark themed */}
         {showQuickActions && messages.length === 1 && !isLoading && (
           <div className="space-y-2 mt-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
             {/* Primary CTA */}
@@ -244,11 +244,11 @@ export function WebsiteChatWidget() {
                 onClick={() => handleSend(action.message)}
                 className={cn(
                   "w-full flex items-center justify-center gap-2 p-3",
-                  "bg-gradient-to-r from-[#833AB4] to-[#E1306C]",
+                  "bg-gradient-to-r from-orange-500 to-orange-600",
                   "hover:opacity-90 hover:scale-[1.02]",
                   "rounded-xl text-sm font-semibold",
                   "text-white transition-all duration-200",
-                  "shadow-lg shadow-[#833AB4]/20"
+                  "shadow-lg shadow-orange-500/30"
                 )}
               >
                 <action.icon className="w-5 h-5" />
@@ -256,7 +256,7 @@ export function WebsiteChatWidget() {
               </button>
             ))}
 
-            {/* Secondary Actions Grid */}
+            {/* Secondary Actions Grid - Dark */}
             <div className="grid grid-cols-2 gap-2">
               {QUICK_ACTIONS.filter(a => !a.primary).map((action, i) => (
                 <button
@@ -264,15 +264,15 @@ export function WebsiteChatWidget() {
                   onClick={() => handleSend(action.message)}
                   className={cn(
                     "flex items-center gap-2 p-3",
-                    "bg-white hover:bg-slate-50",
+                    "bg-[#2a2a4a] hover:bg-purple-500/20",
                     "rounded-xl text-xs font-medium",
-                    "border border-slate-200 hover:border-[#833AB4]/30",
+                    "border border-purple-500/30 hover:border-purple-400",
                     "transition-all duration-200 hover:scale-[1.02]",
-                    "text-slate-700 hover:text-[#833AB4]"
+                    "text-white"
                   )}
                   style={{ animationDelay: `${i * 100}ms` }}
                 >
-                  <action.icon className="w-4 h-4" />
+                  <action.icon className="w-4 h-4 text-purple-400" />
                   {action.label}
                 </button>
               ))}
@@ -280,13 +280,13 @@ export function WebsiteChatWidget() {
           </div>
         )}
 
-        {/* Typing indicator */}
+        {/* Typing indicator - Dark themed */}
         {isLoading && (
           <div className="flex items-center gap-2 py-2 animate-in fade-in duration-200">
-            <div className="flex gap-1 px-4 py-3 bg-slate-100 rounded-2xl rounded-bl-sm border border-slate-200">
-              <span className="w-2 h-2 rounded-full bg-[#833AB4]/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 rounded-full bg-[#833AB4]/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 rounded-full bg-[#833AB4]/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="flex gap-1 px-4 py-3 bg-[#2a2a4a] rounded-2xl rounded-bl-sm border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2 h-2 rounded-full bg-fuchsia-400 animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </div>
         )}
@@ -294,25 +294,25 @@ export function WebsiteChatWidget() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area */}
-      <div className="p-3 border-t border-slate-200 bg-white" style={{ paddingBottom: `calc(0.75rem + env(safe-area-inset-bottom))` }}>
+      {/* Input area - Dark */}
+      <div className="p-3 border-t border-white/10 bg-[#1a1a2e]" style={{ paddingBottom: `calc(0.75rem + env(safe-area-inset-bottom))` }}>
         {/* Contextual input hints based on last message */}
         {(() => {
           const lastAssistantMsg = messages.filter(m => m.role === 'assistant').slice(-1)[0]?.content.toLowerCase() || '';
           if (lastAssistantMsg.includes('quote number') || lastAssistantMsg.includes('quote #')) {
-            return <div className="text-xs text-slate-400 mb-2 px-1">Example: Q-10432</div>;
+            return <div className="text-xs text-gray-500 mb-2 px-1">Example: Q-10432</div>;
           }
           if (lastAssistantMsg.includes('order number') || lastAssistantMsg.includes('order #')) {
-            return <div className="text-xs text-slate-400 mb-2 px-1">Example: #18392</div>;
+            return <div className="text-xs text-gray-500 mb-2 px-1">Example: #18392</div>;
           }
           if (lastAssistantMsg.includes('email') && (lastAssistantMsg.includes('send') || lastAssistantMsg.includes('what'))) {
-            return <div className="text-xs text-slate-400 mb-2 px-1">We'll only use this to send your quote.</div>;
+            return <div className="text-xs text-gray-500 mb-2 px-1">We'll only use this to send your quote.</div>;
           }
           if (lastAssistantMsg.includes('name') && lastAssistantMsg.includes('quote')) {
-            return <div className="text-xs text-slate-400 mb-2 px-1">This helps us label your quote correctly.</div>;
+            return <div className="text-xs text-gray-500 mb-2 px-1">This helps us label your quote correctly.</div>;
           }
           if (lastAssistantMsg.includes('company') || lastAssistantMsg.includes('shop name')) {
-            return <div className="text-xs text-slate-400 mb-2 px-1">Optional — but helpful for shop or fleet orders.</div>;
+            return <div className="text-xs text-gray-500 mb-2 px-1">Optional — but helpful for shop or fleet orders.</div>;
           }
           return null;
         })()}
@@ -325,9 +325,9 @@ export function WebsiteChatWidget() {
             placeholder="Type a message..."
             disabled={isLoading}
             className={cn(
-              "flex-1 bg-white border border-slate-300 rounded-full",
-              "px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400",
-              "focus:outline-none focus:ring-2 focus:ring-[#833AB4]/50 focus:border-[#833AB4]/50",
+              "flex-1 bg-[#2a2a4a] border border-white/10 rounded-full",
+              "px-4 py-2.5 text-sm text-white placeholder:text-gray-400",
+              "focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500",
               "transition-all duration-200"
             )}
           />
@@ -337,7 +337,7 @@ export function WebsiteChatWidget() {
             disabled={isLoading || !input.trim()}
             className={cn(
               "shrink-0 rounded-full w-10 h-10",
-              "bg-gradient-to-r from-[#2563EB] via-[#7C3AED] to-[#A855F7]",
+              "bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500",
               "hover:opacity-90 hover:scale-105",
               "transition-all duration-200",
               "disabled:opacity-50 disabled:hover:scale-100"
@@ -346,10 +346,10 @@ export function WebsiteChatWidget() {
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        {/* WePrintWraps.com branding */}
+        {/* WePrintWraps.com branding - Dark */}
         <div className="mt-2 text-center">
-          <span className="text-xs text-slate-400">Powered by </span>
-          <span className="text-xs font-medium text-[#7C3AED]">weprintwraps.com</span>
+          <span className="text-xs text-gray-500">Powered by </span>
+          <span className="text-xs font-medium text-fuchsia-400">weprintwraps.com</span>
         </div>
       </div>
     </div>
