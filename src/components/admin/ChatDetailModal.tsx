@@ -154,8 +154,8 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
               </TabsList>
 
               {/* Transcript Tab */}
-              <TabsContent value="transcript" className="flex-1 mt-0">
-                <ScrollArea className="h-[calc(90vh-200px)] border border-border rounded-lg bg-muted/20 p-4">
+              <TabsContent value="transcript" className="flex-1 mt-0 flex flex-col">
+                <ScrollArea className="flex-1 min-h-0 h-[calc(90vh-280px)] border border-border rounded-t-lg bg-muted/20 p-4">
                   <div className="space-y-3">
                     {messages.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">
@@ -168,7 +168,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                           className={`flex ${msg.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}
                         >
                           <div
-                            className={`max-w-[85%] rounded-lg p-3 ${
+                            className={`max-w-[90%] rounded-lg p-3 ${
                               msg.direction === 'inbound'
                                 ? 'bg-muted'
                                 : 'bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white'
@@ -184,13 +184,48 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                            <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{msg.content}</p>
                           </div>
                         </div>
                       ))
                     )}
                   </div>
                 </ScrollArea>
+                
+                {/* Persistent Reply Box */}
+                <div className="border border-t-0 border-border rounded-b-lg bg-card p-3">
+                  {contact?.email && !contact.email.includes('@capture.local') ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="default"
+                        className="flex-1 gap-2"
+                        size="sm"
+                        onClick={() => {
+                          setShowReplyPanel(true);
+                          setShowQuoteUpload(false);
+                        }}
+                      >
+                        <Reply className="h-4 w-4" />
+                        Reply to {contact.name || contact.email}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowQuoteUpload(true);
+                          setShowReplyPanel(false);
+                        }}
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm bg-muted/30 rounded p-2">
+                      <Mail className="h-4 w-4 flex-shrink-0" />
+                      <span>No email captured — cannot reply until visitor provides email</span>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               {/* Timeline Tab */}
