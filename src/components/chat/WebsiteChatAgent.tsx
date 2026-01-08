@@ -110,7 +110,7 @@ export function WebsiteChatAgent() {
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-xl 
-        bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C]
+        bg-gradient-to-br from-primary via-primary/80 to-accent
         flex items-center justify-center text-white 
         hover:scale-110 transition-all animate-pulse"
       >
@@ -123,22 +123,22 @@ export function WebsiteChatAgent() {
   return (
     <div
       className="fixed bottom-6 right-6 z-50 w-[360px] max-w-full
-      bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl 
+      bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl 
       flex flex-col overflow-hidden animate-fade-in"
     >
       {/* HEADER */}
-      <div className="p-4 border-b border-white/10 flex items-center justify-between">
+      <div className="p-4 border-b border-border bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-white font-bold">
+          <div className="flex items-center gap-2 text-foreground font-bold">
             WPW AI TEAM
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
           </div>
-          <p className="text-xs text-white/60">Online now</p>
+          <p className="text-xs text-muted-foreground">Online now</p>
         </div>
 
         <button
           onClick={() => setIsOpen(false)}
-          className="text-white/60 hover:text-white transition"
+          className="text-muted-foreground hover:text-foreground transition"
         >
           <X />
         </button>
@@ -151,8 +151,8 @@ export function WebsiteChatAgent() {
             key={msg.id}
             className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm ${
               msg.role === "assistant"
-                ? "bg-gradient-to-r from-[#405DE6] to-[#E1306C] text-white self-start"
-                : "bg-white/10 text-white self-end ml-auto"
+                ? "bg-gradient-to-br from-primary to-accent text-primary-foreground self-start"
+                : "bg-muted text-foreground self-end ml-auto"
             }`}
           >
             {msg.content}
@@ -166,7 +166,7 @@ export function WebsiteChatAgent() {
               <button
                 key={qa.label}
                 onClick={() => sendMessage(qa.message)}
-                className="px-3 py-2 text-xs rounded-xl border border-primary/20
+                className="px-3 py-2 text-xs rounded-xl border border-primary/30
                 bg-primary/10 text-primary hover:bg-primary/20 transition flex items-center gap-2"
               >
                 {qa.label}
@@ -177,7 +177,7 @@ export function WebsiteChatAgent() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center gap-2 text-white/60 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
             WPW AI TEAM is typing…
           </div>
@@ -187,21 +187,21 @@ export function WebsiteChatAgent() {
       </div>
 
       {/* INPUT BAR */}
-      <div className="p-3 flex gap-2 items-center border-t border-white/10">
+      <div className="p-3 flex gap-2 items-center border-t border-border">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleEnter}
           placeholder="Type your message…"
-          className="flex-1 px-4 py-2 rounded-full bg-white/10 text-white 
-          placeholder:text-white/40 outline-none focus:ring-2 focus:ring-primary"
+          className="flex-1 px-4 py-2 rounded-full bg-muted text-foreground 
+          placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary"
         />
 
         <button
           disabled={isLoading || !input.trim()}
           onClick={() => sendMessage()}
           className="w-10 h-10 rounded-full flex items-center justify-center
-          bg-gradient-to-r from-[#405DE6] to-[#E1306C] text-white hover:opacity-90 transition disabled:opacity-50"
+          bg-gradient-to-br from-primary to-accent text-primary-foreground hover:opacity-90 transition disabled:opacity-50"
         >
           <Send className="w-4 h-4" />
         </button>
