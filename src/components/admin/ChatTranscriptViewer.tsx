@@ -8,7 +8,7 @@ import { useWebsiteChats, useWebsiteChatStats, useConversationTotalCount } from 
 import { useEscalationStats } from "@/hooks/useConversationEvents";
 import { ChatTranscriptRow } from "./ChatTranscriptRow";
 import { ChatDetailModal } from "./ChatDetailModal";
-import { NeedsActionQueue } from "./NeedsActionQueue";
+import { EscalationsDashboard } from "./EscalationsDashboard";
 import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
@@ -189,8 +189,8 @@ export function ChatTranscriptViewer() {
         </Card>
       </div>
 
-      {/* Needs Action Queue - Global Control View */}
-      <NeedsActionQueue onSelectConversation={handleQueueSelect} />
+      {/* Escalations Dashboard - Full Control View */}
+      <EscalationsDashboard />
 
       {/* Escalation Quick Filters */}
       <div className="flex flex-wrap items-center gap-2">
