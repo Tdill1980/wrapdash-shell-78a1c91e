@@ -27,7 +27,7 @@ interface StudioRenderRequest {
   vehicleYear?: string;
   vehicleMake?: string;
   vehicleModel?: string;
-  orderNumber: string; // Required for branding
+  // orderNumber resolved internally from approveflow_projects - NEVER from request
 }
 
 // ============================================
@@ -252,13 +252,8 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel, orderNumber } = 
+    const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel } = 
       await req.json() as StudioRenderRequest;
-
-    // Validate required fields
-    if (!orderNumber) {
-      throw new Error("Missing orderNumber - required for branding");
-    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -269,11 +264,25 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // 🔒 OS RULE: Resolve orderNumber internally from source of truth
+    const { data: project, error: projectErr } = await supabase
+      .from('approveflow_projects')
+      .select('order_number')
+      .eq('id', projectId)
+      .single();
+
+    if (projectErr || !project?.order_number) {
+      console.error('[StudioRenderOS] Missing order number for project', projectErr);
+      throw new Error('Order number not found for this project');
+    }
+
+    const orderNumber = project.order_number;
+
     // Build vehicle description
     const vehicleDesc = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(' ') || vehicle;
     
     console.log(`[StudioRenderOS] Starting 6-view generation for: ${vehicleDesc}`);
-    console.log(`[StudioRenderOS] Project: ${projectId}, Version: ${versionId}, Order: ${orderNumber}`);
+    console.log(`[StudioRenderOS] Project: ${projectId}, Version: ${versionId}, Order: ${orderNumber} (resolved from DB)`);
     console.log(`[StudioRenderOS] USE_BRANDED_RENDER_PIPELINE: ${USE_BRANDED_RENDER_PIPELINE}`);
 
     // Generate all 6 views in parallel (but staggered to avoid rate limits)
