@@ -24,21 +24,33 @@ interface EscalationTimelineProps {
 const EVENT_ICONS: Record<string, React.ReactNode> = {
   escalation_sent: <AlertCircle className="h-4 w-4" />,
   email_sent: <Mail className="h-4 w-4" />,
+  email_drafted: <Mail className="h-4 w-4" />,
   quote_attached: <FileText className="h-4 w-4" />,
+  quote_drafted: <FileText className="h-4 w-4" />,
+  marked_no_quote_required: <FileText className="h-4 w-4" />,
   asset_uploaded: <Upload className="h-4 w-4" />,
+  asset_reviewed: <CheckCircle className="h-4 w-4" />,
+  asset_review_required: <Upload className="h-4 w-4" />,
   marked_complete: <CheckCircle className="h-4 w-4" />,
   internal_note: <MessageSquare className="h-4 w-4" />,
   ai_response: <Bot className="h-4 w-4" />,
+  ai_response_sent: <Bot className="h-4 w-4" />,
 };
 
 const EVENT_COLORS: Record<string, string> = {
   escalation_sent: "bg-orange-500/10 text-orange-500 border-orange-500/30",
   email_sent: "bg-blue-500/10 text-blue-500 border-blue-500/30",
+  email_drafted: "bg-blue-500/10 text-blue-400 border-blue-500/30",
   quote_attached: "bg-green-500/10 text-green-500 border-green-500/30",
+  quote_drafted: "bg-green-500/10 text-green-400 border-green-500/30",
+  marked_no_quote_required: "bg-muted text-muted-foreground border-muted",
   asset_uploaded: "bg-purple-500/10 text-purple-500 border-purple-500/30",
+  asset_reviewed: "bg-green-500/10 text-green-500 border-green-500/30",
+  asset_review_required: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
   marked_complete: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
   internal_note: "bg-muted text-muted-foreground border-muted",
   ai_response: "bg-primary/10 text-primary border-primary/30",
+  ai_response_sent: "bg-primary/10 text-primary border-primary/30",
 };
 
 const SUBTYPE_LABELS: Record<string, string> = {
@@ -56,15 +68,26 @@ function getEventTitle(event: ConversationEvent): string {
       return `Escalation: ${SUBTYPE_LABELS[event.subtype || ''] || event.subtype || 'General'}`;
     case 'email_sent':
       return 'Email Sent';
+    case 'email_drafted':
+      return 'Email Drafted';
     case 'quote_attached':
       return `Quote Attached: ${event.payload.quote_number || 'Quote'}`;
+    case 'quote_drafted':
+      return `Quote Drafted: ${event.payload.quote_number || 'Quote'}`;
+    case 'marked_no_quote_required':
+      return 'Quote Not Required';
     case 'asset_uploaded':
       return `File Uploaded: ${event.payload.filename || 'File'}`;
+    case 'asset_reviewed':
+      return 'File Reviewed';
+    case 'asset_review_required':
+      return 'File Review Required';
     case 'marked_complete':
-      return 'Marked Complete';
+      return 'Escalation Complete';
     case 'internal_note':
       return 'Internal Note';
     case 'ai_response':
+    case 'ai_response_sent':
       return 'AI Response';
     default:
       return event.event_type.replace(/_/g, ' ');

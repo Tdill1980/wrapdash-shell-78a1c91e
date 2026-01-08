@@ -8,8 +8,14 @@ import { MapPin, Mail, Phone, Clock, Globe, Car, AlertCircle, User, MessageSquar
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 import { useConversationEvents } from "@/hooks/useConversationEvents";
 import { useConversationQuotes } from "@/hooks/useConversationQuotes";
+import { useEscalationStatus } from "@/hooks/useEscalationStatus";
 import { EscalationTimeline } from "./EscalationTimeline";
 import { EmailReceiptViewer } from "./EmailReceiptViewer";
+import { EscalationStatusCard } from "./EscalationStatusCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 function getCountryFlag(countryCode?: string): string {
   if (!countryCode || countryCode.length !== 2) return "🌍";
@@ -27,10 +33,52 @@ interface ChatDetailModalProps {
 }
 
 export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetailModalProps) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const queryClient = useQueryClient();
   const { data: events, isLoading: eventsLoading } = useConversationEvents(conversation?.id || null);
   const { data: quotes, isLoading: quotesLoading } = useConversationQuotes(conversation?.id || null);
+  const escalationStatus = useEscalationStatus(events);
   
   if (!conversation) return null;
+
+  // Event logging functions
+  const logEvent = async (eventType: string, payload: Record<string, unknown> = {}) => {
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('conversation_events')
+        .insert([{
+          conversation_id: conversation.id,
+          event_type: eventType,
+          actor: 'admin',
+          payload: payload as any,
+        }]);
+
+      if (error) throw error;
+      
+      // Refresh events
+      queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
+      queryClient.invalidateQueries({ queryKey: ['needs-action-queue'] });
+      toast.success(`Event logged: ${eventType.replace(/_/g, ' ')}`);
+    } catch (err) {
+      console.error('Failed to log event:', err);
+      toast.error('Failed to log event');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleMarkComplete = () => logEvent('marked_complete', { 
+    resolution_notes: 'Marked complete by admin' 
+  });
+  
+  const handleDismissQuote = () => logEvent('marked_no_quote_required', { 
+    reason: 'Quote not needed for this escalation' 
+  });
+  
+  const handleMarkFileReviewed = () => logEvent('asset_reviewed', { 
+    reviewed_by: 'admin' 
+  });
 
   const geo = conversation.metadata?.geo;
   const chatState = conversation.chat_state;
@@ -394,6 +442,15 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                 </CardContent>
               </Card>
             )}
+
+            {/* Escalation Status Card - THE KEY UI */}
+            <EscalationStatusCard
+              statusResult={escalationStatus}
+              onMarkComplete={handleMarkComplete}
+              onDismissQuote={handleDismissQuote}
+              onMarkFileReviewed={handleMarkFileReviewed}
+              isLoading={isProcessing}
+            />
 
             {/* Chat State */}
             <Card className="bg-card/50">
