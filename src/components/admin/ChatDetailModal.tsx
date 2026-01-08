@@ -168,7 +168,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                           className={`flex ${msg.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}
                         >
                           <div
-                            className={`max-w-[80%] rounded-lg p-3 ${
+                            className={`max-w-[85%] rounded-lg p-3 ${
                               msg.direction === 'inbound'
                                 ? 'bg-muted'
                                 : 'bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white'
@@ -184,7 +184,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                           </div>
                         </div>
                       ))
@@ -455,7 +455,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
               </CardHeader>
               <CardContent className="space-y-2">
                 {/* Reply to Customer */}
-                {contact?.email && !contact.email.includes('@capture.local') && (
+                {contact?.email && !contact.email.includes('@capture.local') ? (
                   <Button
                     variant="outline"
                     className="w-full gap-2 justify-start"
@@ -468,6 +468,11 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                     <Reply className="h-4 w-4" />
                     Reply to Customer
                   </Button>
+                ) : (
+                  <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded border border-dashed">
+                    <Mail className="h-3 w-3 inline mr-1" />
+                    Reply unavailable - no email captured yet
+                  </div>
                 )}
 
                 {/* Upload Quote */}
