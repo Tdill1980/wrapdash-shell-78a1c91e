@@ -20,10 +20,14 @@ const corsHeaders = {
 // HARDCODED CONSTANTS (OS-OWNED, NEVER EDITABLE)
 // ============================================
 
+// Platform branding (locked) - supports future SaaS co-branding
 const BRANDING = {
-  systemName: "WrapCommand AI™",
+  platformName: "WrapCommandAI™",  // Always visible
+  tenantName: "WPW",               // Current tenant (future: dynamic per org)
   toolName: "ApproveFlow™",
-  tagline: "Design Approval Proof"
+  tagline: "Design Approval Proof",
+  // Combined co-brand line for displays
+  get cobranded() { return `${this.platformName} for ${this.tenantName}`; }
 };
 
 // Mandatory disclaimer - NEVER AI-generated, NEVER editable
@@ -163,21 +167,23 @@ serve(async (req) => {
     const darkBg = rgb(0.06, 0.06, 0.06);
 
     // ============================================
-    // HEADER - HARDCODED BRANDING
+    // HEADER - HARDCODED CO-BRANDING (2-line format)
+    // Line 1: "WrapCommandAI™ for WPW"
+    // Line 2: "ApproveFlow™"
     // ============================================
 
-    // Left: Branding (LOCKED)
-    page.drawText(BRANDING.systemName, {
+    // Left: Co-Branding (LOCKED)
+    page.drawText(BRANDING.cobranded, {
       x: margin,
       y: height - 48,
-      size: 18,
+      size: 16,
       font: fontBold,
       color: black
     });
     page.drawText(BRANDING.toolName, {
       x: margin,
-      y: height - 68,
-      size: 12,
+      y: height - 66,
+      size: 11,
       font,
       color: gray
     });
@@ -482,8 +488,8 @@ serve(async (req) => {
     // ============================================
     const footerY = 18;
     
-    // Left: Branding
-    page.drawText(`${BRANDING.systemName} | ${BRANDING.toolName}`, {
+    // Left: Co-Branding (2-line format compressed for footer)
+    page.drawText(`${BRANDING.cobranded} | ${BRANDING.toolName}`, {
       x: margin,
       y: footerY,
       size: 8,
@@ -534,8 +540,8 @@ serve(async (req) => {
         if (ty < 50) break;
       }
 
-      // Footer branding
-      p2.drawText(`${BRANDING.systemName} | ${BRANDING.toolName}`, {
+      // Footer branding (co-branded format)
+      p2.drawText(`${BRANDING.cobranded} | ${BRANDING.toolName}`, {
         x: 50,
         y: 30,
         size: 8,

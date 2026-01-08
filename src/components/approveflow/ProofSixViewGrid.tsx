@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { ZoomIn } from "lucide-react";
+import { BrandedViewOverlay } from "./BrandedViewOverlay";
+import { downloadBrandedImage } from "@/lib/branded-image-download";
 
 interface ProofSixViewGridProps {
   renderUrls?: Record<string, string>;
   vehicleYear?: string | number;
   vehicleMake?: string;
   vehicleModel?: string;
+  orderNumber?: string;
+  brandLine1?: string;
+  brandLine2?: string;
 }
 
 // Standard 6-view layout matching StudioRenderOS output
@@ -48,8 +53,11 @@ export function ProofSixViewGrid({
   vehicleYear,
   vehicleMake,
   vehicleModel,
+  orderNumber = "",
+  brandLine1 = "WrapCommandAI™ for WPW",
+  brandLine2 = "ApproveFlow™",
 }: ProofSixViewGridProps) {
-  const [selectedView, setSelectedView] = useState<string | null>(null);
+  const [selectedView, setSelectedView] = useState<{ key: string; label: string; url: string } | null>(null);
 
   // Filter valid image URLs
   const validUrls = renderUrls
@@ -59,6 +67,12 @@ export function ProofSixViewGrid({
     : {};
 
   const hasRenders = Object.keys(validUrls).length > 0;
+
+  const handleDownload = (imageUrl: string, label: string) => {
+    if (orderNumber) {
+      downloadBrandedImage(imageUrl, orderNumber, label, { line1: brandLine1, line2: brandLine2 });
+    }
+  };
 
   if (!hasRenders) {
     return (
@@ -81,60 +95,64 @@ export function ProofSixViewGrid({
           const imageUrl = findImageForView(view.key, validUrls);
           
           return (
-            <Dialog key={view.key}>
-              <DialogTrigger asChild>
-                <div 
-                  className={`
-                    group relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer 
-                    border border-border/50 bg-muted/30
-                    hover:border-primary/50 transition-all
-                    ${!imageUrl ? 'opacity-50' : ''}
-                  `}
-                >
-                  {imageUrl ? (
-                    <>
-                      <img
-                        src={imageUrl}
-                        alt={view.label}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-full p-2">
-                          <ZoomIn className="w-4 h-4 text-white" />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-xs text-muted-foreground">Pending</span>
-                    </div>
-                  )}
-                  
-                  {/* View Label Overlay */}
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent py-2 px-3">
-                    <span className="text-xs font-medium text-white">{view.label}</span>
-                  </div>
-                </div>
-              </DialogTrigger>
-              
-              {imageUrl && (
-                <DialogContent className="max-w-4xl p-2 bg-black/95">
-                  <div className="relative">
+            <div key={view.key}>
+              <div 
+                onClick={() => imageUrl && setSelectedView({ key: view.key, label: view.label, url: imageUrl })}
+                className={`
+                  group relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer 
+                  border border-border/50 bg-muted/30
+                  hover:border-primary/50 transition-all
+                  ${!imageUrl ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+              >
+                {imageUrl ? (
+                  <>
                     <img
                       src={imageUrl}
-                      alt={`${view.label} - Full Size`}
-                      className="w-full h-auto rounded-lg"
+                      alt={view.label}
+                      className="w-full h-full object-cover"
                     />
-                    <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-md">
-                      <span className="text-sm font-medium text-white">{view.label}</span>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 rounded-full p-2">
+                        <ZoomIn className="w-4 h-4 text-white" />
+                      </div>
                     </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-xs text-muted-foreground">Pending</span>
                   </div>
-                </DialogContent>
-              )}
-            </Dialog>
+                )}
+                
+                {/* View Label Overlay */}
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent py-2 px-3">
+                  <span className="text-xs font-medium text-white">{view.label}</span>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>
+
+      {/* Enlarged View Dialog with Branding */}
+      <Dialog open={!!selectedView} onOpenChange={() => setSelectedView(null)}>
+        <DialogContent className="max-w-5xl p-4 bg-card border-border">
+          <DialogTitle className="sr-only">
+            {selectedView?.label || "View"}
+          </DialogTitle>
+          {selectedView && (
+            <BrandedViewOverlay
+              imageUrl={selectedView.url}
+              label={selectedView.label}
+              orderNumber={orderNumber}
+              brandLine1={brandLine1}
+              brandLine2={brandLine2}
+              onDownload={() => handleDownload(selectedView.url, selectedView.label)}
+              showActions={true}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* View count indicator */}
       <p className="text-xs text-muted-foreground text-center">

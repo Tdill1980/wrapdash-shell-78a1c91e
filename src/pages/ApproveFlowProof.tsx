@@ -307,12 +307,15 @@ export default function ApproveFlowProof() {
 
       {/* Main Content - All read-only */}
       <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl space-y-6">
-        {/* 6-View Grid - Professional Layout */}
+        {/* 6-View Grid - Professional Layout with Branding */}
         <ProofSixViewGrid
           renderUrls={renderUrls}
           vehicleYear={proofVersion.vehicle_year || undefined}
           vehicleMake={proofVersion.vehicle_make || undefined}
           vehicleModel={proofVersion.vehicle_model || undefined}
+          orderNumber={proofVersion.order_number}
+          brandLine1="WrapCommandAI™ for WPW"
+          brandLine2="ApproveFlow™"
         />
 
         {/* Production Specs Bar - Read-only display */}
