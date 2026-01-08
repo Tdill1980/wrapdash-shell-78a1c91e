@@ -8,6 +8,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
  * Generates deterministic, photorealistic studio renders from a 2D proof.
  * Each view has locked camera angles, lighting, and environment.
  * 
+ * PHASE 2: All renders are branded before storage - no raw renders leave the system.
+ * 
  * Views:
  * 1. driver_side - 45° front-left, eye-level
  * 2. front - centered, slight elevation
@@ -25,7 +27,15 @@ interface StudioRenderRequest {
   vehicleYear?: string;
   vehicleMake?: string;
   vehicleModel?: string;
+  orderNumber: string; // Required for branding
 }
+
+// ============================================
+// OS CONSTANTS — LOCKED (mirrored from src/lib/os-constants.ts)
+// ============================================
+const USE_BRANDED_RENDER_PIPELINE = true; // Phase 2 kill switch
+const BRAND_LINE_1 = "WrapCommandAI™ for WPW";
+const BRAND_LINE_2 = "ApproveFlow™";
 
 // Locked studio environment - NEVER changes
 const STUDIO_ENVIRONMENT = `
@@ -147,19 +157,71 @@ OUTPUT: Single photorealistic image, no text, no labels, no watermarks.`;
   }
 }
 
+/**
+ * PHASE 2: Apply branding overlay to a render
+ * Calls the apply-render-branding edge function
+ * 
+ * OS RULE: If branding fails, the entire render fails (no unbranded renders stored)
+ */
+async function applyBrandingToRender(
+  supabaseUrl: string,
+  supabaseKey: string,
+  imageUrl: string,
+  orderNumber: string,
+  viewLabel: string
+): Promise<string | null> {
+  try {
+    console.log(`[StudioRenderOS] Applying branding to ${viewLabel}...`);
+    
+    const response = await fetch(`${supabaseUrl}/functions/v1/apply-render-branding`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${supabaseKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        imageUrl,
+        orderNumber,
+        viewLabel
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`[StudioRenderOS] Branding failed for ${viewLabel}:`, response.status, error);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (!data.success || !data.brandedUrl) {
+      console.error(`[StudioRenderOS] Branding returned no URL for ${viewLabel}:`, data);
+      return null;
+    }
+
+    console.log(`[StudioRenderOS] ✓ Branding applied to ${viewLabel}`);
+    return data.brandedUrl;
+  } catch (error) {
+    console.error(`[StudioRenderOS] Branding error for ${viewLabel}:`, error);
+    return null;
+  }
+}
+
 async function uploadBase64ToStorage(
   supabase: any,
   projectId: string,
   versionId: string,
   viewKey: string,
-  base64Data: string
+  base64Data: string,
+  orderNumber: string
 ): Promise<string | null> {
   try {
     // Extract the actual base64 content
     const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, '');
     const binaryData = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
     
-    const filePath = `${projectId}/studio-renders/${versionId}_${viewKey}.png`;
+    // OS-consistent storage path: approveflow_3d/{orderNumber}/{projectId}/v1/{viewKey}.png
+    const filePath = `${orderNumber}/${projectId}/v1/${viewKey}.png`;
     
     const { error: uploadError } = await supabase.storage
       .from('approveflow-files')
@@ -190,8 +252,13 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel } = 
+    const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel, orderNumber } = 
       await req.json() as StudioRenderRequest;
+
+    // Validate required fields
+    if (!orderNumber) {
+      throw new Error("Missing orderNumber - required for branding");
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -206,7 +273,8 @@ serve(async (req) => {
     const vehicleDesc = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(' ') || vehicle;
     
     console.log(`[StudioRenderOS] Starting 6-view generation for: ${vehicleDesc}`);
-    console.log(`[StudioRenderOS] Project: ${projectId}, Version: ${versionId}`);
+    console.log(`[StudioRenderOS] Project: ${projectId}, Version: ${versionId}, Order: ${orderNumber}`);
+    console.log(`[StudioRenderOS] USE_BRANDED_RENDER_PIPELINE: ${USE_BRANDED_RENDER_PIPELINE}`);
 
     // Generate all 6 views in parallel (but staggered to avoid rate limits)
     const viewKeys = Object.keys(VIEW_CONFIGS) as (keyof typeof VIEW_CONFIGS)[];
@@ -220,6 +288,7 @@ serve(async (req) => {
       const batchPromises = batch.map(async (viewKey) => {
         console.log(`[StudioRenderOS] Generating: ${viewKey}`);
         
+        // Step 1: Generate raw render
         const base64Image = await generateSingleView(
           LOVABLE_API_KEY,
           vehicleDesc,
@@ -228,23 +297,50 @@ serve(async (req) => {
           VIEW_CONFIGS[viewKey]
         );
 
-        if (base64Image) {
-          const publicUrl = await uploadBase64ToStorage(
-            supabase,
-            projectId,
-            versionId,
-            viewKey,
-            base64Image
+        if (!base64Image) {
+          errors.push(`Failed to generate ${viewKey}`);
+          return;
+        }
+
+        // Step 2: Upload raw render to storage (temporary if branding is enabled)
+        const rawPublicUrl = await uploadBase64ToStorage(
+          supabase,
+          projectId,
+          versionId,
+          viewKey,
+          base64Image,
+          orderNumber
+        );
+
+        if (!rawPublicUrl) {
+          errors.push(`Failed to upload ${viewKey}`);
+          return;
+        }
+
+        // Step 3: Apply branding if enabled (PHASE 2)
+        if (USE_BRANDED_RENDER_PIPELINE) {
+          const brandedUrl = await applyBrandingToRender(
+            SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY,
+            rawPublicUrl,
+            orderNumber,
+            VIEW_CONFIGS[viewKey].label
           );
 
-          if (publicUrl) {
-            renderUrls[viewKey] = publicUrl;
-            console.log(`[StudioRenderOS] ✓ ${viewKey} complete`);
-          } else {
-            errors.push(`Failed to upload ${viewKey}`);
+          if (!brandedUrl) {
+            // OS RULE: Hard fail if branding fails - no unbranded renders stored
+            errors.push(`BRANDING FAILED for ${viewKey} - render rejected`);
+            console.error(`[StudioRenderOS] ❌ HARD FAIL: Branding failed for ${viewKey}, render not stored`);
+            return;
           }
+
+          // Store the branded URL (branding function returns the branded image URL)
+          renderUrls[viewKey] = brandedUrl;
+          console.log(`[StudioRenderOS] ✓ ${viewKey} complete (branded)`);
         } else {
-          errors.push(`Failed to generate ${viewKey}`);
+          // Legacy path: store raw URL (Phase 2 disabled)
+          renderUrls[viewKey] = rawPublicUrl;
+          console.log(`[StudioRenderOS] ✓ ${viewKey} complete (raw - branding disabled)`);
         }
       });
 
@@ -254,6 +350,11 @@ serve(async (req) => {
       if (i + 2 < viewKeys.length) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
+    }
+
+    // OS RULE: If no renders succeeded, fail the entire operation
+    if (Object.keys(renderUrls).length === 0) {
+      throw new Error("All renders failed - no images generated or branded successfully");
     }
 
     // Save to approveflow_3d table with upsert
@@ -289,11 +390,13 @@ serve(async (req) => {
     const successCount = Object.keys(renderUrls).length;
     const verifiedCount = Object.keys(verify.render_urls as Record<string, string>).length;
     console.log(`[StudioRenderOS] Complete: ${successCount}/6 views generated, ${verifiedCount} verified in DB`);
+    console.log(`[StudioRenderOS] Branding: ${USE_BRANDED_RENDER_PIPELINE ? 'APPLIED' : 'DISABLED'}`);
 
     return new Response(JSON.stringify({ 
       success: true,
       renderUrls: verify.render_urls, // Return verified data from DB
       generatedViews: verifiedCount,
+      branded: USE_BRANDED_RENDER_PIPELINE,
       errors: errors.length > 0 ? errors : undefined
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }

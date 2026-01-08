@@ -21,6 +21,14 @@ export const BRAND_FONT = "Inter";
 export const BRAND_TEXT_COLOR = "#000000";
 
 // ============================================
+// PHASE 2 — BRANDED RENDER PIPELINE TOGGLE
+// ============================================
+// When TRUE: All renders are branded before storage (no raw renders stored)
+// When FALSE: Renders are stored without branding (legacy behavior)
+// This is the OS kill switch for Phase 2
+export const USE_BRANDED_RENDER_PIPELINE = true;
+
+// ============================================
 // STUDIO TEMPLATE — LOCKED VERSION
 // ============================================
 // When Phase 3 is implemented, this will be the locked studio template
