@@ -61,6 +61,9 @@ Deno.serve(async (req) => {
     const fileUrls: { url: string; filename: string; fileType: string }[] = [];
     let vehicleInfo: { year?: string; make?: string; model?: string } = {};
 
+    // Collect all text values for design instructions
+    const instructionParts: string[] = [];
+    
     // Iterate through all line items and their meta_data
     for (const item of order.line_items || []) {
       console.log(`[ProcessResync] Processing line item: ${item.name}`);
@@ -70,22 +73,39 @@ Deno.serve(async (req) => {
         const displayKey = meta.display_key || meta.key || "";
         const value = meta.display_value || meta.value || "";
         
+        // Log all meta for debugging
+        console.log(`[ProcessResync] Meta: key="${meta.key}", display_key="${displayKey}", value_preview="${String(value).substring(0, 100)}..."`);
+        
         // Skip internal WooCommerce fields
         if (key.startsWith("_") || key.startsWith("pa_")) continue;
         
-        // Design instructions - look for common field patterns
-        if (
+        // WooCommerce Extra Product Options stores customer text in various ways
+        // Check if this is a meaningful text field (not just a product option label)
+        const valueStr = String(value);
+        
+        // Design instructions - look for common field patterns OR any long text response
+        const isInstructionField = 
           key.includes("describe") ||
           key.includes("design") ||
           key.includes("project") ||
           key.includes("instructions") ||
           key.includes("notes") ||
           key.includes("details") ||
-          key.includes("requirements")
-        ) {
-          if (typeof value === "string" && value.length > 20) {
-            designInstructions = value;
-            console.log(`[ProcessResync] Found design instructions (${value.length} chars)`);
+          key.includes("requirements") ||
+          key.includes("information") ||
+          key.includes("please") ||
+          displayKey.toLowerCase().includes("describe") ||
+          displayKey.toLowerCase().includes("project") ||
+          displayKey.toLowerCase().includes("information");
+        
+        // Also capture any substantial text that looks like customer input
+        // (more than 50 chars and contains spaces = likely a description)
+        const isLongCustomerText = valueStr.length > 50 && valueStr.includes(" ") && !valueStr.startsWith("http");
+        
+        if (isInstructionField || isLongCustomerText) {
+          if (valueStr.length > 10) {
+            instructionParts.push(valueStr);
+            console.log(`[ProcessResync] Found instruction text (${valueStr.length} chars): "${valueStr.substring(0, 80)}..."`);
           }
         }
 
@@ -144,6 +164,11 @@ Deno.serve(async (req) => {
           vehicleInfo.model = value;
         }
       }
+    }
+
+    // Combine all instruction parts into one string
+    if (instructionParts.length > 0) {
+      designInstructions = instructionParts.join("\n\n");
     }
 
     console.log(`[ProcessResync] Extracted: instructions=${designInstructions.length} chars, files=${fileUrls.length}, vehicle=${JSON.stringify(vehicleInfo)}`);
