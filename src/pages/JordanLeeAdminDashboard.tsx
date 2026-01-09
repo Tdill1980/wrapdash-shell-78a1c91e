@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,9 @@ const TABS = [
 ];
 
 export default function JordanLeeAdminDashboard() {
-  const [activeTab, setActiveTab] = useState("control");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "control";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [orgMembership, setOrgMembership] = useState<{

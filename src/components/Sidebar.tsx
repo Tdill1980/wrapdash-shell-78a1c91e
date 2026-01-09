@@ -21,6 +21,7 @@ import {
   FileText,
   Palette,
   Film,
+  AlertTriangle,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -147,6 +148,18 @@ const operationsItems: NavigationItem[] = [
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Website </span>
         <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Chat</span>
+      </span>
+    )
+  },
+  { 
+    name: "Escalation Desk", 
+    path: "/jordan-lee-admin?tab=escalations", 
+    icon: AlertTriangle,
+    roles: ["admin", "beta_shop"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Escalation </span>
+        <span className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] bg-clip-text text-transparent">Desk</span>
       </span>
     )
   },
