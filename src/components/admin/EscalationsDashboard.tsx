@@ -275,6 +275,37 @@ IMPORTANT: Only propose call times within these availability windows. If no avai
   const chatState = conversation?.chat_state;
   const hasEmail = contact?.email && !contact.email.includes('@capture.local');
   const hasPhone = !!contact?.phone;
+  
+  // Identity promotion logic - never stays "Website Visitor" after engagement
+  const getIdentityStatus = (): { label: string; level: 'visitor' | 'prospect' | 'lead' } => {
+    const inboundCount = messages.filter(m => m.direction === 'inbound').length;
+    const hasPricingDiscussion = messages.some(m => 
+      m.content?.toLowerCase().match(/price|cost|quote|how much|pricing|estimate/)
+    );
+    const hasFileIntent = messages.some(m => 
+      m.content?.toLowerCase().match(/upload|file|design|artwork|send.*file|attach/)
+    );
+    // Check chat_state for quote/file data (safely accessing dynamic fields)
+    const stateData = chatState as Record<string, unknown> | undefined;
+    const hasQuoteAttached = stateData?.quote_attached || stateData?.quote_id;
+    const filesUploaded = stateData?.files_uploaded as unknown[] | undefined;
+    const hasFileUploaded = filesUploaded && filesUploaded.length > 0;
+    
+    // Lead: file uploaded OR quote created
+    if (hasFileUploaded || hasQuoteAttached) {
+      return { label: 'Lead', level: 'lead' };
+    }
+    
+    // Prospect: email OR 3+ messages OR pricing discussed OR file intent
+    if (hasEmail || inboundCount >= 3 || hasPricingDiscussion || hasFileIntent) {
+      return { label: 'Prospect', level: 'prospect' };
+    }
+    
+    // Default visitor
+    return { label: 'Website Visitor', level: 'visitor' };
+  };
+  
+  const identity = getIdentityStatus();
 
   const getConversationContext = () => {
     return messages
@@ -534,9 +565,12 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                             {typeConfig.label}
                           </Badge>
                         </div>
+                        {/* Show identity promotion based on engagement */}
                         {item.contactName === 'Website Visitor' && (
-                          <div className="text-[10px] text-muted-foreground/60 ml-5 -mt-0.5 mb-1">
-                            Website Visitor
+                          <div className={`text-[10px] ml-5 -mt-0.5 mb-1 ${
+                            item.contactEmail ? 'text-blue-400' : 'text-muted-foreground/60'
+                          }`}>
+                            {item.contactEmail ? 'Prospect' : 'Website Visitor'}
                           </div>
                         )}
                         
@@ -670,10 +704,19 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                     )}
                   </div>
                   
-                  {/* Tertiary: Visitor ID (if name was generic) */}
+                  {/* Identity badge with promotion status */}
                   {(!contact?.name || contact.name === 'Website Visitor') && (
-                    <div className="text-xs text-muted-foreground/50 mt-2">
-                      Website Visitor
+                    <div className={`inline-flex items-center gap-1.5 text-xs mt-2 px-2 py-0.5 rounded-full ${
+                      identity.level === 'lead' 
+                        ? 'bg-green-500/20 text-green-400' 
+                        : identity.level === 'prospect' 
+                          ? 'bg-blue-500/20 text-blue-400' 
+                          : 'text-muted-foreground/50'
+                    }`}>
+                      {identity.level !== 'visitor' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      )}
+                      {identity.label}
                     </div>
                   )}
                 </div>
