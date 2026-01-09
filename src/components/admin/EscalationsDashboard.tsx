@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { CallRequestModal } from "./CallRequestModal";
 import { ResolutionModal } from "./ResolutionModal";
 import { EscalationActionButtons } from "./EscalationActionButtons";
+import { useTeamAvailability } from "@/hooks/useTeamAvailability";
 
 // Priority order for escalation types (lower = higher priority)
 const TYPE_PRIORITY: Record<string, number> = {
@@ -99,6 +100,9 @@ export function EscalationsDashboard() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   
+  // Team availability for Alex context
+  const { getAvailabilityText } = useTeamAvailability();
+  
   // AI Chat state
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
   const [aiInput, setAiInput] = useState("");
@@ -121,6 +125,17 @@ export function EscalationsDashboard() {
   // Modal states for action buttons
   const [showCallRequestModal, setShowCallRequestModal] = useState(false);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
+
+  // Build team availability context for Alex
+  const getTeamAvailabilityContext = () => {
+    return `TEAM AVAILABILITY (for scheduling calls):
+- Jackson: ${getAvailabilityText('jackson')}
+- Lance: ${getAvailabilityText('lance')}
+- Trish: ${getAvailabilityText('trish')}
+- Manny: ${getAvailabilityText('manny')}
+
+IMPORTANT: Only propose call times within these availability windows. If no availability is set, say "I'll have someone follow up to schedule."`;
+  };
 
   // Fetch escalation queue with priority sorting
   const { data: items, isLoading: queueLoading } = useQuery({
@@ -273,7 +288,15 @@ export function EscalationsDashboard() {
       const { data, error } = await supabase.functions.invoke('agent-chat', {
         body: {
           agent: 'alex_morgan',
-          prompt: `You are Alex Morgan, an executive assistant at WePrintWraps helping the internal team respond to customers.
+          prompt: `You are Alex, an execution assistant at WePrintWraps helping the internal team respond to escalated customer conversations.
+
+YOUR ROLE:
+- Help draft emails and messages
+- Propose call scheduling times (only within team availability)
+- Extract contact info from conversations
+- Execute what the team asks
+
+${getTeamAvailabilityContext()}
 
 Customer: ${contact?.name || 'Unknown'} (${contact?.email || 'no email'}, ${contact?.phone || 'no phone'})
 ${chatState?.vehicle ? `Vehicle: ${chatState.vehicle.year} ${chatState.vehicle.make} ${chatState.vehicle.model}` : ''}
@@ -285,7 +308,7 @@ ${currentDraft ? `Team member's current draft:\n${currentDraft}\n` : ''}
 
 Team member asks: ${userMessage}
 
-Give concise, actionable advice. If they want you to write something, give exact professional text they can copy. If they ask for email, include a full email body. Sign off as "— Alex, WePrintWraps Team". If they ask for contact info extraction, look for any email or phone in the conversation.`,
+Give concise, actionable advice. If they want you to write something, give exact professional text they can copy. If they ask for email, include a full email body. If they ask to schedule a call, propose times ONLY within the team member's availability. Sign off as "— Alex, WePrintWraps Team".`,
         },
       });
 

@@ -24,6 +24,13 @@ export interface ConversationEvent {
     quote_number?: string;
     reason?: string;
     resolution_notes?: string;
+    // Call scheduling fields
+    assigned_to?: string;
+    call_reason?: string;
+    alex_instruction?: string;
+    scheduled_time?: string;
+    call_notes?: string;
+    call_outcome?: string;
     metadata?: Record<string, unknown>;
   };
   created_at: string;
@@ -56,14 +63,21 @@ export function useConversationEscalationSummary(conversationId: string | null) 
   const emailsSent = events?.filter(e => e.event_type === 'email_sent') || [];
   const assetsUploaded = events?.filter(e => e.event_type === 'asset_uploaded') || [];
   const quotesAttached = events?.filter(e => e.event_type === 'quote_attached') || [];
+  const callsRequested = events?.filter(e => e.event_type === 'call_requested') || [];
+  const callsScheduled = events?.filter(e => e.event_type === 'call_scheduled') || [];
+  const callsCompleted = events?.filter(e => e.event_type === 'call_completed') || [];
 
   return {
     escalations,
     emailsSent,
     assetsUploaded,
     quotesAttached,
+    callsRequested,
+    callsScheduled,
+    callsCompleted,
     hasEscalations: escalations.length > 0,
     hasEmailsSent: emailsSent.length > 0,
+    hasCallScheduled: callsScheduled.length > 0,
   };
 }
 
