@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { CallRequestModal } from "./CallRequestModal";
 import { ResolutionModal } from "./ResolutionModal";
 import { EscalationActionButtons } from "./EscalationActionButtons";
+import { AlexApprovalModal } from "./AlexApprovalModal";
 import { useTeamAvailability } from "@/hooks/useTeamAvailability";
 
 // Priority order for escalation types (lower = higher priority)
@@ -125,6 +126,14 @@ export function EscalationsDashboard() {
   // Modal states for action buttons
   const [showCallRequestModal, setShowCallRequestModal] = useState(false);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
+  
+  // Approval modal state for Preview & Send flow
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<{
+    subject: string;
+    body: string;
+    actionType: "email_reply" | "schedule_call" | "quote_send";
+  } | null>(null);
 
   // Build team availability context for Alex
   const getTeamAvailabilityContext = () => {
@@ -365,53 +374,40 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
     }
   };
 
-  // Send email reply
-  const handleSendReply = async () => {
+  // Open Preview & Send modal (replaces direct send)
+  const handlePreviewAndSend = () => {
     if (!hasEmail || !replyBody.trim()) return;
+    
+    const emailSubject = selectedQuote 
+      ? `Your WePrintWraps Quote #${selectedQuote.quote_number}`
+      : 'Re: Your WePrintWraps Inquiry';
+    
+    setPendingEmail({
+      subject: emailSubject,
+      body: replyBody,
+      actionType: selectedQuote ? 'quote_send' : 'email_reply',
+    });
+    setShowApprovalModal(true);
+  };
 
-    setIsSending(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-admin-reply', {
-        body: {
-          conversation_id: selectedId,
-          to_email: contact!.email,
-          to_name: contact?.name || undefined,
-          subject: selectedQuote 
-            ? `Your WePrintWraps Quote #${selectedQuote.quote_number}`
-            : 'Re: Your WePrintWraps Inquiry',
-          body: replyBody,
-          quote_id: selectedQuote?.id,
-        },
-      });
+  // Handle successful send from approval modal
+  const handleApprovalSuccess = () => {
+    setReplyBody("");
+    setSelectedQuote(null);
+    setPendingEmail(null);
+    queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
+  };
 
-      if (error) throw error;
-      if (data?.success) {
-        // Log the email sent event
-        await supabase.from('conversation_events').insert([{
-          conversation_id: selectedId,
-          event_type: 'email_sent',
-          actor: 'admin',
-          payload: {
-            email_sent_to: [contact!.email],
-            email_subject: selectedQuote 
-              ? `Your WePrintWraps Quote #${selectedQuote.quote_number}`
-              : 'Re: Your WePrintWraps Inquiry',
-            quote_attached: !!selectedQuote,
-            quote_id: selectedQuote?.id,
-          },
-        }]);
-        
-        toast.success('Email sent!');
-        setReplyBody("");
-        setSelectedQuote(null);
-        queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
+  // Handle regenerate request from approval modal
+  const handleRegenerateEmail = async () => {
+    setShowApprovalModal(false);
+    await handleAIDraft();
+    // Re-open modal after draft is regenerated
+    setTimeout(() => {
+      if (replyBody.trim()) {
+        handlePreviewAndSend();
       }
-    } catch (err) {
-      console.error('Send error:', err);
-      toast.error('Failed to send email');
-    } finally {
-      setIsSending(false);
-    }
+    }, 500);
   };
 
   // Attach quote to conversation
@@ -872,11 +868,11 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                       />
                       <Button
                         className="w-full gap-2"
-                        onClick={handleSendReply}
-                        disabled={isSending || !replyBody.trim()}
+                        onClick={handlePreviewAndSend}
+                        disabled={!replyBody.trim()}
                       >
-                        {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        Send Email {selectedQuote && `+ Quote`}
+                        <Send className="h-4 w-4" />
+                        Preview & Send {selectedQuote && `+ Quote`}
                       </Button>
                     </>
                   ) : (
@@ -931,6 +927,29 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
           setSelectedId(null);
         }}
       />
+      
+      {/* Alex Approval Modal - Preview & Send */}
+      {pendingEmail && hasEmail && (
+        <AlexApprovalModal
+          open={showApprovalModal}
+          onOpenChange={setShowApprovalModal}
+          conversationId={selectedId || ''}
+          recipient={{
+            email: contact!.email!,
+            name: contact?.name,
+          }}
+          subject={pendingEmail.subject}
+          body={pendingEmail.body}
+          quote={selectedQuote ? {
+            id: selectedQuote.id,
+            quote_number: selectedQuote.quote_number || '',
+            total: selectedQuote.customer_price || 0,
+          } : null}
+          actionType={pendingEmail.actionType}
+          onSuccess={handleApprovalSuccess}
+          onRegenerate={handleRegenerateEmail}
+        />
+      )}
     </div>
   );
 }

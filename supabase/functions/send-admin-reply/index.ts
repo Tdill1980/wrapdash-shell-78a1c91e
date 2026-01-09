@@ -1,5 +1,6 @@
 // Send Admin Reply Edge Function
 // Sends email replies to customers and logs to conversation_events
+// CRITICAL: This is the ONLY authorized send path for escalation emails
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -16,9 +17,28 @@ serve(async (req) => {
   }
 
   try {
-    const { conversation_id, to_email, to_name, subject, body } = await req.json();
+    const { 
+      conversation_id, 
+      to_email, 
+      to_name, 
+      subject, 
+      body,
+      quote_id,
+      quote_number,
+      approved_by,
+      approved_at,
+      action_type,
+      assigned_to,
+    } = await req.json();
 
-    console.log('[SendAdminReply] Received request:', { conversation_id, to_email, subject: subject?.substring(0, 50) });
+    console.log('[SendAdminReply] Received request:', { 
+      conversation_id, 
+      to_email, 
+      subject: subject?.substring(0, 50),
+      quote_id,
+      action_type,
+      approved_by,
+    });
 
     // Validate required fields
     if (!conversation_id || !to_email || !subject || !body) {
@@ -105,14 +125,20 @@ serve(async (req) => {
 
     console.log('[SendAdminReply] Email sent successfully:', emailData?.id);
 
-    // Log email_sent event to conversation_events
+    // Log email_sent event to conversation_events with approval tracking
     const sentAt = new Date().toISOString();
+    
+    // Determine event subtype based on action_type
+    const eventSubtype = action_type === 'schedule_call' ? 'schedule_call' 
+                       : action_type === 'quote_send' ? 'quote_send' 
+                       : 'reply';
     
     const { error: eventError } = await supabase
       .from('conversation_events')
       .insert({
         conversation_id: conversation_id,
         event_type: 'email_sent',
+        subtype: eventSubtype,
         actor: 'admin',
         payload: {
           email_sent_to: [to_email],
@@ -122,6 +148,16 @@ serve(async (req) => {
           customer_email: to_email,
           customer_name: to_name || null,
           resend_id: emailData?.id || null,
+          // Approval tracking - CRITICAL for traceability
+          approved_by: approved_by || 'admin',
+          approved_at: approved_at || sentAt,
+          // Quote tracking
+          quote_attached: !!quote_id,
+          quote_id: quote_id || null,
+          quote_number: quote_number || null,
+          // Action context
+          action_type: action_type || 'email_reply',
+          assigned_to: assigned_to || null,
         },
       });
 
@@ -129,7 +165,47 @@ serve(async (req) => {
       console.error('[SendAdminReply] Failed to log event:', eventError);
       // Don't fail the request - email was sent successfully
     } else {
-      console.log('[SendAdminReply] Event logged successfully');
+      console.log('[SendAdminReply] Event logged successfully with approval tracking');
+    }
+
+    // If quote was attached, log quote_sent event for traceability
+    if (quote_id) {
+      console.log('[SendAdminReply] Logging quote_sent event for quote:', quote_id);
+      
+      const { error: quoteEventError } = await supabase
+        .from('conversation_events')
+        .insert({
+          conversation_id: conversation_id,
+          event_type: 'quote_sent',
+          actor: 'admin',
+          payload: {
+            quote_id: quote_id,
+            quote_number: quote_number || null,
+            approved_by: approved_by || 'admin',
+            approved_at: approved_at || sentAt,
+            sent_at: sentAt,
+            to: to_email,
+          },
+        });
+
+      if (quoteEventError) {
+        console.error('[SendAdminReply] Failed to log quote_sent event:', quoteEventError);
+      }
+
+      // Update quote status to 'sent'
+      const { error: quoteUpdateError } = await supabase
+        .from('quotes')
+        .update({
+          status: 'sent',
+          email_sent: true,
+        })
+        .eq('id', quote_id);
+
+      if (quoteUpdateError) {
+        console.error('[SendAdminReply] Failed to update quote status:', quoteUpdateError);
+      } else {
+        console.log('[SendAdminReply] Quote status updated to sent');
+      }
     }
 
     // Update conversation last_message_at
@@ -142,6 +218,7 @@ serve(async (req) => {
       success: true, 
       email_id: emailData?.id,
       sent_at: sentAt,
+      approved_by: approved_by || 'admin',
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
