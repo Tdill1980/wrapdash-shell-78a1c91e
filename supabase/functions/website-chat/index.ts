@@ -1499,6 +1499,12 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       metadata: { ai_generated: true, agent: 'jordan_lee', escalation: escalationType }
     });
 
+    // Update last_message_at so conversation list shows accurate "last chat" time
+    await supabase
+      .from('conversations')
+      .update({ last_message_at: new Date().toISOString() })
+      .eq('id', conversationId);
+
     // ============================================
     // CREATE QUOTE when Jordan provides pricing
     // ============================================
