@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageCircle, Send, X, Loader2 } from "lucide-react";
+import { MessageCircle, Send, X, Loader2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  quoteSent?: {
+    email: string;
+    quoteNumber: string;
+    amount: number;
+    sentAt: string;
+  };
 }
 
 const QUICK_ACTIONS = [
@@ -24,15 +30,14 @@ export function WebsiteChatAgent() {
   const [showQuick, setShowQuick] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Welcome message
+  // Welcome message - simple, human
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([
         {
           id: "welcome",
           role: "assistant",
-          content:
-            "Hey! 👋 I'm WPW AI TEAM. Want a wrap quote? Tell me your vehicle year, make, and model to get started!",
+          content: "Hey! 👋 What kind of wrap project are you working on?",
         },
       ]);
     }
@@ -67,8 +72,6 @@ export function WebsiteChatAgent() {
           session_id: sessionId,
           message_text: content,
           page_url: window.location.href,
-          // organization_id can be passed here for multi-tenant support
-          // Defaults to WPW org (51aa96db-c06d-41ae-b3cb-25b045c75caf) on backend
           organization_id: undefined,
         },
       });
@@ -80,6 +83,13 @@ export function WebsiteChatAgent() {
           id: crypto.randomUUID(),
           role: "assistant",
           content: data.reply,
+          // Backend-confirmed quote sent data
+          quoteSent: data.quote_sent ? {
+            email: data.quote_email || '',
+            quoteNumber: data.quote_number || '',
+            amount: data.quote_amount || 0,
+            sentAt: data.quote_sent_at || new Date().toISOString(),
+          } : undefined,
         };
         setMessages((prev) => [...prev, botMsg]);
       }
@@ -152,16 +162,29 @@ export function WebsiteChatAgent() {
       {/* MESSAGES - Dark background */}
       <div className="p-4 space-y-3 h-80 overflow-y-auto bg-[#16162a]">
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
-              msg.role === "assistant"
-                ? "bg-gradient-to-br from-fuchsia-500 via-purple-500 to-pink-500 text-white rounded-2xl rounded-tl-md self-start shadow-[0_4px_15px_rgba(168,85,247,0.4)]"
-                : "bg-[#2a2a4a] text-white rounded-2xl rounded-tr-md self-end ml-auto border border-white/10"
-            }`}
-          >
-            {msg.content}
-          </div>
+          <React.Fragment key={msg.id}>
+            <div
+              className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${
+                msg.role === "assistant"
+                  ? "bg-gradient-to-br from-fuchsia-500 via-purple-500 to-pink-500 text-white rounded-2xl rounded-tl-md self-start shadow-[0_4px_15px_rgba(168,85,247,0.4)]"
+                  : "bg-[#2a2a4a] text-white rounded-2xl rounded-tr-md self-end ml-auto border border-white/10"
+              }`}
+            >
+              {msg.content}
+            </div>
+            {/* Backend-confirmed Quote Sent Card */}
+            {msg.quoteSent && (
+              <div className="mx-1 p-3 bg-green-500/20 border border-green-500/30 rounded-xl flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0" />
+                <div className="text-sm">
+                  <span className="text-green-300 font-medium">Quote sent to {msg.quoteSent.email}</span>
+                  {msg.quoteSent.quoteNumber && (
+                    <span className="text-green-400/70 text-xs ml-2">#{msg.quoteSent.quoteNumber}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </React.Fragment>
         ))}
 
         {/* Quick Actions */}
