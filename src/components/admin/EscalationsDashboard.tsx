@@ -783,13 +783,38 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                       <Receipt className="h-3 w-3" />
                       Quote
                     </p>
-                    <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-6 text-xs gap-1">
-                          <Link2 className="h-3 w-3" />
-                          Attach Quote
-                        </Button>
-                      </DialogTrigger>
+                    <div className="flex gap-1">
+                      {/* Create Quote Button - opens MightyCustomer in WPW Internal mode */}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-6 text-xs gap-1"
+                        onClick={() => {
+                          const params = new URLSearchParams({
+                            mode: 'wpw_internal',
+                            conversation_id: selectedId || '',
+                            customer: contact?.name || '',
+                            email: contact?.email || '',
+                            phone: contact?.phone || '',
+                          });
+                          if (chatState?.vehicle) {
+                            params.set('year', chatState.vehicle.year);
+                            params.set('make', chatState.vehicle.make);
+                            params.set('model', chatState.vehicle.model);
+                          }
+                          window.open(`/mighty-customer?${params}`, '_blank');
+                        }}
+                      >
+                        <FileText className="h-3 w-3" />
+                        Create Quote
+                      </Button>
+                      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-6 text-xs gap-1">
+                            <Link2 className="h-3 w-3" />
+                            Attach
+                          </Button>
+                        </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Attach a Quote</DialogTitle>
@@ -816,7 +841,8 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                           </div>
                         </ScrollArea>
                       </DialogContent>
-                    </Dialog>
+                      </Dialog>
+                    </div>
                   </div>
                   
                   {selectedQuote && (

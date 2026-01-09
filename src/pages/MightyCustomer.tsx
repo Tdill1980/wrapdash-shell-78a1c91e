@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
-import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle } from "lucide-react";
+import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
@@ -19,6 +19,7 @@ import { PanelVisualization } from "@/components/PanelVisualization";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VehicleSelectorV2 } from "@/components/VehicleSelectorV2";
 import { VehicleSQFTOptions } from "@/hooks/useVehicleDimensions";
+import { Badge } from "@/components/ui/badge";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -34,22 +35,33 @@ const finishTypes = ["Gloss", "Satin", "Matte", "Gloss PPF", "Matte PPF"];
 
 export default function MightyCustomer() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { products: allProducts, loading: productsLoading, settings } = useProducts();
+
+  // WPW Internal Mode - detect from URL params
+  const isWPWInternal = searchParams.get('mode') === 'wpw_internal';
+  const sourceConversationId = searchParams.get('conversation_id') || null;
+  const prefillCustomer = searchParams.get('customer') || '';
+  const prefillEmail = searchParams.get('email') || '';
+  const prefillPhone = searchParams.get('phone') || '';
+  const prefillYear = searchParams.get('year') || '';
+  const prefillMake = searchParams.get('make') || '';
+  const prefillModel = searchParams.get('model') || '';
 
   const [selectedService, setSelectedService] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [addOns, setAddOns] = useState<string[]>([]);
   const [customerData, setCustomerData] = useState({
-    name: "",
+    name: prefillCustomer,
     company: "",
-    phone: "",
-    email: "",
-    vehicleYear: "",
-    vehicleMake: "",
-    vehicleModel: "",
+    phone: prefillPhone,
+    email: prefillEmail,
+    vehicleYear: prefillYear,
+    vehicleMake: prefillMake,
+    vehicleModel: prefillModel,
   });
-  const [margin, setMargin] = useState(65);
+  const [margin, setMargin] = useState(isWPWInternal ? 0 : 65);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
   const [includeRoof, setIncludeRoof] = useState(true);
@@ -98,9 +110,10 @@ export default function MightyCustomer() {
     vehicle,
     quantity,
     settings.install_rate_per_hour,
-    margin,
+    isWPWInternal ? 0 : margin,
     includeRoof,
-    wrapType === 'partial' ? selectedPanels : null
+    wrapType === 'partial' ? selectedPanels : null,
+    isWPWInternal // WPW mode flag
   );
 
   // Track vehicle match status - now driven by Supabase lookup
@@ -331,16 +344,19 @@ export default function MightyCustomer() {
         }),
         product_name: selectedProduct.product_name,
         sqft: sqft,
-        material_cost: materialCost,
-        labor_cost: laborCost,
+        material_cost: isWPWInternal ? materialCost : materialCost,
+        labor_cost: isWPWInternal ? 0 : laborCost,
         total_price: total,
-        margin: margin,
-        status: "pending",
-        auto_retarget: true,
+        margin: isWPWInternal ? 0 : margin,
+        status: "draft", // Always start as draft now
+        auto_retarget: !isWPWInternal, // No auto-retarget for WPW internal quotes
         email_tone: emailTone,
         email_design: emailDesign,
         expires_at: expiresAt.toISOString(),
-      });
+        // WPW Internal mode fields
+        quote_type: isWPWInternal ? 'wpw_material_only' : 'standard',
+        source_conversation_id: sourceConversationId,
+      } as any); // Type assertion needed until types regenerate
 
       if (error) throw error;
 
@@ -418,10 +434,20 @@ export default function MightyCustomer() {
     <MainLayout userName="Admin">
       <div className="w-full space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            MightyCustomer™
-          </h1>
-          <p className="text-muted-foreground">Quote Builder & Order Management</p>
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              MightyCustomer™
+            </h1>
+            {isWPWInternal && (
+              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/40 flex items-center gap-1">
+                <Package className="h-3 w-3" />
+                WPW Internal - Material Only
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground">
+            {isWPWInternal ? 'Material-Only Quote for Installer Pricing' : 'Quote Builder & Order Management'}
+          </p>
         </div>
 
         <Card className="dashboard-card p-6 space-y-6 relative">
@@ -917,37 +943,51 @@ export default function MightyCustomer() {
           {/* Quote Summary */}
           {selectedProduct && sqft > 0 && (
             <div className="space-y-4 pt-4 border-t">
-              <Label className="text-lg font-semibold">Quote Summary</Label>
+              <Label className="text-lg font-semibold">
+                {isWPWInternal ? 'Material Quote Summary' : 'Quote Summary'}
+              </Label>
               <div className="p-4 bg-gradient-to-br from-background to-muted/20 rounded-lg border space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Material Cost:</span>
                   <span className="font-semibold">${materialCost.toFixed(2)}</span>
                 </div>
                 
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    Labor ({installHours}h × ${settings.install_rate_per_hour}/h):
-                  </span>
-                  <span className="font-semibold">${laborCost.toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Margin ({margin}%):</span>
-                  <span className="font-semibold text-blue-400">${marginAmount.toFixed(2)}</span>
-                </div>
+                {/* Hide labor/margin in WPW Internal mode */}
+                {!isWPWInternal && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Labor ({installHours}h × ${settings.install_rate_per_hour}/h):
+                      </span>
+                      <span className="font-semibold">${laborCost.toFixed(2)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal:</span>
+                      <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Margin ({margin}%):</span>
+                      <span className="font-semibold text-blue-400">${marginAmount.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
                 
                 <div className="pt-3 border-t border-border">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Total:</span>
+                    <span className="text-lg font-bold">
+                      {isWPWInternal ? 'Material Total:' : 'Total:'}
+                    </span>
                     <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
                       ${total.toFixed(2)}
                     </span>
                   </div>
+                  {isWPWInternal && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      WPW Internal pricing at $5.27/sq ft • No installer labor or margin
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -996,19 +1036,22 @@ export default function MightyCustomer() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Label>Margin: {margin}%</Label>
+          {/* Margin slider - hidden in WPW Internal mode */}
+          {!isWPWInternal && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label>Margin: {margin}%</Label>
+              </div>
+              <Slider
+                value={[margin]}
+                onValueChange={([value]) => setMargin(value)}
+                min={0}
+                max={100}
+                step={5}
+                className="w-full"
+              />
             </div>
-            <Slider
-              value={[margin]}
-              onValueChange={([value]) => setMargin(value)}
-              min={0}
-              max={100}
-              step={5}
-              className="w-full"
-            />
-          </div>
+          )}
 
           <div className="space-y-4 pt-4 border-t">
             <Label className="text-lg font-semibold">Customer Information</Label>
