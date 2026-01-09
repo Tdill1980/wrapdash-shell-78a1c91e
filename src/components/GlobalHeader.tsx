@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
-import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 
 interface GlobalHeaderProps {
   userName?: string;
@@ -137,11 +136,6 @@ export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMe
 
       {/* Thin gradient accent bar */}
       <div className="w-full h-[3px] bg-gradient-to-r from-[#2F81F7] to-[#15D1FF]" />
-
-      {/* Breadcrumb Navigation Bar */}
-      <div className="w-full bg-[#0D0F12] px-4 sm:px-8 py-2.5 border-b border-white/10">
-        <AppBreadcrumb />
-      </div>
     </>
   );
 };
