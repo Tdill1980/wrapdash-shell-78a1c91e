@@ -879,6 +879,7 @@ serve(async (req) => {
                 has_email: !!customerEmail,
                 classification, // Include classification for debugging
                 order_verified: orderContext.hasOrder,
+                quote_converted: !!orderContext.quoteConverted,
               },
             },
             orgId
@@ -951,6 +952,8 @@ serve(async (req) => {
               pending_since: pending.detected_at,
               has_phone: !!customerPhone,
               has_email: !!customerEmail,
+              order_verified: orderContext.hasOrder,
+              quote_converted: !!orderContext.quoteConverted,
             },
           },
           orgId

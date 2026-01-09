@@ -239,6 +239,50 @@ export async function sendAlertWithTracking(
   organizationId?: string
 ): Promise<AlertResult> {
   const config = ALERT_CONFIG[alertType];
+
+  // =====================================================
+  // HARD GUARD (defense-in-depth):
+  // A "quality_issue" alert is ILLEGAL without a verified order.
+  // This prevents accidental keyword-triggered ops emails for pre-sale chats.
+  // =====================================================
+  if (alertType === "quality_issue") {
+    const orderVerifiedFromContext =
+      !!context.orderId ||
+      !!context.orderNumber ||
+      (typeof context.additionalInfo === "object" && context.additionalInfo !== null
+        ? // website-chat attaches these fields
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (!!(context.additionalInfo as any).order_verified || !!(context.additionalInfo as any).quote_converted)
+        : false);
+
+    if (!orderVerifiedFromContext) {
+      console.warn("[JordanAlert] BLOCKED quality_issue alert (no verified order)");
+
+      if (context.conversationId) {
+        await logConversationEvent(
+          supabase,
+          context.conversationId,
+          "failed",
+          "jordan_lee",
+          {
+            error: "blocked_no_order",
+            reason: "Blocked quality_issue escalation: no verified order",
+            metadata: {
+              alert_type: alertType,
+            },
+          },
+          alertType
+        );
+      }
+
+      return {
+        success: false,
+        emailSent: false,
+        taskCreated: false,
+        error: "blocked_no_order",
+      };
+    }
+  }
   
   console.log(`[JordanAlert] Sending ${alertType} alert`, {
     orderNumber: context.orderNumber,
