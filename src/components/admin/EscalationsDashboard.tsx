@@ -257,8 +257,8 @@ export function EscalationsDashboard() {
       .join('\n');
   };
 
-  // Ask Jordan AI
-  const handleAskJordan = async () => {
+  // Ask Alex AI (internal assistant)
+  const handleAskAlex = async () => {
     if (!aiInput.trim()) return;
 
     const userMessage = aiInput.trim();
@@ -272,8 +272,8 @@ export function EscalationsDashboard() {
 
       const { data, error } = await supabase.functions.invoke('agent-chat', {
         body: {
-          agent: 'jordan_lee',
-          prompt: `You are Jordan Lee, a friendly wrap specialist helping an admin respond to a customer.
+          agent: 'alex_morgan',
+          prompt: `You are Alex Morgan, an executive assistant at WePrintWraps helping the internal team respond to customers.
 
 Customer: ${contact?.name || 'Unknown'} (${contact?.email || 'no email'}, ${contact?.phone || 'no phone'})
 ${chatState?.vehicle ? `Vehicle: ${chatState.vehicle.year} ${chatState.vehicle.make} ${chatState.vehicle.model}` : ''}
@@ -281,11 +281,11 @@ ${chatState?.vehicle ? `Vehicle: ${chatState.vehicle.year} ${chatState.vehicle.m
 Conversation:
 ${conversationContext}
 
-${currentDraft ? `Admin's current draft:\n${currentDraft}\n` : ''}
+${currentDraft ? `Team member's current draft:\n${currentDraft}\n` : ''}
 
-Admin asks: ${userMessage}
+Team member asks: ${userMessage}
 
-Give concise, actionable advice. If they want you to write something, give exact text they can copy. If they ask for email, include a full email body. If they ask for contact info extraction, look for any email or phone in the conversation.`,
+Give concise, actionable advice. If they want you to write something, give exact professional text they can copy. If they ask for email, include a full email body. Sign off as "— Alex, WePrintWraps Team". If they ask for contact info extraction, look for any email or phone in the conversation.`,
         },
       });
 
@@ -310,14 +310,14 @@ Give concise, actionable advice. If they want you to write something, give exact
     toast.success('Added to email reply!');
   };
 
-  // Generate AI draft
+  // Generate AI draft (Alex polishes human intent)
   const handleAIDraft = async () => {
     setIsAiThinking(true);
     try {
       const { data, error } = await supabase.functions.invoke('agent-chat', {
         body: {
-          agent: 'jordan_lee',
-          prompt: `Write a professional email reply to this customer.
+          agent: 'alex_morgan',
+          prompt: `Write a professional email reply to this customer on behalf of the WePrintWraps team.
 
 Customer: ${contact?.name || 'Valued Customer'}
 Email: ${contact?.email || 'unknown'}
@@ -325,7 +325,7 @@ Phone: ${contact?.phone || 'not provided'}
 Conversation:
 ${getConversationContext()}
 
-Write 2-3 short paragraphs. Be helpful and warm. Sign off as "The WePrintWraps Team". Body only, no subject.`,
+Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "— Alex, WePrintWraps Team". Body only, no subject.`,
         },
       });
 
@@ -679,7 +679,7 @@ Write 2-3 short paragraphs. Be helpful and warm. Sign off as "The WePrintWraps T
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Bot className="h-4 w-4" />
-              Ask Jordan & Reply
+              Ask Alex & Reply
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -692,7 +692,7 @@ Write 2-3 short paragraphs. Be helpful and warm. Sign off as "The WePrintWraps T
               <>
                 {/* AI Chat */}
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Ask Jordan for advice on how to respond:</p>
+                  <p className="text-xs text-muted-foreground">Ask Alex for advice on how to respond:</p>
                   <ScrollArea className="h-[120px] border rounded-lg bg-muted/20 p-2" ref={scrollRef}>
                     {aiMessages.length === 0 ? (
                       <div className="text-center text-muted-foreground text-xs py-4">
@@ -741,17 +741,17 @@ Write 2-3 short paragraphs. Be helpful and warm. Sign off as "The WePrintWraps T
                     <Input
                       value={aiInput}
                       onChange={(e) => setAiInput(e.target.value)}
-                      placeholder="Ask Jordan..."
+                      placeholder="Ask Alex..."
                       className="text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
-                          handleAskJordan();
+                          handleAskAlex();
                         }
                       }}
                       disabled={isAiThinking}
                     />
-                    <Button size="icon" onClick={handleAskJordan} disabled={isAiThinking || !aiInput.trim()}>
+                    <Button size="icon" onClick={handleAskAlex} disabled={isAiThinking || !aiInput.trim()}>
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
