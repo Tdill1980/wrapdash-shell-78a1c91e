@@ -35,9 +35,18 @@ import {
   Phone,
   Car,
   Search,
-  RefreshCw
+  RefreshCw,
+  Link2Off,
+  FileText
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface WebsiteChatQuote {
   id: string;
@@ -68,6 +77,7 @@ const statusColors: Record<string, string> = {
 export function WebsiteChatQuotes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [linkFilter, setLinkFilter] = useState<string>("all");
   const [selectedQuote, setSelectedQuote] = useState<WebsiteChatQuote | null>(null);
 
   const { data: quotes, isLoading, refetch } = useQuery({
@@ -120,6 +130,11 @@ export function WebsiteChatQuotes() {
   });
 
   const filteredQuotes = quotes?.filter((quote) => {
+    // Link filter
+    if (linkFilter === "linked" && !quote.source_conversation_id) return false;
+    if (linkFilter === "unlinked" && quote.source_conversation_id) return false;
+    
+    // Search filter
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -130,6 +145,10 @@ export function WebsiteChatQuotes() {
       quote.vehicle_model?.toLowerCase().includes(search)
     );
   });
+
+  // Count linked vs unlinked for display
+  const linkedCount = quotes?.filter(q => q.source_conversation_id).length || 0;
+  const unlinkedCount = quotes?.filter(q => !q.source_conversation_id).length || 0;
 
   const handleViewConversation = (conversationId: string) => {
     window.open(`/jordan-lee-admin?conversation=${conversationId}`, "_blank");
@@ -177,26 +196,47 @@ export function WebsiteChatQuotes() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search quotes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+      <div className="flex flex-col gap-4">
+        {/* Chat Link Filter Toggle */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Show:</span>
+          <ToggleGroup type="single" value={linkFilter} onValueChange={(v) => v && setLinkFilter(v)} className="bg-muted/50 p-1 rounded-lg">
+            <ToggleGroupItem value="all" className="text-xs px-3 data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              All Quotes ({quotes?.length || 0})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="linked" className="text-xs px-3 data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              <MessageSquare className="w-3 h-3 mr-1" />
+              Chat-Linked ({linkedCount})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="unlinked" className="text-xs px-3 data-[state=on]:bg-background data-[state=on]:shadow-sm">
+              <Link2Off className="w-3 h-3 mr-1" />
+              No Chat ({unlinkedCount})
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="created">Created</SelectItem>
-            <SelectItem value="sent">Sent</SelectItem>
-            <SelectItem value="converted">Converted</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
+        
+        {/* Search and Status Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Search quotes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="created">Created</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="converted">Converted</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -230,12 +270,29 @@ export function WebsiteChatQuotes() {
             ) : (
               filteredQuotes?.map((quote) => {
                 const needsReview = quote.ai_message?.includes("⚠️");
+                const hasLinkedChat = !!quote.source_conversation_id;
                 return (
                   <TableRow key={quote.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedQuote(quote)}>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-2">
                         {needsReview && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
                         {quote.quote_number}
+                        {/* No linked chat badge */}
+                        {!hasLinkedChat && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted-foreground/30 text-[10px] px-1.5 py-0">
+                                  <Link2Off className="w-3 h-3 mr-1" />
+                                  No chat
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[250px] text-xs">
+                                This quote was created outside of Website Chat or before chat linking was available.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -252,10 +309,28 @@ export function WebsiteChatQuotes() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{format(new Date(quote.created_at), "MMM d, h:mm a")}</TableCell>
                     <TableCell>
-                      {quote.source_conversation_id && (
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleViewConversation(quote.source_conversation_id!); }}>
-                          <MessageSquare className="w-4 h-4" />
-                        </Button>
+                      {hasLinkedChat ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleViewConversation(quote.source_conversation_id!); }}>
+                                <MessageSquare className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View Chat</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={(e) => { e.stopPropagation(); setSelectedQuote(quote); }}>
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View Quote Details</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </TableCell>
                   </TableRow>
@@ -325,13 +400,34 @@ export function WebsiteChatQuotes() {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-4 border-t border-border">
-                {selectedQuote.source_conversation_id && (
-                  <Button variant="outline" className="flex-1" onClick={() => handleViewConversation(selectedQuote.source_conversation_id!)}>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    View Conversation
-                  </Button>
+              <div className="flex flex-col gap-3 pt-4 border-t border-border">
+                {/* Show linked chat status */}
+                {!selectedQuote.source_conversation_id && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+                    <Link2Off className="w-4 h-4" />
+                    <span>No linked chat – this quote was created outside of Website Chat or before linking was available.</span>
+                  </div>
                 )}
+                
+                <div className="flex gap-2">
+                  {selectedQuote.source_conversation_id ? (
+                    <Button variant="outline" className="flex-1" onClick={() => handleViewConversation(selectedQuote.source_conversation_id!)}>
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      View Conversation
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="flex-1" disabled>
+                      <MessageSquare className="w-4 h-4 mr-2 opacity-50" />
+                      No Chat Available
+                    </Button>
+                  )}
+                  {selectedQuote.customer_email && (
+                    <Button variant="secondary" className="flex-1" onClick={() => window.open(`mailto:${selectedQuote.customer_email}`)}>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email Quote
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
