@@ -142,7 +142,7 @@ const studioItems: NavigationItem[] = [
 const operationsItems: NavigationItem[] = [
   { 
     name: "Website Chat", 
-    path: "/jordan-lee-admin", 
+    path: "/website-admin", 
     icon: Activity,
     roles: ["admin", "beta_shop"],
     customRender: (
@@ -154,7 +154,7 @@ const operationsItems: NavigationItem[] = [
   },
   { 
     name: "Escalation Desk", 
-    path: "/jordan-lee-admin?tab=escalations", 
+    path: "/website-admin?tab=escalations", 
     icon: AlertTriangle,
     roles: ["admin", "beta_shop"],
     customRender: (
