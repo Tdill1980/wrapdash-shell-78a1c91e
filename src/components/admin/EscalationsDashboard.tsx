@@ -198,7 +198,7 @@ IMPORTANT: Only propose call times within these availability windows. If no avai
         });
       }
 
-      // Sort by: 1) blocked first, 2) type priority, 3) age (oldest first)
+      // Sort by: 1) blocked first, 2) type priority, 3) newest first
       return queueItems.sort((a, b) => {
         // Blocked items first
         if (a.status === 'blocked' && b.status !== 'blocked') return -1;
@@ -207,8 +207,8 @@ IMPORTANT: Only propose call times within these availability windows. If no avai
         // Then by type priority
         if (a.priority !== b.priority) return a.priority - b.priority;
         
-        // Then by age (oldest first)
-        return new Date(a.escalatedAt).getTime() - new Date(b.escalatedAt).getTime();
+        // Then by age (NEWEST first - most recent at top)
+        return new Date(b.escalatedAt).getTime() - new Date(a.escalatedAt).getTime();
       });
     },
     refetchInterval: 30000,
@@ -515,9 +515,13 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                           selectedId === item.conversationId ? 'bg-primary/10 border-l-2 border-primary' : ''
                         } ${isComplete ? 'opacity-50' : ''}`}
                       >
-                        <div className="flex items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-2 mb-1">
                           <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-sm font-medium truncate flex-1">{item.contactName}</span>
+                          <span className="text-sm font-medium truncate flex-1">
+                            {item.contactName !== 'Website Visitor' 
+                              ? item.contactName 
+                              : item.contactEmail?.split('@')[0] || 'Unknown'}
+                          </span>
                           <Badge 
                             variant="outline" 
                             className={`text-[10px] ${typeConfig.color} flex items-center gap-1`}
@@ -526,6 +530,11 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                             {typeConfig.label}
                           </Badge>
                         </div>
+                        {item.contactName === 'Website Visitor' && (
+                          <div className="text-[10px] text-muted-foreground/60 ml-5 -mt-0.5 mb-1">
+                            Website Visitor
+                          </div>
+                        )}
                         
                         {/* Contact info preview */}
                         <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-1.5">
@@ -547,7 +556,7 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                           <Clock className="h-3 w-3" />
                           {item.age}
                           {item.status === 'blocked' && (
-                            <Badge variant="outline" className="text-[9px] bg-red-500/10 text-red-400 ml-auto">
+                            <Badge variant="outline" className="text-[9px] bg-orange-500/10 text-orange-400 ml-auto">
                               blocked
                             </Badge>
                           )}
@@ -561,7 +570,7 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                         {item.missing.length > 0 && !isComplete && (
                           <div className="flex flex-wrap gap-1 mt-1.5">
                             {item.missing.map((m, i) => (
-                              <Badge key={i} variant="outline" className="text-[9px] bg-red-500/5 text-red-400">
+                              <Badge key={i} variant="outline" className="text-[9px] bg-muted text-muted-foreground">
                                 {m}
                               </Badge>
                             ))}
@@ -605,10 +614,15 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
               </div>
             ) : (
               <>
-                {/* Customer info bar - PROMINENT */}
+                {/* Customer info bar - NAME PROMINENT */}
                 <div className="px-3 py-3 border-b bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+                  {/* Primary: Customer name LARGE */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">Contact Info</span>
+                    <h3 className="text-lg font-bold text-foreground">
+                      {contact?.name && contact.name !== 'Website Visitor' 
+                        ? contact.name 
+                        : contact?.email?.split('@')[0] || 'Unknown Customer'}
+                    </h3>
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -619,13 +633,9 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                       Copy
                     </Button>
                   </div>
+                  
+                  {/* Secondary: Email, Phone, Vehicle */}
                   <div className="space-y-1.5">
-                    {contact?.name && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{contact.name}</span>
-                      </div>
-                    )}
                     {hasEmail ? (
                       <div className="flex items-center gap-2 text-sm">
                         <Mail className="h-4 w-4 text-green-500" />
@@ -655,6 +665,13 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                       </div>
                     )}
                   </div>
+                  
+                  {/* Tertiary: Visitor ID (if name was generic) */}
+                  {(!contact?.name || contact.name === 'Website Visitor') && (
+                    <div className="text-xs text-muted-foreground/50 mt-2">
+                      Website Visitor
+                    </div>
+                  )}
                 </div>
 
                 {/* Messages */}
