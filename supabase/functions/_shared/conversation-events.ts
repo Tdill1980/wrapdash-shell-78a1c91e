@@ -16,6 +16,9 @@ export type ConversationEventType =
   | 'asset_reviewed'
   | 'marked_complete'
   | 'classification_completed'
+  | 'call_requested'
+  | 'call_scheduled'
+  | 'call_completed'
   | 'failed';
 
 export interface EventPayload {

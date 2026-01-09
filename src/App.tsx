@@ -85,6 +85,7 @@ import WebsiteChatQuotesPage from "./pages/WebsiteChatQuotesPage";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
 import AssetTaggingAdmin from "./pages/admin/AssetTaggingAdmin";
 import SavedViewsAdmin from "./pages/admin/SavedViewsAdmin";
+import AvailabilityManagerPage from "./pages/admin/AvailabilityManagerPage";
 import OperationsSOP from "./pages/OperationsSOP";
 import RevenueHealth from "./pages/RevenueHealth";
 import AIApprovals from "./pages/AIApprovals";
@@ -195,6 +196,7 @@ const App = () => (
             <Route path="/admin/add-organization" element={<AddOrganizationWizard />} />
             <Route path="/admin/asset-tagging" element={<AssetTaggingAdmin />} />
             <Route path="/admin/saved-views" element={<SavedViewsAdmin />} />
+            <Route path="/admin/availability" element={<AvailabilityManagerPage />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />
