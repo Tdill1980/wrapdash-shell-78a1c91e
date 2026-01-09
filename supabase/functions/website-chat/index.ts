@@ -232,10 +232,44 @@ When the conversation flows naturally, weave in mentions of these:
    - If first-time buyer → offer WRAPREWARDS code + mention WrapRewards program
 
 6. **Bulk Orders** - When customer mentions fleet/bulk/multiple vehicles:
-   - IMMEDIATELY share the bulk discount tiers
-   - Collect their email
-   - Email Jackson for coupon code
-   ${formatBulkDiscountTiers()}
+    - IMMEDIATELY share the bulk discount tiers
+    - Collect their email
+    - Email Jackson for coupon code
+    ${formatBulkDiscountTiers()}
+
+🚫 BULK PRICING RULE (CRITICAL - PREVENTS STICKER SHOCK):
+
+When customer mentions FLEET, BULK, MULTIPLE VEHICLES (3+), or uses phrases like "fleet", "multiple vehicles", "16 trucks", "bulk", "rolls", "commercial job", "ongoing printing", "printed roll", "commercial wrap", "fleet branding", "company vehicles":
+
+✅ YOU MAY SAY:
+- Unit price range in single-vehicle context ("per vehicle pricing", "$5.27/sqft")
+- "CommercialPro volume discounts apply"
+- "Handled directly by CommercialPro"
+- Jackson's name + urgency ("Jackson, our CommercialPro specialist")
+- "For projects like this, we price per vehicle"
+
+❌ YOU MUST NEVER SAY:
+- Total order cost for bulk orders (no "$XX,XXX" numbers)
+- Quantity × unit math (no "16 × $1,318 = $21,088")
+- Dollar totals over $5,000 for fleet/bulk inquiries
+- Exact discount percentages for bulk
+- Coupon codes for bulk orders (Jackson provides these)
+
+APPROVED BULK RESPONSE (USE THIS FORMAT):
+"Got it — a fleet of [X] vehicles!
+
+For projects like this, we price per vehicle, and you'll qualify for CommercialPro volume discounts.
+
+The unit price is in the same range as our standard printed wraps, with discounts applied at this quantity.
+
+Jackson, our CommercialPro specialist, will contact you ASAP to go over final pricing and get this moving.
+
+What's your email so he can reach you?"
+
+IF THEY PUSH FOR TOTAL PRICE:
+"For fleets, we keep totals off chat so pricing stays accurate and flexible. Jackson will walk through the final numbers with you directly."
+
+WHY THIS RULE EXISTS: Enterprise sales psychology — unit pricing anchors value without triggering sticker shock. Totals are discussed by Jackson on a call where he can address concerns and close the deal.
 
 🔥 PRICING (CRITICAL - Updated December 2024):
 Both Avery AND 3M printed wraps are now $5.27/sqft! WePrintWraps.com matched 3M to Avery's price!
@@ -1292,16 +1326,36 @@ DO NOT give the price yet - get email first, then price + auto-email.`;
     
     let proactiveNotes = '';
     
-    // Bulk inquiry handling
+    // Bulk inquiry handling - PRICING SUPPRESSION ACTIVE
     if (bulkInquirySignal) {
       if (chatState.bulk_email_sent) {
         proactiveNotes += `
-🚀 BULK INQUIRY - EMAIL SENT TO JACKSON: You've collected the customer's email and sent it to Jackson for a coupon code. Tell the customer: "I've sent your info to Jackson on our bulk team - he'll email you the exact coupon code for your order size!"`;
+🚫 BULK MODE ACTIVE - PRICING SUPPRESSED:
+You've collected the customer's email and sent it to Jackson. Tell the customer: "I've sent your info to Jackson on our CommercialPro team - he'll reach out with final pricing and your volume discount code!"
+
+❌ DO NOT calculate or share total order cost.`;
       } else if (chatState.bulk_inquiry_pending || !chatState.customer_email) {
         proactiveNotes += `
-🚀 BULK INQUIRY DETECTED: Share the bulk discount tiers and ASK FOR EMAIL!
+🚫 BULK MODE ACTIVE - PRICING SUPPRESSED:
+Customer mentioned fleet/bulk/multiple vehicles.
+
+✅ ALLOWED:
+- Share bulk discount tiers (percentage ranges only)
+- Mention "per vehicle pricing"
+- Say "CommercialPro volume discounts apply"
+- Name Jackson as CommercialPro specialist
+- Collect email for Jackson to follow up
+
+❌ SUPPRESSED (DO NOT SAY):
+- Total order cost (no "$XX,XXX" numbers)
+- Quantity × unit price math (no "16 × $1,318 = ...")
+- Any dollar amount over $5,000 for this inquiry
+- Exact coupon codes (Jackson provides these)
+
 ${formatBulkDiscountTiers()}
-Say: "What's your email? I'll have Jackson from our bulk team send you the exact coupon code for your order size."`;
+
+RESPONSE TEMPLATE:
+"Got it — for a fleet of [X] vehicles, we price per vehicle and you'll qualify for CommercialPro volume discounts. Jackson, our CommercialPro specialist, will contact you ASAP to go over final pricing. What's your email so he can reach you?"`;
       }
     }
     
