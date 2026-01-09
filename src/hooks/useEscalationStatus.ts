@@ -41,12 +41,14 @@ export function evaluateEscalationStatus(events: ConversationEvent[]): Escalatio
 
   const emailSent = events.some(e => 
     e.event_type === 'email_sent' || 
-    e.event_type === 'ai_response_sent'
+    e.event_type === 'ai_response_sent' ||
+    e.event_type === 'outbound_message_sent'
   );
   
   const quoteHandled = events.some(e => 
     e.event_type === 'quote_attached' || 
     e.event_type === 'quote_drafted' ||
+    e.event_type === 'quote_provided' ||
     e.event_type === 'marked_no_quote_required'
   );
   
@@ -60,7 +62,13 @@ export function evaluateEscalationStatus(events: ConversationEvent[]): Escalatio
     (e.event_type === 'escalation_sent' && e.subtype === 'design')
   );
 
-  const alreadyComplete = events.some(e => e.event_type === 'marked_complete');
+  const alreadyComplete = events.some(e => e.event_type === 'marked_complete' || e.event_type === 'resolved');
+  
+  // Check for call requested (escalation is being worked on)
+  const callRequested = events.some(e => e.event_type === 'call_requested');
+  
+  // Check if marked as ongoing (still needs follow-up)
+  const markedOngoing = events.some(e => e.event_type === 'marked_ongoing');
   
   const missing: string[] = [];
   

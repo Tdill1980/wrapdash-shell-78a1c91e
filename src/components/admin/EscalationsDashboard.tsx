@@ -37,6 +37,9 @@ import { evaluateEscalationStatus, type EscalationStatus } from "@/hooks/useEsca
 import type { ConversationEvent } from "@/hooks/useConversationEvents";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 import { toast } from "sonner";
+import { CallRequestModal } from "./CallRequestModal";
+import { ResolutionModal } from "./ResolutionModal";
+import { EscalationActionButtons } from "./EscalationActionButtons";
 
 // Priority order for escalation types (lower = higher priority)
 const TYPE_PRIORITY: Record<string, number> = {
@@ -114,6 +117,10 @@ export function EscalationsDashboard() {
   // Chat reply state
   const [chatReply, setChatReply] = useState("");
   const [isSendingChat, setIsSendingChat] = useState(false);
+  
+  // Modal states for action buttons
+  const [showCallRequestModal, setShowCallRequestModal] = useState(false);
+  const [showResolutionModal, setShowResolutionModal] = useState(false);
 
   // Fetch escalation queue with priority sorting
   const { data: items, isLoading: queueLoading } = useQuery({
@@ -857,23 +864,50 @@ Write 2-3 short paragraphs. Be helpful and warm. Sign off as "The WePrintWraps T
                   )}
                 </div>
 
-                {/* Actions */}
+                {/* Action Buttons - Pipeline Closure */}
                 <div className="pt-2 border-t">
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={handleMarkComplete}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                    Mark Complete
-                  </Button>
+                  <EscalationActionButtons
+                    conversationId={selectedId!}
+                    hasEmail={!!hasEmail}
+                    isLoading={isProcessing}
+                    onRequestCall={() => setShowCallRequestModal(true)}
+                    onSendMessage={() => {
+                      // Scroll to email composer
+                      const emailComposer = document.getElementById('email-reply-section');
+                      emailComposer?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    onResolve={() => setShowResolutionModal(true)}
+                    onRefresh={() => queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] })}
+                  />
                 </div>
               </>
             )}
           </CardContent>
         </Card>
       </div>
+      
+      {/* Call Request Modal */}
+      <CallRequestModal
+        open={showCallRequestModal}
+        onOpenChange={setShowCallRequestModal}
+        conversationId={selectedId || ''}
+        customerName={contact?.name}
+        customerEmail={contact?.email}
+        customerPhone={contact?.phone}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] })}
+      />
+      
+      {/* Resolution Modal */}
+      <ResolutionModal
+        open={showResolutionModal}
+        onOpenChange={setShowResolutionModal}
+        conversationId={selectedId || ''}
+        customerName={contact?.name}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
+          setSelectedId(null);
+        }}
+      />
     </div>
   );
 }
