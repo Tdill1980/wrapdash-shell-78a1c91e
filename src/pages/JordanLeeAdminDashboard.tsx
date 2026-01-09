@@ -20,6 +20,7 @@ import { ToolsTab } from "@/components/admin/jordan-dashboard/ToolsTab";
 import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
 import { RecoveredLeadsTab } from "@/components/admin/jordan-dashboard/RecoveredLeadsTab";
 import { EscalationsDashboard } from "@/components/admin/EscalationsDashboard";
+import { MainLayout } from "@/layouts/MainLayout";
 import { Session } from "@supabase/supabase-js";
 
 const TABS = [
@@ -145,9 +146,9 @@ export default function JordanLeeAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4">
+    <MainLayout>
+      <div className="space-y-6">
+        {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">
@@ -157,29 +158,16 @@ export default function JordanLeeAdminDashboard() {
               Monitor and manage live website chat conversations from weprintwraps.com
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              Logged in as: <span className="font-medium text-foreground">{session.user.email}</span>
-              {orgMembership && (
-                <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                  {orgMembership.organizationName} ({orgMembership.role})
-                </span>
-              )}
-            </span>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+          <div className="hidden sm:flex items-center gap-3">
+            {orgMembership && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                {orgMembership.organizationName} ({orgMembership.role})
+              </span>
+            )}
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="p-6">
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Colorful Tab Bar */}
           <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent p-0 justify-start">
@@ -265,7 +253,7 @@ export default function JordanLeeAdminDashboard() {
             <ToolsTab />
           </TabsContent>
         </Tabs>
-      </main>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
