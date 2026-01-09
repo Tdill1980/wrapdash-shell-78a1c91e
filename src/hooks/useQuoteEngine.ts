@@ -22,7 +22,8 @@ export function useQuoteEngine(
   installRatePerHour: number = 75,
   margin: number = 65,
   includeRoof: boolean = true,
-  selectedPanels: { sides: boolean; back: boolean; hood: boolean; roof: boolean } | null = null
+  selectedPanels: { sides: boolean; back: boolean; hood: boolean; roof: boolean } | null = null,
+  wpwMode: boolean = false // WPW Internal mode - material only, no labor/margin
 ) {
   const [sqft, setSqft] = useState<number>(0);
   const [sqftOptions, setSqftOptions] = useState<VehicleSQFTOptions | null>(null);
@@ -98,6 +99,19 @@ export function useQuoteEngine(
       return;
     }
 
+    // WPW Internal Mode: Material only, no labor, no margin
+    if (wpwMode) {
+      const WPW_PRICE_PER_SQFT = 5.27;
+      const material = sqft * WPW_PRICE_PER_SQFT * quantity;
+      setMaterialCost(material);
+      setLaborCost(0);
+      setInstallHours(0);
+      setSubtotal(material);
+      setMarginAmount(0);
+      setTotal(material);
+      return;
+    }
+
     let material = 0;
 
     // Calculate material cost based on pricing type
@@ -139,7 +153,7 @@ export function useQuoteEngine(
     const totalCalc = sub + marginCalc;
     setTotal(totalCalc);
 
-  }, [sqft, product, quantity, installRatePerHour, margin, selectedPanels, sqftOptions]);
+  }, [sqft, product, quantity, installRatePerHour, margin, selectedPanels, sqftOptions, wpwMode]);
 
   return {
     sqft,

@@ -6114,6 +6114,8 @@ export type Database = {
           ai_message: string | null
           ai_sqft_estimate: number | null
           ai_vehicle_class: string | null
+          approved_at: string | null
+          approved_by: string | null
           auto_retarget: boolean | null
           category: string | null
           click_count: number | null
@@ -6148,7 +6150,9 @@ export type Database = {
           organization_id: string | null
           product_name: string | null
           quote_number: string
+          quote_type: string | null
           reseller_profit: number | null
+          sent_at: string | null
           source: string | null
           source_conversation_id: string | null
           source_message: string | null
@@ -6178,6 +6182,8 @@ export type Database = {
           ai_message?: string | null
           ai_sqft_estimate?: number | null
           ai_vehicle_class?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           auto_retarget?: boolean | null
           category?: string | null
           click_count?: number | null
@@ -6212,7 +6218,9 @@ export type Database = {
           organization_id?: string | null
           product_name?: string | null
           quote_number: string
+          quote_type?: string | null
           reseller_profit?: number | null
+          sent_at?: string | null
           source?: string | null
           source_conversation_id?: string | null
           source_message?: string | null
@@ -6242,6 +6250,8 @@ export type Database = {
           ai_message?: string | null
           ai_sqft_estimate?: number | null
           ai_vehicle_class?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           auto_retarget?: boolean | null
           category?: string | null
           click_count?: number | null
@@ -6276,7 +6286,9 @@ export type Database = {
           organization_id?: string | null
           product_name?: string | null
           quote_number?: string
+          quote_type?: string | null
           reseller_profit?: number | null
+          sent_at?: string | null
           source?: string | null
           source_conversation_id?: string | null
           source_message?: string | null
