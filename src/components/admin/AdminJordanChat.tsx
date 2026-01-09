@@ -32,7 +32,7 @@ export function AdminJordanChat() {
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: `Hey! I'm Alex, your WrapCommand internal assistant. 👋\n\nI can help you with:\n• Understanding any feature (just ask!)\n• Stats: "How many quotes this week?"\n• Directives: "Directive: offer 10% off window perf today"\n• What customers are asking about\n\nWhat can I help you with?`
+        content: `Hey! I'm your WrapCommand Guide. 👋\n\nI help you understand the platform:\n• "How do I use ApproveFlow?"\n• "What is DesignPanelPro?"\n• Stats: "How many quotes this week?"\n• Directives: "Directive: offer 10% off today"\n\nFor escalation tasks, use Alex in the Escalations Desk.\nFor customer questions, Jordan handles that on the website.\n\nWhat can I help you learn?`
       }]);
     }
   }, [isOpen, messages.length]);
@@ -100,7 +100,7 @@ export function AdminJordanChat() {
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg hover:scale-105 transition-transform"
       >
         <Sparkles className="h-5 w-5" />
-        <span className="font-medium">Ask Alex</span>
+        <span className="font-medium">WrapCommand Guide</span>
       </button>
     );
   }
@@ -114,8 +114,8 @@ export function AdminJordanChat() {
             <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="font-semibold text-sm">Alex</h3>
-            <p className="text-xs opacity-80">Internal Assistant</p>
+            <h3 className="font-semibold text-sm">WrapCommand Guide</h3>
+            <p className="text-xs opacity-80">Platform Education</p>
           </div>
         </div>
         <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-primary-foreground/10 rounded">
