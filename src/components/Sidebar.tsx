@@ -22,6 +22,7 @@ import {
   Palette,
   Film,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -197,6 +198,18 @@ const operationsItems: NavigationItem[] = [
         <span className="text-white">Mighty</span>
         <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Mail</span>
         <span className="text-[8px] align-super text-muted-foreground">™</span>
+      </span>
+    )
+  },
+  { 
+    name: "Team Availability", 
+    path: "/admin/availability", 
+    icon: Clock,
+    roles: ["admin", "beta_shop"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Team </span>
+        <span className="bg-gradient-to-r from-[#8B5CF6] to-[#A855F7] bg-clip-text text-transparent">Availability</span>
       </span>
     )
   },
