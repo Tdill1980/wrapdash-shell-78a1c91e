@@ -52,6 +52,18 @@ serve(async (req) => {
       });
     }
 
+    // GOTCHA #2: Validate approved_by is a real UUID (not "admin" or "unknown")
+    if (!approved_by || typeof approved_by !== 'string' || approved_by.length < 20) {
+      console.error('[SendAdminReply] Invalid approved_by:', approved_by);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Missing or invalid approved_by - must be a valid user ID' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Initialize clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
