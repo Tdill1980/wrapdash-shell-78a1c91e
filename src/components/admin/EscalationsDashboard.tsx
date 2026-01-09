@@ -268,7 +268,9 @@ IMPORTANT: Only propose call times within these availability windows. If no avai
     setSelectedQuote(null);
   }, [selectedId]);
 
-  const messages = conversation?.messages || [];
+  const messages = (conversation?.messages || []).sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
   const contact = conversation?.contact;
   const chatState = conversation?.chat_state;
   const hasEmail = contact?.email && !contact.email.includes('@capture.local');
@@ -655,9 +657,9 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                         <span className="font-medium">{contact!.phone}</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-sm text-orange-400">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground/60">
                         <Phone className="h-4 w-4" />
-                        <span>No phone captured</span>
+                        <span>Phone not provided (optional)</span>
                       </div>
                     )}
                     {chatState?.vehicle && (
@@ -812,6 +814,8 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                         variant="outline" 
                         size="sm" 
                         className="h-6 text-xs gap-1"
+                        disabled={!hasEmail}
+                        title={!hasEmail ? "Email required to create quote" : "Create a new quote"}
                         onClick={() => {
                           const params = new URLSearchParams({
                             mode: 'wpw_internal',
@@ -867,6 +871,13 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                       </Dialog>
                     </div>
                   </div>
+                  
+                  {/* Quote status feedback */}
+                  {!hasEmail && (
+                    <div className="text-[10px] text-muted-foreground/70 italic">
+                      Email required to create or send quote
+                    </div>
+                  )}
                   
                   {selectedQuote && (
                     <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2 text-xs">
