@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -65,11 +65,11 @@ export function AlexApprovalModal({
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
-  // Sync with props when they change
-  useState(() => {
+  // FIX #1: Proper useEffect to sync with props
+  useEffect(() => {
     setSubject(initialSubject);
     setBody(initialBody);
-  });
+  }, [initialSubject, initialBody]);
 
   const handleApproveAndSend = async () => {
     if (!recipient.email || !body.trim()) {
@@ -83,23 +83,14 @@ export function AlexApprovalModal({
     try {
       const approvedAt = new Date().toISOString();
 
-      // If quote attached, update quote status to 'approved' first
-      if (quote?.id) {
-        const { error: quoteError } = await supabase
-          .from("quotes")
-          .update({
-            status: "approved",
-            // Note: approved_by and approved_at columns may need to be added via migration
-          })
-          .eq("id", quote.id);
+      // FIX #2: Get REAL user ID for traceability (not hardcoded "admin")
+      const { data: { user } } = await supabase.auth.getUser();
+      const approvedBy = user?.id || "unknown";
 
-        if (quoteError) {
-          console.error("[AlexApprovalModal] Failed to update quote status:", quoteError);
-          // Continue anyway - email send is more important
-        }
-      }
+      // FIX #3: Do NOT update quote status here - ONLY the edge function should do this
+      // This ensures atomic truth: if email fails, quote status stays unchanged
 
-      // Call the send-admin-reply edge function
+      // Call the send-admin-reply edge function - the SINGLE source of truth
       const { data, error } = await supabase.functions.invoke("send-admin-reply", {
         body: {
           conversation_id: conversationId,
@@ -109,7 +100,7 @@ export function AlexApprovalModal({
           body: body,
           quote_id: quote?.id,
           quote_number: quote?.quote_number,
-          approved_by: "admin", // TODO: Use actual user ID
+          approved_by: approvedBy, // Real user ID
           approved_at: approvedAt,
           action_type: actionType,
           assigned_to: assignedTo,
@@ -124,33 +115,8 @@ export function AlexApprovalModal({
         throw new Error(data?.error || "Email send failed");
       }
 
-      // If quote attached, update to 'sent' status after successful email
-      if (quote?.id) {
-        const sentAt = new Date().toISOString();
-        
-        await supabase
-          .from("quotes")
-          .update({
-            status: "sent",
-            email_sent: true,
-          })
-          .eq("id", quote.id);
-
-        // Log quote_sent event for traceability
-        await supabase.from("conversation_events").insert({
-          conversation_id: conversationId,
-          event_type: "quote_sent",
-          actor: "admin",
-          payload: {
-            quote_id: quote.id,
-            quote_number: quote.quote_number,
-            approved_by: "admin",
-            approved_at: approvedAt,
-            sent_at: sentAt,
-            to: recipient.email,
-          },
-        });
-      }
+      // FIX #4: Do NOT update quote status here - edge function already did it
+      // This prevents double-writes and ensures single source of truth
 
       toast.success("Email sent successfully!");
       onSuccess();
