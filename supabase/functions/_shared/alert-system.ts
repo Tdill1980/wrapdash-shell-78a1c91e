@@ -421,8 +421,60 @@ export async function sendAlertWithTracking(
     alertId,
   };
 }
+// ============================================
+// ORDER VERIFICATION GATE
+// ShopFlow alerts (quality_issue) ONLY fire if order exists
+// Non-order inquiries route to Sales/Quote flow
+// ============================================
 
-// Helper to detect alert type from message
+export interface OrderContext {
+  hasOrder: boolean;  // True if order_id, woo_order_id, or woo_order_number exists
+  orderNumber?: string;
+  quoteConverted?: boolean;  // True if quote has converted = true
+}
+
+/**
+ * GATED Alert Detection
+ * Quality issues ONLY escalate to ShopFlow if there's a verified order
+ * Otherwise, they're classified as sales inquiries (no alert)
+ */
+export function detectAlertTypeWithGate(
+  message: string, 
+  orderContext: OrderContext
+): { alertType: AlertType | null; classification: 'shopflow' | 'sales' | 'bulk' | 'unhappy' | null } {
+  
+  // Unhappy customers ALWAYS escalate (could be pre or post sale)
+  if (UNHAPPY_CUSTOMER_PATTERNS.test(message)) {
+    return { alertType: "unhappy_customer", classification: 'unhappy' };
+  }
+  
+  // Bulk inquiries ALWAYS escalate (sales opportunity)
+  if (BULK_INQUIRY_PATTERNS.test(message)) {
+    return { alertType: "bulk_inquiry", classification: 'bulk' };
+  }
+  
+  // Quality issue detection - THIS IS THE GATE
+  if (QUALITY_ISSUE_PATTERNS.test(message)) {
+    // CHECK: Does an order exist?
+    const hasVerifiedOrder = orderContext.hasOrder || orderContext.quoteConverted;
+    
+    if (hasVerifiedOrder) {
+      // ✅ ORDER EXISTS → This is a real ShopFlow quality issue
+      console.log('[OrderGate] Quality issue WITH order - routing to ShopFlow', { orderNumber: orderContext.orderNumber });
+      return { alertType: "quality_issue", classification: 'shopflow' };
+    } else {
+      // ❌ NO ORDER → This is a sales/pricing inquiry, NOT a quality issue
+      // Keywords like "issue", "problem", "wrap" in pre-sale context = sales inquiry
+      console.log('[OrderGate] Quality keywords detected but NO ORDER - classifying as sales inquiry');
+      return { alertType: null, classification: 'sales' };
+    }
+  }
+  
+  return { alertType: null, classification: null };
+}
+
+// Legacy helper (backward compatible) - still fires on keywords alone
+// Use detectAlertTypeWithGate() for proper gated detection
 export function detectAlertType(message: string): AlertType | null {
   if (UNHAPPY_CUSTOMER_PATTERNS.test(message)) {
     return "unhappy_customer";
