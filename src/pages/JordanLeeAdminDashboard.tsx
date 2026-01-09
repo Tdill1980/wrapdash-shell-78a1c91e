@@ -5,39 +5,22 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power, Instagram, Loader2, AlertTriangle, Bell } from "lucide-react";
+import { BarChart3, MessageSquare, FileText, Power, Loader2, AlertTriangle, Bell } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
-import { AgenticAITab } from "@/components/admin/jordan-dashboard/AgenticAITab";
-import { WrapGuruTab } from "@/components/admin/jordan-dashboard/WrapGuruTab";
-import { CorrectionsTab } from "@/components/admin/jordan-dashboard/CorrectionsTab";
-import { KnowledgeBaseTab } from "@/components/admin/jordan-dashboard/KnowledgeBaseTab";
 import { ChatSessionsTab } from "@/components/admin/jordan-dashboard/ChatSessionsTab";
 import { QuotesTab } from "@/components/admin/jordan-dashboard/QuotesTab";
-import { FileAnalysisTab } from "@/components/admin/jordan-dashboard/FileAnalysisTab";
-import { ReviewsTab } from "@/components/admin/jordan-dashboard/ReviewsTab";
-import { EmailTrackingTab } from "@/components/admin/jordan-dashboard/EmailTrackingTab";
-import { ToolsTab } from "@/components/admin/jordan-dashboard/ToolsTab";
 import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
-import { RecoveredLeadsTab } from "@/components/admin/jordan-dashboard/RecoveredLeadsTab";
 import { EscalationsDashboard } from "@/components/admin/EscalationsDashboard";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Session } from "@supabase/supabase-js";
 
+// MVP CORE TABS ONLY — Everything else is contextual or gone
 const TABS = [
-  { id: "control", label: "Agent Control", icon: Power, color: "bg-red-500" },
-  { id: "escalations", label: "Escalations", icon: Bell, color: "bg-orange-500", highlight: true },
-  { id: "recovered", label: "Recovered IG Leads", icon: Instagram, color: "bg-pink-500" },
-  { id: "analytics", label: "Analytics", icon: BarChart3, color: "bg-green-500" },
-  { id: "agentic", label: "Agentic AI", icon: Brain, color: "bg-amber-500" },
-  { id: "wrapguru", label: "WrapGuru", icon: Car, color: "bg-purple-500" },
-  { id: "corrections", label: "Corrections", icon: FileEdit, color: "bg-red-500" },
-  { id: "knowledge", label: "Knowledge Base", icon: BookOpen, color: "bg-teal-500" },
+  { id: "control", label: "Agent Control", icon: Power, color: "bg-primary" },
   { id: "chats", label: "All Chats", icon: MessageSquare, color: "bg-blue-500" },
+  { id: "escalations", label: "Escalations", icon: Bell, color: "bg-orange-500", highlight: true },
   { id: "quotes", label: "Quotes", icon: FileText, color: "bg-indigo-500" },
-  { id: "files", label: "File Analysis", icon: FolderSearch, color: "bg-pink-500" },
-  { id: "reviews", label: "Reviews", icon: Star, color: "bg-yellow-500" },
-  { id: "email", label: "Email Tracking", icon: Mail, color: "bg-cyan-500" },
-  { id: "tools", label: "Tools", icon: Wrench, color: "bg-gray-500" },
+  { id: "analytics", label: "Analytics", icon: BarChart3, color: "bg-green-500" },
 ];
 
 export default function JordanLeeAdminDashboard() {
@@ -196,61 +179,25 @@ export default function JordanLeeAdminDashboard() {
             })}
           </TabsList>
 
-          {/* Tab Contents */}
+          {/* Tab Contents — MVP CORE ONLY */}
           <TabsContent value="control" className="mt-6">
             <AgentControlPanel />
-          </TabsContent>
-
-          <TabsContent value="escalations" className="mt-6">
-            <EscalationsDashboard />
-          </TabsContent>
-
-          <TabsContent value="recovered" className="mt-6">
-            <RecoveredLeadsTab />
-          </TabsContent>
-
-          <TabsContent value="analytics" className="mt-6">
-            <AnalyticsTab />
-          </TabsContent>
-
-          <TabsContent value="agentic" className="mt-6">
-            <AgenticAITab />
-          </TabsContent>
-
-          <TabsContent value="wrapguru" className="mt-6">
-            <WrapGuruTab />
-          </TabsContent>
-
-          <TabsContent value="corrections" className="mt-6">
-            <CorrectionsTab />
-          </TabsContent>
-
-          <TabsContent value="knowledge" className="mt-6">
-            <KnowledgeBaseTab />
           </TabsContent>
 
           <TabsContent value="chats" className="mt-6">
             <ChatSessionsTab />
           </TabsContent>
 
+          <TabsContent value="escalations" className="mt-6">
+            <EscalationsDashboard />
+          </TabsContent>
+
           <TabsContent value="quotes" className="mt-6">
             <QuotesTab />
           </TabsContent>
 
-          <TabsContent value="files" className="mt-6">
-            <FileAnalysisTab />
-          </TabsContent>
-
-          <TabsContent value="reviews" className="mt-6">
-            <ReviewsTab />
-          </TabsContent>
-
-          <TabsContent value="email" className="mt-6">
-            <EmailTrackingTab />
-          </TabsContent>
-
-          <TabsContent value="tools" className="mt-6">
-            <ToolsTab />
+          <TabsContent value="analytics" className="mt-6">
+            <AnalyticsTab />
           </TabsContent>
         </Tabs>
       </div>
