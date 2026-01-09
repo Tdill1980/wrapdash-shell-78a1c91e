@@ -13,12 +13,19 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = [
-  { value: "content_calendar", label: "Content Calendar" },
-  { value: "instagram", label: "Instagram / DMs" },
-  { value: "dm_chat", label: "MightyChat" },
-  { value: "email", label: "Email Campaigns" },
-  { value: "ads", label: "Ads / Performance" },
+  // Core WrapCommand Components
+  { value: "website_chat", label: "Website Chat (Jordan)" },
+  { value: "escalation_desk", label: "Alex Escalation Desk" },
+  { value: "approveflow", label: "ApproveFlow" },
+  { value: "designpanelpro", label: "DesignPanelPro" },
+  { value: "reelbuilder", label: "ReelBuilder / Render Reels" },
+  { value: "mightyportfolio", label: "MightyPortfolio" },
+  { value: "mightycustomer", label: "MightyCustomer" },
+  // Operations
   { value: "quotes", label: "Quotes / Pricing" },
+  { value: "shopflow", label: "ShopFlow / Orders" },
+  { value: "file_analysis", label: "File Analysis" },
+  // General
   { value: "ui_ux", label: "UI / Display Issue" },
   { value: "automation", label: "Automation / AI" },
   { value: "other", label: "Other" },

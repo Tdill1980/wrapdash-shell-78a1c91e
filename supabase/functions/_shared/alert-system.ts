@@ -115,7 +115,7 @@ const ALERT_CONFIG: Record<AlertType, {
     opsTarget: "lance",
     priority: "high",
     recipients: {
-      to: ["Lance@WePrintWraps.com"],
+      to: ["Lance@WePrintWraps.com", "Jackson@WePrintWraps.com"],
       cc: ["Trish@WePrintWraps.com"],
     },
     subjectPrefix: "⚙️ Quality Issue",
