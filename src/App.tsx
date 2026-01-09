@@ -61,7 +61,7 @@ import { AffiliateOnboarding } from "./modules/affiliate/pages/AffiliateOnboardi
 import VehicleAdmin from "./modules/vehicle-admin";
 import DesignGenerator from "./modules/designpanelpro-enterprise/pages/DesignGenerator";
 import WebsiteAgentAdmin from "./pages/WebsiteAgentAdmin";
-import JordanLeeAdminDashboard from "./pages/JordanLeeAdminDashboard";
+import WebsiteAdmin from "./pages/WebsiteAdmin";
 import ChatWidgetDemo from "./pages/ChatWidgetDemo";
 import InstagramTokenExchange from "./pages/InstagramTokenExchange";
 import InstagramSettings from "./pages/settings/InstagramSettings";
@@ -155,8 +155,8 @@ const App = () => (
             {/* DISABLED: MightyChats frozen - Instagram/Email ingestion stopped */}
             {/* <Route path="/mightychat" element={<MightyChat />} /> */}
             {/* <Route path="/mightychat-v2" element={<MightyChatV2 />} /> */}
-            <Route path="/mightychat" element={<Navigate to="/jordan-lee-admin" replace />} />
-            <Route path="/mightychat-v2" element={<Navigate to="/jordan-lee-admin" replace />} />
+            <Route path="/mightychat" element={<Navigate to="/website-admin" replace />} />
+            <Route path="/mightychat-v2" element={<Navigate to="/website-admin" replace />} />
             <Route path="/backlog" element={<Backlog />} />
             <Route path="/contentbox" element={<ContentBox />} />
             <Route path="/content-creator" element={<ContentCreator />} />
@@ -186,8 +186,10 @@ const App = () => (
             <Route path="/admin/products" element={<ProductAdmin />} />
             <Route path="/admin/designvault" element={<DesignVaultAdmin />} />
             <Route path="/admin/dashboard-hero" element={<DashboardHeroAdmin />} />
-            <Route path="/admin/website-agent" element={<JordanLeeAdminDashboard />} />
-            <Route path="/jordan-lee-admin" element={<JordanLeeAdminDashboard />} />
+            <Route path="/admin/website-agent" element={<WebsiteAdmin />} />
+            <Route path="/website-admin" element={<WebsiteAdmin />} />
+            {/* Legacy redirect - keep old route working */}
+            <Route path="/jordan-lee-admin" element={<Navigate to="/website-admin" replace />} />
             <Route path="/admin/chat-widget-demo" element={<ChatWidgetDemo />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />

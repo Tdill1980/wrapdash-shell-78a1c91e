@@ -267,10 +267,10 @@ export const WRAPCOMMAND_FEATURES: Record<string, FeatureDoc> = {
   },
 
   jordan_control: {
-    title: "Jordan Control (Website Chat Admin)",
-    path: "/jordan-lee-admin",
+    title: "Website Admin (Website Chat Control)",
+    path: "/website-admin",
     category: "sales",
-    description: "Manage and monitor the Jordan Lee website chat agent",
+    description: "Manage and monitor the website chat agent",
     howToUse: [
       "View all website chat conversations",
       "See escalation queue and respond to urgent issues",

@@ -151,7 +151,7 @@ export function WebsiteChatQuotes() {
   const unlinkedCount = quotes?.filter(q => !q.source_conversation_id).length || 0;
 
   const handleViewConversation = (conversationId: string) => {
-    window.open(`/jordan-lee-admin?conversation=${conversationId}`, "_blank");
+    window.open(`/website-admin?conversation=${conversationId}`, "_blank");
   };
 
   return (

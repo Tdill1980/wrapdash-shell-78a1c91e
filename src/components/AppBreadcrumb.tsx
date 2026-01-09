@@ -12,7 +12,7 @@ import {
 // Route to label mapping for human-readable breadcrumb names
 const routeLabels: Record<string, string> = {
   "dashboard": "Dashboard",
-  "jordan-lee-admin": "Website Chat",
+  "website-admin": "Website Admin",
   "approveflow": "ApproveFlow",
   "my-shopflow": "MyShopFlow",
   "shopflow-bulk-admin": "ShopFlow Bulk",
