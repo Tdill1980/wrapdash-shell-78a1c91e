@@ -688,19 +688,23 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                           className={`flex ${msg.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}
                         >
                           <div
-                            className={`max-w-[90%] rounded-lg p-2.5 text-sm ${
+                            className={`max-w-[90%] rounded-xl p-3 text-sm shadow-lg ${
                               msg.direction === 'inbound'
-                                ? 'bg-muted'
-                                : 'bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white'
+                                ? 'bg-card/80 border border-border/20'
+                                : 'bg-gradient-to-br from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white'
                             }`}
                           >
-                            <div className="flex items-center gap-2 mb-1 text-xs opacity-70">
-                              <span>{msg.sender_name || (msg.direction === 'inbound' ? 'Customer' : 'Jordan')}</span>
+                            <div className={`flex items-center gap-2 mb-1.5 text-xs ${
+                              msg.direction === 'inbound' ? 'text-muted-foreground' : 'text-white/80'
+                            }`}>
+                              <span className="font-medium">
+                                {msg.sender_name || (msg.direction === 'inbound' ? 'Website Visitor' : 'Jordan Lee')}
+                              </span>
                               {msg.created_at && (
                                 <span>{format(new Date(msg.created_at), 'h:mm a')}</span>
                               )}
                             </div>
-                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                            <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
                           </div>
                         </div>
                       ))
