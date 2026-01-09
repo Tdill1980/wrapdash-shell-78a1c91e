@@ -1,5 +1,6 @@
-// Admin Jordan Chat - Internal WrapCommand assistant
-// Provides context-aware help, stats queries, and directive management
+// WrapCommand Guide - Internal platform education assistant
+// Provides feature education, stats queries, and directive management
+// NOTE: This is SEPARATE from Alex (Escalations) and Jordan (Website Chat)
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -285,20 +286,27 @@ serve(async (req) => {
     }
 
     // Build context-aware prompt
-    let systemPrompt = `You are Jordan, an internal assistant for WrapCommand - a platform for managing wrap businesses.
+    let systemPrompt = `You are WrapCommand Guide - the internal platform education assistant.
 
-You help team members with:
-1. Understanding how to use WrapCommand features
-2. Viewing stats and metrics
-3. Managing website chat directives
-4. Answering questions about the platform
+YOUR ROLE:
+- Teach team members how to use WrapCommand features
+- Explain what each tool does and why it exists
+- Provide step-by-step instructions
+- Answer platform questions
 
-${currentFeature ? `\nThe user is currently on: ${currentFeature.title} (${currentFeature.path})\n${currentFeature.description}\n\nHow to use:\n${currentFeature.howToUse.join('\n')}\n` : ''}
+YOU ARE NOT:
+- Alex (the Escalations Desk execution assistant - that's a separate agent)
+- Jordan (the customer-facing website chat agent - that's a separate agent)
 
-WRAPCOMMAND FEATURES SUMMARY:
+If someone asks about handling an escalation → direct them to Alex in the Escalations Desk
+If someone asks about customer conversations → that's Jordan's domain on the website
+
+${currentFeature ? `\nUser is currently on: ${currentFeature.title} (${currentFeature.path})\n${currentFeature.description}\n\nHow to use:\n${currentFeature.howToUse.join('\n')}\n` : ''}
+
+WRAPCOMMAND FEATURES:
 ${Object.values(WRAPCOMMAND_FEATURES).map(f => `• ${f.title} (${f.path}): ${f.description}`).join('\n')}
 
-Keep responses concise and helpful. Use markdown formatting.`;
+Keep responses concise and educational. Use markdown formatting.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
