@@ -44,6 +44,7 @@ export interface AlertContext {
   orderNumber?: string;
   customerName?: string;
   customerEmail?: string;
+  customerPhone?: string;
   conversationId?: string;
   messageExcerpt?: string;
   productType?: string;
@@ -131,11 +132,25 @@ const ALERT_CONFIG: Record<AlertType, {
 };
 
 function getAlertEmailHtml(alertType: AlertType, context: AlertContext): string {
+  // Prominent callback info section for high-priority alerts
+  const callbackSection = (context.customerEmail || context.customerPhone) ? `
+    <div style="background:#fff3cd; padding:15px; border-radius:8px; margin:10px 0; border:2px solid #ffc107;">
+      <h3 style="margin:0 0 10px 0; color:#856404;">📞 CALLBACK INFO:</h3>
+      ${context.customerName ? `<p style="margin:5px 0;"><strong>Name:</strong> ${context.customerName}</p>` : ""}
+      ${context.customerEmail ? `<p style="margin:5px 0;"><strong>Email:</strong> <a href="mailto:${context.customerEmail}">${context.customerEmail}</a></p>` : ""}
+      ${context.customerPhone ? `<p style="margin:5px 0;"><strong>Phone:</strong> <a href="tel:${context.customerPhone}">${context.customerPhone}</a></p>` : ""}
+    </div>
+  ` : `
+    <div style="background:#f8d7da; padding:15px; border-radius:8px; margin:10px 0; border:2px solid #f5c6cb;">
+      <h3 style="margin:0 0 10px 0; color:#721c24;">⚠️ NO CONTACT INFO COLLECTED</h3>
+      <p style="margin:5px 0; color:#721c24;">Customer did not provide email or phone. Check MightyChat for conversation.</p>
+    </div>
+  `;
+  
   const baseInfo = `
+    ${callbackSection}
     <hr>
     ${context.orderNumber ? `<p><strong>Order #:</strong> ${context.orderNumber}</p>` : ""}
-    ${context.customerName ? `<p><strong>Customer:</strong> ${context.customerName}</p>` : ""}
-    ${context.customerEmail ? `<p><strong>Email:</strong> ${context.customerEmail}</p>` : ""}
     ${context.productType ? `<p><strong>Product:</strong> ${context.productType}</p>` : ""}
     ${context.status ? `<p><strong>Status:</strong> ${context.status}</p>` : ""}
     <hr>

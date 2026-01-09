@@ -15,7 +15,7 @@ import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
 import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
 import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
 import { getApprovedLinksForPrompt, LINK_AWARE_RULES, APPROVED_LINKS } from "../_shared/wpw-links.ts";
-import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType, formatBulkDiscountTiers } from "../_shared/alert-system.ts";
+import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType, formatBulkDiscountTiers, AlertType } from "../_shared/alert-system.ts";
 import { logConversationEvent, logQuoteEvent } from "../_shared/conversation-events.ts";
 
 // Proactive selling detection patterns
@@ -162,10 +162,37 @@ SAY: "To get you an accurate quote, I'll need your name, email, and phone number
 IF customer jumps straight to "how much?":
 SAY: "I can definitely get you pricing! What vehicle is this for? And what's your name and email so I can send the quote?"
 
+🚨 LEAD CAPTURE PROTOCOL - HIGH PRIORITY SIGNALS (CRITICAL):
+
+When a customer mentions ANY of these, you MUST immediately collect contact info:
+- Quality issue (defect, wrong, damaged, reprint, issue, problem)
+- Bulk/fleet inquiry (multiple vehicles, commercial, fleet, bulk)
+- Unhappy/frustrated language (angry, upset, complaint, terrible, refund)
+- Partnership/sponsorship interest
+
+QUALITY ISSUE TEMPLATE (use immediately when quality concern detected):
+"I'm so sorry to hear that! I want to make sure our team gets this resolved ASAP. What's your name, email, and phone number so someone can call you directly?"
+
+BULK INQUIRY TEMPLATE (use immediately when bulk/fleet interest detected):
+"That's exciting! For fleet and bulk orders, our team (especially Jackson) handles custom pricing personally. What's your name, email, and phone number so he can reach out with the best pricing?"
+
+UNHAPPY CUSTOMER TEMPLATE (use immediately when frustration detected):
+"I completely understand your frustration, and I'm sorry for any trouble. Let me get someone on this right away. What's your name, email, and phone number so we can call you directly to make this right?"
+
+DO NOT proceed with normal conversation until you have:
+1. Name (or at minimum first name)
+2. Email
+3. Phone number
+
+If they only give one, ask for the others: "And what's your phone number so we can call if needed?" or "And what's the best email to reach you?"
+
+Once you have all contact info AND there's a quality/bulk/unhappy signal, confirm: "Got it! I'm flagging this for [Jackson/our team] right now. Someone will reach out to you at [their phone] shortly."
+
 YOUR TEAM (mention naturally when routing):
 - Alex (Quoting Team) - handles formal quotes and pricing
 - Grant (Design Team) - handles design questions and file reviews
 - Taylor (Partnerships) - handles collabs and sponsorships
+- Jackson (Bulk/Fleet) - handles commercial and bulk pricing
 
 🔥 PROACTIVE SALES APPROACH (Subtle, Not Salesy):
 
@@ -737,39 +764,132 @@ serve(async (req) => {
     }
 
     // ============================================
-    // QUALITY ISSUE / UNHAPPY CUSTOMER ALERTS
-    // Trigger sendAlertWithTracking for quality or unhappy customer signals
+    // QUALITY ISSUE / UNHAPPY CUSTOMER / BULK ALERTS
+    // LEAD CAPTURE GATE: Only send alerts when we have contact info
     // ============================================
     const detectedAlertType = detectAlertType(message_text);
-    if (detectedAlertType && resendKey) {
-      console.log('[JordanLee] Detected alert type:', detectedAlertType, '- sending tracked alert');
+    const hasContactInfo = chatState.customer_email || chatState.customer_phone;
+    
+    if (detectedAlertType) {
+      if (hasContactInfo && resendKey) {
+        // We have contact info - send the alert immediately
+        console.log('[JordanLee] Detected alert type:', detectedAlertType, '- contact info available, sending alert');
+        
+        try {
+          const customerEmail = typeof chatState.customer_email === 'string' ? chatState.customer_email : undefined;
+          const customerPhone = typeof chatState.customer_phone === 'string' ? chatState.customer_phone : undefined;
+          const customerName = typeof chatState.customer_name === 'string' ? chatState.customer_name : undefined;
+          const orderNum = typeof chatState.order_number === 'string' ? chatState.order_number : (extractedOrderNumber || undefined);
+          
+          await sendAlertWithTracking(
+            supabase,
+            resendKey,
+            detectedAlertType,
+            {
+              orderNumber: orderNum,
+              customerName: customerName || customerEmail || 'Website Visitor',
+              customerEmail: customerEmail,
+              customerPhone: customerPhone,
+              conversationId,
+              messageExcerpt: message_text.substring(0, 300),
+              additionalInfo: {
+                page_url,
+                session_id,
+                vehicle: chatState.vehicle,
+                alert_source: 'website_chat',
+                has_phone: !!customerPhone,
+                has_email: !!customerEmail,
+              },
+            },
+            orgId
+          );
+          console.log('[JordanLee] Alert sent successfully with contact info:', { email: !!customerEmail, phone: !!customerPhone });
+          
+          // Clear pending escalation if it was set
+          if (chatState.pending_escalation) {
+            delete chatState.pending_escalation;
+          }
+        } catch (alertErr) {
+          console.error('[JordanLee] Failed to send alert:', alertErr);
+        }
+      } else {
+        // No contact info yet - store as pending escalation
+        console.log('[JordanLee] Detected alert type:', detectedAlertType, '- NO contact info, storing as pending');
+        chatState.pending_escalation = {
+          type: detectedAlertType,
+          detected_at: new Date().toISOString(),
+          message_excerpt: message_text.substring(0, 300),
+        };
+        chatState.needs_contact_for_escalation = true;
+        
+        // Tag the contact for follow-up
+        if (contactId) {
+          const alertTag = detectedAlertType === 'bulk_inquiry' ? 'bulk_lead_pending' : 
+                          detectedAlertType === 'quality_issue' ? 'quality_issue_pending' : 
+                          'escalation_pending';
+          await supabase
+            .from('contacts')
+            .update({ 
+              tags: ['website', 'chat', alertTag, 'needs_callback'],
+              priority: 'high'
+            })
+            .eq('id', contactId);
+        }
+      }
+    }
+    
+    // Check if we NOW have contact info and there's a pending escalation
+    if (chatState.pending_escalation && hasContactInfo && resendKey) {
+      const pending = chatState.pending_escalation as { type: AlertType; detected_at: string; message_excerpt: string };
+      console.log('[JordanLee] Contact info now collected - sending pending escalation:', pending.type);
       
       try {
         const customerEmail = typeof chatState.customer_email === 'string' ? chatState.customer_email : undefined;
-        const orderNum = typeof chatState.order_number === 'string' ? chatState.order_number : (extractedOrderNumber || undefined);
+        const customerPhone = typeof chatState.customer_phone === 'string' ? chatState.customer_phone : undefined;
+        const customerName = typeof chatState.customer_name === 'string' ? chatState.customer_name : undefined;
+        const orderNum = typeof chatState.order_number === 'string' ? chatState.order_number : undefined;
         
         await sendAlertWithTracking(
           supabase,
           resendKey,
-          detectedAlertType,
+          pending.type,
           {
             orderNumber: orderNum,
-            customerName: customerEmail || 'Website Visitor',
+            customerName: customerName || customerEmail || 'Website Visitor',
             customerEmail: customerEmail,
+            customerPhone: customerPhone,
             conversationId,
-            messageExcerpt: message_text.substring(0, 300),
+            messageExcerpt: pending.message_excerpt,
             additionalInfo: {
               page_url,
               session_id,
               vehicle: chatState.vehicle,
               alert_source: 'website_chat',
+              was_pending: true,
+              pending_since: pending.detected_at,
+              has_phone: !!customerPhone,
+              has_email: !!customerEmail,
             },
           },
           orgId
         );
-        console.log('[JordanLee] Alert sent successfully:', detectedAlertType);
+        console.log('[JordanLee] Pending escalation sent with contact info:', { email: !!customerEmail, phone: !!customerPhone });
+        
+        // Clear pending state
+        delete chatState.pending_escalation;
+        delete chatState.needs_contact_for_escalation;
+        
+        // Update contact tags
+        if (contactId) {
+          await supabase
+            .from('contacts')
+            .update({ 
+              tags: ['website', 'chat', 'escalated', 'jordan_lead'],
+            })
+            .eq('id', contactId);
+        }
       } catch (alertErr) {
-        console.error('[JordanLee] Failed to send alert:', alertErr);
+        console.error('[JordanLee] Failed to send pending escalation:', alertErr);
       }
     }
 
