@@ -66,8 +66,9 @@ export const UNHAPPY_CUSTOMER_PATTERNS = /\b(unhappy|frustrated|angry|upset|comp
 // Bulk/commercial inquiry patterns
 export const BULK_INQUIRY_PATTERNS = /\b(fleet|bulk|wholesale|commercial|multiple|business|company|franchise|dealer|dealership|car lot|10\+|20\+|50\+|100\+|quantity discount)\b/i;
 
-// Quality issue patterns - EXPANDED to catch more issues
-export const QUALITY_ISSUE_PATTERNS = /\b(quality|defect|wrong|mistake|error|reprint|redo|color.*(wrong|off|different)|damaged|torn|ripped|bubbl|peel|fade|roller|mark|line|stripe|band|banding|streak|artifact|scratch|smear|smudge|flaw|imperfection|misprinted|misaligned|crooked|problem.*(order|wrap|print)|issue.*(order|wrap|print)|not right|looks off|visible)\b/i;
+// Quality issue patterns - STRICT: Must indicate actual product/print problems
+// Removed loose patterns like "issue", "problem" alone - too many false positives on sales inquiries
+export const QUALITY_ISSUE_PATTERNS = /\b(defect|wrong color|misprinted|misaligned|reprint needed|redo needed|damaged shipment|torn|ripped|bubble|peeling|fading|roller mark|banding|streak|artifact|scratched|smeared|flaw|imperfection|crooked print|print.*(wrong|defect|issue|problem)|received.*(wrong|damaged|defect)|my order.*(wrong|damaged|issue|problem)|wrap.*(peel|bubble|fade|damage|defect|wrong))\b/i;
 
 // Alert configuration matrix
 const ALERT_CONFIG: Record<AlertType, {
