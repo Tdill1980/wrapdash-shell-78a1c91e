@@ -598,6 +598,62 @@ serve(async (req) => {
       );
     }
 
+    // ACTION: quick - Stateless AI response (no persistent chat required)
+    // Use this for ad-hoc requests like generating emails, drafting responses, etc.
+    if (action === "quick") {
+      if (!message) {
+        throw new Error("Missing message for quick action");
+      }
+
+      const agentConfig = AGENT_CONFIGS[agent_id] || {
+        name: "Alex",
+        role: "Assistant",
+        systemPrompt: "You are a helpful assistant.",
+      };
+
+      const openAIKey = Deno.env.get("OPENAI_API_KEY");
+      if (!openAIKey) throw new Error("OpenAI API key not configured");
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openAIKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: agentConfig.systemPrompt },
+            { role: "user", content: message },
+          ],
+          temperature: 0.7,
+          max_tokens: 1500,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("OpenAI error:", errorText);
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const aiData = await response.json();
+      const reply = aiData.choices?.[0]?.message?.content || "Unable to generate response.";
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          reply,
+          agent: {
+            id: agent_id,
+            name: agentConfig.name,
+            role: agentConfig.role,
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ACTION: send - Send message and get AI response
     if (action === "send") {
       if (!chat_id || !message) {

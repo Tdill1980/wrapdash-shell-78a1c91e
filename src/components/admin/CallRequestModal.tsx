@@ -95,8 +95,9 @@ export function CallRequestModal({
       
       const { data, error } = await supabase.functions.invoke('agent-chat', {
         body: {
-          agent: 'alex_morgan',
-          prompt: `You are Alex, writing a professional scheduling email to a customer on behalf of the WePrintWraps team.
+          action: 'quick',
+          agent_id: 'alex_morgan',
+          message: `You are Alex, writing a professional scheduling email to a customer on behalf of the WePrintWraps team.
 
 TASK: Write a scheduling email to set up a call with ${assignedName}.
 
