@@ -1,47 +1,29 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   AlertTriangle, 
   Clock, 
   Mail, 
-  Receipt, 
-  FileCheck,
   User,
-  Send,
-  Bot,
-  Loader2,
   CheckCircle,
-  Sparkles,
   MessageCircle,
-  Car,
   Phone,
-  X,
-  Link2,
-  FileText,
   Truck,
   Palette,
   AlertCircle,
   ExternalLink,
-  Copy
+  Loader2
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { evaluateEscalationStatus, type EscalationStatus } from "@/hooks/useEscalationStatus";
 import type { ConversationEvent } from "@/hooks/useConversationEvents";
-import type { ChatConversation } from "@/hooks/useWebsiteChats";
 import { toast } from "sonner";
-import { CallRequestModal } from "./CallRequestModal";
 import { ResolutionModal } from "./ResolutionModal";
-import { EscalationActionButtons } from "./EscalationActionButtons";
-import { AlexApprovalModal } from "./AlexApprovalModal";
-import { useTeamAvailability } from "@/hooks/useTeamAvailability";
 
 // Priority order for escalation types (lower = higher priority)
 const TYPE_PRIORITY: Record<string, number> = {
@@ -81,70 +63,15 @@ interface EscalationItem {
   priority: number;
 }
 
-interface Quote {
-  id: string;
-  quote_number: string | null;
-  customer_name: string | null;
-  customer_email: string | null;
-  customer_price: number | null;
-  vehicle_year: string | null;
-  vehicle_make: string | null;
-  vehicle_model: string | null;
+interface EscalationsDashboardProps {
+  onSelectConversation?: (conversationId: string) => void;
 }
 
-interface AIMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-export function EscalationsDashboard() {
+export function EscalationsDashboard({ onSelectConversation }: EscalationsDashboardProps) {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  
-  // Team availability for Alex context
-  const { getAvailabilityText } = useTeamAvailability();
-  
-  // AI Chat state
-  const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
-  const [aiInput, setAiInput] = useState("");
-  const [isAiThinking, setIsAiThinking] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  // Reply state
-  const [replyBody, setReplyBody] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Quote attachment state
-  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
-  
-  // Chat reply state
-  const [chatReply, setChatReply] = useState("");
-  const [isSendingChat, setIsSendingChat] = useState(false);
-  
-  // Modal states for action buttons
-  const [showCallRequestModal, setShowCallRequestModal] = useState(false);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
-  
-  // Approval modal state for Preview & Send flow
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState<{
-    subject: string;
-    body: string;
-    actionType: "email_reply" | "schedule_call" | "quote_send";
-  } | null>(null);
-
-  // Build team availability context for Alex
-  const getTeamAvailabilityContext = () => {
-    return `TEAM AVAILABILITY (for scheduling calls):
-- Jackson: ${getAvailabilityText('jackson')}
-- Lance: ${getAvailabilityText('lance')}
-- Trish: ${getAvailabilityText('trish')}
-- Manny: ${getAvailabilityText('manny')}
-
-IMPORTANT: Only propose call times within these availability windows. If no availability is set, say "I'll have someone follow up to schedule."`;
-  };
 
   // Fetch escalation queue with priority sorting
   const { data: items, isLoading: queueLoading } = useQuery({
@@ -214,368 +141,138 @@ IMPORTANT: Only propose call times within these availability windows. If no avai
     refetchInterval: 30000,
   });
 
-  // Fetch selected conversation
-  const { data: conversation, isLoading: convLoading } = useQuery({
-    queryKey: ['escalation-conversation', selectedId],
-    queryFn: async (): Promise<ChatConversation | null> => {
-      if (!selectedId) return null;
-
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          contact:contacts(*),
-          messages:messages(*)
-        `)
-        .eq('id', selectedId)
-        .single();
-
-      if (error) throw error;
-      return data as ChatConversation;
-    },
-    enabled: !!selectedId,
-  });
-
-  // Fetch available quotes for attachment
-  const { data: availableQuotes } = useQuery({
-    queryKey: ['available-quotes'],
-    queryFn: async (): Promise<Quote[]> => {
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('id, quote_number, customer_name, customer_email, customer_price, vehicle_year, vehicle_make, vehicle_model')
-        .in('status', ['pending', 'lead', 'completed'])
-        .order('created_at', { ascending: false })
-        .limit(50);
-      
-      if (error) throw error;
-      return data as Quote[];
-    },
-  });
-
-  // Scroll AI chat to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [aiMessages]);
-
-  // Reset state when selecting new conversation
-  useEffect(() => {
-    setAiMessages([]);
-    setAiInput("");
-    setReplyBody("");
-    setChatReply("");
-    setSelectedQuote(null);
-  }, [selectedId]);
-
-  const messages = (conversation?.messages || []).sort((a, b) => 
-    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-  );
-  const contact = conversation?.contact;
-  const chatState = conversation?.chat_state;
-  const hasEmail = contact?.email && !contact.email.includes('@capture.local');
-  const hasPhone = !!contact?.phone;
-  
-  // Identity promotion logic - never stays "Website Visitor" after engagement
-  const getIdentityStatus = (): { label: string; level: 'visitor' | 'prospect' | 'lead' } => {
-    const inboundCount = messages.filter(m => m.direction === 'inbound').length;
-    const hasPricingDiscussion = messages.some(m => 
-      m.content?.toLowerCase().match(/price|cost|quote|how much|pricing|estimate/)
-    );
-    const hasFileIntent = messages.some(m => 
-      m.content?.toLowerCase().match(/upload|file|design|artwork|send.*file|attach/)
-    );
-    // Check chat_state for quote/file data (safely accessing dynamic fields)
-    const stateData = chatState as Record<string, unknown> | undefined;
-    const hasQuoteAttached = stateData?.quote_attached || stateData?.quote_id;
-    const filesUploaded = stateData?.files_uploaded as unknown[] | undefined;
-    const hasFileUploaded = filesUploaded && filesUploaded.length > 0;
-    
-    // Lead: file uploaded OR quote created
-    if (hasFileUploaded || hasQuoteAttached) {
-      return { label: 'Lead', level: 'lead' };
-    }
-    
-    // Prospect: email OR 3+ messages OR pricing discussed OR file intent
-    if (hasEmail || inboundCount >= 3 || hasPricingDiscussion || hasFileIntent) {
-      return { label: 'Prospect', level: 'prospect' };
-    }
-    
-    // Default visitor
-    return { label: 'Website Visitor', level: 'visitor' };
-  };
-  
-  const identity = getIdentityStatus();
-
-  const getConversationContext = () => {
-    return messages
-      .slice(-15)
-      .map((msg) => `${msg.direction === 'inbound' ? 'Customer' : 'Jordan'}: ${msg.content}`)
-      .join('\n');
-  };
-
-  // Ask Alex AI (internal assistant)
-  const handleAskAlex = async () => {
-    if (!aiInput.trim()) return;
-
-    const userMessage = aiInput.trim();
-    setAiInput("");
-    setAiMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsAiThinking(true);
-
-    try {
-      const conversationContext = getConversationContext();
-      const currentDraft = replyBody.trim();
-
-      const { data, error } = await supabase.functions.invoke('agent-chat', {
-        body: {
-          action: 'quick',
-          agent_id: 'alex_morgan',
-          message: `You are Alex, an execution assistant at WePrintWraps helping the internal team respond to escalated customer conversations.
-
-YOUR ROLE:
-- Help draft emails and messages
-- Propose call scheduling times (only within team availability)
-- Extract contact info from conversations
-- Execute what the team asks
-
-${getTeamAvailabilityContext()}
-
-Customer: ${contact?.name || 'Unknown'} (${contact?.email || 'no email'}, ${contact?.phone || 'no phone'})
-${chatState?.vehicle ? `Vehicle: ${chatState.vehicle.year} ${chatState.vehicle.make} ${chatState.vehicle.model}` : ''}
-
-Conversation:
-${conversationContext}
-
-${currentDraft ? `Team member's current draft:\n${currentDraft}\n` : ''}
-
-Team member asks: ${userMessage}
-
-Give concise, actionable advice. If they want you to write something, give exact professional text they can copy. If they ask for email, include a full email body. If they ask to schedule a call, propose times ONLY within the team member's availability. Sign off as "— Alex, WePrintWraps Team".`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.reply) {
-        setAiMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-      } else {
-        throw new Error('No reply received');
-      }
-    } catch (err) {
-      console.error('AI error:', err);
-      setAiMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, had trouble with that. Try again.' }]);
-    } finally {
-      setIsAiThinking(false);
-    }
-  };
-
-  // Use AI text in reply
-  const useInReply = (text: string) => {
-    setReplyBody(text);
-    toast.success('Added to email reply!');
-  };
-
-  // Generate AI draft (Alex polishes human intent)
-  const handleAIDraft = async () => {
-    setIsAiThinking(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('agent-chat', {
-        body: {
-          action: 'quick',
-          agent_id: 'alex_morgan',
-          message: `Write a professional email reply to this customer on behalf of the WePrintWraps team.
-
-Customer: ${contact?.name || 'Valued Customer'}
-Email: ${contact?.email || 'unknown'}
-Phone: ${contact?.phone || 'not provided'}
-Conversation:
-${getConversationContext()}
-
-Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "— Alex, WePrintWraps Team". Body only, no subject.`,
-        },
-      });
-
-      if (error) throw error;
-      if (data?.reply) {
-        setReplyBody(data.reply);
-        toast.success('Draft ready!');
-      }
-    } catch (err) {
-      console.error('Draft error:', err);
-      toast.error('Failed to generate draft');
-    } finally {
-      setIsAiThinking(false);
-    }
-  };
-
-  // Open Preview & Send modal (replaces direct send)
-  const handlePreviewAndSend = () => {
-    if (!hasEmail || !replyBody.trim()) return;
-    
-    const emailSubject = selectedQuote 
-      ? `Your WePrintWraps Quote #${selectedQuote.quote_number}`
-      : 'Re: Your WePrintWraps Inquiry';
-    
-    setPendingEmail({
-      subject: emailSubject,
-      body: replyBody,
-      actionType: selectedQuote ? 'quote_send' : 'email_reply',
-    });
-    setShowApprovalModal(true);
-  };
-
-  // Handle successful send from approval modal
-  const handleApprovalSuccess = () => {
-    setReplyBody("");
-    setSelectedQuote(null);
-    setPendingEmail(null);
-    queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
-  };
-
-  // Handle regenerate request from approval modal
-  const handleRegenerateEmail = async () => {
-    setShowApprovalModal(false);
-    await handleAIDraft();
-    // Re-open modal after draft is regenerated
-    setTimeout(() => {
-      if (replyBody.trim()) {
-        handlePreviewAndSend();
-      }
-    }, 500);
-  };
-
-  // Attach quote to conversation
-  const handleAttachQuote = (quote: Quote) => {
-    setSelectedQuote(quote);
-    setShowQuoteDialog(false);
-    
-    // Log quote attached event
-    supabase.from('conversation_events').insert([{
-      conversation_id: selectedId,
-      event_type: 'quote_attached',
-      actor: 'admin',
-      payload: {
-        quote_id: quote.id,
-        quote_number: quote.quote_number,
-        customer_price: quote.customer_price,
-      },
-    }]);
-    
-    toast.success(`Quote #${quote.quote_number} attached!`);
-    queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
-  };
-
-  // Copy contact info
-  const copyContactInfo = () => {
-    const info = [
-      contact?.name && `Name: ${contact.name}`,
-      contact?.email && `Email: ${contact.email}`,
-      contact?.phone && `Phone: ${contact.phone}`,
-    ].filter(Boolean).join('\n');
-    
-    navigator.clipboard.writeText(info);
-    toast.success('Contact info copied!');
-  };
-
-  // Mark escalation complete
-  const handleMarkComplete = async () => {
-    if (!selectedId) return;
-    setIsProcessing(true);
-    try {
-      await supabase.from('conversation_events').insert([{
-        conversation_id: selectedId,
-        event_type: 'marked_complete',
-        actor: 'admin',
-        payload: { resolution_notes: 'Marked complete by admin' },
-      }]);
-      toast.success('Marked complete!');
-      queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
-      setSelectedId(null);
-    } catch (err) {
-      toast.error('Failed to mark complete');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const getTypeConfig = (type: string) => {
     return TYPE_CONFIG[type] || { label: type, icon: MessageCircle, color: 'bg-muted text-muted-foreground border-muted' };
   };
 
   const blockedItems = items?.filter(i => i.status === 'blocked') || [];
-  const completedItems = items?.filter(i => i.status === 'complete') || [];
+
+  // Handle row click - opens canonical chat
+  const handleRowClick = (conversationId: string) => {
+    setSelectedId(conversationId);
+    if (onSelectConversation) {
+      onSelectConversation(conversationId);
+    }
+  };
+
+  // Handle resolve action
+  const handleResolve = () => {
+    if (!selectedId) {
+      toast.error('Select an escalation first');
+      return;
+    }
+    setShowResolutionModal(true);
+  };
+
+  // Quick resolve without modal
+  const handleQuickResolve = async (conversationId: string) => {
+    setIsProcessing(true);
+    try {
+      await supabase.from('conversation_events').insert([{
+        conversation_id: conversationId,
+        event_type: 'marked_complete',
+        actor: 'admin',
+        payload: { resolution_notes: 'Quick resolved from escalations dashboard' },
+      }]);
+      toast.success('Resolved!');
+      queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
+    } catch (err) {
+      toast.error('Failed to resolve');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Get selected item for resolution modal
+  const selectedItem = items?.find(i => i.conversationId === selectedId);
 
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <AlertTriangle className="h-5 w-5 text-orange-500" />
         Escalations Dashboard
+        <span className="text-sm font-normal text-muted-foreground ml-2">
+          (Click to open in Chat)
+        </span>
       </h2>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left: Escalation Queue */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span>Queue</span>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center justify-between">
+            <span>Queue</span>
+            <div className="flex items-center gap-2">
               {blockedItems.length > 0 && (
                 <Badge variant="outline" className="bg-orange-500/10 text-orange-500">
                   {blockedItems.length} blocked
                 </Badge>
               )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {queueLoading ? (
-              <div className="p-4 text-center text-muted-foreground text-sm">Loading...</div>
-            ) : !items || items.length === 0 ? (
-              <div className="p-4 text-center">
-                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">All clear! No escalations.</p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[calc(100vh-280px)]">
-                <div className="divide-y divide-border">
-                  {items.map((item) => {
-                    const typeConfig = getTypeConfig(item.escalationType);
-                    const TypeIcon = typeConfig.icon;
-                    const isComplete = item.status === 'complete';
-                    
-                    return (
+              {selectedId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 border-green-500/30 text-green-600 hover:bg-green-500/10"
+                  onClick={handleResolve}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  )}
+                  Resolve Selected
+                </Button>
+              )}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {queueLoading ? (
+            <div className="p-4 text-center text-muted-foreground text-sm">Loading...</div>
+          ) : !items || items.length === 0 ? (
+            <div className="p-8 text-center">
+              <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
+              <p className="text-sm font-medium">All clear!</p>
+              <p className="text-xs text-muted-foreground">No escalations pending</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[400px]">
+              <div className="divide-y divide-border">
+                {items.map((item) => {
+                  const typeConfig = getTypeConfig(item.escalationType);
+                  const TypeIcon = typeConfig.icon;
+                  const isComplete = item.status === 'complete';
+                  const isSelected = selectedId === item.conversationId;
+                  
+                  return (
+                    <div
+                      key={item.conversationId}
+                      className={`flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer ${
+                        isSelected ? 'bg-primary/10 border-l-2 border-primary' : ''
+                      } ${isComplete ? 'opacity-50' : ''}`}
+                    >
+                      {/* Main clickable area - opens canonical chat */}
                       <button
-                        key={item.conversationId}
-                        onClick={() => setSelectedId(item.conversationId)}
-                        className={`w-full p-3 text-left hover:bg-muted/50 transition-colors ${
-                          selectedId === item.conversationId ? 'bg-primary/10 border-l-2 border-primary' : ''
-                        } ${isComplete ? 'opacity-50' : ''}`}
+                        onClick={() => handleRowClick(item.conversationId)}
+                        className="flex-1 text-left min-w-0"
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-sm font-medium truncate flex-1">
+                          <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">
                             {item.contactName !== 'Website Visitor' 
                               ? item.contactName 
                               : item.contactEmail?.split('@')[0] || 'Unknown'}
                           </span>
                           <Badge 
                             variant="outline" 
-                            className={`text-[10px] ${typeConfig.color} flex items-center gap-1`}
+                            className={`text-[10px] ${typeConfig.color} flex items-center gap-1 flex-shrink-0`}
                           >
                             <TypeIcon className="h-3 w-3" />
                             {typeConfig.label}
                           </Badge>
                         </div>
-                        {/* Show identity promotion based on engagement */}
-                        {item.contactName === 'Website Visitor' && (
-                          <div className={`text-[10px] ml-5 -mt-0.5 mb-1 ${
-                            item.contactEmail ? 'text-blue-400' : 'text-muted-foreground/60'
-                          }`}>
-                            {item.contactEmail ? 'Prospect' : 'Website Visitor'}
-                          </div>
-                        )}
                         
                         {/* Contact info preview */}
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-1.5">
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-1.5 ml-5">
                           {item.contactEmail && (
                             <span className="flex items-center gap-1 truncate">
                               <Mail className="h-3 w-3" />
@@ -590,7 +287,7 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground ml-5">
                           <Clock className="h-3 w-3" />
                           {item.age}
                           {item.status === 'blocked' && (
@@ -606,7 +303,7 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                         </div>
                         
                         {item.missing.length > 0 && !isComplete && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
+                          <div className="flex flex-wrap gap-1 mt-1.5 ml-5">
                             {item.missing.map((m, i) => (
                               <Badge key={i} variant="outline" className="text-[9px] bg-muted text-muted-foreground">
                                 {m}
@@ -615,444 +312,57 @@ Write 2-3 short paragraphs. Be helpful, professional, and warm. Sign off as "—
                           </div>
                         )}
                       </button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Middle: Full Transcript */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span>Full Transcript</span>
-              {conversation && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setSelectedId(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {!selectedId ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Select an escalation to view transcript</p>
-              </div>
-            ) : convLoading ? (
-              <div className="p-8 text-center">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-              </div>
-            ) : (
-              <>
-                {/* Customer info bar - NAME PROMINENT */}
-                <div className="px-3 py-3 border-b bg-gradient-to-r from-blue-500/10 to-purple-500/10">
-                  {/* Primary: Customer name LARGE */}
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-bold text-foreground">
-                      {contact?.name && contact.name !== 'Website Visitor' 
-                        ? contact.name 
-                        : contact?.email?.split('@')[0] || 'Unknown Customer'}
-                    </h3>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-6 text-xs gap-1"
-                      onClick={copyContactInfo}
-                    >
-                      <Copy className="h-3 w-3" />
-                      Copy
-                    </Button>
-                  </div>
-                  
-                  {/* Secondary: Email, Phone, Vehicle */}
-                  <div className="space-y-1.5">
-                    {hasEmail ? (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-green-500" />
-                        <span>{contact!.email}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-red-400">
-                        <Mail className="h-4 w-4" />
-                        <span>No email captured</span>
-                      </div>
-                    )}
-                    {hasPhone ? (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-green-500" />
-                        <span className="font-medium">{contact!.phone}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground/60">
-                        <Phone className="h-4 w-4" />
-                        <span>Phone not provided (optional)</span>
-                      </div>
-                    )}
-                    {chatState?.vehicle && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Car className="h-4 w-4 text-blue-500" />
-                        <span>{chatState.vehicle.year} {chatState.vehicle.make} {chatState.vehicle.model}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Identity badge with promotion status */}
-                  {(!contact?.name || contact.name === 'Website Visitor') && (
-                    <div className={`inline-flex items-center gap-1.5 text-xs mt-2 px-2 py-0.5 rounded-full ${
-                      identity.level === 'lead' 
-                        ? 'bg-green-500/20 text-green-400' 
-                        : identity.level === 'prospect' 
-                          ? 'bg-blue-500/20 text-blue-400' 
-                          : 'text-muted-foreground/50'
-                    }`}>
-                      {identity.level !== 'visitor' && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                      )}
-                      {identity.label}
-                    </div>
-                  )}
-                </div>
-
-                {/* Messages */}
-                <ScrollArea className="h-[calc(100vh-450px)] p-3">
-                  <div className="space-y-3">
-                    {messages.length === 0 ? (
-                      <p className="text-center text-muted-foreground text-sm py-4">No messages</p>
-                    ) : (
-                      messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={`flex ${msg.direction === 'inbound' ? 'justify-start' : 'justify-end'}`}
-                        >
-                          <div
-                            className={`max-w-[90%] rounded-xl p-3 text-sm shadow-lg ${
-                              msg.direction === 'inbound'
-                                ? 'bg-card/80 border border-border/20'
-                                : 'bg-gradient-to-br from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white'
-                            }`}
-                          >
-                            <div className={`flex items-center gap-2 mb-1.5 text-xs ${
-                              msg.direction === 'inbound' ? 'text-muted-foreground' : 'text-white/80'
-                            }`}>
-                              <span className="font-medium">
-                                {msg.sender_name || (msg.direction === 'inbound' ? 'Website Visitor' : 'Jordan Lee')}
-                              </span>
-                              {msg.created_at && (
-                                <span>{format(new Date(msg.created_at), 'h:mm a')}</span>
-                              )}
-                            </div>
-                            <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Right: AI Chat + Reply */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              Ask Alex & Reply
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!selectedId ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Select an escalation first</p>
-              </div>
-            ) : (
-              <>
-                {/* AI Chat */}
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Ask Alex for advice on how to respond:</p>
-                  <ScrollArea className="h-[120px] border rounded-lg bg-muted/20 p-2" ref={scrollRef}>
-                    {aiMessages.length === 0 ? (
-                      <div className="text-center text-muted-foreground text-xs py-4">
-                        <p>e.g. "we need his email" or "draft a follow-up"</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {aiMessages.map((msg, idx) => (
-                          <div
-                            key={idx}
-                            className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                          >
-                            {msg.role === 'assistant' && (
-                              <Bot className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
-                            )}
-                            <div
-                              className={`max-w-[85%] rounded-lg p-2 text-xs ${
-                                msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                              }`}
-                            >
-                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                              {msg.role === 'assistant' && msg.content.length > 30 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="mt-1 h-5 text-[10px] gap-1 px-1"
-                                  onClick={() => useInReply(msg.content)}
-                                >
-                                  <Sparkles className="h-2.5 w-2.5" />
-                                  Use
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {isAiThinking && (
-                          <div className="flex gap-2">
-                            <Bot className="h-4 w-4 text-primary" />
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </ScrollArea>
-                  <div className="flex gap-2">
-                    <Input
-                      value={aiInput}
-                      onChange={(e) => setAiInput(e.target.value)}
-                      placeholder="Ask Alex..."
-                      className="text-sm"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleAskAlex();
-                        }
-                      }}
-                      disabled={isAiThinking}
-                    />
-                    <Button size="icon" onClick={handleAskAlex} disabled={isAiThinking || !aiInput.trim()}>
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Quote Attachment */}
-                <div className="pt-2 border-t space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium flex items-center gap-1">
-                      <Receipt className="h-3 w-3" />
-                      Quote
-                    </p>
-                    <div className="flex gap-1">
-                      {/* Create Quote Button - opens MightyCustomer in WPW Internal mode */}
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-6 text-xs gap-1"
-                        disabled={!hasEmail}
-                        title={!hasEmail ? "Email required to create quote" : "Create a new quote"}
-                        onClick={() => {
-                          const params = new URLSearchParams({
-                            mode: 'wpw_internal',
-                            conversation_id: selectedId || '',
-                            customer: contact?.name || '',
-                            email: contact?.email || '',
-                            phone: contact?.phone || '',
-                          });
-                          if (chatState?.vehicle) {
-                            params.set('year', chatState.vehicle.year);
-                            params.set('make', chatState.vehicle.make);
-                            params.set('model', chatState.vehicle.model);
-                          }
-                          window.open(`/mighty-customer?${params}`, '_blank');
-                        }}
-                      >
-                        <FileText className="h-3 w-3" />
-                        Create Quote
-                      </Button>
-                      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-6 text-xs gap-1">
-                            <Link2 className="h-3 w-3" />
-                            Attach
-                          </Button>
-                        </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Attach a Quote</DialogTitle>
-                        </DialogHeader>
-                        <ScrollArea className="h-[300px]">
-                          <div className="space-y-2">
-                            {availableQuotes?.map((quote) => (
-                              <button
-                                key={quote.id}
-                                onClick={() => handleAttachQuote(quote)}
-                                className="w-full p-3 text-left border rounded-lg hover:bg-muted/50 transition-colors"
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="font-mono text-sm font-medium">#{quote.quote_number}</span>
-                                  <span className="text-sm font-bold text-green-500">
-                                    ${quote.customer_price?.toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {quote.customer_name || 'Unknown'} • {quote.vehicle_year} {quote.vehicle_make} {quote.vehicle_model}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </DialogContent>
-                      </Dialog>
-                    </div>
-                  </div>
-                  
-                  {/* Quote status feedback */}
-                  {!hasEmail && (
-                    <div className="text-[10px] text-muted-foreground/70 italic">
-                      Email required to create or send quote
-                    </div>
-                  )}
-                  
-                  {selectedQuote && (
-                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-green-400">Quote #{selectedQuote.quote_number} attached</span>
+                      
+                      {/* Quick actions - always visible */}
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-5 w-5"
-                          onClick={() => setSelectedQuote(null)}
+                          className="h-7 w-7 text-muted-foreground hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRowClick(item.conversationId);
+                          }}
+                          title="Open in Chat"
                         >
-                          <X className="h-3 w-3" />
+                          <ExternalLink className="h-4 w-4" />
                         </Button>
-                      </div>
-                      <div className="text-muted-foreground mt-1">
-                        ${selectedQuote.customer_price?.toLocaleString()} • {selectedQuote.vehicle_year} {selectedQuote.vehicle_make}
+                        {!isComplete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-green-500"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleQuickResolve(item.conversationId);
+                            }}
+                            disabled={isProcessing}
+                            title="Quick Resolve"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Email Reply composer */}
-                <div className="space-y-2 pt-2 border-t">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      Email Reply
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-xs gap-1"
-                      onClick={handleAIDraft}
-                      disabled={isAiThinking}
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      AI Draft
-                    </Button>
-                  </div>
-                  
-                  {hasEmail ? (
-                    <>
-                      <Textarea
-                        value={replyBody}
-                        onChange={(e) => setReplyBody(e.target.value)}
-                        placeholder="Type your reply..."
-                        className="min-h-[80px] text-sm resize-none"
-                      />
-                      <Button
-                        className="w-full gap-2"
-                        onClick={handlePreviewAndSend}
-                        disabled={!replyBody.trim()}
-                      >
-                        <Send className="h-4 w-4" />
-                        Preview & Send {selectedQuote && `+ Quote`}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="text-xs text-muted-foreground bg-muted/30 rounded p-3 text-center">
-                      <Mail className="h-4 w-4 mx-auto mb-1 opacity-50" />
-                      No email captured yet
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons - Pipeline Closure */}
-                <div className="pt-2 border-t">
-                  <EscalationActionButtons
-                    conversationId={selectedId!}
-                    hasEmail={!!hasEmail}
-                    isLoading={isProcessing}
-                    onRequestCall={() => setShowCallRequestModal(true)}
-                    onSendMessage={() => {
-                      // Scroll to email composer
-                      const emailComposer = document.getElementById('email-reply-section');
-                      emailComposer?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    onResolve={() => setShowResolutionModal(true)}
-                    onRefresh={() => queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] })}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Call Request Modal */}
-      <CallRequestModal
-        open={showCallRequestModal}
-        onOpenChange={setShowCallRequestModal}
-        conversationId={selectedId || ''}
-        customerName={contact?.name}
-        customerEmail={contact?.email}
-        customerPhone={contact?.phone}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] })}
-      />
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
       
       {/* Resolution Modal */}
       <ResolutionModal
         open={showResolutionModal}
         onOpenChange={setShowResolutionModal}
         conversationId={selectedId || ''}
-        customerName={contact?.name}
+        customerName={selectedItem?.contactName}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['escalations-dashboard-queue'] });
           setSelectedId(null);
         }}
       />
-      
-      {/* Alex Approval Modal - Preview & Send */}
-      {pendingEmail && hasEmail && (
-        <AlexApprovalModal
-          open={showApprovalModal}
-          onOpenChange={setShowApprovalModal}
-          conversationId={selectedId || ''}
-          recipient={{
-            email: contact!.email!,
-            name: contact?.name,
-          }}
-          subject={pendingEmail.subject}
-          body={pendingEmail.body}
-          quote={selectedQuote ? {
-            id: selectedQuote.id,
-            quote_number: selectedQuote.quote_number || '',
-            total: selectedQuote.customer_price || 0,
-          } : null}
-          actionType={pendingEmail.actionType}
-          onSuccess={handleApprovalSuccess}
-          onRegenerate={handleRegenerateEmail}
-        />
-      )}
     </div>
   );
 }

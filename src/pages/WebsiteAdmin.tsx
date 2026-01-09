@@ -35,6 +35,7 @@ export default function JordanLeeAdminDashboard() {
     role: string;
   } | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [pendingConversationId, setPendingConversationId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -185,11 +186,19 @@ export default function JordanLeeAdminDashboard() {
           </TabsContent>
 
           <TabsContent value="chats" className="mt-6">
-            <ChatSessionsTab />
+            <ChatSessionsTab 
+              initialConversationId={pendingConversationId} 
+              onConversationOpened={() => setPendingConversationId(null)}
+            />
           </TabsContent>
 
           <TabsContent value="escalations" className="mt-6">
-            <EscalationsDashboard />
+            <EscalationsDashboard 
+              onSelectConversation={(conversationId) => {
+                setPendingConversationId(conversationId);
+                setActiveTab("chats");
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="quotes" className="mt-6">

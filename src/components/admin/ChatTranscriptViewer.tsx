@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { useWebsiteChats, useWebsiteChatStats, useConversationTotalCount } from 
 import { useEscalationStats } from "@/hooks/useConversationEvents";
 import { ChatTranscriptRow } from "./ChatTranscriptRow";
 import { ChatDetailModal } from "./ChatDetailModal";
-import { EscalationsDashboard } from "./EscalationsDashboard";
+// EscalationsDashboard removed - now a separate tab, not embedded here
 import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
@@ -34,7 +34,15 @@ const ESCALATION_QUICK_FILTERS = [
   { value: 'none', label: 'No Escalation', color: 'bg-muted text-muted-foreground' },
 ];
 
-export function ChatTranscriptViewer() {
+interface ChatTranscriptViewerProps {
+  initialConversationId?: string | null;
+  onConversationOpened?: () => void;
+}
+
+export function ChatTranscriptViewer({ 
+  initialConversationId,
+  onConversationOpened 
+}: ChatTranscriptViewerProps) {
   const { conversations, isLoading, refetch } = useWebsiteChats();
   const { data: stats } = useWebsiteChatStats();
   const { data: totalDbCount } = useConversationTotalCount();
@@ -45,6 +53,18 @@ export function ChatTranscriptViewer() {
   const [todayOnly, setTodayOnly] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Handle initial conversation selection from props (e.g., from Escalations)
+  useEffect(() => {
+    if (initialConversationId && conversations.length > 0) {
+      const convo = conversations.find(c => c.id === initialConversationId);
+      if (convo) {
+        setSelectedConversation(convo);
+        setModalOpen(true);
+        onConversationOpened?.();
+      }
+    }
+  }, [initialConversationId, conversations, onConversationOpened]);
 
   // Filter conversations - ALL filters are optional UI controls, not defaults
   const filteredConversations = conversations.filter((convo) => {
@@ -189,8 +209,7 @@ export function ChatTranscriptViewer() {
         </Card>
       </div>
 
-      {/* Escalations Dashboard - Full Control View */}
-      <EscalationsDashboard />
+      {/* Escalations Dashboard removed - now filter-only in its own tab */}
 
       {/* Escalation Quick Filters */}
       <div className="flex flex-wrap items-center gap-2">
