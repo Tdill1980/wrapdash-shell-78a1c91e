@@ -151,6 +151,18 @@ const operationsItems: NavigationItem[] = [
     )
   },
   { 
+    name: "Website Quotes", 
+    path: "/admin/website-quotes", 
+    icon: DollarSign,
+    roles: ["admin", "beta_shop"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Website </span>
+        <span className="bg-gradient-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent">Quotes</span>
+      </span>
+    )
+  },
+  { 
     name: "ShopFlow Internal", 
     path: "/shopflow-internal", 
     icon: Package,

@@ -81,6 +81,7 @@ import MightyEdit from "./pages/MightyEdit";
 import MyProducts from "./pages/settings/MyProducts";
 import AdminOrganizations from "./pages/AdminOrganizations";
 import QuoteDrafts from "./pages/QuoteDrafts";
+import WebsiteChatQuotesPage from "./pages/WebsiteChatQuotesPage";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
 import AssetTaggingAdmin from "./pages/admin/AssetTaggingAdmin";
 import SavedViewsAdmin from "./pages/admin/SavedViewsAdmin";
@@ -189,6 +190,7 @@ const App = () => (
             <Route path="/admin/chat-widget-demo" element={<ChatWidgetDemo />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
+            <Route path="/admin/website-quotes" element={<WebsiteChatQuotesPage />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/admin/add-organization" element={<AddOrganizationWizard />} />
             <Route path="/admin/asset-tagging" element={<AssetTaggingAdmin />} />

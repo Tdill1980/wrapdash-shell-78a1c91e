@@ -34,11 +34,31 @@ const VEHICLE_SQFT: Record<string, number> = {
   // Full-size trucks
   'f150': 250, 'f-150': 250, 'silverado': 250, 'sierra': 250, 'ram': 250,
   'tundra': 250, 'titan': 250, 'f250': 275, 'f-250': 275, 'f350': 275, 'f-350': 275,
+  // HD TRUCKS (CRITICAL - These were missing and blocking quotes!)
+  'f450': 300, 'f-450': 300, 'f550': 320, 'f-550': 320, 'f650': 350, 'f-650': 350,
+  'silverado 2500': 280, 'silverado 2500hd': 280, 'silverado2500': 280,
+  'silverado 3500': 300, 'silverado 3500hd': 300, 'silverado3500': 300,
+  'silverado 4500': 320, 'silverado 4500hd': 320, 'silverado4500': 320,
+  'silverado 5500': 340, 'silverado 5500hd': 340, 'silverado5500': 340,
+  'silverado 6500': 360, 'silverado 6500hd': 360, 'silverado6500': 360,
+  'sierra 2500': 280, 'sierra 2500hd': 280, 'sierra2500': 280,
+  'sierra 3500': 300, 'sierra 3500hd': 300, 'sierra3500': 300,
+  'ram 2500': 280, 'ram2500': 280,
+  'ram 3500': 300, 'ram3500': 300,
+  'ram 4500': 320, 'ram4500': 320,
+  'ram 5500': 340, 'ram5500': 340,
   // Large SUVs
   'tahoe': 275, 'expedition': 275, 'suburban': 300, 'yukon': 275,
   'sequoia': 275, 'armada': 275, 'escalade': 275, 'navigator': 275,
   // Cargo vans
   'transit': 350, 'sprinter': 350, 'promaster': 350, 'express': 300, 'savana': 300,
+  // Sprinter variants by wheelbase
+  'sprinter 144': 280, 'sprinter 170': 320, 'sprinter 170 ext': 360,
+  'transit 130': 260, 'transit 148': 300, 'transit 148 ext': 350,
+  // Box trucks
+  'box truck': 400, 'boxtruck': 400,
+  'npr': 320, 'isuzu npr': 320, 'nqr': 350, 'isuzu nqr': 350, 'nrr': 380, 'isuzu nrr': 380,
+  'hino': 350, 'fuso': 350, 'canter': 320,
   // Sports cars
   'mustang': 180, 'camaro': 180, 'challenger': 190, 'corvette': 175,
   'supra': 170, '370z': 170, '86': 160, 'brz': 160, 'miata': 150, 'mx5': 150,
@@ -50,33 +70,82 @@ const VEHICLE_SQFT: Record<string, number> = {
   'bronco': 200, 'defender': 225, 'range rover': 250,
 };
 
-function getVehicleSqft(make: string, model: string): number {
+// COMMERCIAL VEHICLE FALLBACK ESTIMATES (never block silently!)
+const COMMERCIAL_FALLBACK_SQFT: Record<string, number> = {
+  'hd_truck': 300,      // HD trucks (4500, 5500, 6500 series)
+  'box_truck': 380,     // Box trucks / cab chassis
+  'commercial_van': 320, // Commercial vans
+  'chassis_cab': 300,   // Chassis cab
+  'default': 275,       // Safe default for unknown commercial
+};
+
+interface SqftResult {
+  sqft: number;
+  source: 'exact' | 'pattern' | 'commercial_fallback' | 'default_fallback';
+  needsReview: boolean;
+}
+
+function getVehicleSqft(make: string, model: string): SqftResult {
   const modelLower = model.toLowerCase().replace(/\s+/g, '');
   const modelWithSpaces = model.toLowerCase();
+  const modelNormalized = model.toLowerCase().replace(/[\s-]+/g, ' ').trim();
   
   // Check exact match first
-  if (VEHICLE_SQFT[modelLower]) return VEHICLE_SQFT[modelLower];
-  if (VEHICLE_SQFT[modelWithSpaces]) return VEHICLE_SQFT[modelWithSpaces];
+  if (VEHICLE_SQFT[modelLower]) {
+    return { sqft: VEHICLE_SQFT[modelLower], source: 'exact', needsReview: false };
+  }
+  if (VEHICLE_SQFT[modelWithSpaces]) {
+    return { sqft: VEHICLE_SQFT[modelWithSpaces], source: 'exact', needsReview: false };
+  }
+  if (VEHICLE_SQFT[modelNormalized]) {
+    return { sqft: VEHICLE_SQFT[modelNormalized], source: 'exact', needsReview: false };
+  }
   
   // Check partial matches
   for (const [key, sqft] of Object.entries(VEHICLE_SQFT)) {
     if (modelLower.includes(key) || key.includes(modelLower)) {
-      return sqft;
+      return { sqft, source: 'pattern', needsReview: false };
     }
   }
   
-  // Default based on common patterns
-  if (/van|sprinter|transit|promaster/i.test(model)) return 350;
-  if (/truck|f-?\d{3}|silverado|sierra|ram|tundra/i.test(model)) return 250;
-  if (/suv|tahoe|expedition|suburban|yukon/i.test(model)) return 275;
+  // Pattern-based fallbacks for commercial vehicles
+  // HD Trucks (4500, 5500, 6500 series)
+  if (/4500|5500|6500/i.test(model)) {
+    console.log('[SQFT FALLBACK] HD truck detected:', model);
+    return { sqft: COMMERCIAL_FALLBACK_SQFT.hd_truck, source: 'commercial_fallback', needsReview: true };
+  }
   
-  // ❌ NO SILENT FALLBACK
-  console.warn('[PRICING BLOCKED]', {
-    source: 'create-quote-from-chat',
-    vehicle: { make, model },
-    reason: 'No pattern match for vehicle model'
-  });
-  return 0; // Zero = pricing blocked
+  // Box trucks / Isuzu / Hino / Fuso
+  if (/box|npr|nqr|nrr|hino|fuso|canter|cabover|cab.?over/i.test(model)) {
+    console.log('[SQFT FALLBACK] Box truck detected:', model);
+    return { sqft: COMMERCIAL_FALLBACK_SQFT.box_truck, source: 'commercial_fallback', needsReview: true };
+  }
+  
+  // Commercial vans
+  if (/van|sprinter|transit|promaster|express|savana|nv\d/i.test(model)) {
+    console.log('[SQFT FALLBACK] Commercial van detected:', model);
+    return { sqft: COMMERCIAL_FALLBACK_SQFT.commercial_van, source: 'commercial_fallback', needsReview: true };
+  }
+  
+  // Chassis cab / work trucks
+  if (/chassis|work.?truck|flatbed|stake|dump|utility/i.test(model)) {
+    console.log('[SQFT FALLBACK] Chassis/work truck detected:', model);
+    return { sqft: COMMERCIAL_FALLBACK_SQFT.chassis_cab, source: 'commercial_fallback', needsReview: true };
+  }
+  
+  // Regular trucks
+  if (/truck|f-?\d{3}|silverado|sierra|ram|tundra|titan/i.test(model)) {
+    return { sqft: 250, source: 'pattern', needsReview: false };
+  }
+  
+  // SUVs
+  if (/suv|tahoe|expedition|suburban|yukon|explorer|pilot/i.test(model)) {
+    return { sqft: 275, source: 'pattern', needsReview: false };
+  }
+  
+  // ✅ NEVER BLOCK QUOTE CREATION - Always return a fallback with review flag
+  console.log('[SQFT FALLBACK] Unknown vehicle, using safe default:', { make, model });
+  return { sqft: COMMERCIAL_FALLBACK_SQFT.default, source: 'default_fallback', needsReview: true };
 }
 
 function generateQuoteNumber(): string {
@@ -118,31 +187,23 @@ serve(async (req) => {
     const resendKey = Deno.env.get('RESEND_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Calculate SQFT and pricing
-    const sqft = getVehicleSqft(vehicle_make || '', vehicle_model || '');
+    // Calculate SQFT and pricing - NEVER BLOCK, always create quote
+    const sqftResult = getVehicleSqft(vehicle_make || '', vehicle_model || '');
+    const sqft = sqftResult.sqft;
+    const needsReview = sqftResult.needsReview;
     
-    // ❌ NO SILENT FALLBACK - Block pricing for unknown vehicles
-    if (sqft === 0) {
-      console.warn('[CreateQuoteFromChat] PRICING BLOCKED - vehicle not recognized', {
-        vehicle_make, vehicle_model, vehicle_year
-      });
-      
-      return new Response(JSON.stringify({ 
-        success: true,
-        needs_review: true,
-        message: 'Vehicle information insufficient for pricing. Manual review required.',
-        vehicle: { year: vehicle_year, make: vehicle_make, model: vehicle_model }
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    console.log('[CreateQuoteFromChat] SQFT lookup:', {
+      vehicle: `${vehicle_year} ${vehicle_make} ${vehicle_model}`,
+      sqft,
+      source: sqftResult.source,
+      needsReview
+    });
     
     const pricePerSqft = 5.27; // Both Avery and 3M are now $5.27
     const materialCost = Math.round(sqft * pricePerSqft * 100) / 100;
     const quoteNumber = generateQuoteNumber();
 
-    console.log('[CreateQuoteFromChat] Calculated:', { sqft, pricePerSqft, materialCost, quoteNumber });
+    console.log('[CreateQuoteFromChat] Calculated:', { sqft, pricePerSqft, materialCost, quoteNumber, needsReview });
 
     // Create quote record (using ONLY columns that exist in quotes table)
     const { data: quote, error: quoteError } = await supabase
@@ -162,9 +223,12 @@ serve(async (req) => {
         source: 'website_chat',
         ai_generated: true,
         ai_sqft_estimate: sqft,
-        ai_message: `Auto-generated from chat. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`,
+        ai_message: needsReview 
+          ? `⚠️ SQFT estimated (~${sqft} sqft). Vehicle "${vehicle_model}" not in database - manual review recommended. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`
+          : `Auto-generated from chat. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`,
         source_conversation_id: conversation_id || null,
-        email_sent: false
+        email_sent: false,
+        needs_review: needsReview
       })
       .select()
       .single();

@@ -36,26 +36,70 @@ const VEHICLE_QUICK_REF: Record<string, { sqft: number; category: string }> = {
   'ford_f_150': { sqft: 341, category: 'truck' },   // Matches "F-150", "F 150", "F150"
   'ford_f_250': { sqft: 280, category: 'truck' },
   'ford_f_350': { sqft: 300, category: 'truck' },
+  'ford_f_450': { sqft: 320, category: 'truck' },   // HD TRUCK
+  'ford_f_550': { sqft: 340, category: 'truck' },   // HD TRUCK
+  'ford_f_650': { sqft: 360, category: 'truck' },   // HD TRUCK
   'chevy_silverado': { sqft: 260, category: 'truck' },
   'chevrolet_silverado': { sqft: 260, category: 'truck' },
   'chevy_silverado_1500': { sqft: 260, category: 'truck' },
   'chevrolet_silverado_1500': { sqft: 260, category: 'truck' },
-  'ram_1500': { sqft: 255, category: 'truck' },
-  'toyota_tacoma': { sqft: 220, category: 'truck' },
-  'toyota_tundra': { sqft: 260, category: 'truck' },
+  // HD TRUCKS - Silverado (CRITICAL - These were missing!)
+  'chevy_silverado_2500': { sqft: 280, category: 'truck' },
+  'chevy_silverado_2500hd': { sqft: 280, category: 'truck' },
+  'chevrolet_silverado_2500hd': { sqft: 280, category: 'truck' },
+  'chevy_silverado_3500': { sqft: 300, category: 'truck' },
+  'chevy_silverado_3500hd': { sqft: 300, category: 'truck' },
+  'chevrolet_silverado_3500hd': { sqft: 300, category: 'truck' },
+  'chevy_silverado_4500': { sqft: 320, category: 'truck' },
+  'chevy_silverado_4500hd': { sqft: 320, category: 'truck' },
+  'chevrolet_silverado_4500hd': { sqft: 320, category: 'truck' },
+  'chevy_silverado_5500': { sqft: 340, category: 'truck' },
+  'chevy_silverado_5500hd': { sqft: 340, category: 'truck' },
+  'chevrolet_silverado_5500hd': { sqft: 340, category: 'truck' },
+  'chevy_silverado_6500': { sqft: 360, category: 'truck' },
+  'chevy_silverado_6500hd': { sqft: 360, category: 'truck' },
+  'chevrolet_silverado_6500hd': { sqft: 360, category: 'truck' },
+  // HD TRUCKS - GMC Sierra
   'gmc_sierra': { sqft: 260, category: 'truck' },
   'gmc_sierra_1500': { sqft: 260, category: 'truck' },
+  'gmc_sierra_2500': { sqft: 280, category: 'truck' },
+  'gmc_sierra_2500hd': { sqft: 280, category: 'truck' },
+  'gmc_sierra_3500': { sqft: 300, category: 'truck' },
+  'gmc_sierra_3500hd': { sqft: 300, category: 'truck' },
+  // HD TRUCKS - RAM
+  'ram_1500': { sqft: 255, category: 'truck' },
+  'ram_2500': { sqft: 280, category: 'truck' },
+  'ram_3500': { sqft: 300, category: 'truck' },
+  'ram_4500': { sqft: 320, category: 'truck' },
+  'ram_5500': { sqft: 340, category: 'truck' },
+  // Toyota
+  'toyota_tacoma': { sqft: 220, category: 'truck' },
+  'toyota_tundra': { sqft: 260, category: 'truck' },
   
   // VANS
   'ford_transit': { sqft: 250, category: 'van' },
   'ford_transit_low': { sqft: 220, category: 'van' },
   'ford_transit_high': { sqft: 280, category: 'van' },
+  'ford_transit_130': { sqft: 260, category: 'van' },
+  'ford_transit_148': { sqft: 300, category: 'van' },
+  'ford_transit_148_ext': { sqft: 350, category: 'van' },
   'mercedes_sprinter': { sqft: 260, category: 'van' },
   'mercedes_benz_sprinter': { sqft: 260, category: 'van' },
+  'sprinter_144': { sqft: 280, category: 'van' },
+  'sprinter_170': { sqft: 320, category: 'van' },
+  'sprinter_170_ext': { sqft: 360, category: 'van' },
   'nissan_nv200': { sqft: 180, category: 'van' },
   'ram_promaster': { sqft: 260, category: 'van' },
   'chevy_express': { sqft: 280, category: 'van' },
   'chevrolet_express': { sqft: 280, category: 'van' },
+  
+  // BOX TRUCKS
+  'isuzu_npr': { sqft: 320, category: 'box_truck' },
+  'isuzu_nqr': { sqft: 350, category: 'box_truck' },
+  'isuzu_nrr': { sqft: 380, category: 'box_truck' },
+  'hino': { sqft: 350, category: 'box_truck' },
+  'fuso': { sqft: 350, category: 'box_truck' },
+  'fuso_canter': { sqft: 320, category: 'box_truck' },
   
   // SUVs
   'chevy_tahoe': { sqft: 240, category: 'suv' },

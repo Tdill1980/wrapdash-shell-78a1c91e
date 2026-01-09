@@ -1,0 +1,342 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  MessageSquare, 
+  AlertTriangle, 
+  Mail,
+  Phone,
+  Car,
+  Search,
+  RefreshCw
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface WebsiteChatQuote {
+  id: string;
+  quote_number: string;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+  vehicle_year: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  sqft: number | null;
+  material_cost: number | null;
+  status: string | null;
+  created_at: string;
+  email_sent: boolean | null;
+  ai_message: string | null;
+  source_conversation_id: string | null;
+}
+
+const statusColors: Record<string, string> = {
+  created: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  sent: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  converted: "bg-green-500/20 text-green-400 border-green-500/30",
+  expired: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  lead: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+};
+
+export function WebsiteChatQuotes() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedQuote, setSelectedQuote] = useState<WebsiteChatQuote | null>(null);
+
+  const { data: quotes, isLoading, refetch } = useQuery({
+    queryKey: ["website-chat-quotes", statusFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("quotes")
+        .select("id, quote_number, customer_name, customer_email, customer_phone, vehicle_year, vehicle_make, vehicle_model, sqft, material_cost, status, created_at, email_sent, ai_message, source_conversation_id")
+        .eq("source", "website_chat")
+        .order("created_at", { ascending: false });
+
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as WebsiteChatQuote[];
+    },
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["website-chat-quotes-stats"],
+    queryFn: async () => {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+
+      const { data: allQuotes, error } = await supabase
+        .from("quotes")
+        .select("id, created_at, material_cost, ai_message")
+        .eq("source", "website_chat");
+
+      if (error) throw error;
+
+      const todayQuotes = (allQuotes || []).filter(
+        (q) => new Date(q.created_at) >= today
+      );
+
+      const needsReview = (allQuotes || []).filter((q) => {
+        return q.ai_message?.includes("⚠️") || q.ai_message?.includes("review");
+      });
+
+      return {
+        total: allQuotes?.length || 0,
+        today: todayQuotes.length,
+        needsReview: needsReview.length,
+        totalValue: (allQuotes || []).reduce((sum, q) => sum + (q.material_cost || 0), 0),
+      };
+    },
+  });
+
+  const filteredQuotes = quotes?.filter((quote) => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      quote.quote_number?.toLowerCase().includes(search) ||
+      quote.customer_name?.toLowerCase().includes(search) ||
+      quote.customer_email?.toLowerCase().includes(search) ||
+      quote.vehicle_make?.toLowerCase().includes(search) ||
+      quote.vehicle_model?.toLowerCase().includes(search)
+    );
+  });
+
+  const handleViewConversation = (conversationId: string) => {
+    window.open(`/jordan-lee-admin?conversation=${conversationId}`, "_blank");
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Quotes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.total || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Today</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{stats?.today || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-500" />
+              Needs Review
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-500">{stats?.needsReview || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">${stats?.totalValue?.toLocaleString() || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search quotes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="created">Created</SelectItem>
+            <SelectItem value="sent">Sent</SelectItem>
+            <SelectItem value="converted">Converted</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Quote #</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead className="text-right">SQFT</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: 8 }).map((_, j) => (
+                    <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : filteredQuotes?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No website chat quotes found</TableCell>
+              </TableRow>
+            ) : (
+              filteredQuotes?.map((quote) => {
+                const needsReview = quote.ai_message?.includes("⚠️");
+                return (
+                  <TableRow key={quote.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedQuote(quote)}>
+                    <TableCell className="font-mono text-sm">
+                      <div className="flex items-center gap-2">
+                        {needsReview && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                        {quote.quote_number}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{quote.customer_name || "Unknown"}</span>
+                        <span className="text-xs text-muted-foreground">{quote.customer_email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{quote.vehicle_year} {quote.vehicle_make} {quote.vehicle_model}</TableCell>
+                    <TableCell className="text-right font-mono">{quote.sqft || "-"}</TableCell>
+                    <TableCell className="text-right font-mono font-medium">${quote.material_cost?.toFixed(2) || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={statusColors[quote.status || "created"]}>{quote.status || "created"}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{format(new Date(quote.created_at), "MMM d, h:mm a")}</TableCell>
+                    <TableCell>
+                      {quote.source_conversation_id && (
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleViewConversation(quote.source_conversation_id!); }}>
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Detail Sheet */}
+      <Sheet open={!!selectedQuote} onOpenChange={() => setSelectedQuote(null)}>
+        <SheetContent className="w-[400px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              Quote Details
+              {selectedQuote?.ai_message?.includes("⚠️") && (
+                <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Needs Review</Badge>
+              )}
+            </SheetTitle>
+            <SheetDescription>Quote #{selectedQuote?.quote_number}</SheetDescription>
+          </SheetHeader>
+
+          {selectedQuote && (
+            <div className="mt-6 space-y-6">
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Customer</h4>
+                <div className="space-y-2">
+                  <span className="font-medium">{selectedQuote.customer_name || "Unknown"}</span>
+                  {selectedQuote.customer_email && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="w-4 h-4" />{selectedQuote.customer_email}</div>
+                  )}
+                  {selectedQuote.customer_phone && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="w-4 h-4" />{selectedQuote.customer_phone}</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Vehicle</h4>
+                <div className="flex items-center gap-2">
+                  <Car className="w-4 h-4 text-muted-foreground" />
+                  <span>{selectedQuote.vehicle_year} {selectedQuote.vehicle_make} {selectedQuote.vehicle_model}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Pricing</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <div className="text-xs text-muted-foreground">Square Feet</div>
+                    <div className="text-lg font-bold">{selectedQuote.sqft || "-"}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <div className="text-xs text-muted-foreground">Material Cost</div>
+                    <div className="text-lg font-bold text-green-500">${selectedQuote.material_cost?.toFixed(2) || "-"}</div>
+                  </div>
+                </div>
+              </div>
+
+              {selectedQuote.ai_message && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">AI Note</h4>
+                  <div className={`p-3 rounded-lg text-sm ${selectedQuote.ai_message.includes("⚠️") ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-muted/50"}`}>
+                    {selectedQuote.ai_message}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4 border-t border-border">
+                {selectedQuote.source_conversation_id && (
+                  <Button variant="outline" className="flex-1" onClick={() => handleViewConversation(selectedQuote.source_conversation_id!)}>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    View Conversation
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
