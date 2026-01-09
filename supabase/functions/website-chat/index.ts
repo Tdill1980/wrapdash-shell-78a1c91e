@@ -15,7 +15,7 @@ import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
 import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
 import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
 import { getApprovedLinksForPrompt, LINK_AWARE_RULES, APPROVED_LINKS } from "../_shared/wpw-links.ts";
-import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType, formatBulkDiscountTiers, AlertType } from "../_shared/alert-system.ts";
+import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType, detectAlertTypeWithGate, formatBulkDiscountTiers, AlertType, OrderContext } from "../_shared/alert-system.ts";
 import { logConversationEvent, logQuoteEvent } from "../_shared/conversation-events.ts";
 
 // Proactive selling detection patterns
@@ -808,9 +808,44 @@ serve(async (req) => {
 
     // ============================================
     // QUALITY ISSUE / UNHAPPY CUSTOMER / BULK ALERTS
+    // ORDER VERIFICATION GATE: Quality issues ONLY escalate with verified order
     // LEAD CAPTURE GATE: Only send alerts when we have contact info
     // ============================================
-    const detectedAlertType = detectAlertType(message_text);
+    
+    // Build order context for the gate
+    const orderContext: OrderContext = {
+      hasOrder: !!orderData || !!chatState.order_number || !!chatState.woo_order_id,
+      orderNumber: orderData?.order_number || (typeof chatState.order_number === 'string' ? chatState.order_number : undefined),
+      quoteConverted: false, // Would need to check quotes table if needed
+    };
+    
+    // Use GATED detection - quality issues only escalate with verified order
+    const gatedResult = detectAlertTypeWithGate(message_text, orderContext);
+    const detectedAlertType = gatedResult.alertType;
+    const classification = gatedResult.classification;
+    
+    console.log('[JordanLee] Order Gate Result:', {
+      alertType: detectedAlertType,
+      classification,
+      hasOrder: orderContext.hasOrder,
+      orderNumber: orderContext.orderNumber,
+    });
+    
+    // If classified as 'sales' (quality keywords but no order), log it but DON'T escalate
+    if (classification === 'sales' && !detectedAlertType) {
+      console.log('[JordanLee] Sales inquiry detected (quality keywords without order) - routing to sales flow, NOT ShopFlow');
+      // Tag for sales follow-up instead of quality escalation
+      if (contactId) {
+        await supabase
+          .from('contacts')
+          .update({ 
+            tags: ['website', 'chat', 'sales_inquiry', 'pricing_request'],
+            priority: 'medium'
+          })
+          .eq('id', contactId);
+      }
+    }
+    
     const hasContactInfo = chatState.customer_email || chatState.customer_phone;
     
     if (detectedAlertType) {
@@ -842,6 +877,8 @@ serve(async (req) => {
                 alert_source: 'website_chat',
                 has_phone: !!customerPhone,
                 has_email: !!customerEmail,
+                classification, // Include classification for debugging
+                order_verified: orderContext.hasOrder,
               },
             },
             orgId
@@ -862,6 +899,8 @@ serve(async (req) => {
           type: detectedAlertType,
           detected_at: new Date().toISOString(),
           message_excerpt: message_text.substring(0, 300),
+          classification, // Include classification
+          order_verified: orderContext.hasOrder,
         };
         chatState.needs_contact_for_escalation = true;
         
