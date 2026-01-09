@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings, LogOut, BarChart3, Brain, Car, FileEdit, BookOpen, MessageSquare, FileText, FolderSearch, Star, Mail, Wrench, Power, Instagram, Loader2, AlertTriangle, Bell } from "lucide-react";
+import { AppBreadcrumb } from "@/components/AppBreadcrumb";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { AgenticAITab } from "@/components/admin/jordan-dashboard/AgenticAITab";
 import { WrapGuruTab } from "@/components/admin/jordan-dashboard/WrapGuruTab";
@@ -146,6 +147,11 @@ export default function JordanLeeAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Breadcrumb Navigation Bar */}
+      <div className="bg-[#0D0F12] px-4 sm:px-6 py-2.5 border-b border-white/10">
+        <AppBreadcrumb />
+      </div>
+
       {/* Header */}
       <header className="bg-card border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
