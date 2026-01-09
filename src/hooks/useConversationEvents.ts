@@ -68,13 +68,14 @@ export function useConversationEscalationSummary(conversationId: string | null) 
 }
 
 // Global escalation stats across all conversations
+// Counts UNIQUE conversations that were escalated, not raw event count
 export function useEscalationStats() {
   return useQuery({
     queryKey: ['escalation-stats'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('conversation_events')
-        .select('event_type, subtype, created_at')
+        .select('conversation_id, subtype, created_at')
         .eq('event_type', 'escalation_sent');
 
       if (error) throw error;
@@ -83,18 +84,31 @@ export function useEscalationStats() {
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
 
+      // Get unique conversation IDs (total ever escalated)
+      const uniqueConversations = new Set(events.map(e => e.conversation_id));
+      
+      // Get unique conversation IDs escalated today
       const todayEvents = events.filter(e => new Date(e.created_at) >= today);
+      const uniqueConversationsToday = new Set(todayEvents.map(e => e.conversation_id));
 
-      // Count by subtype
-      const byType: Record<string, number> = {};
+      // Count unique conversations by subtype (use first escalation type per conversation)
+      const conversationTypes: Record<string, Set<string>> = {};
       events.forEach(e => {
         const type = e.subtype || 'other';
-        byType[type] = (byType[type] || 0) + 1;
+        if (!conversationTypes[type]) {
+          conversationTypes[type] = new Set();
+        }
+        conversationTypes[type].add(e.conversation_id);
+      });
+
+      const byType: Record<string, number> = {};
+      Object.entries(conversationTypes).forEach(([type, ids]) => {
+        byType[type] = ids.size;
       });
 
       return {
-        total: events.length,
-        today: todayEvents.length,
+        total: uniqueConversations.size,
+        today: uniqueConversationsToday.size,
         byType,
       };
     },
