@@ -296,7 +296,8 @@ IMPORTANT: Only propose call times within these availability windows. If no avai
 
       const { data, error } = await supabase.functions.invoke('agent-chat', {
         body: {
-          agent: 'alex_morgan',
+          action: 'send',
+          agent_id: 'alex_morgan',
           prompt: `You are Alex, an execution assistant at WePrintWraps helping the internal team respond to escalated customer conversations.
 
 YOUR ROLE:
@@ -348,7 +349,8 @@ Give concise, actionable advice. If they want you to write something, give exact
     try {
       const { data, error } = await supabase.functions.invoke('agent-chat', {
         body: {
-          agent: 'alex_morgan',
+          action: 'send',
+          agent_id: 'alex_morgan',
           prompt: `Write a professional email reply to this customer on behalf of the WePrintWraps team.
 
 Customer: ${contact?.name || 'Valued Customer'}
