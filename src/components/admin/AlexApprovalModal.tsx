@@ -83,9 +83,12 @@ export function AlexApprovalModal({
     try {
       const approvedAt = new Date().toISOString();
 
-      // FIX #2: Get REAL user ID for traceability (not hardcoded "admin")
-      const { data: { user } } = await supabase.auth.getUser();
-      const approvedBy = user?.id || "unknown";
+      // GOTCHA #1: Get REAL user ID - NEVER allow "unknown"
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user?.id) {
+        throw new Error("You must be logged in to approve & send.");
+      }
+      const approvedBy = user.id;
 
       // FIX #3: Do NOT update quote status here - ONLY the edge function should do this
       // This ensures atomic truth: if email fails, quote status stays unchanged
