@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import DOMPurify from "dompurify";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -68,7 +69,12 @@ export function EmailReceiptViewer({ emailEvents }: EmailReceiptViewerProps) {
                   <p className="text-xs text-muted-foreground mb-2">Email Content:</p>
                   <div 
                     className="p-3 bg-muted/30 rounded-lg text-xs max-h-32 overflow-auto prose prose-sm dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: event.payload.email_body }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(event.payload.email_body, {
+                        ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'a', 'ul', 'ol', 'li', 'strong', 'em', 'span', 'div'],
+                        ALLOWED_ATTR: ['href', 'target', 'rel']
+                      })
+                    }}
                   />
                 </div>
               )}

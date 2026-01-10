@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import DOMPurify from "dompurify";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -161,7 +162,12 @@ function EventCard({ event }: { event: ConversationEvent }) {
                 <CollapsibleContent>
                   <div 
                     className="mt-2 p-3 bg-muted/30 rounded text-xs max-h-40 overflow-auto"
-                    dangerouslySetInnerHTML={{ __html: event.payload.email_body || '' }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(event.payload.email_body || '', {
+                        ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'a', 'ul', 'ol', 'li', 'strong', 'em', 'span', 'div'],
+                        ALLOWED_ATTR: ['href', 'target', 'rel']
+                      })
+                    }}
                   />
                 </CollapsibleContent>
               </>
