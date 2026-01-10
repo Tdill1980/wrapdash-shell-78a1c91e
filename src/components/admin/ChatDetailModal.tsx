@@ -154,8 +154,8 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
               </TabsList>
 
               {/* Transcript Tab */}
-              <TabsContent value="transcript" className="flex-1 mt-0 flex flex-col">
-                <ScrollArea className="flex-1 min-h-0 h-[calc(90vh-280px)] border border-border rounded-t-lg bg-muted/20 p-4">
+              <TabsContent value="transcript" className="mt-0 flex flex-col">
+                <ScrollArea className="h-[calc(90vh-300px)] border border-border rounded-t-lg bg-muted/20 p-4">
                   <div className="space-y-3">
                     {messages.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">
