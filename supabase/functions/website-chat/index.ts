@@ -1325,50 +1325,81 @@ Tell the customer: "I don't have pricing data for that specific ${currentVehicle
 DO NOT give any price estimate or guess!`;
     } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0 && chatState.customer_email) {
       // ============================================
-      // GOLDEN PATH: Has email + vehicle + sqft = GIVE PRICE + AUTO-EMAIL QUOTE
+      // 🔐 OS ENFORCEMENT: Create quote BEFORE AI response
+      // Price can ONLY come from a successfully created quote
       // ============================================
       const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
       
-      // Build pricing info with with/without roof if available
-      let pricingInfo = '';
-      if (vehicleSqftWithRoof > 0 && vehicleSqftWithoutRoof > 0) {
-        pricingInfo = `
-WITHOUT ROOF: ${vehicleSqftWithoutRoof} sqft = ~$${estimatedCostWithoutRoof}
-WITH ROOF: ${vehicleSqftWithRoof} sqft = ~$${estimatedCostWithRoof}
-(Roof adds ~${Math.round(vehicleSqftWithRoof - vehicleSqftWithoutRoof)} sqft)`;
-      } else {
-        pricingInfo = `${vehicleSqft} sqft = ~$${estimatedCost}`;
-      }
+      console.log('[JordanLee] OS ENFORCEMENT: Creating quote BEFORE AI response');
       
-      if (closestMatch && !vehicleFromDb) {
-        contextNotes = `🎯 GIVE PRICE NOW + QUOTE WILL AUTO-EMAIL to ${chatState.customer_email}:
-Vehicle: ${vehicleStr} (based on similar ${closestMatch.make} ${closestMatch.model})
-PRICING:${pricingInfo}
-At $5.27/sqft for both Avery AND 3M (we matched 3M to Avery's price!).
+      try {
+        const quoteResponse = await supabase.functions.invoke('create-quote-from-chat', {
+          body: {
+            conversation_id: conversationId,
+            organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
+            customer_email: chatState.customer_email,
+            customer_name: chatState.customer_name || null,
+            vehicle_year: currentVehicle?.year,
+            vehicle_make: currentVehicle?.make,
+            vehicle_model: currentVehicle?.model,
+            product_type: 'avery',
+            send_email: true
+          }
+        });
+        
+        if (quoteResponse.data?.success) {
+          chatState.quote_created = true;
+          chatState.quote_id = quoteResponse.data.quote_id;
+          chatState.quote_number = quoteResponse.data.quote_number;
+          chatState.quote_amount = quoteResponse.data.material_cost;
+          chatState.quote_sent_at = new Date().toISOString();
+          
+          console.log('[JordanLee] Quote created BEFORE response:', quoteResponse.data.quote_number);
+          
+          // Build pricing info with real quote data (sqft only, price comes from quote)
+          let pricingInfo = '';
+          if (vehicleSqftWithRoof > 0 && vehicleSqftWithoutRoof > 0) {
+            pricingInfo = `
+WITHOUT ROOF: ${vehicleSqftWithoutRoof} sqft
+WITH ROOF: ${vehicleSqftWithRoof} sqft
+(Roof adds ~${Math.round(vehicleSqftWithRoof - vehicleSqftWithoutRoof)} sqft)`;
+          } else {
+            pricingInfo = `${vehicleSqft} sqft`;
+          }
+          
+          // APPEND to context with QUOTE-CONFIRMED price
+          contextNotes += `
 
-Give them the price! Tell them "I'm sending this quote to your email right now!" The quote email will be sent automatically.`;
-      } else {
-        contextNotes = `🎯 GIVE PRICE NOW + QUOTE WILL AUTO-EMAIL to ${chatState.customer_email}:
+🎉 QUOTE CREATED AND EMAILED!
+Quote #${quoteResponse.data.quote_number}
+Amount: $${quoteResponse.data.material_cost}
+Email: ${chatState.customer_email}
 Vehicle: ${vehicleStr}
-PRICING FROM DATABASE:${pricingInfo}
-Both Avery AND 3M are $5.27/sqft (we matched 3M to Avery's price!).
+SQFT:${pricingInfo}
 
-Give them the specific price! Tell them "I'm sending this quote to your email right now!" The quote email will be sent automatically.`;
+INSTRUCTIONS:
+- You MUST tell the customer the price: $${quoteResponse.data.material_cost}
+- You MUST tell them you just emailed the formal quote
+- Use ONLY the quote amount above ($${quoteResponse.data.material_cost}). Do not recalculate.
+- Both Avery AND 3M are $5.27/sqft (we matched 3M to Avery's price!).`;
+          
+        } else {
+          // 🚨 QUOTE FAILED - DO NOT ALLOW PRICING
+          console.error('[JordanLee] OS VIOLATION: Quote creation failed:', quoteResponse.data);
+          contextNotes += `
+
+⚠️ SYSTEM ERROR: Could not create quote.
+DO NOT give any pricing numbers.
+SAY: "I'm having a technical issue generating your quote right now. Let me confirm your email - is ${chatState.customer_email} correct? I want to make sure your quote gets to you."`;
+        }
+      } catch (quoteError) {
+        console.error('[JordanLee] OS VIOLATION: Quote creation threw error:', quoteError);
+        contextNotes += `
+
+⚠️ SYSTEM ERROR: Could not create quote.
+DO NOT give any pricing numbers. 
+SAY: "I'm running into a technical hiccup - our team will email you at ${chatState.customer_email} with your quote shortly!"`;
       }
-    } else if (vehicleIsComplete && vehicleSqft > 0 && !chatState.customer_email) {
-      // Has vehicle but no email - need to collect email before giving price
-      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
-      contextNotes = `EMAIL REQUIRED: Have complete vehicle (${vehicleStr}) but NO EMAIL yet.
-
-SAY: "I've got the ${vehicleStr} - great choice! What's your name and email? I'll calculate your exact price and send over a formal quote!"
-
-DO NOT give the price yet - get email first, then price + auto-email.`;
-    } else if (partnershipSignal) {
-      contextNotes = `PARTNERSHIP ROUTED: You've looped in the partnerships team. Tell the customer someone will follow up shortly.`;
-    } else if (hasPartialVehicle && !vehicleIsComplete) {
-      // Customer gave partial vehicle info but not complete
-      const partialInfo = extractedVehicle.make || extractedVehicle.model || '';
-      contextNotes = `PARTIAL VEHICLE: Customer mentioned "${partialInfo}" - need the COMPLETE vehicle (year, make, model) + their name and email to give a price.`;
     }
 
     // ============================================
@@ -1557,62 +1588,17 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       .eq('id', conversationId);
 
     // ============================================
-    // CREATE QUOTE when Jordan provides pricing
+    // QUOTE CREATION MOVED EARLIER (OS ENFORCEMENT)
+    // This block is now a safety check only - quote should already be created
     // ============================================
-    // Trigger when: email captured + complete vehicle + valid pricing
     if (chatState.customer_email && vehicleIsComplete && vehicleSqft > 0 && !chatState.quote_created) {
-      try {
-        const quoteResponse = await supabase.functions.invoke('create-quote-from-chat', {
-          body: {
-            conversation_id: conversationId,
-            organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
-            customer_email: chatState.customer_email,
-            customer_name: chatState.customer_name || null,
-            vehicle_year: currentVehicle?.year,
-            vehicle_make: currentVehicle?.make,
-            vehicle_model: currentVehicle?.model,
-            product_type: 'avery', // Default to Avery
-            send_email: true
-          }
-        });
-        
-        if (quoteResponse.data?.success) {
-          chatState.quote_created = true;
-          chatState.quote_id = quoteResponse.data.quote_id;
-          chatState.quote_number = quoteResponse.data.quote_number;
-          chatState.quote_sent_at = new Date().toISOString();
-          chatState.quote_amount = quoteResponse.data.material_cost;
-          console.log('[JordanLee] Quote created:', quoteResponse.data.quote_number);
-          
-          // ============================================
-          // OS SPINE: Log quote_attached event
-          // ============================================
-          await logQuoteEvent(
-            supabase,
-            conversationId,
-            'quote_attached',
-            {
-              quoteId: quoteResponse.data.quote_id,
-              quoteNumber: quoteResponse.data.quote_number,
-              total: quoteResponse.data.material_cost,
-              customerEmail: String(chatState.customer_email) || undefined,
-              customerName: chatState.customer_name as string || undefined,
-              vehicleInfo: currentVehicle ? `${currentVehicle.year} ${currentVehicle.make} ${currentVehicle.model}` : undefined,
-            }
-          );
-          console.log('[JordanLee] Quote event logged to conversation_events');
-          
-          // Update conversation with quote state
-          await supabase
-            .from('conversations')
-            .update({ chat_state: chatState })
-            .eq('id', conversationId);
-        } else {
-          console.log('[JordanLee] Quote creation returned:', quoteResponse.data);
-        }
-      } catch (quoteError) {
-        console.error('[JordanLee] Failed to create quote:', quoteError);
-      }
+      console.warn('[JordanLee] WARNING: Reached post-response stage without quote_created. This should not happen.', {
+        conversationId,
+        hasEmail: !!chatState.customer_email,
+        vehicleIsComplete,
+        vehicleSqft,
+        stage: chatState.stage
+      });
     }
 
     // Log to message_ingest_log
@@ -1643,6 +1629,25 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       response.quote_email = chatState.customer_email;
       response.quote_amount = chatState.quote_amount;
       response.quote_sent_at = chatState.quote_sent_at || new Date().toISOString();
+    }
+
+    // 🚨 OS ASSERTION: Never allow price in response without quote
+    const pricePattern = /\$[\d,]+(?:\.\d{2})?/;
+    const responseHasPrice = pricePattern.test(aiReply);
+
+    if (responseHasPrice && !chatState.quote_created) {
+      console.error('[JordanLee] 🚨 OS_VIOLATION: Price in reply without quote!', {
+        conversationId,
+        stage: chatState.stage,
+        email: chatState.customer_email ?? null,
+        vehicle: currentVehicle ?? null,
+        vehicleSqft,
+        quote_created: chatState.quote_created,
+        response_preview: aiReply.substring(0, 100)
+      });
+      
+      // HARD FAIL - this state must be impossible
+      throw new Error('OS_VIOLATION: Price spoken without quote');
     }
 
     return new Response(JSON.stringify(response), {
