@@ -66,8 +66,35 @@ export interface Creative {
 
 /**
  * Create a new creative in the vault
+ * Auto-resolves organization_id from user membership if not provided
  */
 export async function createCreative(input: CreativeCreateInput): Promise<Creative> {
+  // 🔒 Auto-resolve organization_id if missing - REQUIRED for RLS
+  let organizationId = input.organizationId;
+  
+  if (!organizationId) {
+    const { data: auth } = await supabase.auth.getUser();
+    
+    if (!auth?.user) {
+      throw new Error("User not authenticated - cannot create creative");
+    }
+    
+    const { data: membership, error: membershipError } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", auth.user.id)
+      .limit(1)
+      .single();
+    
+    if (membershipError || !membership?.organization_id) {
+      console.error("[creativeVault] No org membership found:", membershipError);
+      throw new Error("No organization membership found - cannot create creative");
+    }
+    
+    organizationId = membership.organization_id;
+    console.log("[creativeVault] Auto-resolved org_id:", organizationId);
+  }
+
   const { data, error } = await supabase
     .from("ai_creatives")
     .insert({
@@ -82,7 +109,7 @@ export async function createCreative(input: CreativeCreateInput): Promise<Creati
       platform: input.platform ?? null,
       created_by: input.createdBy ?? "ai",
       created_by_agent: input.createdByAgent ?? null,
-      organization_id: input.organizationId ?? null,
+      organization_id: organizationId, // Always set - never null
       metadata: input.metadata ?? {},
       status: "draft"
     })
