@@ -1311,6 +1311,41 @@ Ask them for their order number (usually 4-6 digits from their confirmation emai
 DO NOT guess or make up any order information!`;
     } else if (escalationType && escalationSent) {
       contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
+    } else if (pricingIntent && (!currentVehicle?.year || !currentVehicle?.make || !currentVehicle?.model)) {
+      // ============================================
+      // 🚧 FIX #1: VEHICLE COMPLETION GUARD
+      // Prevents crashes when only partial vehicle info is captured
+      // ============================================
+      const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
+      const hasYear = existingVehicle?.year || currentVehicle?.year;
+      const hasMake = existingVehicle?.make || currentVehicle?.make;
+      const hasModel = existingVehicle?.model || currentVehicle?.model;
+      
+      const missingParts: string[] = [];
+      if (!hasYear) missingParts.push('year');
+      if (!hasMake) missingParts.push('make');
+      if (!hasModel) missingParts.push('model');
+      
+      console.log('[JordanLee] VEHICLE COMPLETION GUARD:', {
+        hasYear: !!hasYear,
+        hasMake: !!hasMake,
+        hasModel: !!hasModel,
+        missing: missingParts.join(', ')
+      });
+      
+      if (hasYear && (!hasMake || !hasModel)) {
+        // Has year, needs make/model
+        contextNotes = `NEED MAKE/MODEL: Customer wants a price and gave us ${hasYear}, but we need the make and model.
+Ask: "Got it! And what's the make and model? (For example: Tesla Model Y, Ford F-150)"`;
+      } else if (hasMake && !hasModel) {
+        // Has make, needs model
+        contextNotes = `NEED MODEL: Customer mentioned ${hasMake}, but we need the specific model.
+Ask: "What model of ${hasMake}? (For example: Model Y, F-150, Camry)"`;
+      } else {
+        // Need everything
+        contextNotes = `NEED VEHICLE INFO: Customer wants pricing but we need the full year, make, and model.
+Ask: "What vehicle are you looking to wrap? Give me the year, make, and model (like 2019 Tesla Model Y)."`;
+      }
     } else if (pricingIntent && !chatState.customer_email) {
       // ============================================
       // HARD GATE: NO PRICING WITHOUT EMAIL + NAME + PHONE
@@ -1355,23 +1390,25 @@ DO NOT give any price estimate or guess!`;
     } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0) {
       // ============================================
       // 🔐 CONTACT-GATED PRICING: Require name + email before price
+      // 🛠️ FIX #3: Wrapped in try/catch for safe fallback
       // ============================================
-      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
-      
-      // Check if contact info is captured
-      if (!chatState.customer_email || !chatState.customer_name) {
-        chatState.stage = 'contact_required';
+      try {
+        const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
         
-        console.log('[JordanLee] CONTACT-GATED: Blocking price until name+email captured', {
-          tenant,
-          hasEmail: !!chatState.customer_email,
-          hasName: !!chatState.customer_name,
-          vehicle: vehicleStr
-        });
-        
-        const printOnlyNote = tenant === 'WPW' ? ' (printing only — install not included)' : '';
-        
-        contextNotes += `
+        // Check if contact info is captured
+        if (!chatState.customer_email || !chatState.customer_name) {
+          chatState.stage = 'contact_required';
+          
+          console.log('[JordanLee] CONTACT-GATED: Blocking price until name+email captured', {
+            tenant,
+            hasEmail: !!chatState.customer_email,
+            hasName: !!chatState.customer_name,
+            vehicle: vehicleStr
+          });
+          
+          const printOnlyNote = tenant === 'WPW' ? ' (printing only — install not included)' : '';
+          
+          contextNotes += `
 
 ⚠️ CONTACT REQUIRED BEFORE PRICING:
 Customer wants a price for ${vehicleStr} but hasn't provided name AND email yet.
@@ -1383,22 +1420,23 @@ INSTRUCTIONS:
 - Ask for their name and email so you can send them the quote
 - Say something like: "I can price that out for you${printOnlyNote} — what's your name and email so I can generate and email your quote?"
 - Do NOT give any $ amounts until BOTH name and email are captured`;
-      } else {
-        // ✅ PRICING ALLOWED: Contact captured, vehicle complete
-        const pricePerSqft = 5.27;
-        // Prefer WITHOUT ROOF unless user explicitly asked for roof
-        const sqft = vehicleSqftWithoutRoof > 0 ? vehicleSqftWithoutRoof : vehicleSqft;
-        const calculatedPrice = Math.round(sqft * pricePerSqft);
-        
-        // Sanity guard to prevent insane totals
-        if (sqft < 100 || sqft > 500) {
-          console.warn('[JordanLee] SQFT sanity check failed:', { sqft, vehicle: vehicleStr });
-          contextNotes += `
-
-⚠️ SQFT SANITY CHECK:
-Vehicle ${vehicleStr} has ${sqft} sqft which seems unusual.
-Ask: "Quick check — are you pricing a **full wrap** or a **partial** (hood/roof/doors)? I want to quote the correct cost."`;
         } else {
+          // ✅ PRICING ALLOWED: Contact captured, vehicle complete
+          const pricePerSqft = 5.27;
+          // Prefer WITHOUT ROOF unless user explicitly asked for roof
+          const sqft = vehicleSqftWithoutRoof > 0 ? vehicleSqftWithoutRoof : vehicleSqft;
+          const calculatedPrice = Math.round(sqft * pricePerSqft);
+          
+          // 🛠️ FIX #2: SQFT sanity guard - RETURN IMMEDIATELY instead of falling through
+          if (sqft < 100 || sqft > 500) {
+            console.warn('[JordanLee] SQFT sanity check failed - returning clarification:', { sqft, vehicle: vehicleStr });
+            return new Response(JSON.stringify({
+              message: "Quick check — are you pricing a **full wrap** or a **partial** (hood, roof, doors)? I want to quote the correct **print-only** cost.",
+              conversation_id: conversationId
+            }), { headers: corsHeaders });
+          }
+          
+          // SQFT is valid, proceed with pricing
           chatState.calculated_price = calculatedPrice;
           chatState.stage = 'price_given';
           
@@ -1410,29 +1448,33 @@ Ask: "Quick check — are you pricing a **full wrap** or a **partial** (hood/roo
             price: calculatedPrice
           });
           
-          // 🔁 Fire-and-forget quote email (non-blocking)
-          supabase.functions.invoke('create-quote-from-chat', {
-            body: {
-              conversation_id: conversationId,
-              organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
-              customer_email: chatState.customer_email,
-              customer_name: chatState.customer_name,
-              vehicle_year: currentVehicle?.year,
-              vehicle_make: currentVehicle?.make,
-              vehicle_model: currentVehicle?.model,
-              material_cost: calculatedPrice,
-              product_type: 'avery',
-              send_email: true
-            }
-          }).then(response => {
-            if (response.data?.success) {
-              console.log('[JordanLee] Quote emailed successfully:', response.data.quote_number);
-            } else {
-              console.warn('[JordanLee] Quote email failed (non-blocking):', response.data);
-            }
-          }).catch(err => {
-            console.warn('[JordanLee] Quote email error (non-blocking):', err);
-          });
+          // 🔁 Fire-and-forget quote email (non-blocking) - wrapped in its own try/catch
+          try {
+            supabase.functions.invoke('create-quote-from-chat', {
+              body: {
+                conversation_id: conversationId,
+                organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
+                customer_email: chatState.customer_email,
+                customer_name: chatState.customer_name,
+                vehicle_year: currentVehicle?.year,
+                vehicle_make: currentVehicle?.make,
+                vehicle_model: currentVehicle?.model,
+                material_cost: calculatedPrice,
+                product_type: 'avery',
+                send_email: true
+              }
+            }).then(response => {
+              if (response.data?.success) {
+                console.log('[JordanLee] Quote emailed successfully:', response.data.quote_number);
+              } else {
+                console.warn('[JordanLee] Quote email failed (non-blocking):', response.data);
+              }
+            }).catch(err => {
+              console.warn('[JordanLee] Quote email error (non-blocking):', err);
+            });
+          } catch (quoteErr) {
+            console.warn('[JordanLee] Quote invocation failed (non-blocking):', quoteErr);
+          }
           
           // Build pricing context for AI
           const printOnlyLabel = tenant === 'WPW' ? 'For **printing only (no install)**' : 'Your wrap';
@@ -1461,6 +1503,13 @@ INSTRUCTIONS:
 - Tell them you're emailing the formal quote
 - Both Avery AND 3M are $5.27/sqft (we matched 3M to Avery's price!)`;
         }
+      } catch (pricingErr) {
+        // 🛠️ FIX #3: Safe fallback if pricing logic throws
+        console.error('[WPW PRICING ERROR]', pricingErr);
+        return new Response(JSON.stringify({
+          message: "I'm running into a quick hiccup calculating that. Let me double-check the details and I'll get this priced for you.",
+          conversation_id: conversationId
+        }), { headers: corsHeaders });
       }
     }
 
