@@ -227,15 +227,23 @@ serve(async (req) => {
           ? `⚠️ SQFT estimated (~${sqft} sqft). Vehicle "${vehicle_model}" not in database - manual review recommended. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`
           : `Auto-generated from chat. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`,
         source_conversation_id: conversation_id || null,
-        email_sent: false,
-        needs_review: needsReview
+        email_sent: false
+        // Note: needs_review flag is captured in ai_message field above
       })
       .select()
       .single();
 
     if (quoteError) {
       console.error('[CreateQuoteFromChat] Quote creation error:', quoteError);
-      throw quoteError;
+      // Return explicit failure response instead of throwing
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: quoteError.message,
+        code: 'QUOTE_INSERT_FAILED'
+      }), { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log('[CreateQuoteFromChat] Quote created:', quote.id);
