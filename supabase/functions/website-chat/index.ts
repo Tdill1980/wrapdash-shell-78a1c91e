@@ -29,6 +29,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============================================
+// 🔐 TENANT DETECTION: WPW ecommerce vs SaaS
+// ============================================
+function getTenantFromRequest(req: Request): 'WPW' | 'SAAS' {
+  const host = req.headers.get("x-forwarded-host")
+    ?? req.headers.get("host")
+    ?? "";
+  const origin = req.headers.get("origin") ?? "";
+  
+  const h = (host || origin).toLowerCase();
+  
+  // WPW ecommerce (print-only, no installation)
+  if (h.includes("weprintwraps.com") || h.includes("weprintwraps.")) return "WPW";
+  
+  // WrapCommand SaaS platform
+  if (h.includes("wrapcommandai.com") || h.includes("wrapcommand.")) return "SAAS";
+  
+  // Default to WPW for now (most chat widget traffic)
+  return "WPW";
+}
+
 // Regex patterns to extract vehicle info - EXPANDED with common models
 const VEHICLE_PATTERNS = {
   year: /\b(19|20)\d{2}\b/,
@@ -342,7 +363,15 @@ serve(async (req) => {
   try {
     const { org, agent, mode, session_id, message_text, page_url, referrer, geo, organization_id } = await req.json();
 
-    console.log('[JordanLee] Received message:', { org, session_id, organization_id, message_text: message_text?.substring(0, 50) });
+    // Detect tenant from request origin
+    const tenant = getTenantFromRequest(req);
+    console.log('[TENANT]', {
+      tenant,
+      host: req.headers.get("x-forwarded-host") ?? req.headers.get("host"),
+      origin: req.headers.get("origin"),
+    });
+
+    console.log('[JordanLee] Received message:', { org, session_id, organization_id, tenant, message_text: message_text?.substring(0, 50) });
 
     if (!message_text || !session_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -1323,82 +1352,115 @@ DO NOT give any price numbers or ranges - get vehicle + email first.`;
       contextNotes = `PRICING BLOCKED for ${vehicleStr}: This vehicle isn't in our database and we don't have a reliable sqft estimate. 
 Tell the customer: "I don't have pricing data for that specific ${currentVehicle?.model} in my system. I've flagged this for our team - they'll email you at ${chatState.customer_email} with accurate pricing shortly!"
 DO NOT give any price estimate or guess!`;
-    } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0 && chatState.customer_email) {
+    } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0) {
       // ============================================
-      // 🔐 OS ENFORCEMENT: Create quote BEFORE AI response
-      // Price can ONLY come from a successfully created quote
+      // 🔐 CONTACT-GATED PRICING: Require name + email before price
       // ============================================
       const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
       
-      console.log('[JordanLee] OS ENFORCEMENT: Creating quote BEFORE AI response');
-      
-      try {
-        const quoteResponse = await supabase.functions.invoke('create-quote-from-chat', {
-          body: {
-            conversation_id: conversationId,
-            organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
-            customer_email: chatState.customer_email,
-            customer_name: chatState.customer_name || null,
-            vehicle_year: currentVehicle?.year,
-            vehicle_make: currentVehicle?.make,
-            vehicle_model: currentVehicle?.model,
-            product_type: 'avery',
-            send_email: true
-          }
+      // Check if contact info is captured
+      if (!chatState.customer_email || !chatState.customer_name) {
+        chatState.stage = 'contact_required';
+        
+        console.log('[JordanLee] CONTACT-GATED: Blocking price until name+email captured', {
+          tenant,
+          hasEmail: !!chatState.customer_email,
+          hasName: !!chatState.customer_name,
+          vehicle: vehicleStr
         });
         
-        if (quoteResponse.data?.success) {
-          chatState.quote_created = true;
-          chatState.quote_id = quoteResponse.data.quote_id;
-          chatState.quote_number = quoteResponse.data.quote_number;
-          chatState.quote_amount = quoteResponse.data.material_cost;
-          chatState.quote_sent_at = new Date().toISOString();
+        const printOnlyNote = tenant === 'WPW' ? ' (printing only — install not included)' : '';
+        
+        contextNotes += `
+
+⚠️ CONTACT REQUIRED BEFORE PRICING:
+Customer wants a price for ${vehicleStr} but hasn't provided name AND email yet.
+Has email: ${!!chatState.customer_email}
+Has name: ${!!chatState.customer_name}
+Tenant: ${tenant}
+
+INSTRUCTIONS:
+- Ask for their name and email so you can send them the quote
+- Say something like: "I can price that out for you${printOnlyNote} — what's your name and email so I can generate and email your quote?"
+- Do NOT give any $ amounts until BOTH name and email are captured`;
+      } else {
+        // ✅ PRICING ALLOWED: Contact captured, vehicle complete
+        const pricePerSqft = 5.27;
+        // Prefer WITHOUT ROOF unless user explicitly asked for roof
+        const sqft = vehicleSqftWithoutRoof > 0 ? vehicleSqftWithoutRoof : vehicleSqft;
+        const calculatedPrice = Math.round(sqft * pricePerSqft);
+        
+        // Sanity guard to prevent insane totals
+        if (sqft < 100 || sqft > 500) {
+          console.warn('[JordanLee] SQFT sanity check failed:', { sqft, vehicle: vehicleStr });
+          contextNotes += `
+
+⚠️ SQFT SANITY CHECK:
+Vehicle ${vehicleStr} has ${sqft} sqft which seems unusual.
+Ask: "Quick check — are you pricing a **full wrap** or a **partial** (hood/roof/doors)? I want to quote the correct cost."`;
+        } else {
+          chatState.calculated_price = calculatedPrice;
+          chatState.stage = 'price_given';
           
-          console.log('[JordanLee] Quote created BEFORE response:', quoteResponse.data.quote_number);
+          console.log('[JordanLee] CONTACT-GATED: Calculating price with contact captured', {
+            tenant,
+            name: chatState.customer_name,
+            email: chatState.customer_email,
+            sqft,
+            price: calculatedPrice
+          });
           
-          // Build pricing info with real quote data (sqft only, price comes from quote)
-          let pricingInfo = '';
+          // 🔁 Fire-and-forget quote email (non-blocking)
+          supabase.functions.invoke('create-quote-from-chat', {
+            body: {
+              conversation_id: conversationId,
+              organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
+              customer_email: chatState.customer_email,
+              customer_name: chatState.customer_name,
+              vehicle_year: currentVehicle?.year,
+              vehicle_make: currentVehicle?.make,
+              vehicle_model: currentVehicle?.model,
+              material_cost: calculatedPrice,
+              product_type: 'avery',
+              send_email: true
+            }
+          }).then(response => {
+            if (response.data?.success) {
+              console.log('[JordanLee] Quote emailed successfully:', response.data.quote_number);
+            } else {
+              console.warn('[JordanLee] Quote email failed (non-blocking):', response.data);
+            }
+          }).catch(err => {
+            console.warn('[JordanLee] Quote email error (non-blocking):', err);
+          });
+          
+          // Build pricing context for AI
+          const printOnlyLabel = tenant === 'WPW' ? 'For **printing only (no install)**' : 'Your wrap';
+          let sqftInfo = '';
           if (vehicleSqftWithRoof > 0 && vehicleSqftWithoutRoof > 0) {
-            pricingInfo = `
+            sqftInfo = `
 WITHOUT ROOF: ${vehicleSqftWithoutRoof} sqft
 WITH ROOF: ${vehicleSqftWithRoof} sqft
 (Roof adds ~${Math.round(vehicleSqftWithRoof - vehicleSqftWithoutRoof)} sqft)`;
           } else {
-            pricingInfo = `${vehicleSqft} sqft`;
+            sqftInfo = `${sqft} sqft`;
           }
           
-          // APPEND to context with QUOTE-CONFIRMED price
           contextNotes += `
 
-🎉 QUOTE CREATED AND EMAILED!
-Quote #${quoteResponse.data.quote_number}
-Amount: $${quoteResponse.data.material_cost}
+✅ PRICE CALCULATED - CONTACT CAPTURED:
+Tenant: ${tenant}
+Customer: ${chatState.customer_name}
 Email: ${chatState.customer_email}
 Vehicle: ${vehicleStr}
-SQFT:${pricingInfo}
+SQFT:${sqftInfo}
+PRICE: $${calculatedPrice}
 
 INSTRUCTIONS:
-- You MUST tell the customer the price: $${quoteResponse.data.material_cost}
-- You MUST tell them you just emailed the formal quote
-- Use ONLY the quote amount above ($${quoteResponse.data.material_cost}). Do not recalculate.
-- Both Avery AND 3M are $5.27/sqft (we matched 3M to Avery's price!).`;
-          
-        } else {
-          // 🚨 QUOTE FAILED - DO NOT ALLOW PRICING
-          console.error('[JordanLee] OS VIOLATION: Quote creation failed:', quoteResponse.data);
-          contextNotes += `
-
-⚠️ SYSTEM ERROR: Could not create quote.
-DO NOT give any pricing numbers.
-SAY: "I'm having a technical issue generating your quote right now. Let me confirm your email - is ${chatState.customer_email} correct? I want to make sure your quote gets to you."`;
+- Tell them the price: "${printOnlyLabel}, your estimated print cost is **$${calculatedPrice}**"
+- Tell them you're emailing the formal quote
+- Both Avery AND 3M are $5.27/sqft (we matched 3M to Avery's price!)`;
         }
-      } catch (quoteError) {
-        console.error('[JordanLee] OS VIOLATION: Quote creation threw error:', quoteError);
-        contextNotes += `
-
-⚠️ SYSTEM ERROR: Could not create quote.
-DO NOT give any pricing numbers. 
-SAY: "I'm running into a technical hiccup - our team will email you at ${chatState.customer_email} with your quote shortly!"`;
       }
     }
 
@@ -1631,23 +1693,24 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       response.quote_sent_at = chatState.quote_sent_at || new Date().toISOString();
     }
 
-    // 🚨 OS ASSERTION: Never allow price in response without quote
+    // 🚨 OS ASSERTION: Never allow price without contact info (name + email)
     const pricePattern = /\$[\d,]+(?:\.\d{2})?/;
     const responseHasPrice = pricePattern.test(aiReply);
 
-    if (responseHasPrice && !chatState.quote_created) {
-      console.error('[JordanLee] 🚨 OS_VIOLATION: Price in reply without quote!', {
+    if (responseHasPrice && (!chatState.customer_email || !chatState.customer_name)) {
+      console.error('[JordanLee] 🚨 OS_VIOLATION: Price shown without contact info!', {
         conversationId,
+        tenant,
         stage: chatState.stage,
         email: chatState.customer_email ?? null,
+        name: chatState.customer_name ?? null,
         vehicle: currentVehicle ?? null,
         vehicleSqft,
-        quote_created: chatState.quote_created,
         response_preview: aiReply.substring(0, 100)
       });
       
-      // HARD FAIL - this state must be impossible
-      throw new Error('OS_VIOLATION: Price spoken without quote');
+      // HARD FAIL - contact info is required before pricing
+      throw new Error('OS_VIOLATION: Price shown without contact info');
     }
 
     return new Response(JSON.stringify(response), {
