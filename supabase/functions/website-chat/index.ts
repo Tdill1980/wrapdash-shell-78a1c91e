@@ -1023,6 +1023,59 @@ serve(async (req) => {
     let vehicleFromDb = false;
     let closestMatch: { make: string; model: string; year: string; sqft: number; sqftWithRoof?: number; sqftWithoutRoof?: number } | null = null;
     
+    // ============================================
+    // PARTIAL WRAP / CUSTOM DIMENSION DETECTION
+    // Detect explicit dimensions like "36x36" or "24 x 24"
+    // ============================================
+    const customDimensionPattern = /(\d+)\s*(?:x|by|×)\s*(\d+)/gi;
+    const allMessages = messageHistory?.map(m => m.content).join(' ') || '';
+    const combinedText = `${allMessages} ${message_text}`.toLowerCase();
+    const dimensionMatches = [...combinedText.matchAll(customDimensionPattern)];
+    
+    let customSqft = 0;
+    let customDimensionsDetected = false;
+    const detectedDimensions: string[] = [];
+    
+    if (dimensionMatches.length > 0) {
+      for (const match of dimensionMatches) {
+        const dim1 = parseInt(match[1]);
+        const dim2 = parseInt(match[2]);
+        // Assume inches if dimensions are > 12, convert to sqft
+        const width = dim1 > 12 ? dim1 / 12 : dim1;
+        const height = dim2 > 12 ? dim2 / 12 : dim2;
+        const sqftPiece = width * height;
+        customSqft += sqftPiece;
+        detectedDimensions.push(`${match[1]}x${match[2]}`);
+      }
+      
+      // Check for quantity multipliers (e.g., "two 36x36" or "2 36x36")
+      const quantityPatterns = [
+        /\b(two|2)\s+(\d+\s*(?:x|by|×)\s*\d+)/gi,
+        /\b(three|3)\s+(\d+\s*(?:x|by|×)\s*\d+)/gi,
+        /\b(four|4)\s+(\d+\s*(?:x|by|×)\s*\d+)/gi,
+      ];
+      
+      for (const pattern of quantityPatterns) {
+        const qMatch = combinedText.match(pattern);
+        if (qMatch) {
+          const multiplier = qMatch[0].toLowerCase().startsWith('two') || qMatch[0].startsWith('2') ? 2 :
+                            qMatch[0].toLowerCase().startsWith('three') || qMatch[0].startsWith('3') ? 3 :
+                            qMatch[0].toLowerCase().startsWith('four') || qMatch[0].startsWith('4') ? 4 : 1;
+          if (multiplier > 1) {
+            // Recalculate with multiplier (replace single sqft with multiplied)
+            customSqft = customSqft * multiplier / dimensionMatches.length;
+          }
+        }
+      }
+      
+      customDimensionsDetected = customSqft > 0;
+      console.log('[JordanLee] Custom dimensions detected:', { 
+        customSqft: Math.round(customSqft * 100) / 100, 
+        dimensions: detectedDimensions,
+        rawText: message_text.substring(0, 100)
+      });
+    }
+    
     // Get the current vehicle state (merged from conversation history)
     const currentVehicle = chatState.vehicle as Record<string, string | null> | undefined;
     const vehicleIsComplete = chatState.vehicle_complete === true || 
@@ -1448,9 +1501,9 @@ INSTRUCTIONS:
             price: calculatedPrice
           });
           
-          // 🔁 Fire-and-forget quote email (non-blocking) - wrapped in its own try/catch
+          // 🔁 AWAIT quote creation - MUST verify quote was created before telling customer
           try {
-            supabase.functions.invoke('create-quote-from-chat', {
+            const quoteResult = await supabase.functions.invoke('create-quote-from-chat', {
               body: {
                 conversation_id: conversationId,
                 organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
@@ -1459,21 +1512,46 @@ INSTRUCTIONS:
                 vehicle_year: currentVehicle?.year,
                 vehicle_make: currentVehicle?.make,
                 vehicle_model: currentVehicle?.model,
+                sqft: sqft,
                 material_cost: calculatedPrice,
                 product_type: 'avery',
-                send_email: true
+                send_email: true,
+                notes: `Full wrap - ${sqft} sqft @ $5.27/sqft`
               }
-            }).then(response => {
-              if (response.data?.success) {
-                console.log('[JordanLee] Quote emailed successfully:', response.data.quote_number);
-              } else {
-                console.warn('[JordanLee] Quote email failed (non-blocking):', response.data);
-              }
-            }).catch(err => {
-              console.warn('[JordanLee] Quote email error (non-blocking):', err);
             });
+            
+            if (quoteResult.error || !quoteResult.data?.success) {
+              console.error('[JordanLee] ❌ QUOTE CREATION FAILED:', { 
+                error: quoteResult.error, 
+                data: quoteResult.data,
+                customer: chatState.customer_email,
+                vehicle: vehicleStr 
+              });
+              contextNotes += `\n\n⚠️ QUOTE EMAIL FAILED - Tell customer: "I've calculated your price but having a small issue emailing the quote. I'll make sure you get it shortly!"`;
+            } else {
+              console.log('[JordanLee] ✅ Quote created & emailed:', quoteResult.data.quote_number);
+              // Store quote info in chatState for response
+              chatState.quote_created = true;
+              chatState.quote_id = quoteResult.data.quote_id;
+              chatState.quote_number = quoteResult.data.quote_number;
+              chatState.quote_amount = calculatedPrice;
+              chatState.quote_sent_at = new Date().toISOString();
+              
+              // Log the quote event
+              await logQuoteEvent(supabase, conversationId, 'quote_drafted', {
+                quoteId: quoteResult.data.quote_id,
+                quoteNumber: quoteResult.data.quote_number,
+                total: calculatedPrice,
+                customerEmail: chatState.customer_email as string,
+                customerName: chatState.customer_name as string,
+                vehicleInfo: vehicleStr
+              }, 'jordan_lee');
+              
+              contextNotes += `\n\n✅ QUOTE ${quoteResult.data.quote_number} EMAILED to ${chatState.customer_email}. You can confirm this was sent.`;
+            }
           } catch (quoteErr) {
-            console.warn('[JordanLee] Quote invocation failed (non-blocking):', quoteErr);
+            console.error('[JordanLee] Quote invocation exception:', quoteErr);
+            contextNotes += `\n\n⚠️ QUOTE EMAIL FAILED - Tell customer you'll follow up with the formal quote.`;
           }
           
           // Build pricing context for AI
@@ -1510,6 +1588,104 @@ INSTRUCTIONS:
           message: "I'm running into a quick hiccup calculating that. Let me double-check the details and I'll get this priced for you.",
           conversation_id: conversationId
         }), { headers: corsHeaders });
+      }
+    }
+
+    // ============================================
+    // PARTIAL WRAP QUOTE PATH
+    // For customers providing custom dimensions (e.g., "two 36x36 door logos")
+    // Bypasses vehicle completion requirement
+    // ============================================
+    const isPartialWrapWithDimensions = customDimensionsDetected && 
+                                        customSqft > 0 && 
+                                        chatState.customer_email && 
+                                        chatState.customer_name &&
+                                        !chatState.quote_created;  // Don't double-create
+    
+    if (isPartialWrapWithDimensions && !vehicleIsComplete) {
+      const pricePerSqft = 5.27;
+      const sqft = Math.round(customSqft * 100) / 100;  // Round to 2 decimals
+      const calculatedPrice = Math.round(sqft * pricePerSqft * 100) / 100;
+      
+      console.log('[JordanLee] 🎯 PARTIAL WRAP PATH: Creating quote from custom dimensions', {
+        sqft,
+        price: calculatedPrice,
+        dimensions: detectedDimensions,
+        email: chatState.customer_email,
+        name: chatState.customer_name,
+        vehicle: chatState.vehicle
+      });
+      
+      chatState.calculated_price = calculatedPrice;
+      chatState.stage = 'price_given';
+      chatState.partial_wrap = true;
+      
+      // Create the quote
+      try {
+        const vehicleInfo = chatState.vehicle as Record<string, string> | undefined;
+        const quoteResult = await supabase.functions.invoke('create-quote-from-chat', {
+          body: {
+            conversation_id: conversationId,
+            organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
+            customer_email: chatState.customer_email,
+            customer_name: chatState.customer_name,
+            vehicle_year: vehicleInfo?.year || 'N/A',
+            vehicle_make: vehicleInfo?.make || 'Custom',
+            vehicle_model: vehicleInfo?.model || 'Partial Wrap',
+            sqft: sqft,
+            material_cost: calculatedPrice,
+            product_type: 'avery',
+            send_email: true,
+            notes: `Partial wrap - customer dimensions: ${detectedDimensions.join(', ')} = ${sqft} sqft @ $${pricePerSqft}/sqft`
+          }
+        });
+        
+        if (quoteResult.error || !quoteResult.data?.success) {
+          console.error('[JordanLee] ❌ PARTIAL WRAP QUOTE FAILED:', {
+            error: quoteResult.error,
+            data: quoteResult.data,
+            customer: chatState.customer_email,
+            dimensions: detectedDimensions
+          });
+          contextNotes += `\n\n⚠️ QUOTE EMAIL FAILED - Tell customer: "I've calculated $${calculatedPrice} for your ${detectedDimensions.join(', ')} pieces, but having a small issue emailing the quote. You'll get it shortly!"`;
+        } else {
+          console.log('[JordanLee] ✅ Partial wrap quote created & emailed:', quoteResult.data.quote_number);
+          
+          // Store quote info in chatState
+          chatState.quote_created = true;
+          chatState.quote_id = quoteResult.data.quote_id;
+          chatState.quote_number = quoteResult.data.quote_number;
+          chatState.quote_amount = calculatedPrice;
+          chatState.quote_sent_at = new Date().toISOString();
+          
+          // Log the quote event
+          await logQuoteEvent(supabase, conversationId, 'quote_drafted', {
+            quoteId: quoteResult.data.quote_id,
+            quoteNumber: quoteResult.data.quote_number,
+            total: calculatedPrice,
+            customerEmail: chatState.customer_email as string,
+            customerName: chatState.customer_name as string,
+            vehicleInfo: `Partial Wrap: ${detectedDimensions.join(', ')}`
+          }, 'jordan_lee');
+          
+          contextNotes += `
+
+✅ PARTIAL WRAP QUOTE SENT:
+Customer: ${chatState.customer_name}
+Email: ${chatState.customer_email}
+Dimensions: ${detectedDimensions.join(', ')}
+SQFT: ${sqft}
+PRICE: $${calculatedPrice}
+Quote Number: ${quoteResult.data.quote_number}
+
+INSTRUCTIONS:
+- Confirm the price: "For your ${detectedDimensions.join(' and ')} pieces, that's **$${calculatedPrice}** for print-only material"
+- Confirm the quote was emailed to ${chatState.customer_email}
+- Ask if they have any other questions about their partial wrap`;
+        }
+      } catch (partialQuoteErr) {
+        console.error('[JordanLee] Partial wrap quote exception:', partialQuoteErr);
+        contextNotes += `\n\n⚠️ QUOTE FAILED - Tell customer you calculated $${calculatedPrice} for their pieces and will email the formal quote.`;
       }
     }
 
