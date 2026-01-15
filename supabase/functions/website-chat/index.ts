@@ -472,6 +472,7 @@ serve(async (req) => {
       estimated_completion_date: string | null;
     } | null = null;
     
+    // First check: lookup order from current message
     if (orderStatusIntent && extractedOrderNumber) {
       const { data: order, error: orderError } = await supabase
         .from('shopflow_orders')
@@ -481,13 +482,47 @@ serve(async (req) => {
       
       if (order && !orderError) {
         orderData = order;
-        console.log('[JordanLee] Found order:', { 
+        console.log('[JordanLee] Found order from message:', { 
           order_number: order.order_number, 
           status: order.status, 
           tracking: order.tracking_number ? 'YES' : 'NO' 
         });
       } else {
         console.log('[JordanLee] Order not found:', extractedOrderNumber);
+      }
+    }
+    
+    // CRITICAL FIX: If no order found but we have one stored in chat state, re-fetch it
+    // This prevents hallucination when customer asks follow-up questions about their order
+    // Load existing chat state first to check for stored order number
+    const { data: existingConvoForOrder } = await supabase
+      .from('conversations')
+      .select('chat_state')
+      .eq('metadata->>session_id', session_id)
+      .eq('channel', 'website')
+      .single();
+    
+    const existingChatState = (existingConvoForOrder?.chat_state as Record<string, unknown>) || {};
+    const storedOrderNumber = existingChatState.order_number as string | undefined;
+    
+    if (!orderData && storedOrderNumber) {
+      console.log('[JordanLee] Re-fetching stored order:', storedOrderNumber);
+      const { data: order, error: orderError } = await supabase
+        .from('shopflow_orders')
+        .select('order_number, status, customer_stage, tracking_number, tracking_url, shipped_at, product_type, customer_name, estimated_completion_date')
+        .eq('order_number', storedOrderNumber)
+        .single();
+      
+      if (order && !orderError) {
+        orderData = order;
+        console.log('[JordanLee] Re-fetched stored order:', { 
+          order_number: order.order_number, 
+          status: order.status, 
+          customer_stage: order.customer_stage,
+          tracking: order.tracking_number ? 'YES' : 'NO' 
+        });
+      } else {
+        console.log('[JordanLee] Stored order not found in DB:', storedOrderNumber, orderError);
       }
     }
     
@@ -1804,6 +1839,14 @@ CRITICAL INSTRUCTIONS:
 2. If vehicle info is incomplete, ask for the SPECIFIC missing parts only.
 3. If you already know the year, make, and model from previous messages, use that info directly.
 4. Pay close attention to what was said earlier - the customer may have provided details you need.
+
+🚨 ANTI-HALLUCINATION RULES - VIOLATIONS WILL CAUSE CUSTOMER COMPLAINTS:
+- NEVER fabricate delivery dates, shipping dates, or tracking numbers
+- NEVER say an order is "complete", "delivered", or "shipped" unless the CURRENT CONTEXT above explicitly states it
+- If order status is "printing", "in_production", "processing", etc. - the order has NOT shipped yet
+- If you don't see a tracking number in CURRENT CONTEXT, DO NOT make one up
+- If you're unsure about order status, say "let me check with the team" rather than guessing
+- Today's date is ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} - never reference future dates as past events
 
 ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
         });
