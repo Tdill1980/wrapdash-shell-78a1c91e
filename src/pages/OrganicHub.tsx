@@ -92,40 +92,44 @@ export default function OrganicHub() {
     },
   ];
 
-  // Fetch real stats from the database
+  // Fetch real stats from ai_creatives (actual created content)
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["organic-hub-stats"],
     queryFn: async () => {
-      // Get total reels from content_queue
-      const { count: reelsCount } = await supabase
-        .from("content_queue")
-        .select("*", { count: "exact", head: true })
-        .in("content_type", ["reel", "ig_reel", "fb_reel", "youtube_short"]);
+      // Get total creatives from ai_creatives
+      const { count: creativesCount } = await supabase
+        .from("ai_creatives")
+        .select("*", { count: "exact", head: true });
 
-      // Get this week's content
+      // Get this week's creatives
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const { count: weekCount } = await supabase
-        .from("content_queue")
+        .from("ai_creatives")
         .select("*", { count: "exact", head: true })
         .gte("created_at", weekAgo.toISOString());
 
+      // Get completed count for engagement proxy
+      const { count: completedCount } = await supabase
+        .from("ai_creatives")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "complete");
+
       return {
-        reelsCreated: reelsCount || 0,
-        avgEngagement: "4.2%", // Would come from analytics
+        reelsCreated: creativesCount || 0,
+        completedCount: completedCount || 0,
         thisWeek: weekCount || 0,
       };
     },
   });
 
-  // Fetch recent reels
+  // Fetch recent creatives from ai_creatives
   const { data: recentReels = [] } = useQuery({
-    queryKey: ["recent-reels"],
+    queryKey: ["recent-creatives"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("content_queue")
-        .select("id, title, output_url, created_at, status")
-        .in("content_type", ["reel", "ig_reel", "fb_reel", "youtube_short"])
+        .from("ai_creatives")
+        .select("id, title, output_url, thumbnail_url, created_at, status")
         .order("created_at", { ascending: false })
         .limit(6);
       return data || [];
@@ -133,8 +137,8 @@ export default function OrganicHub() {
   });
 
   const quickStats = [
-    { label: "Reels Created", value: statsLoading ? "..." : String(stats?.reelsCreated || 0), icon: <Film className="w-4 h-4" /> },
-    { label: "Avg. Engagement", value: stats?.avgEngagement || "—", icon: <TrendingUp className="w-4 h-4" /> },
+    { label: "Creatives", value: statsLoading ? "..." : String(stats?.reelsCreated || 0), icon: <Film className="w-4 h-4" /> },
+    { label: "Completed", value: statsLoading ? "..." : String(stats?.completedCount || 0), icon: <TrendingUp className="w-4 h-4" /> },
     { label: "This Week", value: statsLoading ? "..." : String(stats?.thisWeek || 0), icon: <Zap className="w-4 h-4" /> },
   ];
 
