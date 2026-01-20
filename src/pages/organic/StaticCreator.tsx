@@ -20,10 +20,13 @@ import {
   Settings,
   Upload,
   LayoutGrid,
+  Copy,
+  Check,
 } from "lucide-react";
 import { ContentMetadataPanel, useContentMetadata } from "@/components/content/ContentMetadataPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { downloadToDevice, copyToClipboard, generateFilename } from "@/lib/downloadUtils";
 
 const TEMPLATES = [
   { id: "before-after", name: "Before/After", icon: "↔️" },
@@ -57,8 +60,10 @@ export default function StaticCreator() {
   const [ctaText, setCtaText] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedCaption, setGeneratedCaption] = useState<string | null>(null);
+  const [generatedHashtags, setGeneratedHashtags] = useState<string[]>([]);
   const [carouselSlides, setCarouselSlides] = useState<string[]>([]);
-
+  const [captionCopied, setCaptionCopied] = useState(false);
   const handleGenerateSingle = async () => {
     if (!headline.trim()) {
       toast.error("Please enter a headline");
@@ -84,13 +89,15 @@ export default function StaticCreator() {
 
       if (data?.imageUrl) {
         setGeneratedImageUrl(data.imageUrl);
+        setGeneratedCaption(data.caption || null);
+        setGeneratedHashtags(data.hashtags || []);
         
         // Save to content_queue
         await supabase.from("content_queue").insert({
           content_type: "static",
           status: "draft",
           title: headline,
-          caption: bodyText,
+          caption: data.caption || bodyText,
           cta_text: ctaText,
           output_url: data.imageUrl,
           brand: contentMetadata.brand,
@@ -101,6 +108,8 @@ export default function StaticCreator() {
           mode: "auto",
           ai_metadata: {
             template: selectedTemplate,
+            design: data.design,
+            hashtags: data.hashtags,
             generated_at: new Date().toISOString(),
           },
         });
@@ -335,7 +344,7 @@ export default function StaticCreator() {
                 <CardHeader>
                   <CardTitle className="text-base">Generated Preview</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="aspect-square max-w-md mx-auto rounded-lg overflow-hidden border border-border">
                     <img 
                       src={generatedImageUrl} 
@@ -343,8 +352,48 @@ export default function StaticCreator() {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="flex gap-2 justify-center mt-4">
-                    <Button variant="outline" size="sm">
+                  
+                  {/* Caption & Hashtags */}
+                  {(generatedCaption || generatedHashtags.length > 0) && (
+                    <div className="max-w-md mx-auto space-y-3">
+                      {generatedCaption && (
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-muted-foreground">Caption</span>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-6 px-2"
+                              onClick={async () => {
+                                await copyToClipboard(generatedCaption, "Caption copied!");
+                                setCaptionCopied(true);
+                                setTimeout(() => setCaptionCopied(false), 2000);
+                              }}
+                            >
+                              {captionCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            </Button>
+                          </div>
+                          <p className="text-sm">{generatedCaption}</p>
+                        </div>
+                      )}
+                      {generatedHashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {generatedHashtags.map((tag, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">
+                              {tag.startsWith("#") ? tag : `#${tag}`}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => downloadToDevice(generatedImageUrl, generateFilename("static-post", "png"))}
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>

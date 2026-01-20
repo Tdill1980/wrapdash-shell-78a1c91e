@@ -362,3 +362,6 @@ verify_jwt = false
 
 [functions.video-transcribe]
 verify_jwt = false
+
+[functions.ai-generate-static]
+verify_jwt = false
