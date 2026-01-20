@@ -19,7 +19,10 @@
     mode: scriptTag?.getAttribute('data-mode') || 'live',
     theme: scriptTag?.getAttribute('data-theme') || 'wpw',
     apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/website-chat',
-    statusUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status'
+    statusUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status',
+    artworkCheckUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-artwork-file',
+    supabaseUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co',
+    supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I'
   };
 
   // ========================================
@@ -67,19 +70,19 @@
   // WPW Logo (base64 encoded small version for embed)
   const WPW_LOGO = 'https://weprintwraps.com/cdn/shop/files/WePrintWraps-Logo-White.png?v=1690318107';
 
-  // Quick action buttons config
+  // WIRED BUTTONS ONLY - 3 specific quick actions
   const quickActions = [
-    { id: 'quote', text: 'Get an exact quote', icon: '💬' },
-    { id: 'cost', text: 'How much does a wrap cost?', icon: '$', primary: true },
-    { id: 'order', text: 'How do I order?', icon: '📦' },
-    { id: 'email', text: 'Email my quote', icon: '✉️' },
-    { id: 'status', text: 'Order status', icon: '📋' },
-    { id: 'bulk', text: 'Bulk / Fleet pricing', icon: '🚗' },
-    { id: 'shipping', text: 'Production & Shipping', icon: '🕐' }
+    { id: 'bulk', text: '🚛 Bulk Order / Fleet Quote', icon: '🚛', primary: true, message: 'I need bulk or fleet pricing for multiple vehicles' },
+    { id: 'status', text: '📦 Order Status', icon: '📦', message: 'I want to check my order status' },
+    { id: 'check-file', text: '📎 Check My File', icon: '📎', message: null } // Special handler
   ];
 
   // Geo data (fetched on load)
   let geoData = null;
+  
+  // Track file upload count per session for rate limiting
+  let fileUploadCount = 0;
+  const MAX_UPLOADS_PER_SESSION = 3;
 
   // Fetch geo location on widget load
   (async function fetchGeoData() {
@@ -294,6 +297,7 @@
       border-radius: 16px;
       font-size: 14px;
       line-height: 1.5;
+      white-space: pre-wrap;
     }
     .wcai-message.user {
       align-self: flex-end;
@@ -352,6 +356,7 @@
       color: #374151;
       transition: all 0.2s;
       text-align: left;
+      width: 100%;
     }
     .wcai-quick-btn:hover {
       border-color: ${colors.primary};
@@ -372,12 +377,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
-    }
-    .wcai-quick-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      font-size: 16px;
     }
     .wcai-chat-input-area {
       padding: 12px 16px;
@@ -460,15 +460,109 @@
       0%, 100% { border-color: ${colors.primary}; }
       50% { border-color: transparent; }
     }
+    
+    /* Modal styles */
+    .wcai-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: wcai-fade-in 0.2s ease-out;
+    }
+    @keyframes wcai-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .wcai-modal {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 360px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: wcai-modal-in 0.3s ease-out;
+    }
+    @keyframes wcai-modal-in {
+      from { opacity: 0; transform: scale(0.9) translateY(20px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .wcai-modal h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      color: #111827;
+    }
+    .wcai-modal p {
+      margin: 0 0 20px;
+      color: #6b7280;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .wcai-modal-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .wcai-modal-btn {
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .wcai-modal-btn.confirm {
+      background: ${colors.primary};
+      color: white;
+    }
+    .wcai-modal-btn.confirm:hover {
+      background: #cc0070;
+    }
+    .wcai-modal-btn.cancel {
+      background: #f1f5f9;
+      color: #374151;
+    }
+    .wcai-modal-btn.cancel:hover {
+      background: #e2e8f0;
+    }
+    
+    /* Upload progress */
+    .wcai-upload-progress {
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 8px 0;
+    }
+    .wcai-upload-progress-bar {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .wcai-upload-progress-fill {
+      height: 100%;
+      background: ${colors.primary};
+      border-radius: 3px;
+      transition: width 0.3s ease-out;
+    }
+    .wcai-upload-text {
+      font-size: 13px;
+      color: #374151;
+    }
+    
     @media (max-width: 480px) {
       .wcai-chat-window {
         width: calc(100vw - 40px);
         max-height: calc(100vh - 120px);
         bottom: 70px;
         right: -10px;
-      }
-      .wcai-quick-grid {
-        grid-template-columns: 1fr;
       }
     }
   `;
@@ -483,23 +577,14 @@
     'wcai_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
   localStorage.setItem('wcai_session', sessionId);
 
-  // Create quick actions HTML
+  // Create quick actions HTML - only 3 wired buttons
   const quickActionsHTML = quickActions.map(action => {
-    if (action.primary) {
-      return `<button class="wcai-quick-btn primary" data-action="${action.id}">
-        <span class="wcai-quick-btn-icon">${action.icon}</span>
-        ${action.text}
-      </button>`;
-    }
-    return null;
-  }).filter(Boolean).join('') + 
-  '<div class="wcai-quick-grid">' +
-  quickActions.filter(a => !a.primary).map(action => 
-    `<button class="wcai-quick-btn" data-action="${action.id}">
+    const btnClass = action.primary ? 'wcai-quick-btn primary' : 'wcai-quick-btn';
+    return `<button class="${btnClass}" data-action="${action.id}">
       <span class="wcai-quick-btn-icon">${action.icon}</span>
       ${action.text}
-    </button>`
-  ).join('') + '</div>';
+    </button>`;
+  }).join('');
 
   // Create chat container
   const container = document.createElement('div');
@@ -547,6 +632,7 @@
         <span class="wcai-bubble-pulse"></span>
       </div>
     </div>
+    <input type="file" id="wcai-file-input" style="display:none" accept=".pdf,.png,.jpg,.jpeg,.psd,.ai,.eps,.tif,.tiff" />
   `;
   document.body.appendChild(container);
 
@@ -560,6 +646,7 @@
   const quickActionsContainer = document.getElementById('wcai-quick-actions');
   const input = document.getElementById('wcai-input');
   const sendBtn = document.getElementById('wcai-send');
+  const fileInput = document.getElementById('wcai-file-input');
 
   let isOpen = false;
   let hasInteracted = false;
@@ -663,13 +750,187 @@
     }
   }
 
+  // Show confirmation modal for Check My File
+  function showCheckFileModal() {
+    // Check rate limit
+    if (fileUploadCount >= MAX_UPLOADS_PER_SESSION) {
+      addMessage("You've reached the upload limit for this session. Please email your files to Design@WePrintWraps.com for review.", false);
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'wcai-modal-overlay';
+    overlay.id = 'wcai-modal-overlay';
+    overlay.innerHTML = `
+      <div class="wcai-modal">
+        <h3>📎 Check My File</h3>
+        <p>This file check is for <strong>full vehicle wraps over 200 sq ft</strong>. Our design team will review your file and email you with:</p>
+        <ul style="margin:0 0 16px;padding-left:20px;color:#374151;font-size:14px;line-height:1.6;">
+          <li>Whether it's print-ready</li>
+          <li>A quote for your wrap project</li>
+          <li>Design services if needed</li>
+        </ul>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+          💡 For sq ft pricing, use <a href="https://weprintwraps.com/quote" target="_blank" style="color:${colors.primary};">our quote tool</a> - select your make & model!
+        </p>
+        <div class="wcai-modal-buttons">
+          <button class="wcai-modal-btn confirm" id="wcai-modal-yes">Yes, this is a full wrap over 200 sq ft</button>
+          <button class="wcai-modal-btn cancel" id="wcai-modal-no">No / Not sure</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+      }
+    });
+
+    document.getElementById('wcai-modal-yes').addEventListener('click', () => {
+      overlay.remove();
+      fileInput.click();
+    });
+
+    document.getElementById('wcai-modal-no').addEventListener('click', () => {
+      overlay.remove();
+      hideQuickActions();
+      addMessage("No worries! The file check feature is for full vehicle wraps over 200 sq ft.\n\nFor smaller projects or partial wraps, you can still get a quote!\n\n1. Visit weprintwraps.com/quote\n2. Select your vehicle make & model\n3. Get instant sq ft pricing\n\nThen attach your artwork when you order - our team reviews all files before production.\n\nWant help with something else?", false);
+    });
+  }
+
+  // Handle file selection
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file size (50MB max)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      addMessage("That file is too large (max 50MB). Please compress it or email it directly to Design@WePrintWraps.com", false);
+      fileInput.value = '';
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['pdf', 'png', 'jpg', 'jpeg', 'psd', 'ai', 'eps', 'tif', 'tiff'];
+    const ext = file.name.toLowerCase().split('.').pop();
+    if (!allowedTypes.includes(ext)) {
+      addMessage(`That file type (.${ext}) isn't supported. Please upload a PDF, PNG, JPG, AI, EPS, PSD, or TIFF file.`, false);
+      fileInput.value = '';
+      return;
+    }
+
+    hideQuickActions();
+    hideAskTrigger();
+
+    // Show upload progress
+    addMessage(`📎 Uploading: ${file.name}`, true);
+    
+    const progressDiv = document.createElement('div');
+    progressDiv.className = 'wcai-upload-progress';
+    progressDiv.innerHTML = `
+      <div class="wcai-upload-text">Uploading your artwork... <span id="wcai-progress-pct">0%</span></div>
+      <div class="wcai-upload-progress-bar">
+        <div class="wcai-upload-progress-fill" id="wcai-progress-fill" style="width: 0%"></div>
+      </div>
+    `;
+    messagesContainer.appendChild(progressDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    try {
+      // Upload to Supabase Storage
+      const timestamp = Date.now();
+      const storagePath = `artwork-check/${sessionId}/${timestamp}-${file.name}`;
+      
+      // Simulate progress (actual XHR would provide real progress)
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress = Math.min(progress + 10, 90);
+        document.getElementById('wcai-progress-pct').textContent = progress + '%';
+        document.getElementById('wcai-progress-fill').style.width = progress + '%';
+      }, 200);
+
+      // Upload using fetch to Supabase Storage REST API
+      const uploadResponse = await fetch(`${config.supabaseUrl}/storage/v1/object/media-library/${storagePath}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.supabaseAnonKey}`,
+          'apikey': config.supabaseAnonKey,
+          'Content-Type': file.type || 'application/octet-stream',
+          'x-upsert': 'true'
+        },
+        body: file
+      });
+
+      clearInterval(progressInterval);
+
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed: ' + uploadResponse.statusText);
+      }
+
+      // Update progress to 100%
+      document.getElementById('wcai-progress-pct').textContent = '100%';
+      document.getElementById('wcai-progress-fill').style.width = '100%';
+
+      // Get public URL
+      const fileUrl = `${config.supabaseUrl}/storage/v1/object/public/media-library/${storagePath}`;
+
+      // Remove progress bar after a moment
+      setTimeout(() => progressDiv.remove(), 1000);
+
+      // Increment upload count
+      fileUploadCount++;
+
+      // Call check-artwork-file edge function
+      showTyping();
+      
+      const checkResponse = await fetch(config.artworkCheckUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          file_url: fileUrl,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+          customer_confirmed_full_wrap: true,
+          geo_data: geoData
+        })
+      });
+
+      const checkData = await checkResponse.json();
+      hideTyping();
+
+      if (checkData.success && checkData.message) {
+        await addMessage(checkData.message, false, true);
+        
+        // Follow up asking for email
+        setTimeout(async () => {
+          await addMessage("What email should our design team reach you at?", false, true);
+        }, 1500);
+      } else {
+        addMessage("Got your file! ✓ Our design team will review it and email you with a detailed analysis and quote. What email should they reach you at?", false);
+      }
+
+    } catch (err) {
+      console.error('[WCAI] Upload error:', err);
+      document.getElementById('wcai-progress-pct').textContent = 'Failed';
+      setTimeout(() => progressDiv.remove(), 2000);
+      addMessage("Sorry, there was an issue uploading your file. Please try again or email it directly to Design@WePrintWraps.com", false);
+    }
+
+    fileInput.value = '';
+  });
+
   // Send message
   async function sendMessage(text) {
     const messageText = text || input.value.trim();
     if (!messageText) return;
 
     hideQuickActions();
-    hideAskTrigger(); // Hide the ask trigger after first message
+    hideAskTrigger();
     addMessage(messageText, true);
     input.value = '';
     sendBtn.disabled = true;
@@ -713,8 +974,19 @@
   quickActionsContainer.addEventListener('click', (e) => {
     const btn = e.target.closest('.wcai-quick-btn');
     if (btn) {
-      const actionText = btn.textContent.trim();
-      sendMessage(actionText);
+      const actionId = btn.getAttribute('data-action');
+      
+      // Special handler for Check My File
+      if (actionId === 'check-file') {
+        showCheckFileModal();
+        return;
+      }
+      
+      // Find the action and send its message
+      const action = quickActions.find(a => a.id === actionId);
+      if (action && action.message) {
+        sendMessage(action.message);
+      }
     }
   });
 
