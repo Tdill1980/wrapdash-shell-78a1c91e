@@ -23,6 +23,81 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
+// Check if URL is a social media video (YouTube, TikTok, Instagram)
+function isSocialMediaUrl(url: string): boolean {
+  const patterns = [
+    /youtube\.com/i,
+    /youtu\.be/i,
+    /tiktok\.com/i,
+    /instagram\.com/i,
+    /twitter\.com/i,
+    /x\.com/i,
+    /vimeo\.com/i
+  ];
+  return patterns.some(p => p.test(url));
+}
+
+// Extract audio from social media URL using Cobalt API
+async function extractSocialMediaAudio(url: string): Promise<{ audioUrl: string; filename: string }> {
+  console.log('Extracting audio via Cobalt API for:', url);
+  
+  const response = await fetch('https://api.cobalt.tools/', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      url: url,
+      downloadMode: 'audio',
+      audioFormat: 'mp3',
+      audioBitrate: '128',
+      filenameStyle: 'basic'
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Cobalt API error:', response.status, errorText);
+    throw new Error('Audio extraction service unavailable. Please try again or download manually.');
+  }
+
+  const data = await response.json();
+  console.log('Cobalt response status:', data.status);
+  
+  if (data.status === 'error') {
+    const errorMsg = data.error?.code || data.text || 'Failed to extract audio';
+    console.error('Cobalt extraction error:', errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  // Handle tunnel/redirect responses - both contain the download URL
+  if (data.status === 'tunnel' || data.status === 'redirect' || data.status === 'stream') {
+    if (!data.url) {
+      throw new Error('No download URL received from extraction service');
+    }
+    return { 
+      audioUrl: data.url, 
+      filename: data.filename || 'audio.mp3' 
+    };
+  }
+
+  // Handle picker response (multiple options available)
+  if (data.status === 'picker' && data.picker && data.picker.length > 0) {
+    // Find audio option or use first available
+    const audioOption = data.picker.find((p: any) => p.type === 'audio') || data.picker[0];
+    if (audioOption?.url) {
+      return {
+        audioUrl: audioOption.url,
+        filename: audioOption.filename || 'audio.mp3'
+      };
+    }
+  }
+
+  console.error('Unexpected Cobalt response:', JSON.stringify(data));
+  throw new Error('Unexpected response from extraction service');
+}
+
 // Convert segments to SRT format
 function toSRT(segments: Array<{ start: number; end: number; text: string }>): string {
   return segments.map((seg, i) => {
@@ -112,65 +187,157 @@ serve(async (req) => {
     let mimeType = 'audio/webm';
     let fileName = 'audio.mp4';
 
-    // Handle YouTube URLs
+    // Handle YouTube/Social Media URLs - extract audio via Cobalt
     if (youtube_url) {
       const videoId = extractYouTubeVideoId(youtube_url);
-      if (!videoId) {
-        throw new Error('Invalid YouTube URL format');
-      }
-      
       console.log('YouTube video ID:', videoId);
       
-      return new Response(
-        JSON.stringify({ 
-          error: 'youtube_not_direct',
-          message: 'YouTube videos require downloading first. Please use a YouTube to MP3 converter and upload the audio file.',
-          video_id: videoId,
-          suggestion: 'Use the file upload option with the extracted audio'
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      try {
+        // Step 1: Get audio download URL from Cobalt
+        const { audioUrl, filename } = await extractSocialMediaAudio(youtube_url);
+        console.log('Audio URL obtained, downloading...');
+        
+        // Step 2: Download the audio file
+        const audioResponse = await fetch(audioUrl, {
+          headers: {
+            'Accept': 'audio/*',
+            'User-Agent': 'Mozilla/5.0 (compatible; VideoTranscriber/1.0)'
+          }
+        });
+        
+        if (!audioResponse.ok) {
+          throw new Error(`Failed to download audio: ${audioResponse.status}`);
         }
-      );
+        
+        const contentLength = audioResponse.headers.get('content-length');
+        if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
+          throw new Error(`Video audio is too large (${Math.round(parseInt(contentLength) / 1024 / 1024)}MB). Maximum is 25MB. Try a shorter video.`);
+        }
+        
+        const audioBuffer = await audioResponse.arrayBuffer();
+        if (audioBuffer.byteLength > MAX_FILE_SIZE) {
+          throw new Error('Audio file exceeds 25MB limit. Try a shorter video.');
+        }
+        
+        audioBlob = new Blob([audioBuffer], { type: 'audio/mp3' });
+        mimeType = 'audio/mp3';
+        fileName = filename || 'audio.mp3';
+        
+        console.log('YouTube audio downloaded, size:', audioBuffer.byteLength);
+        
+      } catch (extractError) {
+        // Fallback: Return helpful error if extraction fails
+        console.error('YouTube extraction failed:', extractError);
+        return new Response(
+          JSON.stringify({
+            error: 'youtube_extraction_failed',
+            message: extractError instanceof Error 
+              ? extractError.message 
+              : 'Could not extract audio from YouTube. Please download the audio manually and upload it.',
+            video_id: videoId,
+            suggestion: 'Use a YouTube to MP3 converter, then upload the file directly.',
+            fallback_urls: [
+              'https://cobalt.tools/',
+              'https://y2mate.com/',
+              'https://ytmp3.cc/'
+            ]
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
     }
-
-    // Handle direct video URL - download and process
-    if (video_url) {
-      console.log('Fetching video from URL:', video_url);
-      
-      const videoResponse = await fetch(video_url, {
-        headers: {
-          'Accept': 'audio/*, video/*',
+    // Handle direct video URL - check if it's social media first
+    else if (video_url) {
+      // Check if this is a social media URL that needs extraction
+      if (isSocialMediaUrl(video_url)) {
+        console.log('Social media URL detected, extracting audio...');
+        
+        try {
+          const { audioUrl, filename } = await extractSocialMediaAudio(video_url);
+          console.log('Audio URL obtained, downloading...');
+          
+          const audioResponse = await fetch(audioUrl, {
+            headers: {
+              'Accept': 'audio/*',
+              'User-Agent': 'Mozilla/5.0 (compatible; VideoTranscriber/1.0)'
+            }
+          });
+          
+          if (!audioResponse.ok) {
+            throw new Error(`Failed to download audio: ${audioResponse.status}`);
+          }
+          
+          const contentLength = audioResponse.headers.get('content-length');
+          if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
+            throw new Error(`Audio is too large (${Math.round(parseInt(contentLength) / 1024 / 1024)}MB). Maximum is 25MB.`);
+          }
+          
+          const audioBuffer = await audioResponse.arrayBuffer();
+          if (audioBuffer.byteLength > MAX_FILE_SIZE) {
+            throw new Error('Audio file exceeds 25MB limit.');
+          }
+          
+          audioBlob = new Blob([audioBuffer], { type: 'audio/mp3' });
+          mimeType = 'audio/mp3';
+          fileName = filename || 'audio.mp3';
+          
+          console.log('Social media audio downloaded, size:', audioBuffer.byteLength);
+          
+        } catch (extractError) {
+          console.error('Social media extraction failed:', extractError);
+          return new Response(
+            JSON.stringify({
+              error: 'extraction_failed',
+              message: extractError instanceof Error 
+                ? extractError.message 
+                : 'Could not extract audio. Please download manually and upload.',
+              suggestion: 'Use cobalt.tools to download the audio, then upload it here.',
+              fallback_urls: ['https://cobalt.tools/']
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
         }
-      });
-      
-      if (!videoResponse.ok) {
-        throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
+      } else {
+        // Direct video URL - download and process
+        console.log('Fetching video from URL:', video_url);
+        
+        const videoResponse = await fetch(video_url, {
+          headers: {
+            'Accept': 'audio/*, video/*',
+          }
+        });
+        
+        if (!videoResponse.ok) {
+          throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
+        }
+        
+        const contentType = videoResponse.headers.get('content-type') || 'video/mp4';
+        const contentLength = videoResponse.headers.get('content-length');
+        
+        if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
+          throw new Error(`File too large. Maximum size is 25MB for transcription. Your file is ${Math.round(parseInt(contentLength) / 1024 / 1024)}MB.`);
+        }
+        
+        const videoBuffer = await videoResponse.arrayBuffer();
+        
+        if (videoBuffer.byteLength > MAX_FILE_SIZE) {
+          throw new Error(`File too large. Maximum size is 25MB for transcription.`);
+        }
+        
+        audioBlob = new Blob([videoBuffer], { type: contentType });
+        mimeType = contentType;
+        
+        const extension = contentType.split('/')[1]?.split(';')[0] || 'mp4';
+        fileName = `audio.${extension}`;
+        
+        console.log('Video fetched, size:', videoBuffer.byteLength, 'type:', contentType);
       }
-      
-      const contentType = videoResponse.headers.get('content-type') || 'video/mp4';
-      const contentLength = videoResponse.headers.get('content-length');
-      
-      if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
-        throw new Error(`File too large. Maximum size is 25MB for transcription. Your file is ${Math.round(parseInt(contentLength) / 1024 / 1024)}MB.`);
-      }
-      
-      // Stream the response to avoid loading entire file in memory at once
-      const videoBuffer = await videoResponse.arrayBuffer();
-      
-      if (videoBuffer.byteLength > MAX_FILE_SIZE) {
-        throw new Error(`File too large. Maximum size is 25MB for transcription.`);
-      }
-      
-      audioBlob = new Blob([videoBuffer], { type: contentType });
-      mimeType = contentType;
-      
-      // Determine file extension
-      const extension = contentType.split('/')[1]?.split(';')[0] || 'mp4';
-      fileName = `audio.${extension}`;
-      
-      console.log('Video fetched, size:', videoBuffer.byteLength, 'type:', contentType);
     }
     // Handle base64 encoded audio
     else if (audio_base64) {

@@ -59,9 +59,14 @@ export function useVideoTranscriber() {
       }
 
       if (data.error) {
-        if (data.error === 'youtube_not_direct') {
-          toast.error('YouTube videos need to be downloaded first', {
-            description: data.message
+        // Handle extraction failures with fallback options
+        if (data.error === 'youtube_extraction_failed' || data.error === 'extraction_failed') {
+          toast.error('Audio extraction failed', {
+            description: data.message,
+            action: data.fallback_urls?.[0] ? {
+              label: 'Try Cobalt',
+              onClick: () => window.open(data.fallback_urls[0], '_blank')
+            } : undefined
           });
           setError(data.message);
           setStatus('error');
