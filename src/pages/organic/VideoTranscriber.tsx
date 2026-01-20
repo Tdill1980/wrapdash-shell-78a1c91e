@@ -144,8 +144,8 @@ export default function VideoTranscriber() {
                     className="text-sm"
                   />
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Youtube className="w-4 h-4 text-destructive" />
-                    <span>YouTube links require downloading audio first</span>
+                    <Youtube className="w-4 h-4 text-primary" />
+                    <span>YouTube, TikTok, Instagram & direct video URLs supported</span>
                   </div>
                   <Button 
                     type="submit" 
@@ -350,7 +350,7 @@ export default function VideoTranscriber() {
               <div className="text-sm">
                 <p className="font-medium mb-1">Pro Tips</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• For YouTube videos, download the audio first using a converter tool</li>
+                  <li>• Paste any YouTube, TikTok, or Instagram URL to auto-extract and transcribe</li>
                   <li>• Shorter clips (under 10 minutes) transcribe faster and more accurately</li>
                   <li>• Clear audio with minimal background noise gives the best results</li>
                   <li>• Use SRT/VTT exports to add captions directly to your videos</li>
