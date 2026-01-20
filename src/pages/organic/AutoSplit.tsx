@@ -20,8 +20,11 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  Download,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { downloadFromUrl, generateFilename } from "@/lib/downloadUtils";
 
 interface MicroReel {
   id: string;
@@ -281,6 +284,62 @@ export default function AutoSplit() {
     }
   };
 
+  const handleDownloadReel = (reel: MicroReel) => {
+    if (reel.rendered_url) {
+      downloadFromUrl(reel.rendered_url, generateFilename(`reel-${reel.id}`, "mp4"));
+    } else {
+      toast.error("Reel not rendered yet. Click 'Render' first.");
+    }
+  };
+
+  const handleDownloadAll = () => {
+    const completedReels = reels.filter(r => r.render_status === "complete" && r.rendered_url);
+    if (completedReels.length === 0) {
+      toast.error("No reels rendered yet. Click 'Render All' first.");
+      return;
+    }
+    
+    // Open each in new tab with slight delay to prevent popup blocking
+    completedReels.forEach((reel, index) => {
+      setTimeout(() => {
+        if (reel.rendered_url) {
+          window.open(reel.rendered_url, "_blank");
+        }
+      }, index * 500);
+    });
+    
+    toast.success(`Opening ${completedReels.length} reels for download`);
+  };
+
+  const handleScheduleReel = async (reel: MicroReel) => {
+    if (!reel.rendered_url) {
+      toast.error("Reel not rendered yet");
+      return;
+    }
+
+    try {
+      await supabase.from("content_queue").insert({
+        content_type: "reel",
+        status: "draft",
+        title: reel.title,
+        caption: reel.hook || "",
+        output_url: reel.rendered_url,
+        brand: "wpw",
+        channel: "organic",
+        mode: "auto",
+        ai_metadata: {
+          source: "auto-split",
+          virality_score: reel.virality_score,
+          overlay_suggestions: reel.overlay_suggestions,
+        },
+      });
+      toast.success(`"${reel.title}" added to scheduler!`);
+    } catch (err) {
+      console.error("Schedule error:", err);
+      toast.error("Failed to add to scheduler");
+    }
+  };
+
   const getStepLabel = () => {
     switch (processingStep) {
       case "uploading":
@@ -524,6 +583,30 @@ export default function AutoSplit() {
                         )}
                       </Button>
                     </div>
+                    
+                    {/* Download & Schedule row - only show when rendered */}
+                    {reel.render_status === "complete" && reel.rendered_url && (
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleDownloadReel(reel)}
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Download
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleScheduleReel(reel)}
+                        >
+                          <Calendar className="w-3 h-3 mr-1" />
+                          Schedule
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -531,30 +614,40 @@ export default function AutoSplit() {
 
             {/* Bulk Actions */}
             <Card className="border-primary/30">
-              <CardContent className="p-4 flex items-center justify-between">
+              <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="font-semibold">Render All Reels</h3>
+                  <h3 className="font-semibold">Bulk Actions</h3>
                   <p className="text-sm text-muted-foreground">
                     Export all {reels.length} micro-reels at once
                   </p>
                 </div>
-                <Button
-                  className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
-                  onClick={handleRenderAll}
-                  disabled={renderingIds.size > 0}
-                >
-                  {renderingIds.size > 0 ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Rendering...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 mr-2" />
-                      Render All ({reels.length})
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadAll}
+                    disabled={!reels.some(r => r.render_status === "complete")}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download All
+                  </Button>
+                  <Button
+                    className="bg-gradient-to-r from-[#405DE6] to-[#E1306C]"
+                    onClick={handleRenderAll}
+                    disabled={renderingIds.size > 0}
+                  >
+                    {renderingIds.size > 0 ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Rendering...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 mr-2" />
+                        Render All ({reels.length})
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </>
