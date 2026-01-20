@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Maximum file size: 25MB (OpenAI Whisper limit)
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
 // Extract YouTube video ID from various URL formats
 function extractYouTubeVideoId(url: string): string | null {
   const patterns = [
@@ -18,36 +21,6 @@ function extractYouTubeVideoId(url: string): string | null {
     if (match) return match[1];
   }
   return null;
-}
-
-// Process base64 in chunks to prevent memory issues
-function processBase64Chunks(base64String: string, chunkSize = 32768) {
-  const chunks: Uint8Array[] = [];
-  let position = 0;
-  
-  while (position < base64String.length) {
-    const chunk = base64String.slice(position, position + chunkSize);
-    const binaryChunk = atob(chunk);
-    const bytes = new Uint8Array(binaryChunk.length);
-    
-    for (let i = 0; i < binaryChunk.length; i++) {
-      bytes[i] = binaryChunk.charCodeAt(i);
-    }
-    
-    chunks.push(bytes);
-    position += chunkSize;
-  }
-
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  return result;
 }
 
 // Convert segments to SRT format
@@ -81,12 +54,43 @@ function toVTT(segments: Array<{ start: number; end: number; text: string }>): s
   return `WEBVTT\n\n${cues}`;
 }
 
+// Decode base64 and return size info
+function decodeBase64(base64String: string): { data: Blob; size: number; detectedMime: string | null } {
+  // Remove data URL prefix if present
+  let base64Data = base64String;
+  let detectedMime: string | null = null;
+  
+  if (base64String.startsWith('data:')) {
+    const mimeMatch = base64String.match(/^data:([^;]+);/);
+    if (mimeMatch) {
+      detectedMime = mimeMatch[1];
+    }
+    const commaIndex = base64String.indexOf(',');
+    if (commaIndex !== -1) {
+      base64Data = base64String.substring(commaIndex + 1);
+    }
+  }
+  
+  // Use Deno's built-in base64 decoding
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  // Create blob from the array buffer directly
+  const blob = new Blob([bytes.buffer as ArrayBuffer], { type: detectedMime || 'audio/webm' });
+  
+  return { data: blob, size: binaryString.length, detectedMime };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    const requestBody = await req.json();
     const { 
       youtube_url, 
       video_url,
@@ -94,20 +98,21 @@ serve(async (req) => {
       include_timestamps = true,
       output_format = 'json',
       language
-    } = await req.json();
+    } = requestBody;
     
     console.log('Video transcribe request:', { 
       youtube_url: youtube_url ? 'provided' : 'none',
       video_url: video_url ? 'provided' : 'none', 
-      audio_base64: audio_base64 ? 'provided' : 'none',
+      audio_base64: audio_base64 ? `provided (${Math.round((audio_base64?.length || 0) / 1024)}KB base64)` : 'none',
       include_timestamps,
       output_format 
     });
 
     let audioBlob: Blob;
     let mimeType = 'audio/webm';
+    let fileName = 'audio.mp4';
 
-    // Handle YouTube URLs - we'll use captions API as fallback or extract info
+    // Handle YouTube URLs
     if (youtube_url) {
       const videoId = extractYouTubeVideoId(youtube_url);
       if (!videoId) {
@@ -116,8 +121,6 @@ serve(async (req) => {
       
       console.log('YouTube video ID:', videoId);
       
-      // For YouTube, we need to inform the user to download and upload the audio
-      // Direct YouTube audio extraction requires additional infrastructure
       return new Response(
         JSON.stringify({ 
           error: 'youtube_not_direct',
@@ -135,25 +138,66 @@ serve(async (req) => {
     // Handle direct video URL - download and process
     if (video_url) {
       console.log('Fetching video from URL:', video_url);
-      const videoResponse = await fetch(video_url);
+      
+      const videoResponse = await fetch(video_url, {
+        headers: {
+          'Accept': 'audio/*, video/*',
+        }
+      });
+      
       if (!videoResponse.ok) {
         throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
       }
       
       const contentType = videoResponse.headers.get('content-type') || 'video/mp4';
+      const contentLength = videoResponse.headers.get('content-length');
+      
+      if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
+        throw new Error(`File too large. Maximum size is 25MB for transcription. Your file is ${Math.round(parseInt(contentLength) / 1024 / 1024)}MB.`);
+      }
+      
+      // Stream the response to avoid loading entire file in memory at once
       const videoBuffer = await videoResponse.arrayBuffer();
       
-      // For video files, we send them directly to Whisper (it can handle video)
+      if (videoBuffer.byteLength > MAX_FILE_SIZE) {
+        throw new Error(`File too large. Maximum size is 25MB for transcription.`);
+      }
+      
       audioBlob = new Blob([videoBuffer], { type: contentType });
       mimeType = contentType;
+      
+      // Determine file extension
+      const extension = contentType.split('/')[1]?.split(';')[0] || 'mp4';
+      fileName = `audio.${extension}`;
+      
       console.log('Video fetched, size:', videoBuffer.byteLength, 'type:', contentType);
     }
     // Handle base64 encoded audio
     else if (audio_base64) {
       console.log('Processing base64 audio...');
-      const binaryAudio = processBase64Chunks(audio_base64);
-      audioBlob = new Blob([binaryAudio], { type: 'audio/webm' });
-      console.log('Audio blob created, size:', binaryAudio.length);
+      
+      // Check approximate decoded size (base64 is ~33% larger than binary)
+      const estimatedSize = Math.floor(audio_base64.length * 0.75);
+      if (estimatedSize > MAX_FILE_SIZE) {
+        throw new Error(`File too large. Maximum size is 25MB for transcription. Your file is approximately ${Math.round(estimatedSize / 1024 / 1024)}MB.`);
+      }
+      
+      // Decode base64
+      const decoded = decodeBase64(audio_base64);
+      
+      if (decoded.size > MAX_FILE_SIZE) {
+        throw new Error(`File too large. Maximum size is 25MB for transcription.`);
+      }
+      
+      // Use detected mime type or default
+      mimeType = decoded.detectedMime || 'audio/webm';
+      audioBlob = decoded.data;
+      
+      // Determine file extension
+      const extension = mimeType.split('/')[1]?.split(';')[0] || 'mp4';
+      fileName = `audio.${extension}`;
+      
+      console.log('Audio blob created, size:', decoded.size, 'type:', mimeType);
     }
     else {
       throw new Error('No video source provided. Please provide youtube_url, video_url, or audio_base64');
@@ -161,7 +205,7 @@ serve(async (req) => {
 
     // Prepare form data for OpenAI Whisper
     const formData = new FormData();
-    formData.append('file', audioBlob, `audio.${mimeType.split('/')[1] || 'mp4'}`);
+    formData.append('file', audioBlob, fileName);
     formData.append('model', 'whisper-1');
     
     // Request verbose JSON for timestamps
@@ -229,7 +273,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
-        details: 'Failed to transcribe video. Please try again or use a different video format.'
+        details: 'Failed to transcribe video. Please try again with a smaller file (max 25MB).'
       }),
       {
         status: 500,
