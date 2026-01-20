@@ -76,6 +76,7 @@ import AutoSplit from "./pages/organic/AutoSplit";
 import StaticCreator from "./pages/organic/StaticCreator";
 import Atomizer from "./pages/organic/Atomizer";
 import YouTubeEditor from "./pages/organic/YouTubeEditor";
+import VideoTranscriber from "./pages/organic/VideoTranscriber";
 import ReelVault from "./pages/organic/ReelVault";
 import MightyEdit from "./pages/MightyEdit";
 import MyProducts from "./pages/settings/MyProducts";
@@ -172,6 +173,7 @@ const App = () => (
             <Route path="/organic/reel-vault" element={<ReelVault />} />
             <Route path="/organic/tag-manager" element={<TagManager />} />
             <Route path="/organic/youtube-editor" element={<YouTubeEditor />} />
+            <Route path="/organic/transcriber" element={<VideoTranscriber />} />
             <Route path="/bulk-variations" element={<BulkVariationReview />} />
             <Route path="/ad-vault" element={<AdVault />} />
             <Route path="/paid-ads-performance" element={<PaidAdsPerformance />} />
