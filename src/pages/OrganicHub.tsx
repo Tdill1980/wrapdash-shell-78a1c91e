@@ -16,6 +16,7 @@ import {
   Atom,
   Youtube,
   Loader2,
+  Mic,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,15 @@ export default function OrganicHub() {
       path: "/organic/youtube-editor",
       gradient: "from-[#CC0000] to-[#FF4444]",
       badge: "Pro",
+    },
+    {
+      id: "video_transcriber",
+      label: "Video Transcriber",
+      description: "Transcribe YouTube videos and short-form reels into text with timestamps.",
+      icon: <Mic className="w-6 h-6" />,
+      path: "/organic/transcriber",
+      gradient: "from-[#9333EA] to-[#EC4899]",
+      badge: "New",
     },
   ];
 
