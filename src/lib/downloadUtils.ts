@@ -1,4 +1,6 @@
 import { toast } from "sonner";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 /**
  * Download a file from URL - opens in new tab for video/large files
@@ -102,4 +104,97 @@ export function generateFilename(prefix: string, extension: string): string {
   const timestamp = new Date().toISOString().slice(0, 10);
   const random = Math.random().toString(36).slice(2, 6);
   return `${prefix}-${timestamp}-${random}.${extension}`;
+}
+
+// ============= Batch ZIP Export =============
+
+export interface DownloadItem {
+  url: string;
+  filename: string;
+  folder?: string; // e.g., "2025-01-20/WrapDash/instagram"
+}
+
+/**
+ * Download multiple files as a ZIP archive
+ * Organizes files into folders based on the folder property
+ */
+export async function downloadAsZip(
+  items: DownloadItem[],
+  zipFilename: string,
+  onProgress?: (completed: number, total: number) => void
+): Promise<void> {
+  if (items.length === 0) {
+    toast.error("No files to download");
+    return;
+  }
+
+  const zip = new JSZip();
+  let completed = 0;
+  let failed = 0;
+
+  // Fetch all files and add to ZIP
+  const promises = items.map(async (item) => {
+    try {
+      const response = await fetch(item.url);
+      if (!response.ok) throw new Error(`Failed to fetch ${item.url}`);
+
+      const blob = await response.blob();
+      const path = item.folder
+        ? `${item.folder}/${item.filename}`
+        : item.filename;
+
+      zip.file(path, blob);
+      completed++;
+      onProgress?.(completed, items.length);
+    } catch (error) {
+      console.error(`Failed to add ${item.filename}:`, error);
+      failed++;
+    }
+  });
+
+  await Promise.all(promises);
+
+  if (completed === 0) {
+    toast.error("Failed to download any files");
+    return;
+  }
+
+  // Generate and download ZIP
+  const content = await zip.generateAsync({ 
+    type: "blob",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 }
+  });
+  
+  saveAs(content, zipFilename);
+
+  if (failed > 0) {
+    toast.warning(`Downloaded ${completed} files, ${failed} failed`);
+  } else {
+    toast.success(`Downloaded ${completed} files!`);
+  }
+}
+
+// ============= Helper Functions for ZIP =============
+
+/**
+ * Sanitize folder name for filesystem
+ */
+export function sanitizeFolderName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9-_ ]/g, "").trim() || "Unknown";
+}
+
+/**
+ * Sanitize filename for filesystem
+ */
+export function sanitizeFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9-_ ]/g, "_").slice(0, 50);
+}
+
+/**
+ * Extract file extension from URL
+ */
+export function getExtensionFromUrl(url: string): string {
+  const match = url.match(/\.(mp4|mov|webm|jpg|jpeg|png|gif|webp)(\?|$)/i);
+  return match ? `.${match[1].toLowerCase()}` : ".mp4";
 }
