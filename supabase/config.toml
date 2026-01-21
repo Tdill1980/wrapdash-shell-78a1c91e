@@ -365,3 +365,6 @@ verify_jwt = false
 
 [functions.ai-generate-static]
 verify_jwt = false
+
+[functions.ai-boost-copy]
+verify_jwt = false

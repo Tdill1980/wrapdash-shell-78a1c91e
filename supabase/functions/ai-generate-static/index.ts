@@ -5,6 +5,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ExtractedStyle {
+  font_headline?: string;
+  font_body?: string;
+  primary_text_color?: string;
+  accent_color?: string;
+  background_style?: string;
+  text_position?: string;
+  text_animation?: string;
+  layout?: string;
+}
+
 interface StaticRequest {
   template: string;
   headline: string;
@@ -13,7 +24,14 @@ interface StaticRequest {
   brand?: string;
   platform?: string;
   contentPurpose?: string;
-  slideCount?: number; // For carousels
+  slideCount?: number;
+  // NEW: Style reference from uploaded example
+  styleReference?: {
+    imageUrl: string;
+    extractedStyle: ExtractedStyle;
+  };
+  // NEW: Wrapped vehicle photo to feature
+  wrappedVehicleUrl?: string;
 }
 
 serve(async (req) => {
@@ -23,7 +41,10 @@ serve(async (req) => {
 
   try {
     const body: StaticRequest = await req.json();
-    const { template, headline, bodyText, ctaText, brand, platform, contentPurpose, slideCount } = body;
+    const { 
+      template, headline, bodyText, ctaText, brand, platform, contentPurpose, slideCount,
+      styleReference, wrappedVehicleUrl 
+    } = body;
 
     if (!headline) {
       return new Response(
@@ -37,13 +58,36 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log(`Generating static content: template=${template}, headline=${headline}`);
+    console.log(`Generating static content: template=${template}, headline=${headline}, hasStyleRef=${!!styleReference}, hasVehicle=${!!wrappedVehicleUrl}`);
 
     // For carousels, we generate multiple slides
     const isCarousel = slideCount && slideCount > 1;
     
+    // Build style instructions based on reference
+    const styleInstructions = styleReference?.extractedStyle ? `
+STYLE REFERENCE (MATCH THIS EXACTLY):
+- Headline Font: ${styleReference.extractedStyle.font_headline || "Bold Sans-Serif"}
+- Body Font: ${styleReference.extractedStyle.font_body || "Clean Sans-Serif"}
+- Primary Text Color: ${styleReference.extractedStyle.primary_text_color || "#FFFFFF"}
+- Accent Color: ${styleReference.extractedStyle.accent_color || "#FF6B35"}
+- Background Style: ${styleReference.extractedStyle.background_style || "Dark gradient"}
+- Text Position: ${styleReference.extractedStyle.text_position || "Center"}
+- Layout: ${styleReference.extractedStyle.layout || "Centered with visual hierarchy"}
+
+CRITICAL: Match this style reference exactly - fonts, colors, positioning, and overall aesthetic.
+` : "";
+
+    const vehicleInstructions = wrappedVehicleUrl ? `
+VEHICLE PHOTO TO FEATURE:
+This design should prominently feature the wrapped vehicle from this photo: ${wrappedVehicleUrl}
+The vehicle wrap is the star - make sure it's visible and impressive.
+` : "";
+
     const systemPrompt = `You are an expert social media graphic designer specializing in ${brand || "vehicle wrap"} industry content.
 Create ${isCarousel ? `a ${slideCount}-slide carousel` : "a single static post"} design specification that is visually compelling and optimized for ${platform || "Instagram"}.
+
+${styleInstructions}
+${vehicleInstructions}
 
 Return a JSON object with:
 {
@@ -89,6 +133,8 @@ ${ctaText ? `CTA: ${ctaText}` : ""}
 Brand: ${brand || "WPW"}
 Platform: ${platform || "Instagram"}
 Purpose: ${contentPurpose || "organic"}
+${styleReference ? "IMPORTANT: Match the uploaded style reference exactly!" : ""}
+${wrappedVehicleUrl ? "IMPORTANT: Feature the uploaded wrapped vehicle prominently!" : ""}
 
 Make it visually striking and optimized for engagement.`;
 
@@ -160,14 +206,19 @@ Make it visually striking and optimized for engagement.`;
       };
     }
 
-    // Now generate actual image using Gemini image generation
+    // Build enhanced image prompt with style reference and vehicle
+    const styleColors = styleReference?.extractedStyle 
+      ? `Use these exact colors: primary=${styleReference.extractedStyle.primary_text_color || "#FFFFFF"}, accent=${styleReference.extractedStyle.accent_color || "#FF6B35"}`
+      : "Colors: Dark professional theme with orange/red accents";
+
     const imagePrompt = `Create a professional social media graphic for a vehicle wrap business:
 - Style: ${template}
 - Headline text: "${headline}"
 ${bodyText ? `- Subtext: "${bodyText}"` : ""}
 ${ctaText ? `- Call to action: "${ctaText}"` : ""}
 - Brand: ${brand || "WPW"}
-- Colors: Dark professional theme with orange/red accents
+- ${styleColors}
+${wrappedVehicleUrl ? `- IMPORTANT: Feature this wrapped vehicle prominently in the design (reference: ${wrappedVehicleUrl})` : ""}
 - Make it bold, modern, and suitable for Instagram
 - 1:1 square aspect ratio
 - High contrast text that's easy to read

@@ -27,6 +27,8 @@ import { ContentMetadataPanel, useContentMetadata } from "@/components/content/C
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { downloadToDevice, copyToClipboard, generateFilename } from "@/lib/downloadUtils";
+import { StyleReferenceUpload, type ExtractedStyle } from "@/components/static-creator/StyleReferenceUpload";
+import { CopyBoostModal } from "@/components/static-creator/CopyBoostModal";
 
 const TEMPLATES = [
   { id: "before-after", name: "Before/After", icon: "↔️" },
@@ -64,6 +66,13 @@ export default function StaticCreator() {
   const [generatedHashtags, setGeneratedHashtags] = useState<string[]>([]);
   const [carouselSlides, setCarouselSlides] = useState<string[]>([]);
   const [captionCopied, setCaptionCopied] = useState(false);
+  
+  // NEW: AI Copy Boost & Upload States
+  const [copyBoostOpen, setCopyBoostOpen] = useState(false);
+  const [extractedStyle, setExtractedStyle] = useState<ExtractedStyle | null>(null);
+  const [styleReferenceUrl, setStyleReferenceUrl] = useState<string | null>(null);
+  const [wrappedVehicleUrl, setWrappedVehicleUrl] = useState<string | null>(null);
+  const [isBoosted, setIsBoosted] = useState(false);
   const handleGenerateSingle = async () => {
     if (!headline.trim()) {
       toast.error("Please enter a headline");
@@ -72,7 +81,7 @@ export default function StaticCreator() {
 
     setGenerating(true);
     try {
-      // Call AI to generate static post
+      // Call AI to generate static post with enhanced options
       const { data, error } = await supabase.functions.invoke("ai-generate-static", {
         body: {
           template: selectedTemplate || "product-feature",
@@ -82,6 +91,12 @@ export default function StaticCreator() {
           brand: contentMetadata.brand,
           platform: contentMetadata.platform,
           contentPurpose: contentMetadata.contentPurpose,
+          // NEW: Pass style reference and vehicle photo if available
+          styleReference: extractedStyle ? {
+            imageUrl: styleReferenceUrl,
+            extractedStyle,
+          } : undefined,
+          wrappedVehicleUrl,
         },
       });
 
@@ -264,12 +279,34 @@ export default function StaticCreator() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Headline *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Headline *</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs gap-1"
+                        onClick={() => setCopyBoostOpen(true)}
+                        disabled={!headline.trim()}
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        AI Boost
+                      </Button>
+                    </div>
                     <Input 
                       placeholder="Main headline for your post..."
                       value={headline}
-                      onChange={(e) => setHeadline(e.target.value)}
+                      onChange={(e) => {
+                        setHeadline(e.target.value);
+                        setIsBoosted(false);
+                      }}
                     />
+                    {isBoosted && (
+                      <Badge variant="secondary" className="text-xs gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        AI Enhanced
+                      </Badge>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Body Text</Label>
@@ -286,6 +323,23 @@ export default function StaticCreator() {
                       placeholder="e.g., Shop Now, Learn More..."
                       value={ctaText}
                       onChange={(e) => setCtaText(e.target.value)}
+                    />
+                  </div>
+
+                  {/* NEW: Upload Sections */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <StyleReferenceUpload
+                      type="style"
+                      onStyleExtracted={(style, imageUrl) => {
+                        setExtractedStyle(style);
+                        setStyleReferenceUrl(imageUrl);
+                      }}
+                    />
+                    <StyleReferenceUpload
+                      type="vehicle"
+                      onVehicleUploaded={(imageUrl) => {
+                        setWrappedVehicleUrl(imageUrl);
+                      }}
                     />
                   </div>
 
@@ -471,6 +525,22 @@ export default function StaticCreator() {
           />
         </div>
       </div>
+
+      {/* AI Copy Boost Modal */}
+      <CopyBoostModal
+        open={copyBoostOpen}
+        onOpenChange={setCopyBoostOpen}
+        rawHeadline={headline}
+        rawBody={bodyText}
+        rawCta={ctaText}
+        onBoosted={(result) => {
+          setHeadline(result.headline);
+          if (result.primary_text) setBodyText(result.primary_text);
+          if (result.cta) setCtaText(result.cta);
+          setIsBoosted(true);
+          toast.success("Copy enhanced! Ready to generate.");
+        }}
+      />
     </div>
   );
 }
