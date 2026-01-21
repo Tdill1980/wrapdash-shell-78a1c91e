@@ -1137,6 +1137,7 @@ export type Database = {
           latest_render_job_id: string | null
           metadata: Json | null
           organization_id: string | null
+          output_payload: Json | null
           output_url: string | null
           platform: string | null
           source_id: string | null
@@ -1164,6 +1165,7 @@ export type Database = {
           latest_render_job_id?: string | null
           metadata?: Json | null
           organization_id?: string | null
+          output_payload?: Json | null
           output_url?: string | null
           platform?: string | null
           source_id?: string | null
@@ -1191,6 +1193,7 @@ export type Database = {
           latest_render_job_id?: string | null
           metadata?: Json | null
           organization_id?: string | null
+          output_payload?: Json | null
           output_url?: string | null
           platform?: string | null
           source_id?: string | null
