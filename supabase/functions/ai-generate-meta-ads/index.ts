@@ -104,8 +104,33 @@ Use language that converts wrap customers.`;
       throw new Error("Failed to parse AI response as JSON");
     }
 
+    // Build structured output_payload for multi-platform export
+    const outputPayload = {
+      meta: {
+        short_texts: parsed.short_texts || [],
+        long_texts: parsed.long_texts || [],
+        headlines: parsed.headlines || [],
+        descriptions: parsed.descriptions || [],
+        cta_button: parsed.cta || "LEARN_MORE",
+        angles: parsed.angles || [],
+        video_url: media_url || null,
+        placement: placement,
+      },
+      csv: {
+        headers: ["Primary Text", "Headline", "Description", "CTA", "Media URL"],
+        rows: (parsed.angles || []).map((angle: any) => ({
+          "Primary Text": angle.primary_text || "",
+          "Headline": angle.headline || "",
+          "Description": parsed.descriptions?.[0] || "",
+          "CTA": parsed.cta || "LEARN_MORE",
+          "Media URL": media_url || "",
+        })),
+      },
+      generated_at: new Date().toISOString(),
+    };
+
     return new Response(
-      JSON.stringify({ success: true, output: parsed }),
+      JSON.stringify({ success: true, output: parsed, output_payload: outputPayload }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: unknown) {

@@ -544,12 +544,43 @@ serve(async (req) => {
     if (aiCreativeId) {
       console.log("[render-reel] Updating ai_creative:", aiCreativeId);
       
-      // Update creative status and output
+      // Build output_payload for multi-platform exports
+      const outputPayload = {
+        reel: {
+          video_url: finalUrl,
+          format: normalizedBlueprint.format || "reel",
+          platform: normalizedBlueprint.platform || "instagram",
+          aspect_ratio: normalizedBlueprint.aspectRatio || "9:16",
+          caption: normalizedBlueprint.caption || "",
+          scenes_count: normalizedBlueprint.scenes?.length || 0,
+          duration: timeline.duration,
+        },
+        meta: {
+          video_url: finalUrl,
+          headline: normalizedBlueprint.endCard?.text || "",
+          cta_button: normalizedBlueprint.endCard?.cta || "LEARN_MORE",
+          creative_type: "VIDEO",
+        },
+        csv: {
+          row: {
+            "Video URL": finalUrl,
+            "Format": normalizedBlueprint.format || "reel",
+            "Platform": normalizedBlueprint.platform || "instagram",
+            "Duration": String(timeline.duration),
+          }
+        },
+        rendered_at: new Date().toISOString(),
+        renderer: "creatomate",
+        render_id: renderId,
+      };
+
+      // Update creative status, output, and payload
       await supabase
         .from("ai_creatives")
         .update({
           status: "complete",
           output_url: finalUrl,
+          output_payload: outputPayload,
           updated_at: new Date().toISOString()
         })
         .eq("id", aiCreativeId);
@@ -565,7 +596,7 @@ serve(async (req) => {
         .from("creative_tag_map")
         .insert({ creative_id: aiCreativeId, tag_slug: "status:complete" });
       
-      console.log("[render-reel] ✓ ai_creative updated with status:complete");
+      console.log("[render-reel] ✓ ai_creative updated with output_payload and status:complete");
     }
 
     console.log("[render-reel] DB save verified:", JSON.stringify(saved));

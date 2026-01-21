@@ -106,12 +106,34 @@ Deno.serve(async (req) => {
         .single();
 
       if (veq?.ai_creative_id) {
+        // Build output_payload for multi-platform exports
+        const outputPayload = {
+          reel: {
+            video_url: body.render_url,
+            platform: body.platform || "instagram",
+            content_type: body.content_type || "reel",
+          },
+          meta: {
+            video_url: body.render_url,
+            creative_type: "VIDEO",
+          },
+          csv: {
+            row: {
+              "Video URL": body.render_url,
+              "Platform": body.platform || "",
+              "Content Type": body.content_type || "",
+            }
+          },
+          rendered_at: new Date().toISOString(),
+        };
+
         await supabaseAdmin.from("ai_creatives").update({
           status: "complete",
           output_url: body.render_url,
           thumbnail_url: body.thumbnail_url ?? null,
+          output_payload: outputPayload,
         }).eq("id", veq.ai_creative_id);
-        console.log("[mightyedit-render-callback] Updated ai_creatives:", veq.ai_creative_id);
+        console.log("[mightyedit-render-callback] Updated ai_creatives with output_payload:", veq.ai_creative_id);
       }
     }
 
