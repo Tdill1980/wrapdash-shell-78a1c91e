@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Video, Image, Play, ExternalLink, RefreshCw, Download, Loader2, CheckSquare, Square, X } from "lucide-react";
+import { ArrowLeft, Video, Image, Play, ExternalLink, RefreshCw, Download, Loader2, CheckSquare, X, FileJson } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { listCreatives, Creative, FormatSlug, SourceType, ToolSlug, CreativeStatus } from "@/lib/creativeVault";
 import { downloadAsZip, DownloadItem, sanitizeFolderName, sanitizeFilename, getExtensionFromUrl } from "@/lib/downloadUtils";
+import { outputPayloadToCSV, hasMetaPayload, hasReelPayload } from "@/lib/types/output-payload";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -86,7 +87,7 @@ export default function ReelVault() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // Batch export handler
+  // Batch export handler - now uses output_payload for deterministic exports
   const handleBatchExport = async () => {
     const selected = items.filter(c => selectedIds.has(c.id) && c.output_url);
     if (selected.length === 0) {
@@ -99,7 +100,9 @@ export default function ReelVault() {
 
     try {
       // Build download items with folder structure: date/brand/platform
-      const downloadItems: DownloadItem[] = selected.map(creative => {
+      const downloadItems: DownloadItem[] = [];
+
+      for (const creative of selected) {
         // Date folder: YYYY-MM-DD
         const date = new Date(creative.created_at).toISOString().slice(0, 10);
 
@@ -114,14 +117,43 @@ export default function ReelVault() {
 
         // Filename from title or ID
         const ext = getExtensionFromUrl(creative.output_url || "");
-        const filename = sanitizeFilename(creative.title || creative.id) + ext;
+        const baseName = sanitizeFilename(creative.title || creative.id);
 
-        return {
+        // Add video file
+        downloadItems.push({
           url: creative.output_url!,
-          filename,
+          filename: baseName + ext,
           folder,
-        };
-      });
+        });
+
+        // If output_payload exists, add JSON export
+        if (creative.output_payload) {
+          const jsonBlob = new Blob(
+            [JSON.stringify(creative.output_payload, null, 2)],
+            { type: "application/json" }
+          );
+          const jsonUrl = URL.createObjectURL(jsonBlob);
+          downloadItems.push({
+            url: jsonUrl,
+            filename: baseName + "-metadata.json",
+            folder,
+          });
+        }
+
+        // If output_payload has CSV data, add CSV export
+        if (creative.output_payload?.csv) {
+          const csvContent = outputPayloadToCSV(creative.output_payload);
+          if (csvContent) {
+            const csvBlob = new Blob([csvContent], { type: "text/csv" });
+            const csvUrl = URL.createObjectURL(csvBlob);
+            downloadItems.push({
+              url: csvUrl,
+              filename: baseName + "-export.csv",
+              folder,
+            });
+          }
+        }
+      }
 
       await downloadAsZip(
         downloadItems,
@@ -136,6 +168,26 @@ export default function ReelVault() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // Single item JSON download
+  const handleDownloadJSON = (creative: Creative) => {
+    if (!creative.output_payload) {
+      toast.error("No export data available");
+      return;
+    }
+
+    const blob = new Blob(
+      [JSON.stringify(creative.output_payload, null, 2)],
+      { type: "application/json" }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${sanitizeFilename(creative.title || creative.id)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("JSON downloaded!");
   };
 
   return (
@@ -210,6 +262,7 @@ export default function ReelVault() {
             {items.map((creative) => {
               const isSelectable = creative.status === "complete" && creative.output_url;
               const isSelected = selectedIds.has(creative.id);
+              const hasPayload = !!creative.output_payload;
               
               return (
                 <Card
@@ -277,6 +330,17 @@ export default function ReelVault() {
                     >
                       {creative.status}
                     </Badge>
+
+                    {/* Payload indicator */}
+                    {hasPayload && (
+                      <Badge
+                        variant="outline"
+                        className="absolute bottom-2 right-2 text-xs bg-background/90"
+                      >
+                        <FileJson className="h-3 w-3 mr-1" />
+                        Export Ready
+                      </Badge>
+                    )}
                   </div>
 
                   <CardContent className="p-3">
@@ -308,18 +372,32 @@ export default function ReelVault() {
                     </p>
 
                     {/* Actions */}
-                    {creative.output_url && (
-                      <a
-                        href={creative.output_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Watch
-                      </a>
-                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      {creative.output_url && (
+                        <a
+                          href={creative.output_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Watch
+                        </a>
+                      )}
+                      {hasPayload && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadJSON(creative);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <FileJson className="h-3 w-3" />
+                          JSON
+                        </button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               );

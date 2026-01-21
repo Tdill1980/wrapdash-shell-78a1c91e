@@ -9,7 +9,10 @@ export interface MetaAdPayload {
   headline?: string;
   primary_text?: string;
   description?: string;
+  cta?: string;
   cta_button?: "LEARN_MORE" | "SHOP_NOW" | "BOOK_NOW" | "GET_QUOTE" | "CONTACT_US" | "SIGN_UP";
+  ad_objective?: string;
+  creative_type?: string;
   hashtags?: string[];
   video_url?: string;
   image_url?: string;

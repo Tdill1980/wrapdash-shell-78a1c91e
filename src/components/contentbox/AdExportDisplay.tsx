@@ -1,35 +1,64 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, FileJson, FileSpreadsheet, CheckCircle, Megaphone } from "lucide-react";
+import { Copy, FileJson, FileSpreadsheet, CheckCircle, Megaphone } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MetaAdCreative, exportAsCSV, exportAsJSON } from "@/lib/ads-transformer";
+import { OutputPayload, hasMetaPayload, outputPayloadToCSV } from "@/lib/types/output-payload";
 
 interface AdExportDisplayProps {
-  adCreative: MetaAdCreative | null;
+  /** Primary source: read from output_payload */
+  outputPayload?: OutputPayload | null;
+  /** Legacy fallback: will be deprecated */
+  adCreative?: {
+    headline: string;
+    primary_text: string;
+    description: string;
+    cta_button: string;
+    ad_objective: string;
+    creative_type: string;
+    hashtags: string[];
+    video_url?: string;
+  } | null;
   onExportJSON?: () => void;
   onExportCSV?: () => void;
 }
 
 export function AdExportDisplay({
-  adCreative,
+  outputPayload,
+  adCreative: legacyAdCreative,
   onExportJSON,
   onExportCSV,
 }: AdExportDisplayProps) {
   const [copied, setCopied] = useState(false);
 
+  // Prefer output_payload.meta, fallback to legacy prop
+  const adCreative = hasMetaPayload(outputPayload)
+    ? {
+        headline: outputPayload.meta.headline || "",
+        primary_text: outputPayload.meta.primary_text || "",
+        description: outputPayload.meta.description || "",
+        cta_button: outputPayload.meta.cta || outputPayload.meta.cta_button || "LEARN_MORE",
+        ad_objective: outputPayload.meta.ad_objective || "CONVERSIONS",
+        creative_type: outputPayload.meta.creative_type || "video",
+        hashtags: outputPayload.meta.hashtags || [],
+        video_url: outputPayload.meta.video_url,
+      }
+    : legacyAdCreative;
+
   if (!adCreative) return null;
 
   const handleCopyJSON = () => {
-    navigator.clipboard.writeText(JSON.stringify(adCreative, null, 2));
+    const exportData = hasMetaPayload(outputPayload) ? outputPayload.meta : adCreative;
+    navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
     setCopied(true);
     toast.success("Ad creative copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadJSON = () => {
-    const blob = new Blob([JSON.stringify(adCreative, null, 2)], { type: "application/json" });
+    const exportData = hasMetaPayload(outputPayload) ? outputPayload.meta : adCreative;
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -40,11 +69,19 @@ export function AdExportDisplay({
   };
 
   const handleDownloadCSV = () => {
-    const csvContent = [
-      "Primary Text,Headline,Description,CTA,Video URL,Hashtags",
-      `"${adCreative.primary_text.replace(/"/g, '""')}","${adCreative.headline}","${adCreative.description}","${adCreative.cta_button}","${adCreative.video_url || ""}","${adCreative.hashtags.join(" ")}"`,
-    ].join("\n");
-    
+    let csvContent: string;
+
+    // Prefer output_payload.csv if available
+    if (outputPayload?.csv) {
+      csvContent = outputPayloadToCSV(outputPayload);
+    } else {
+      // Legacy fallback
+      csvContent = [
+        "Primary Text,Headline,Description,CTA,Video URL,Hashtags",
+        `"${adCreative.primary_text.replace(/"/g, '""')}","${adCreative.headline}","${adCreative.description}","${adCreative.cta_button}","${adCreative.video_url || ""}","${adCreative.hashtags.join(" ")}"`,
+      ].join("\n");
+    }
+
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -119,7 +156,7 @@ export function AdExportDisplay({
             View Raw JSON
           </summary>
           <pre className="text-xs bg-muted/50 p-2 rounded mt-2 max-h-32 overflow-auto">
-            {JSON.stringify(adCreative, null, 2)}
+            {JSON.stringify(hasMetaPayload(outputPayload) ? outputPayload.meta : adCreative, null, 2)}
           </pre>
         </details>
 
