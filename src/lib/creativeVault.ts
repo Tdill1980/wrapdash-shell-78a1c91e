@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-
+import type { OutputPayload } from "@/lib/types/output-payload";
 export type SourceType =
   | "mighty_task"
   | "content_calendar"
@@ -58,6 +58,7 @@ export interface Creative {
   latest_render_job_id: string | null;
   thumbnail_url: string | null;
   output_url: string | null;
+  output_payload: OutputPayload | null;
   created_by: string | null;
   created_by_agent: string | null;
   organization_id: string | null;
@@ -196,17 +197,28 @@ export async function updateCreative(
     status: CreativeStatus;
     thumbnail_url: string;
     output_url: string;
+    output_payload: OutputPayload;
     latest_render_job_id: string;
     blueprint: Json;
     metadata: Json;
   }>
 ): Promise<void> {
+  // Extract output_payload and cast separately for Supabase compatibility
+  const { output_payload, ...rest } = patch;
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: any = {
+    ...rest,
+    updated_at: new Date().toISOString()
+  };
+  
+  if (output_payload !== undefined) {
+    updateData.output_payload = output_payload;
+  }
+
   const { error } = await supabase
     .from("ai_creatives")
-    .update({
-      ...patch,
-      updated_at: new Date().toISOString()
-    })
+    .update(updateData)
     .eq("id", creativeId);
 
   if (error) throw error;
