@@ -368,3 +368,6 @@ verify_jwt = false
 
 [functions.ai-boost-copy]
 verify_jwt = false
+
+[functions.ai-generate-carousel-topic]
+verify_jwt = false

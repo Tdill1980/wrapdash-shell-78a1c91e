@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { downloadToDevice, copyToClipboard, generateFilename } from "@/lib/downloadUtils";
 import { StyleReferenceUpload, type ExtractedStyle } from "@/components/static-creator/StyleReferenceUpload";
 import { CopyBoostModal } from "@/components/static-creator/CopyBoostModal";
+import { CarouselTopicGenerator } from "@/components/static-creator/CarouselTopicGenerator";
 
 const TEMPLATES = [
   { id: "before-after", name: "Before/After", icon: "↔️" },
@@ -473,9 +474,32 @@ export default function StaticCreator() {
                     Build a multi-slide carousel with cohesive design. AI will help you structure the content flow.
                   </p>
 
+                  {/* AI Topic Generator Button */}
+                  <div className="flex justify-center">
+                    <CarouselTopicGenerator
+                      brand={contentMetadata.brand}
+                      onTopicGenerated={(topic) => {
+                        setHeadline(topic.title);
+                        // Convert slides to body text (one per line)
+                        const slidePoints = topic.slides
+                          .map((s, i) => `${i + 1}. ${s.headline}: ${s.body}`)
+                          .join("\n\n");
+                        setBodyText(slidePoints);
+                        if (topic.cta) setCtaText(topic.cta);
+                      }}
+                    />
+                  </div>
+
                   <div className="max-w-md mx-auto space-y-4 text-left">
                     <div className="space-y-2">
-                      <Label>Carousel Topic *</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Carousel Topic *</Label>
+                        {headline && (
+                          <Badge variant="secondary" className="text-xs">
+                            AI Generated
+                          </Badge>
+                        )}
+                      </div>
                       <Input 
                         placeholder="What's your carousel about?"
                         value={headline}
@@ -489,6 +513,14 @@ export default function StaticCreator() {
                         value={bodyText}
                         onChange={(e) => setBodyText(e.target.value)}
                         className="min-h-[120px]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>CTA Text</Label>
+                      <Input 
+                        placeholder="e.g., Get Your Quote Today"
+                        value={ctaText}
+                        onChange={(e) => setCtaText(e.target.value)}
                       />
                     </div>
                   </div>
