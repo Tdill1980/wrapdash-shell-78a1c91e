@@ -179,6 +179,9 @@ Keep it concise (2-3 short paragraphs max). Do NOT include the subject line, jus
 
     setIsSending(true);
     try {
+      // Get current user for approved_by field
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase.functions.invoke('send-admin-reply', {
         body: {
           conversation_id: conversation.id,
@@ -188,6 +191,8 @@ Keep it concise (2-3 short paragraphs max). Do NOT include the subject line, jus
           body: body,
           quote_id: selectedQuote?.id,
           quote_number: selectedQuote?.quote_number,
+          approved_by: user?.id,
+          approved_at: new Date().toISOString(),
         },
       });
 

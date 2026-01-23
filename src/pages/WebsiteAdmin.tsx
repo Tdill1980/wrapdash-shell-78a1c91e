@@ -5,12 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BarChart3, MessageSquare, FileText, Power, Loader2, AlertTriangle, Bell } from "lucide-react";
+import { BarChart3, MessageSquare, FileText, Power, Loader2, AlertTriangle, Bell, FileImage } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { ChatSessionsTab } from "@/components/admin/jordan-dashboard/ChatSessionsTab";
 import { QuotesTab } from "@/components/admin/jordan-dashboard/QuotesTab";
 import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
 import { EscalationsDashboard } from "@/components/admin/EscalationsDashboard";
+import { ArtworkReviewsPanel } from "@/components/admin/ArtworkReviewsPanel";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Session } from "@supabase/supabase-js";
 
@@ -19,6 +20,7 @@ const TABS = [
   { id: "control", label: "Agent Control", icon: Power, color: "bg-primary" },
   { id: "chats", label: "All Chats", icon: MessageSquare, color: "bg-blue-500" },
   { id: "escalations", label: "Escalations", icon: Bell, color: "bg-orange-500", highlight: true },
+  { id: "artwork", label: "Artwork Reviews", icon: FileImage, color: "bg-purple-500" },
   { id: "quotes", label: "Quotes", icon: FileText, color: "bg-indigo-500" },
   { id: "analytics", label: "Analytics", icon: BarChart3, color: "bg-green-500" },
 ];
@@ -199,6 +201,10 @@ export default function JordanLeeAdminDashboard() {
                 setActiveTab("chats");
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="artwork" className="mt-6">
+            <ArtworkReviewsPanel />
           </TabsContent>
 
           <TabsContent value="quotes" className="mt-6">
