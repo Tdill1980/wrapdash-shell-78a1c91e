@@ -371,3 +371,6 @@ verify_jwt = false
 
 [functions.ai-generate-carousel-topic]
 verify_jwt = false
+
+[functions.resolve-artwork-review]
+verify_jwt = false

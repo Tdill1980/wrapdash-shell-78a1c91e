@@ -282,7 +282,7 @@ serve(async (req) => {
 
         await resend.emails.send({
           from: 'WePrintWraps <hello@weprintwraps.com>',
-          to: ['Design@WePrintWraps.com'],
+          to: ['jackson@weprintwraps.com', 'Design@WePrintWraps.com'],
           cc: ['Trish@WePrintWraps.com'],
           subject: `📎 [ARTWORK CHECK] ${file_name} - Customer Upload`,
           html: emailHtml
