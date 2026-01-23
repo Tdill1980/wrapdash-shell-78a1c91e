@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Send, Sparkles, X, Mail, CheckCircle, MessageCircle, Bot, User } from "lucide-react";
+import { Loader2, Send, Sparkles, X, Mail, CheckCircle, MessageCircle, Bot, User, Receipt, ShoppingCart, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
+import { QuoteSelector } from "./QuoteSelector";
 
 interface InternalReplyPanelProps {
   conversation: ChatConversation;
@@ -37,6 +38,10 @@ export function InternalReplyPanel({
   const [isDrafting, setIsDrafting] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  
+  // Quote attachment state
+  const [selectedQuote, setSelectedQuote] = useState<{ id: string; quote_number: string; total_price: number } | null>(null);
+  const [showQuoteSelector, setShowQuoteSelector] = useState(false);
   
   // AI Chat state
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
@@ -181,6 +186,8 @@ Keep it concise (2-3 short paragraphs max). Do NOT include the subject line, jus
           to_name: customerName || undefined,
           subject: subject,
           body: body,
+          quote_id: selectedQuote?.id,
+          quote_number: selectedQuote?.quote_number,
         },
       });
 
@@ -251,6 +258,58 @@ Keep it concise (2-3 short paragraphs max). Do NOT include the subject line, jus
 
           {/* Compose Tab */}
           <TabsContent value="compose" className="space-y-4 mt-4">
+            {/* Quick Action Links */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBody(prev => 
+                  prev + (prev ? "\n\n" : "") + "Ready to order? Complete your purchase here: https://weprintwraps.com/quote"
+                )}
+                className="gap-1.5 text-xs"
+              >
+                <ShoppingCart className="h-3 w-3" />
+                Add Order Link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBody(prev => 
+                  prev + (prev ? "\n\n" : "") + "Need design help? Our team can prepare your artwork for $75+: https://weprintwraps.com/design-services"
+                )}
+                className="gap-1.5 text-xs"
+              >
+                <Palette className="h-3 w-3" />
+                Add Design Fee Link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowQuoteSelector(true)}
+                className="gap-1.5 text-xs"
+              >
+                <Receipt className="h-3 w-3" />
+                Attach Quote
+              </Button>
+            </div>
+
+            {/* Attached Quote Preview */}
+            {selectedQuote && (
+              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-lg p-2">
+                <Receipt className="h-4 w-4 text-green-500" />
+                <span className="text-sm">Quote #{selectedQuote.quote_number}</span>
+                <span className="text-sm font-bold">${selectedQuote.total_price?.toLocaleString()}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 ml-auto"
+                  onClick={() => setSelectedQuote(null)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="subject">Subject</Label>
               <Input
@@ -287,6 +346,18 @@ Keep it concise (2-3 short paragraphs max). Do NOT include the subject line, jus
                 className="min-h-[150px] resize-none"
               />
             </div>
+
+            {/* Quote Selector Modal */}
+            {showQuoteSelector && (
+              <QuoteSelector
+                customerEmail={customerEmail}
+                onSelect={(quote) => {
+                  setSelectedQuote(quote);
+                  setShowQuoteSelector(false);
+                }}
+                onClose={() => setShowQuoteSelector(false)}
+              />
+            )}
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={onClose}>
