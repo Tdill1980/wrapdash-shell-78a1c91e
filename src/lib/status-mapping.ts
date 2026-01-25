@@ -69,8 +69,8 @@ export const internalToCustomerStatus: Record<InternalStatus, string> = {
   awaiting_approval: "Awaiting Your Approval",
   preparing_for_print: "Preparing for Print",
   in_production: "In Production",
-  ready_or_shipped: "Ready / Shipped",
-  completed: "Completed"
+  ready_or_shipped: "Completed / Shipped",
+  completed: "Completed / Shipped"
 };
 
 /**

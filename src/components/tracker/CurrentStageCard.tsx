@@ -52,8 +52,16 @@ const STAGE_MESSAGES: Record<string, { title: string; description: string }> = {
     description: "Final quality inspection in progress. Checking color, finish, and fit."
   },
   ready: {
-    title: "Order Complete",
-    description: "Your order is complete and ready for pickup or shipment."
+    title: "Completed / Shipped",
+    description: "Your order is complete and ready for pickup or has been shipped."
+  },
+  shipped: {
+    title: "Completed / Shipped",
+    description: "Your order has been completed and shipped! Check your email for tracking info."
+  },
+  completed: {
+    title: "Completed / Shipped",
+    description: "Your order has been completed and shipped. Thank you for choosing WePrintWraps!"
   },
 };
 
