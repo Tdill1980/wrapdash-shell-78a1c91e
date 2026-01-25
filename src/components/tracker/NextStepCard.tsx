@@ -18,7 +18,9 @@ const NEXT_STEPS: Record<string, string> = {
   laminating: "Cutting and finishing will begin.",
   cutting: "Quality inspection will be performed.",
   qc: "Order will be finalized and packaged.",
-  ready: "Order is ready for delivery.",
+  ready: "Your order is complete! Check your email for tracking info.",
+  shipped: "Your order is on its way! Track delivery using your tracking number.",
+  completed: "Order delivered! Thank you for choosing WePrintWraps.",
 };
 
 export function NextStepCard({ order }: NextStepCardProps) {

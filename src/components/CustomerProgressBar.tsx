@@ -7,7 +7,7 @@ const CUSTOMER_STEPS = [
   { label: "Awaiting Approval", icon: Eye },
   { label: "Print Production", icon: Printer },
   { label: "Being Quality Checked", icon: CheckCircle },
-  { label: "Ready/Shipped", icon: Truck },
+  { label: "Completed/Shipped", icon: Truck },
 ];
 
 interface CustomerProgressBarProps {
@@ -48,12 +48,12 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
     "finishing": "Print Production",
     
     // Quality check - ONLY when shipped
-    "shipped": "Being Quality Checked",
+    "shipped": "Completed/Shipped",
     
     // Final stages
-    "ready-for-pickup": "Ready/Shipped",
-    "shipping-cost": "Ready/Shipped",
-    "completed": "Ready/Shipped"
+    "ready-for-pickup": "Completed/Shipped",
+    "shipping-cost": "Completed/Shipped",
+    "completed": "Completed/Shipped"
   };
 
   const displayStatus = statusMap[currentStatus] || "Order Received";
