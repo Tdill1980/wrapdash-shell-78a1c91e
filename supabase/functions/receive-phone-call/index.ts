@@ -24,8 +24,23 @@ Deno.serve(async (req) => {
     const callerPhone = formData.get("From") as string;
     const calledPhone = formData.get("To") as string;
     const speechResult = formData.get("SpeechResult") as string | null;
+    
+    // Twilio forwarding headers - detect if call was forwarded
+    const forwardedFrom = formData.get("ForwardedFrom") as string | null;
+    const sipHeader = formData.get("SipHeader_X-Forwarded-For") as string | null;
+    const callerIdName = formData.get("CallerName") as string | null;
+    
+    // Some carriers pass the original number in different headers
+    const diversionHeader = formData.get("SipHeader_Diversion") as string | null;
+    
+    // Determine if this is a forwarded call
+    const isForwarded = !!(forwardedFrom || sipHeader || diversionHeader);
+    const detectedForwardedFrom = forwardedFrom || sipHeader || diversionHeader;
 
     console.log(`[receive-phone-call] Call from ${callerPhone} to ${calledPhone}, SID: ${callSid}`);
+    if (isForwarded) {
+      console.log(`[receive-phone-call] Forwarded call detected from: ${detectedForwardedFrom}`);
+    }
 
     // Look up organization by the Twilio number that received the call
     let phoneSettings: any = null;
@@ -97,6 +112,9 @@ Deno.serve(async (req) => {
       caller_phone: callerPhone,
       organization_id: organizationId,
       status: "in_progress",
+      forwarded_from: detectedForwardedFrom || null,
+      original_called_number: isForwarded ? calledPhone : null,
+      forwarding_detected: isForwarded,
     });
 
     if (insertError) {

@@ -119,6 +119,11 @@ CREATE TABLE public.organization_phone_settings (
   greeting_message TEXT,
   phone_agent_enabled BOOLEAN DEFAULT false,
   sms_alerts_enabled BOOLEAN DEFAULT true,
+  -- NEW: Connection method fields
+  connection_method TEXT DEFAULT 'new_number' CHECK (connection_method IN ('new_number', 'port_number', 'forward_calls')),
+  original_business_number TEXT,
+  setup_completed BOOLEAN DEFAULT false,
+  setup_completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -149,9 +154,17 @@ CREATE TRIGGER update_organization_phone_settings_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
+#### Connection Methods
+
+| Method | Description | Use Case |
+|--------|-------------|----------|
+| `new_number` | Get a new dedicated number from the platform | Fastest setup, recommended for new businesses |
+| `forward_calls` | Keep existing number, forward calls to AI | Existing business number, no carrier change |
+| `port_number` | Transfer existing number to platform | Full control, takes 1-3 business days |
+
 ### Table 2: `phone_calls`
 
-Stores call metadata, transcripts, and AI classifications.
+Stores call metadata, transcripts, AI classifications, and forwarding information.
 
 ```sql
 -- Create the table
@@ -170,6 +183,10 @@ CREATE TABLE public.phone_calls (
   status TEXT DEFAULT 'in_progress',
   customer_name TEXT,
   vehicle_info JSONB,
+  -- NEW: Call forwarding detection fields
+  forwarded_from TEXT,              -- Original number that forwarded the call
+  original_called_number TEXT,      -- The original number the customer dialed
+  forwarding_detected BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -194,6 +211,9 @@ CREATE POLICY "Service role can update"
 CREATE TRIGGER update_phone_calls_updated_at
   BEFORE UPDATE ON phone_calls
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Index for faster forwarded call lookups
+CREATE INDEX idx_phone_calls_forwarded ON phone_calls(forwarded_from) WHERE forwarded_from IS NOT NULL;
 ```
 
 ---
