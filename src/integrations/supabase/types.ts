@@ -5679,6 +5679,106 @@ export type Database = {
           },
         ]
       }
+      phone_calls: {
+        Row: {
+          ai_classification: Json | null
+          call_duration_seconds: number | null
+          caller_phone: string
+          conversation_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          id: string
+          is_hot_lead: boolean | null
+          organization_id: string | null
+          sms_sent: boolean | null
+          sms_sent_at: string | null
+          status: string | null
+          transcript: string | null
+          twilio_call_sid: string
+          updated_at: string | null
+          vehicle_info: Json | null
+        }
+        Insert: {
+          ai_classification?: Json | null
+          call_duration_seconds?: number | null
+          caller_phone: string
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          is_hot_lead?: boolean | null
+          organization_id?: string | null
+          sms_sent?: boolean | null
+          sms_sent_at?: string | null
+          status?: string | null
+          transcript?: string | null
+          twilio_call_sid: string
+          updated_at?: string | null
+          vehicle_info?: Json | null
+        }
+        Update: {
+          ai_classification?: Json | null
+          call_duration_seconds?: number | null
+          caller_phone?: string
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          is_hot_lead?: boolean | null
+          organization_id?: string | null
+          sms_sent?: boolean | null
+          sms_sent_at?: string | null
+          status?: string | null
+          transcript?: string | null
+          twilio_call_sid?: string
+          updated_at?: string | null
+          vehicle_info?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_leads_with_emails"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "phone_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "mightychat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ops_backlog_needs_response"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "website_chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_calls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_jobs: {
         Row: {
           completion_date: string | null

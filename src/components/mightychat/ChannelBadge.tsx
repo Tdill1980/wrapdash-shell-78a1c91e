@@ -35,6 +35,12 @@ const channelConfig: Record<string, {
     label: "Website",
     emoji: "💬",
     className: "bg-purple-500 text-white border-0 hover:bg-purple-600"
+  },
+  phone: {
+    icon: Phone,
+    label: "Phone",
+    emoji: "📞",
+    className: "bg-amber-500 text-white border-0 hover:bg-amber-600"
   }
 };
 
@@ -60,6 +66,8 @@ export function ChannelIcon({ channel, className = "w-4 h-4" }: { channel: strin
     ? "text-blue-500" 
     : channel === "sms" 
     ? "text-green-500" 
+    : channel === "phone"
+    ? "text-amber-500"
     : "text-purple-500";
   
   return <Icon className={`${className} ${colorClass}`} />;

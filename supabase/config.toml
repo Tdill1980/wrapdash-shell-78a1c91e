@@ -374,3 +374,12 @@ verify_jwt = false
 
 [functions.resolve-artwork-review]
 verify_jwt = false
+
+[functions.receive-phone-call]
+verify_jwt = false
+
+[functions.process-phone-speech]
+verify_jwt = false
+
+[functions.send-phone-alert]
+verify_jwt = false
