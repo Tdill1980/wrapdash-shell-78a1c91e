@@ -201,7 +201,7 @@ export function PhoneTranscriptView({ call, onBack, onCallBack }: PhoneTranscrip
         <div className="p-4 border-t border-border bg-green-500/10">
           <div className="flex items-center gap-2 text-sm text-green-400">
             <CheckCircle className="w-4 h-4" />
-            SMS alert sent to Jackson
+            SMS alert sent
             {call.sms_sent_at && (
               <span className="text-muted-foreground">
                 at {format(new Date(call.sms_sent_at), "h:mm a")}
