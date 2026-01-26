@@ -7,11 +7,12 @@ import {
   Inbox,
   Palette,
   User,
-  AlertCircle
+  AlertCircle,
+  Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type InboxFilter = 'all' | 'hello' | 'design' | 'jackson' | 'instagram' | 'website' | 'quotes';
+export type InboxFilter = 'all' | 'hello' | 'design' | 'jackson' | 'instagram' | 'website' | 'quotes' | 'phone';
 
 interface InboxFiltersProps {
   activeFilter: InboxFilter;
@@ -24,6 +25,7 @@ interface InboxFiltersProps {
     instagram?: number;
     website?: number;
     pendingQuotes?: number;
+    phone?: number;
   };
 }
 
@@ -74,6 +76,12 @@ const filterConfig: Record<InboxFilter, {
     icon: <AlertCircle className="w-3.5 h-3.5" />,
     color: 'text-red-600',
     bgColor: 'bg-red-100 dark:bg-red-900/30'
+  },
+  phone: {
+    label: 'Phone',
+    icon: <Phone className="w-3.5 h-3.5" />,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/30'
   }
 };
 

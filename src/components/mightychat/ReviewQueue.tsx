@@ -16,6 +16,7 @@ import {
   DollarSign,
   Image as ImageIcon,
   Facebook,
+  Phone,
 } from "lucide-react";
 import { AgentSelector } from "./AgentSelector";
 import { AgentChatPanel } from "./AgentChatPanel";
@@ -205,6 +206,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
       if (source === "instagram") return itemSource === "instagram";
       if (source === "email") return itemSource === "email";
       if (source === "website") return itemSource === "website_chat" || itemSource === "website";
+      if (source === "phone") return itemSource === "phone";
       return false;
     }) || [];
   };
@@ -221,6 +223,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const instagramItems = filterBySource("instagram");
   const emailItems = filterBySource("email");
   const websiteItems = filterBySource("website");
+  const phoneItems = filterBySource("phone");
   const helloEmails = filterByInbox("hello");
   const designEmails = filterByInbox("design");
   const jacksonEmails = filterByInbox("jackson");
@@ -237,6 +240,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
       return emailItems;
     }
     if (activeTab === "website") return websiteItems;
+    if (activeTab === "phone") return phoneItems;
     return recentConversations;
   };
 
@@ -317,6 +321,15 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
             color="cyan"
           >
             Website Chat
+          </TabButton>
+          <TabButton 
+            active={activeTab === "phone"} 
+            onClick={() => { setActiveTab("phone"); setEmailSubTab(null); }}
+            count={phoneItems.length}
+            icon={<Phone className="w-3.5 h-3.5" />}
+            color="amber"
+          >
+            Phone
           </TabButton>
         </div>
 
@@ -416,7 +429,7 @@ function TabButton({
   onClick: () => void; 
   count: number;
   icon?: React.ReactNode;
-  color?: "default" | "pink" | "blue" | "green" | "cyan";
+  color?: "default" | "pink" | "blue" | "green" | "cyan" | "amber";
 }) {
   const colorClasses = {
     default: active ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-muted/80",
@@ -424,6 +437,7 @@ function TabButton({
     blue: active ? "bg-blue-500 text-white" : "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30",
     green: active ? "bg-green-500 text-white" : "bg-green-500/20 text-green-400 hover:bg-green-500/30",
     cyan: active ? "bg-cyan-500 text-white" : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30",
+    amber: active ? "bg-amber-500 text-white" : "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30",
   };
 
   return (
@@ -573,6 +587,7 @@ function TaskCard({
       case "email": return <Mail className="w-4 h-4" />;
       case "website_chat":
       case "website": return <MessageCircle className="w-4 h-4" />;
+      case "phone": return <Phone className="w-4 h-4" />;
       default: return <FileText className="w-4 h-4" />;
     }
   };
@@ -583,6 +598,7 @@ function TaskCard({
       case "email": return "text-green-400 bg-green-500/20";
       case "website_chat":
       case "website": return "text-cyan-400 bg-cyan-500/20";
+      case "phone": return "text-amber-400 bg-amber-500/20";
       default: return "text-muted-foreground bg-muted";
     }
   };
