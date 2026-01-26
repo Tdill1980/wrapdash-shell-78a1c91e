@@ -65,6 +65,7 @@ import WebsiteAdmin from "./pages/WebsiteAdmin";
 import ChatWidgetDemo from "./pages/ChatWidgetDemo";
 import InstagramTokenExchange from "./pages/InstagramTokenExchange";
 import InstagramSettings from "./pages/settings/InstagramSettings";
+import PhoneSettings from "./pages/settings/PhoneSettings";
 import MetaCallback from "./pages/auth/MetaCallback";
 import AICorrectionsAdmin from "./pages/AICorrectionsAdmin";
 import AdVault from "./pages/AdVault";
@@ -209,6 +210,7 @@ const App = () => (
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/settings/products" element={<MyProducts />} />
             <Route path="/settings/instagram" element={<InstagramSettings />} />
+            <Route path="/settings/phone" element={<PhoneSettings />} />
             <Route path="/auth/meta/callback" element={<MetaCallback />} />
             <Route path="/affiliate/card/:affiliateCode" element={<AffiliateCard />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
