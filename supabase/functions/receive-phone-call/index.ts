@@ -5,8 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// WPW organization ID for fallback
+const WPW_ORG_ID = "51aa96db-c06d-41ae-b3cb-25b045c75caf";
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -17,25 +19,58 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Parse form data from Twilio webhook
     const formData = await req.formData();
     const callSid = formData.get("CallSid") as string;
     const callerPhone = formData.get("From") as string;
     const calledPhone = formData.get("To") as string;
     const speechResult = formData.get("SpeechResult") as string | null;
 
-    console.log(`[receive-phone-call] Call from ${callerPhone}, SID: ${callSid}`);
+    console.log(`[receive-phone-call] Call from ${callerPhone} to ${calledPhone}, SID: ${callSid}`);
+
+    // Look up organization by the Twilio number that received the call
+    let phoneSettings: any = null;
+    let organizationId: string | null = null;
+    let companyName = "WePrintWraps";
+    let agentName = "Jordan";
+
+    // Clean phone number for lookup (remove + prefix variations)
+    const cleanedCalledPhone = calledPhone.replace(/^\+/, "");
+    
+    const { data: settingsData } = await supabase
+      .from("organization_phone_settings")
+      .select("*, organizations(name, subdomain)")
+      .or(`twilio_phone_number.eq.${calledPhone},twilio_phone_number.eq.${cleanedCalledPhone},twilio_phone_number.eq.+${cleanedCalledPhone}`)
+      .eq("phone_agent_enabled", true)
+      .maybeSingle();
+
+    if (settingsData) {
+      phoneSettings = settingsData;
+      organizationId = settingsData.organization_id;
+      companyName = settingsData.company_name || settingsData.organizations?.name || "our company";
+      agentName = settingsData.ai_agent_name || "Jordan";
+      console.log(`[receive-phone-call] Found org settings for ${companyName}`);
+    } else {
+      // Fallback: Check if this is the WPW Twilio number from env
+      const wpwTwilioNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
+      if (wpwTwilioNumber && (calledPhone === wpwTwilioNumber || calledPhone.includes(wpwTwilioNumber.replace(/^\+/, "")))) {
+        organizationId = WPW_ORG_ID;
+        companyName = "WePrintWraps";
+        agentName = "Jordan";
+        console.log(`[receive-phone-call] Using WPW fallback`);
+      } else {
+        console.log(`[receive-phone-call] No org found for number ${calledPhone}, using defaults`);
+      }
+    }
 
     if (speechResult) {
-      // This is a callback after gathering speech - process it
       console.log(`[receive-phone-call] Speech result: ${speechResult}`);
 
-      // Call process-phone-speech function
       const { error: invokeError } = await supabase.functions.invoke("process-phone-speech", {
         body: {
           callSid,
           callerPhone,
           speechResult,
+          organizationId,
         },
       });
 
@@ -43,11 +78,10 @@ Deno.serve(async (req) => {
         console.error("[receive-phone-call] Error invoking process-phone-speech:", invokeError);
       }
 
-      // Thank the caller and end
       const thankYouTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Joanna">
-    Thank you for calling WePrintWraps! One of our team members will reach out to you shortly. Have a great day!
+    Thank you for calling ${companyName}! One of our team members will reach out to you shortly. Have a great day!
   </Say>
   <Hangup/>
 </Response>`;
@@ -61,6 +95,7 @@ Deno.serve(async (req) => {
     const { error: insertError } = await supabase.from("phone_calls").insert({
       twilio_call_sid: callSid,
       caller_phone: callerPhone,
+      organization_id: organizationId,
       status: "in_progress",
     });
 
@@ -72,12 +107,17 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const actionUrl = `${supabaseUrl}/functions/v1/receive-phone-call`;
 
+    // Use custom greeting if provided, otherwise use default
+    const customGreeting = phoneSettings?.greeting_message;
+    const greetingText = customGreeting || 
+      `Hi, thanks for calling ${companyName}! I'm ${agentName}, our AI assistant. 
+       How can I help you today? Just tell me what you're looking for, 
+       like a quote for a vehicle wrap, and I'll make sure the right person gets back to you.`;
+
     const greetingTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Joanna">
-    Hi, thanks for calling WePrintWraps! I'm Jordan, our AI assistant. 
-    How can I help you today? Just tell me what you're looking for, 
-    like a quote for a vehicle wrap, and I'll make sure the right person gets back to you.
+    ${greetingText}
   </Say>
   <Gather input="speech" timeout="5" speechTimeout="auto" action="${actionUrl}">
     <Say voice="Polly.Joanna">
@@ -96,11 +136,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("[receive-phone-call] Error:", error);
     
-    // Return error TwiML
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Joanna">
-    I'm sorry, we're experiencing technical difficulties. Please try calling back later or visit our website at weprintwraps.com.
+    I'm sorry, we're experiencing technical difficulties. Please try calling back later.
   </Say>
   <Hangup/>
 </Response>`;
