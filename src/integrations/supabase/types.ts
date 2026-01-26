@@ -5431,11 +5431,15 @@ export type Database = {
           alert_email: string | null
           alert_phone_number: string
           company_name: string | null
+          connection_method: string | null
           created_at: string | null
           greeting_message: string | null
           id: string
           organization_id: string
+          original_business_number: string | null
           phone_agent_enabled: boolean | null
+          setup_completed: boolean | null
+          setup_completed_at: string | null
           sms_alerts_enabled: boolean | null
           twilio_account_sid: string | null
           twilio_auth_token: string | null
@@ -5447,11 +5451,15 @@ export type Database = {
           alert_email?: string | null
           alert_phone_number: string
           company_name?: string | null
+          connection_method?: string | null
           created_at?: string | null
           greeting_message?: string | null
           id?: string
           organization_id: string
+          original_business_number?: string | null
           phone_agent_enabled?: boolean | null
+          setup_completed?: boolean | null
+          setup_completed_at?: string | null
           sms_alerts_enabled?: boolean | null
           twilio_account_sid?: string | null
           twilio_auth_token?: string | null
@@ -5463,11 +5471,15 @@ export type Database = {
           alert_email?: string | null
           alert_phone_number?: string
           company_name?: string | null
+          connection_method?: string | null
           created_at?: string | null
           greeting_message?: string | null
           id?: string
           organization_id?: string
+          original_business_number?: string | null
           phone_agent_enabled?: boolean | null
+          setup_completed?: boolean | null
+          setup_completed_at?: string | null
           sms_alerts_enabled?: boolean | null
           twilio_account_sid?: string | null
           twilio_auth_token?: string | null
@@ -5746,9 +5758,12 @@ export type Database = {
           conversation_id: string | null
           created_at: string | null
           customer_name: string | null
+          forwarded_from: string | null
+          forwarding_detected: boolean | null
           id: string
           is_hot_lead: boolean | null
           organization_id: string | null
+          original_called_number: string | null
           sms_sent: boolean | null
           sms_sent_at: string | null
           status: string | null
@@ -5764,9 +5779,12 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string | null
           customer_name?: string | null
+          forwarded_from?: string | null
+          forwarding_detected?: boolean | null
           id?: string
           is_hot_lead?: boolean | null
           organization_id?: string | null
+          original_called_number?: string | null
           sms_sent?: boolean | null
           sms_sent_at?: string | null
           status?: string | null
@@ -5782,9 +5800,12 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string | null
           customer_name?: string | null
+          forwarded_from?: string | null
+          forwarding_detected?: boolean | null
           id?: string
           is_hot_lead?: boolean | null
           organization_id?: string | null
+          original_called_number?: string | null
           sms_sent?: boolean | null
           sms_sent_at?: string | null
           status?: string | null

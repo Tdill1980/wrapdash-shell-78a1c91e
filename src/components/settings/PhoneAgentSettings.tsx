@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, MessageSquare, Shield, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Phone, MessageSquare, Shield, Loader2, Sparkles, PhoneForwarded, RefreshCw, Settings2 } from "lucide-react";
 import { usePhoneSettings, PhoneSettingsInput } from "@/hooks/usePhoneSettings";
+import { PhoneSetupWizard, ConnectionMethod } from "./PhoneSetupWizard";
 
 interface PhoneAgentSettingsProps {
   organizationId: string | null;
@@ -14,6 +16,7 @@ interface PhoneAgentSettingsProps {
 
 export function PhoneAgentSettings({ organizationId }: PhoneAgentSettingsProps) {
   const { settings, isLoading, saveSettings, isSaving } = usePhoneSettings(organizationId);
+  const [showWizard, setShowWizard] = useState(false);
   
   const [formData, setFormData] = useState<PhoneSettingsInput>({
     twilio_phone_number: "",
@@ -26,6 +29,9 @@ export function PhoneAgentSettings({ organizationId }: PhoneAgentSettingsProps) 
     greeting_message: "",
     phone_agent_enabled: false,
     sms_alerts_enabled: true,
+    connection_method: "new_number",
+    original_business_number: "",
+    setup_completed: false,
   });
 
   useEffect(() => {
@@ -41,9 +47,39 @@ export function PhoneAgentSettings({ organizationId }: PhoneAgentSettingsProps) 
         greeting_message: settings.greeting_message || "",
         phone_agent_enabled: settings.phone_agent_enabled || false,
         sms_alerts_enabled: settings.sms_alerts_enabled !== false,
+        connection_method: settings.connection_method || "new_number",
+        original_business_number: settings.original_business_number || "",
+        setup_completed: settings.setup_completed || false,
       });
     }
   }, [settings]);
+
+  const handleWizardComplete = async (data: {
+    connectionMethod: ConnectionMethod;
+    originalBusinessNumber?: string;
+    twilioPhoneNumber?: string;
+  }) => {
+    await saveSettings({
+      ...formData,
+      connection_method: data.connectionMethod,
+      original_business_number: data.originalBusinessNumber || null,
+      twilio_phone_number: data.twilioPhoneNumber || null,
+      setup_completed: true,
+    });
+    setShowWizard(false);
+  };
+
+  const getConnectionMethodInfo = () => {
+    const method = formData.connection_method || "new_number";
+    switch (method) {
+      case "new_number":
+        return { icon: Sparkles, label: "New Number", color: "text-primary" };
+      case "forward_calls":
+        return { icon: PhoneForwarded, label: "Call Forwarding", color: "text-amber-500" };
+      case "port_number":
+        return { icon: RefreshCw, label: "Number Porting", color: "text-blue-500" };
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.alert_phone_number) {
@@ -65,8 +101,62 @@ export function PhoneAgentSettings({ organizationId }: PhoneAgentSettingsProps) 
     );
   }
 
+  // Show wizard if setup not completed
+  if (showWizard || !formData.setup_completed) {
+    return (
+      <PhoneSetupWizard
+        onComplete={handleWizardComplete}
+        onCancel={() => {
+          if (formData.setup_completed) {
+            setShowWizard(false);
+          }
+        }}
+        assignedPlatformNumber={formData.twilio_phone_number || "+1 (555) 123-4567"}
+      />
+    );
+  }
+
+  const connectionInfo = getConnectionMethodInfo();
+  const ConnectionIcon = connectionInfo.icon;
+
   return (
     <div className="space-y-6">
+      {/* Connection Method Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-primary" />
+              <CardTitle>Phone Connection</CardTitle>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowWizard(true)}>
+              Change Setup
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+            <ConnectionIcon className={`h-8 w-8 ${connectionInfo.color}`} />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{connectionInfo.label}</span>
+                <Badge variant="secondary" className="text-xs">Active</Badge>
+              </div>
+              {formData.twilio_phone_number && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  AI Number: <span className="font-mono">{formData.twilio_phone_number}</span>
+                </p>
+              )}
+              {formData.original_business_number && (
+                <p className="text-sm text-muted-foreground">
+                  Business Number: <span className="font-mono">{formData.original_business_number}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">

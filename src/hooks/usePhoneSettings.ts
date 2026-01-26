@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export type ConnectionMethod = "new_number" | "port_number" | "forward_calls";
+
 export interface PhoneSettings {
   id: string;
   organization_id: string;
@@ -15,6 +17,10 @@ export interface PhoneSettings {
   greeting_message: string | null;
   phone_agent_enabled: boolean;
   sms_alerts_enabled: boolean;
+  connection_method: ConnectionMethod | null;
+  original_business_number: string | null;
+  setup_completed: boolean;
+  setup_completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +36,9 @@ export interface PhoneSettingsInput {
   greeting_message?: string | null;
   phone_agent_enabled?: boolean;
   sms_alerts_enabled?: boolean;
+  connection_method?: ConnectionMethod;
+  original_business_number?: string | null;
+  setup_completed?: boolean;
 }
 
 export function usePhoneSettings(organizationId: string | null) {
