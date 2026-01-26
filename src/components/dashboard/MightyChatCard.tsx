@@ -14,7 +14,9 @@ import {
   Bell,
   Flame,
   AlertTriangle,
-  TrendingUp
+  TrendingUp,
+  Instagram,
+  Phone
 } from "lucide-react";
 
 interface WorkStreamStats {
@@ -26,6 +28,12 @@ interface WorkStreamStats {
   totalUnread: number;
   highValue: number;
   cxRisk: number;
+  hotLeads: number;
+  instagram: number;
+  email: number;
+  website: number;
+  phone: number;
+  pendingQuotes: number;
 }
 
 interface WorkItem {
@@ -40,12 +48,11 @@ interface WorkItem {
   metadata?: unknown;
 }
 
-const WORK_STREAMS = [
-  { key: 'websiteLeads', label: 'Website Leads', icon: Globe, color: 'text-blue-400', stream: 'website' },
-  { key: 'quotesWaiting', label: 'Quotes Waiting', icon: Mail, color: 'text-amber-400', stream: 'quotes' },
-  { key: 'designReviews', label: 'Design Reviews', icon: Palette, color: 'text-purple-400', stream: 'design' },
-  { key: 'socialDMs', label: 'Social DMs', icon: MessageSquare, color: 'text-pink-400', stream: 'social' },
-  { key: 'opsDesk', label: 'Ops Desk', icon: Brain, color: 'text-emerald-400', stream: 'ops' },
+const CHANNEL_CARDS = [
+  { key: 'instagram', label: 'Instagram', icon: Instagram, color: 'text-pink-500', bgColor: 'bg-pink-500/10', filter: 'instagram' },
+  { key: 'email', label: 'Email', icon: Mail, color: 'text-green-500', bgColor: 'bg-green-500/10', filter: 'email' },
+  { key: 'website', label: 'Website', icon: Globe, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', filter: 'website' },
+  { key: 'phone', label: 'Phone', icon: Phone, color: 'text-amber-500', bgColor: 'bg-amber-500/10', filter: 'phone' },
 ] as const;
 
 export function MightyChatCard() {
@@ -58,7 +65,13 @@ export function MightyChatCard() {
     opsDesk: 0,
     totalUnread: 0,
     highValue: 0,
-    cxRisk: 0
+    cxRisk: 0,
+    hotLeads: 0,
+    instagram: 0,
+    email: 0,
+    website: 0,
+    phone: 0,
+    pendingQuotes: 0
   });
   const [topItems, setTopItems] = useState<WorkItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +90,8 @@ export function MightyChatCard() {
 
   async function loadWorkStreams() {
     try {
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
       // Fetch conversations with metadata
       const { data: conversations, error } = await supabase
         .from("conversations")
@@ -87,6 +102,49 @@ export function MightyChatCard() {
       if (error) throw error;
 
       const convs = conversations || [];
+
+      // Fetch pending AI actions (for hot leads and quote count)
+      const { data: pendingActions } = await supabase
+        .from("ai_actions")
+        .select("id, action_type, priority, channel")
+        .eq("resolved", false)
+        .in("action_type", ["create_quote", "escalation", "auto_quote_generated", "file_review"]);
+
+      // Calculate hot leads (urgent/high priority + pending critical actions)
+      const hotLeadConversations = convs.filter(c => c.priority === 'urgent' || c.priority === 'high').length;
+      const hotLeadActions = pendingActions?.filter(a => 
+        a.action_type === 'escalation' || a.priority === 'urgent'
+      ).length || 0;
+      const hotLeads = hotLeadConversations + hotLeadActions;
+
+      // Channel breakdown (for pending items)
+      const pendingConvs = convs.filter(c => 
+        c.review_status === 'pending_review' || 
+        c.review_status === 'needs_response' ||
+        (c.unread_count && c.unread_count > 0)
+      );
+
+      const channelCounts = {
+        instagram: 0,
+        email: 0,
+        website: 0,
+        phone: 0,
+      };
+
+      pendingConvs.forEach((conv) => {
+        const channel = conv.channel?.toLowerCase() || "website";
+        const inbox = conv.recipient_inbox?.toLowerCase() || "";
+        
+        if (channel.includes("instagram") || channel === "dm") {
+          channelCounts.instagram++;
+        } else if (channel.includes("email") || inbox.includes("hello") || inbox.includes("design") || inbox.includes("jackson")) {
+          channelCounts.email++;
+        } else if (channel.includes("phone") || channel.includes("sms")) {
+          channelCounts.phone++;
+        } else {
+          channelCounts.website++;
+        }
+      });
 
       // Categorize into work streams
       const websiteLeads = convs.filter(c => c.channel === 'website').length;
@@ -111,6 +169,11 @@ export function MightyChatCard() {
         c.review_status === 'pending_review'
       ).length;
 
+      // Pending quotes count
+      const pendingQuotes = pendingActions?.filter(a => 
+        a.action_type === 'create_quote' || a.action_type === 'auto_quote_generated'
+      ).length || 0;
+
       setStats({
         websiteLeads,
         quotesWaiting,
@@ -119,7 +182,13 @@ export function MightyChatCard() {
         opsDesk: opsCount || 0,
         totalUnread,
         highValue,
-        cxRisk
+        cxRisk,
+        hotLeads,
+        instagram: channelCounts.instagram,
+        email: channelCounts.email,
+        website: channelCounts.website,
+        phone: channelCounts.phone,
+        pendingQuotes
       });
 
       // Get top priority items for quick view
@@ -160,151 +229,86 @@ export function MightyChatCard() {
     return 'Open';
   }
 
-  function getIntentColor(intent: string): string {
-    switch (intent) {
-      case 'Quote Request': return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
-      case 'Design Inquiry': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      case 'Website Lead': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'Social DM': return 'bg-pink-500/20 text-pink-400 border-pink-500/30';
-      default: return 'bg-muted text-muted-foreground border-border';
-    }
-  }
-
-  function getStatusBadge(status: string): { color: string; icon?: typeof Flame } {
-    switch (status) {
-      case 'Urgent': return { color: 'bg-destructive text-destructive-foreground', icon: AlertTriangle };
-      case 'High Priority': return { color: 'bg-orange-500/20 text-orange-400', icon: Flame };
-      case 'Needs Review': return { color: 'bg-red-500/20 text-red-400' };
-      default: return { color: 'bg-muted/50 text-muted-foreground' };
-    }
-  }
-
-  const handleStreamClick = (stream: string) => {
-    if (stream === 'ops') {
-      navigate('/mightychat?mode=ops');
-    } else {
-      navigate(`/mightychat?stream=${stream}`);
-    }
-  };
-
   return (
-    <Card className="dashboard-card h-full">
-      <CardHeader className="pb-3">
+    <Card className="border-border bg-card">
+      <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="dashboard-card-title text-lg font-bold font-poppins">
-              <span className="text-foreground">Mighty</span>
-              <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>
-              <span className="text-muted-foreground text-sm align-super">™</span>
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              Work Streams • Intent-Based Routing
-            </p>
-          </div>
-          {stats.totalUnread > 0 && (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <Bell className="w-3 h-3" />
-              {stats.totalUnread}
-            </Badge>
-          )}
+          <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-primary" />
+            <span>Mighty</span>
+            <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/mightychat-v2")}
+            className="text-xs h-7 px-2"
+          >
+            Open Inbox
+            <ArrowRight className="w-3 h-3 ml-1" />
+          </Button>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 space-y-3">
-        {/* Signal Badges */}
-        {(stats.highValue > 0 || stats.cxRisk > 0) && (
-          <div className="flex gap-2 flex-wrap">
-            {stats.highValue > 0 && (
-              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                {stats.highValue} High Value
+      <CardContent className="pt-0 space-y-4">
+        {/* Hot Leads Banner */}
+        <div 
+          className="flex items-center justify-between p-3 rounded-lg bg-background/50 cursor-pointer hover:bg-background/80 transition-colors"
+          onClick={() => navigate("/mightychat-v2?filter=hot")}
+        >
+          <div className="flex items-center gap-2">
+            {stats.hotLeads > 0 ? (
+              <Badge className="bg-red-500 text-white animate-pulse flex items-center gap-1 px-2 py-1">
+                <Flame className="w-3 h-3" />
+                {stats.hotLeads} Hot Lead{stats.hotLeads !== 1 ? "s" : ""}
               </Badge>
-            )}
-            {stats.cxRisk > 0 && (
-              <Badge variant="outline" className="text-[10px] bg-red-500/10 text-red-400 border-red-500/30">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                {stats.cxRisk} CX Risk
+            ) : (
+              <Badge variant="secondary" className="text-muted-foreground flex items-center gap-1">
+                <Flame className="w-3 h-3" />
+                No hot leads
               </Badge>
             )}
           </div>
-        )}
+          {stats.hotLeads > 0 && (
+            <span className="text-xs text-muted-foreground">Click to view</span>
+          )}
+        </div>
 
-        {/* Work Streams Grid */}
-        <div className="grid grid-cols-5 gap-1">
-          {WORK_STREAMS.map((stream) => {
-            const count = stats[stream.key as keyof WorkStreamStats] as number;
-            const Icon = stream.icon;
+        {/* Channel Breakdown Grid */}
+        <div className="grid grid-cols-4 gap-2">
+          {CHANNEL_CARDS.map((channel) => {
+            const Icon = channel.icon;
+            const count = stats[channel.key as keyof WorkStreamStats] as number;
             return (
               <button
-                key={stream.key}
-                onClick={() => handleStreamClick(stream.stream)}
-                className="flex flex-col items-center p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors group"
+                key={channel.key}
+                onClick={() => navigate(`/mightychat-v2?filter=${channel.filter}`)}
+                className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
               >
-                <Icon className={`w-4 h-4 ${stream.color} group-hover:scale-110 transition-transform`} />
-                <span className="text-lg font-bold text-foreground mt-1">{count}</span>
-                <span className="text-[8px] text-muted-foreground text-center leading-tight">
-                  {stream.label.split(' ')[0]}
+                <div className={`p-1.5 rounded-md ${channel.bgColor}`}>
+                  <Icon className={`w-3.5 h-3.5 ${channel.color}`} />
+                </div>
+                <span className="text-lg font-semibold text-foreground">
+                  {count}
+                </span>
+                <span className="text-[10px] text-muted-foreground leading-tight">
+                  {channel.label}
                 </span>
               </button>
             );
           })}
         </div>
 
-        {/* Top Priority Work Items */}
-        {loading ? (
-          <div className="text-xs text-muted-foreground text-center py-4">Loading...</div>
-        ) : topItems.length > 0 ? (
-          <div className="space-y-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-              Priority Work
-            </div>
-            {topItems.map((item) => {
-              const statusStyle = getStatusBadge(item.status || '');
-              return (
-                <div
-                  key={item.id}
-                  className="p-2 rounded-md bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors border border-border/50"
-                  onClick={() => navigate(`/mightychat?id=${item.id}`)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${getIntentColor(item.intent || '')}`}>
-                          {item.intent}
-                        </Badge>
-                        {item.status && item.status !== 'Open' && (
-                          <Badge className={`text-[9px] px-1.5 py-0 ${statusStyle.color}`}>
-                            {statusStyle.icon && <statusStyle.icon className="w-2 h-2 mr-0.5" />}
-                            {item.status}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-foreground truncate">
-                        {item.subject || 'No subject'}
-                      </div>
-                    </div>
-                    <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0 mt-1" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-xs text-muted-foreground text-center py-4">
-            All caught up! No priority items.
-          </div>
-        )}
-
-        {/* Open MightyChat Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full text-xs"
-          onClick={() => navigate("/mightychat")}
-        >
-          Open MightyChat
-          <ArrowRight className="w-3 h-3 ml-2" />
-        </Button>
+        {/* Quick Stats */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
+          <span className="flex items-center gap-1">
+            <Bell className="w-3 h-3" />
+            {stats.totalUnread || 0} pending reviews
+          </span>
+          <span className="flex items-center gap-1">
+            📋 {stats.pendingQuotes || 0} quote requests
+          </span>
+        </div>
       </CardContent>
     </Card>
   );

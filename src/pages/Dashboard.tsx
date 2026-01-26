@@ -19,6 +19,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -221,7 +222,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section 2: MightyAffiliate Status */}
+        {/* Section 2: MightyChat Card */}
+        <MightyChatCard />
+
+        {/* Section 3: MightyAffiliate Status */}
         <Card className="border-border bg-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
