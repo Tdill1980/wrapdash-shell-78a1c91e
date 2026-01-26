@@ -5425,6 +5425,65 @@ export type Database = {
           },
         ]
       }
+      organization_phone_settings: {
+        Row: {
+          ai_agent_name: string | null
+          alert_email: string | null
+          alert_phone_number: string
+          company_name: string | null
+          created_at: string | null
+          greeting_message: string | null
+          id: string
+          organization_id: string
+          phone_agent_enabled: boolean | null
+          sms_alerts_enabled: boolean | null
+          twilio_account_sid: string | null
+          twilio_auth_token: string | null
+          twilio_phone_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_agent_name?: string | null
+          alert_email?: string | null
+          alert_phone_number: string
+          company_name?: string | null
+          created_at?: string | null
+          greeting_message?: string | null
+          id?: string
+          organization_id: string
+          phone_agent_enabled?: boolean | null
+          sms_alerts_enabled?: boolean | null
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_agent_name?: string | null
+          alert_email?: string | null
+          alert_phone_number?: string
+          company_name?: string | null
+          created_at?: string | null
+          greeting_message?: string | null
+          id?: string
+          organization_id?: string
+          phone_agent_enabled?: boolean | null
+          sms_alerts_enabled?: boolean | null
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          twilio_phone_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_phone_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_product_settings: {
         Row: {
           created_at: string | null

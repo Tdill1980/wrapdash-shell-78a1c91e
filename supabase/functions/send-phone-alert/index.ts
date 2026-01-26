@@ -5,29 +5,76 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// WPW organization ID for fallback
+const WPW_ORG_ID = "51aa96db-c06d-41ae-b3cb-25b045c75caf";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { callSid, callerPhone, classification } = await req.json();
+    const { callSid, callerPhone, classification, organizationId } = await req.json();
 
-    console.log(`[send-phone-alert] Sending alert for call ${callSid}`);
-
-    const twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const twilioPhoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
-    const jacksonPhoneNumber = Deno.env.get("JACKSON_PHONE_NUMBER");
-
-    if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber || !jacksonPhoneNumber) {
-      throw new Error("Twilio credentials not configured");
-    }
+    console.log(`[send-phone-alert] Sending alert for call ${callSid}, org ${organizationId}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Look up organization's phone settings
+    let alertPhoneNumber: string | null = null;
+    let twilioPhoneNumber: string | null = null;
+    let twilioAccountSid: string | null = null;
+    let twilioAuthToken: string | null = null;
+    let companyName = "WPW";
+    let smsAlertsEnabled = true;
+
+    if (organizationId) {
+      const { data: phoneSettings } = await supabase
+        .from("organization_phone_settings")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+
+      if (phoneSettings) {
+        alertPhoneNumber = phoneSettings.alert_phone_number;
+        twilioPhoneNumber = phoneSettings.twilio_phone_number;
+        twilioAccountSid = phoneSettings.twilio_account_sid;
+        twilioAuthToken = phoneSettings.twilio_auth_token;
+        companyName = phoneSettings.company_name || "Your Shop";
+        smsAlertsEnabled = phoneSettings.sms_alerts_enabled !== false;
+        console.log(`[send-phone-alert] Using org settings for ${companyName}`);
+      }
+    }
+
+    // Fallback to environment variables (WPW legacy support)
+    if (!alertPhoneNumber) {
+      alertPhoneNumber = Deno.env.get("JACKSON_PHONE_NUMBER") || null;
+      console.log(`[send-phone-alert] Using fallback JACKSON_PHONE_NUMBER`);
+    }
+    if (!twilioPhoneNumber) {
+      twilioPhoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER") || null;
+    }
+    if (!twilioAccountSid) {
+      twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID") || null;
+    }
+    if (!twilioAuthToken) {
+      twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN") || null;
+    }
+
+    if (!smsAlertsEnabled) {
+      console.log(`[send-phone-alert] SMS alerts disabled for org ${organizationId}`);
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: "SMS alerts disabled" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber || !alertPhoneNumber) {
+      throw new Error("Twilio credentials or alert phone not configured");
+    }
 
     // Format phone number for display
     const formatPhone = (phone: string) => {
@@ -55,7 +102,7 @@ Deno.serve(async (req) => {
       ? `\n🚗 ${[vehicleInfo.year, vehicleInfo.make, vehicleInfo.model].filter(Boolean).join(" ")}`
       : "";
 
-    const smsBody = `${emoji} WPW ${alertType}!
+    const smsBody = `${emoji} ${companyName} ${alertType}!
 
 📞 ${formatPhone(callerPhone)}
 ${classification.customer_name ? `👤 ${classification.customer_name}` : ""}${vehicleStr}
@@ -77,7 +124,7 @@ Reply CALL to call back.`;
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        To: jacksonPhoneNumber,
+        To: alertPhoneNumber,
         From: twilioPhoneNumber,
         Body: smsBody,
       }),
@@ -107,6 +154,7 @@ Reply CALL to call back.`;
 
     // Create an agent alert for the dashboard
     await supabase.from("agent_alerts").insert({
+      organization_id: organizationId,
       agent_id: "taylor_phone",
       alert_type: isHotLead ? "hot_lead" : intent === "upset_customer" ? "upset_customer" : "new_call",
       priority: isHotLead || intent === "upset_customer" ? "high" : "normal",
