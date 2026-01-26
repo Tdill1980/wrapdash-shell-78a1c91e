@@ -7,6 +7,7 @@ The AI Phone Agent System is a multi-tenant, Twilio-powered automated call handl
 - Transcribes and classifies call intent using Lovable AI (Gemini)
 - Routes hot leads and urgent calls via SMS alerts
 - Integrates with MightyChat for unified inbox management
+- **Supports existing business numbers via call forwarding or porting**
 
 ---
 
@@ -18,8 +19,9 @@ The AI Phone Agent System is a multi-tenant, Twilio-powered automated call handl
 4. [Edge Functions](#edge-functions)
 5. [Frontend Components](#frontend-components)
 6. [Twilio Setup](#twilio-setup)
-7. [Testing & Verification](#testing--verification)
-8. [Troubleshooting](#troubleshooting)
+7. [Connecting Existing Phone Numbers](#connecting-existing-phone-numbers)
+8. [Testing & Verification](#testing--verification)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -30,45 +32,58 @@ The AI Phone Agent System is a multi-tenant, Twilio-powered automated call handl
 │                        Call Flow                                │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  Customer Dials ──► Twilio ──► receive-phone-call               │
-│                                      │                          │
-│                          ┌───────────┴───────────┐              │
-│                          │                       │              │
-│                    Lookup Org by          Create phone_calls    │
-│                    phone number              record             │
-│                          │                       │              │
-│                          └───────────┬───────────┘              │
-│                                      │                          │
-│                              Return TwiML                       │
-│                           (Dynamic Greeting)                    │
-│                                      │                          │
-│                              ◄───────┘                          │
-│                                      │                          │
-│                         Customer Speaks                         │
-│                                      │                          │
-│                                      ▼                          │
-│                         process-phone-speech                    │
-│                                      │                          │
-│                          ┌───────────┴───────────┐              │
-│                          │                       │              │
-│                    AI Classifies          Create MightyChat     │
-│                       Intent              conversation          │
-│                          │                       │              │
-│                          └───────────┬───────────┘              │
-│                                      │                          │
-│                        (if hot lead or upset)                   │
-│                                      │                          │
-│                                      ▼                          │
-│                          send-phone-alert                       │
-│                                      │                          │
-│                          ┌───────────┴───────────┐              │
-│                          │                       │              │
-│                    Lookup Org's           Send SMS via          │
-│                    alert settings            Twilio             │
-│                          │                       │              │
-│                          └───────────┬───────────┘              │
-│                                      │                          │
-│                           Update Records                        │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Customer dials existing business number                 │   │
+│  │              OR                                          │   │
+│  │  Customer dials new AI-assigned number                   │   │
+│  └───────────────────────┬──────────────────────────────────┘   │
+│                          │                                      │
+│                          ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  (If forwarded) Carrier forwards → Twilio Number         │   │
+│  └───────────────────────┬──────────────────────────────────┘   │
+│                          │                                      │
+│                          ▼                                      │
+│               receive-phone-call                                │
+│                          │                                      │
+│          ┌───────────────┴───────────────┐                      │
+│          │                               │                      │
+│    Lookup Org by              Create phone_calls                │
+│    phone number               record with                       │
+│    (detect forwarding)        forwarding info                   │
+│          │                               │                      │
+│          └───────────────┬───────────────┘                      │
+│                          │                                      │
+│                  Return TwiML                                   │
+│               (Dynamic Greeting)                                │
+│                          │                                      │
+│                  ◄───────┘                                      │
+│                          │                                      │
+│                 Customer Speaks                                 │
+│                          │                                      │
+│                          ▼                                      │
+│             process-phone-speech                                │
+│                          │                                      │
+│          ┌───────────────┴───────────────┐                      │
+│          │                               │                      │
+│    AI Classifies              Create MightyChat                 │
+│       Intent                  conversation                      │
+│          │                               │                      │
+│          └───────────────┬───────────────┘                      │
+│                          │                                      │
+│            (if hot lead or upset)                               │
+│                          │                                      │
+│                          ▼                                      │
+│              send-phone-alert                                   │
+│                          │                                      │
+│          ┌───────────────┴───────────────┐                      │
+│          │                               │                      │
+│    Lookup Org's               Send SMS via                      │
+│    alert settings                Twilio                         │
+│          │                               │                      │
+│          └───────────────┬───────────────┘                      │
+│                          │                                      │
+│                   Update Records                                │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -102,7 +117,7 @@ The AI Phone Agent System is a multi-tenant, Twilio-powered automated call handl
 
 ### Table 1: `organization_phone_settings`
 
-Stores per-organization phone agent configuration.
+Stores per-organization phone agent configuration including connection method.
 
 ```sql
 -- Create the table
@@ -119,7 +134,7 @@ CREATE TABLE public.organization_phone_settings (
   greeting_message TEXT,
   phone_agent_enabled BOOLEAN DEFAULT false,
   sms_alerts_enabled BOOLEAN DEFAULT true,
-  -- NEW: Connection method fields
+  -- Connection method fields
   connection_method TEXT DEFAULT 'new_number' CHECK (connection_method IN ('new_number', 'port_number', 'forward_calls')),
   original_business_number TEXT,
   setup_completed BOOLEAN DEFAULT false,
@@ -183,7 +198,7 @@ CREATE TABLE public.phone_calls (
   status TEXT DEFAULT 'in_progress',
   customer_name TEXT,
   vehicle_info JSONB,
-  -- NEW: Call forwarding detection fields
+  -- Call forwarding detection fields
   forwarded_from TEXT,              -- Original number that forwarded the call
   original_called_number TEXT,      -- The original number the customer dialed
   forwarding_detected BOOLEAN DEFAULT false,
@@ -194,7 +209,7 @@ CREATE TABLE public.phone_calls (
 -- Enable RLS
 ALTER TABLE phone_calls ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies (adjust based on your needs)
+-- RLS Policies
 CREATE POLICY "Org members can view phone calls" 
   ON phone_calls FOR SELECT 
   USING (organization_id IS NULL OR public.is_member_of_organization(auth.uid(), organization_id));
@@ -222,7 +237,7 @@ CREATE INDEX idx_phone_calls_forwarded ON phone_calls(forwarded_from) WHERE forw
 
 ### Function 1: `receive-phone-call`
 
-**Purpose**: Twilio webhook entry point. Answers calls, performs multi-tenant lookup, returns TwiML.
+**Purpose**: Twilio webhook entry point. Answers calls, performs multi-tenant lookup, detects forwarding, returns TwiML.
 
 **File**: `supabase/functions/receive-phone-call/index.ts`
 
@@ -253,8 +268,23 @@ Deno.serve(async (req) => {
     const callerPhone = formData.get("From") as string;
     const calledPhone = formData.get("To") as string;
     const speechResult = formData.get("SpeechResult") as string | null;
+    
+    // Twilio forwarding headers - detect if call was forwarded
+    const forwardedFrom = formData.get("ForwardedFrom") as string | null;
+    const sipHeader = formData.get("SipHeader_X-Forwarded-For") as string | null;
+    const callerIdName = formData.get("CallerName") as string | null;
+    
+    // Some carriers pass the original number in different headers
+    const diversionHeader = formData.get("SipHeader_Diversion") as string | null;
+    
+    // Determine if this is a forwarded call
+    const isForwarded = !!(forwardedFrom || sipHeader || diversionHeader);
+    const detectedForwardedFrom = forwardedFrom || sipHeader || diversionHeader;
 
     console.log(`[receive-phone-call] Call from ${callerPhone} to ${calledPhone}, SID: ${callSid}`);
+    if (isForwarded) {
+      console.log(`[receive-phone-call] Forwarded call detected from: ${detectedForwardedFrom}`);
+    }
 
     // Look up organization by the Twilio number that received the call
     let phoneSettings: any = null;
@@ -326,6 +356,9 @@ Deno.serve(async (req) => {
       caller_phone: callerPhone,
       organization_id: organizationId,
       status: "in_progress",
+      forwarded_from: detectedForwardedFrom || null,
+      original_called_number: isForwarded ? calledPhone : null,
+      forwarding_detected: isForwarded,
     });
 
     if (insertError) {
@@ -618,7 +651,7 @@ Rules:
 
 ### Function 3: `send-phone-alert`
 
-**Purpose**: Sends SMS alerts to organization's configured alert number.
+**Purpose**: Sends SMS alerts to organization owners for hot leads and urgent calls.
 
 **File**: `supabase/functions/send-phone-alert/index.ts`
 
@@ -810,226 +843,623 @@ Reply CALL to call back.`;
 
 ---
 
-### Config.toml Entries
-
-Add to `supabase/config.toml`:
-
-```toml
-[functions.receive-phone-call]
-verify_jwt = false
-
-[functions.process-phone-speech]
-verify_jwt = false
-
-[functions.send-phone-alert]
-verify_jwt = false
-```
-
----
-
 ## Frontend Components
 
-### Component 1: Settings Page
+### Component 1: `PhoneSetupWizard.tsx`
 
-**File**: `src/pages/settings/PhoneSettings.tsx`
+**Purpose**: Guided setup wizard for connecting phone numbers via new number, forwarding, or porting.
 
-```tsx
-import { MainLayout } from "@/layouts/MainLayout";
-import { PhoneAgentSettings } from "@/components/settings/PhoneAgentSettings";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Phone, Loader2 } from "lucide-react";
+**File**: `src/components/settings/PhoneSetupWizard.tsx`
 
-export default function PhoneSettings() {
-  const { data: organizationId, isLoading } = useQuery({
-    queryKey: ["user-organization"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+```typescript
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Phone, 
+  ArrowRight, 
+  ArrowLeft, 
+  Check, 
+  PhoneForwarded, 
+  RefreshCw, 
+  Sparkles,
+  Copy,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-      const { data } = await supabase
-        .from("organization_members")
-        .select("organization_id")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
+export type ConnectionMethod = "new_number" | "port_number" | "forward_calls";
 
-      return data?.organization_id ?? null;
-    },
-  });
+interface PhoneSetupWizardProps {
+  onComplete: (data: {
+    connectionMethod: ConnectionMethod;
+    originalBusinessNumber?: string;
+    twilioPhoneNumber?: string;
+  }) => void;
+  onCancel: () => void;
+  assignedPlatformNumber?: string;
+}
+
+const STEPS = [
+  { id: 1, title: "Choose Method", description: "How to connect your number" },
+  { id: 2, title: "Configuration", description: "Set up your connection" },
+  { id: 3, title: "Verify", description: "Test your setup" },
+];
+
+export function PhoneSetupWizard({ 
+  onComplete, 
+  onCancel,
+  assignedPlatformNumber = "+1 (555) 123-4567" 
+}: PhoneSetupWizardProps) {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod>("new_number");
+  const [originalBusinessNumber, setOriginalBusinessNumber] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<"idle" | "testing" | "success" | "failed">("idle");
+
+  const handleNext = () => {
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      onComplete({
+        connectionMethod,
+        originalBusinessNumber: connectionMethod !== "new_number" ? originalBusinessNumber : undefined,
+        twilioPhoneNumber: connectionMethod === "new_number" ? assignedPlatformNumber : 
+                          connectionMethod === "port_number" ? originalBusinessNumber : assignedPlatformNumber,
+      });
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(assignedPlatformNumber.replace(/\D/g, ""));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const simulateVerification = () => {
+    setVerificationStatus("testing");
+    setTimeout(() => {
+      setVerificationStatus("success");
+    }, 2000);
+  };
+
+  const canProceed = () => {
+    if (currentStep === 1) return true;
+    if (currentStep === 2) {
+      if (connectionMethod === "new_number") return true;
+      return originalBusinessNumber.length >= 10;
+    }
+    if (currentStep === 3) {
+      return verificationStatus === "success" || connectionMethod === "new_number";
+    }
+    return false;
+  };
 
   return (
-    <MainLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Phone className="h-6 w-6 text-amber-500" />
-            Phone Agent Settings
-          </h1>
-          <p className="text-muted-foreground">
-            Configure your AI phone agent for automated call handling
-          </p>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Phone className="h-5 w-5 text-primary" />
+          <CardTitle>Phone Agent Setup Wizard</CardTitle>
         </div>
+        <CardDescription>
+          Connect your phone number to enable AI-powered call answering.
+        </CardDescription>
+        
+        {/* Progress Steps */}
+        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          {STEPS.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <div className="flex flex-col items-center">
+                <div 
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                    currentStep > step.id 
+                      ? "bg-primary text-primary-foreground" 
+                      : currentStep === step.id 
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {currentStep > step.id ? <Check className="h-4 w-4" /> : step.id}
+                </div>
+                <span className="text-xs mt-1 text-muted-foreground">{step.title}</span>
+              </div>
+              {index < STEPS.length - 1 && (
+                <div className={cn(
+                  "h-0.5 w-16 mx-2",
+                  currentStep > step.id ? "bg-primary" : "bg-muted"
+                )} />
+              )}
+            </div>
+          ))}
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        {/* Step 1: Choose Connection Method */}
+        {currentStep === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-medium">How would you like to connect?</h3>
+            <RadioGroup 
+              value={connectionMethod} 
+              onValueChange={(v) => setConnectionMethod(v as ConnectionMethod)}
+              className="space-y-3"
+            >
+              <label 
+                htmlFor="new_number"
+                className={cn(
+                  "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors",
+                  connectionMethod === "new_number" ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                )}
+              >
+                <RadioGroupItem value="new_number" id="new_number" className="mt-1" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Get a New Number</span>
+                    <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    We'll assign you a dedicated phone number. Fastest setup - ready in minutes.
+                  </p>
+                </div>
+              </label>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <label 
+                htmlFor="forward_calls"
+                className={cn(
+                  "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors",
+                  connectionMethod === "forward_calls" ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                )}
+              >
+                <RadioGroupItem value="forward_calls" id="forward_calls" className="mt-1" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <PhoneForwarded className="h-4 w-4 text-amber-500" />
+                    <span className="font-medium">Forward Your Existing Number</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Keep your existing business number and forward calls to our AI. No carrier changes needed.
+                  </p>
+                </div>
+              </label>
+
+              <label 
+                htmlFor="port_number"
+                className={cn(
+                  "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors",
+                  connectionMethod === "port_number" ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                )}
+              >
+                <RadioGroupItem value="port_number" id="port_number" className="mt-1" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 text-blue-500" />
+                    <span className="font-medium">Port Your Existing Number</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Transfer your existing number to our system. Takes 1-3 business days.
+                  </p>
+                </div>
+              </label>
+            </RadioGroup>
           </div>
-        ) : (
-          <PhoneAgentSettings organizationId={organizationId} />
         )}
-      </div>
-    </MainLayout>
+
+        {/* Step 2: Configuration - See full component for details */}
+        {/* Step 3: Verification - See full component for details */}
+
+        {/* Navigation */}
+        <div className="flex justify-between pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={currentStep === 1 ? onCancel : handleBack}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {currentStep === 1 ? "Cancel" : "Back"}
+          </Button>
+          <Button 
+            onClick={handleNext}
+            disabled={!canProceed()}
+          >
+            {currentStep === 3 ? "Complete Setup" : "Next"}
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 ```
 
-### Component 2: Settings Form
+---
+
+### Component 2: `PhoneAgentSettings.tsx`
+
+**Purpose**: Main settings panel for phone agent configuration.
 
 **File**: `src/components/settings/PhoneAgentSettings.tsx`
 
-(See full code in the codebase - 265 lines)
+```typescript
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Phone, MessageSquare, Shield, Loader2, Sparkles, PhoneForwarded, RefreshCw, Settings2 } from "lucide-react";
+import { usePhoneSettings, PhoneSettingsInput } from "@/hooks/usePhoneSettings";
+import { PhoneSetupWizard, ConnectionMethod } from "./PhoneSetupWizard";
 
-### Hook: usePhoneSettings
+interface PhoneAgentSettingsProps {
+  organizationId: string | null;
+}
+
+export function PhoneAgentSettings({ organizationId }: PhoneAgentSettingsProps) {
+  const { settings, isLoading, saveSettings, isSaving } = usePhoneSettings(organizationId);
+  const [showWizard, setShowWizard] = useState(false);
+  
+  const [formData, setFormData] = useState<PhoneSettingsInput>({
+    twilio_phone_number: "",
+    twilio_account_sid: "",
+    twilio_auth_token: "",
+    alert_phone_number: "",
+    alert_email: "",
+    company_name: "",
+    ai_agent_name: "Jordan",
+    greeting_message: "",
+    phone_agent_enabled: false,
+    sms_alerts_enabled: true,
+    connection_method: "new_number",
+    original_business_number: "",
+    setup_completed: false,
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setFormData({
+        twilio_phone_number: settings.twilio_phone_number || "",
+        twilio_account_sid: settings.twilio_account_sid || "",
+        twilio_auth_token: settings.twilio_auth_token || "",
+        alert_phone_number: settings.alert_phone_number || "",
+        alert_email: settings.alert_email || "",
+        company_name: settings.company_name || "",
+        ai_agent_name: settings.ai_agent_name || "Jordan",
+        greeting_message: settings.greeting_message || "",
+        phone_agent_enabled: settings.phone_agent_enabled || false,
+        sms_alerts_enabled: settings.sms_alerts_enabled !== false,
+        connection_method: settings.connection_method || "new_number",
+        original_business_number: settings.original_business_number || "",
+        setup_completed: settings.setup_completed || false,
+      });
+    }
+  }, [settings]);
+
+  const handleWizardComplete = async (data: {
+    connectionMethod: ConnectionMethod;
+    originalBusinessNumber?: string;
+    twilioPhoneNumber?: string;
+  }) => {
+    await saveSettings({
+      ...formData,
+      connection_method: data.connectionMethod,
+      original_business_number: data.originalBusinessNumber || null,
+      twilio_phone_number: data.twilioPhoneNumber || null,
+      setup_completed: true,
+    });
+    setShowWizard(false);
+  };
+
+  // Show wizard if setup not completed
+  if (showWizard || !formData.setup_completed) {
+    return (
+      <PhoneSetupWizard
+        onComplete={handleWizardComplete}
+        onCancel={() => {
+          if (formData.setup_completed) {
+            setShowWizard(false);
+          }
+        }}
+        assignedPlatformNumber={formData.twilio_phone_number || "+1 (555) 123-4567"}
+      />
+    );
+  }
+
+  // Full settings UI - see complete component for details
+  return (
+    <div className="space-y-6">
+      {/* Connection Method Card */}
+      {/* Phone Agent Settings Card */}
+      {/* Twilio Configuration Card */}
+      {/* Alert Settings Card */}
+      {/* AI Greeting Customization Card */}
+    </div>
+  );
+}
+```
+
+---
+
+### Hook: `usePhoneSettings.ts`
+
+**Purpose**: React Query hook for managing phone settings CRUD operations.
 
 **File**: `src/hooks/usePhoneSettings.ts`
 
-(See full code in the codebase - 120 lines)
+```typescript
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-### Route Entry
+export type ConnectionMethod = "new_number" | "port_number" | "forward_calls";
 
-**File**: `src/App.tsx`
+export interface PhoneSettings {
+  id: string;
+  organization_id: string;
+  twilio_phone_number: string | null;
+  twilio_account_sid: string | null;
+  twilio_auth_token: string | null;
+  alert_phone_number: string;
+  alert_email: string | null;
+  company_name: string;
+  ai_agent_name: string;
+  greeting_message: string | null;
+  phone_agent_enabled: boolean;
+  sms_alerts_enabled: boolean;
+  connection_method: ConnectionMethod | null;
+  original_business_number: string | null;
+  setup_completed: boolean;
+  setup_completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
-```tsx
-import PhoneSettings from "./pages/settings/PhoneSettings";
+export interface PhoneSettingsInput {
+  twilio_phone_number?: string | null;
+  twilio_account_sid?: string | null;
+  twilio_auth_token?: string | null;
+  alert_phone_number: string;
+  alert_email?: string | null;
+  company_name?: string;
+  ai_agent_name?: string;
+  greeting_message?: string | null;
+  phone_agent_enabled?: boolean;
+  sms_alerts_enabled?: boolean;
+  connection_method?: ConnectionMethod;
+  original_business_number?: string | null;
+  setup_completed?: boolean;
+}
 
-// Add to routes:
-<Route path="/settings/phone" element={<PhoneSettings />} />
+export function usePhoneSettings(organizationId: string | null) {
+  const queryClient = useQueryClient();
+
+  const { data: settings, isLoading, error } = useQuery({
+    queryKey: ["phone-settings", organizationId],
+    queryFn: async () => {
+      if (!organizationId) return null;
+      
+      const { data, error } = await supabase
+        .from("organization_phone_settings")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as PhoneSettings | null;
+    },
+    enabled: !!organizationId,
+  });
+
+  const createSettings = useMutation({
+    mutationFn: async (input: PhoneSettingsInput) => {
+      if (!organizationId) throw new Error("No organization ID");
+      
+      const { data, error } = await supabase
+        .from("organization_phone_settings")
+        .insert({
+          organization_id: organizationId,
+          ...input,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["phone-settings", organizationId] });
+      toast.success("Phone settings created");
+    },
+    onError: (error) => {
+      console.error("Error creating phone settings:", error);
+      toast.error("Failed to create phone settings");
+    },
+  });
+
+  const updateSettings = useMutation({
+    mutationFn: async (input: Partial<PhoneSettingsInput>) => {
+      if (!organizationId) throw new Error("No organization ID");
+      
+      const { data, error } = await supabase
+        .from("organization_phone_settings")
+        .update(input)
+        .eq("organization_id", organizationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["phone-settings", organizationId] });
+      toast.success("Phone settings updated");
+    },
+    onError: (error) => {
+      console.error("Error updating phone settings:", error);
+      toast.error("Failed to update phone settings");
+    },
+  });
+
+  const saveSettings = async (input: PhoneSettingsInput) => {
+    if (settings) {
+      return updateSettings.mutateAsync(input);
+    } else {
+      return createSettings.mutateAsync(input);
+    }
+  };
+
+  return {
+    settings,
+    isLoading,
+    error,
+    saveSettings,
+    isSaving: createSettings.isPending || updateSettings.isPending,
+  };
+}
 ```
+
+---
+
+## Connecting Existing Phone Numbers
+
+### Option 1: Call Forwarding (Recommended for Quick Setup)
+
+1. **Keep your existing number** with your current carrier
+2. **Set up call forwarding** to your assigned platform number
+3. **How it works**: Customer calls your business number → Carrier forwards to AI → AI answers
+
+**Carrier-Specific Instructions:**
+
+| Carrier | Forward All Calls | Forward When Busy |
+|---------|-------------------|-------------------|
+| AT&T | `*21*[number]#` | `*67*[number]#` |
+| Verizon | `*72[number]` | `*71[number]` |
+| T-Mobile | `**21*[number]#` | `**67*[number]#` |
+| Most VoIP | Settings → Call Forwarding |
+
+### Option 2: Number Porting (Full Transfer)
+
+1. **Submit port request** through the setup wizard
+2. **Keep service active** with current carrier during transfer
+3. **Wait 1-3 business days** for completion
+4. **Number moves to Twilio** - full AI control
+
+### Forwarding Detection
+
+The system automatically detects forwarded calls using Twilio headers:
+- `ForwardedFrom` - Standard forwarding header
+- `SipHeader_Diversion` - SIP diversion header
+- `SipHeader_X-Forwarded-For` - Custom forwarding header
 
 ---
 
 ## Twilio Setup
 
-### Step 1: Get Your Twilio Credentials
+### 1. Configure Webhook URLs
 
-1. Log in to [Twilio Console](https://console.twilio.com)
-2. Copy your **Account SID** and **Auth Token** from the dashboard
-3. Purchase or use an existing phone number with Voice and SMS capabilities
+In your Twilio Console, set the following webhook for your phone number:
 
-### Step 2: Configure Voice Webhook
+**Voice Configuration:**
+- **A Call Comes In**: `https://[your-project-id].supabase.co/functions/v1/receive-phone-call`
+- **HTTP Method**: `POST`
 
-1. Go to **Phone Numbers** → **Manage** → **Active Numbers**
-2. Click on your phone number
-3. Under **Voice Configuration**:
-   - Set **Configure with**: Webhooks
-   - Set **A call comes in**: Webhook
-   - **URL**: `https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/receive-phone-call`
-   - **HTTP Method**: `POST`
-4. Click **Save Configuration**
+### 2. Phone Number Settings
 
-### Step 3: For Multi-Tenant SaaS
-
-Each organization configures their own Twilio number:
-
-1. Organization owner goes to `/settings/phone`
-2. Enters their Twilio phone number
-3. Optionally provides their own Twilio Account SID and Auth Token
-4. If no custom credentials, the platform's shared Twilio account is used
+Ensure your Twilio number has:
+- Voice enabled ✅
+- SMS enabled ✅
+- Region appropriate for your customers
 
 ---
 
 ## Testing & Verification
 
-### Test 1: Verify Webhook Endpoint
+### Test Call Flow
 
-```bash
-curl -X POST "https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/receive-phone-call" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "CallSid=TEST123&From=+15551234567&To=+15559876543"
+1. Call the configured Twilio number
+2. Listen for AI greeting with company name
+3. Speak a test phrase (e.g., "I need a quote for a fleet of 10 trucks")
+4. Verify SMS alert is received (if hot lead)
+5. Check MightyChat inbox for conversation
+
+### Verify Database Records
+
+```sql
+-- Check recent phone calls
+SELECT * FROM phone_calls ORDER BY created_at DESC LIMIT 5;
+
+-- Check forwarding detection
+SELECT caller_phone, forwarded_from, forwarding_detected 
+FROM phone_calls 
+WHERE forwarding_detected = true;
+
+-- Check organization settings
+SELECT organization_id, company_name, connection_method, setup_completed
+FROM organization_phone_settings;
 ```
-
-Expected: TwiML response with greeting
-
-### Test 2: Verify AI Classification
-
-```bash
-curl -X POST "https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/process-phone-speech" \
-  -H "Content-Type: application/json" \
-  -d '{"callSid":"TEST123","callerPhone":"+15551234567","speechResult":"I need a quote for wrapping my Ford F-150","organizationId":"your-org-id"}'
-```
-
-Expected: JSON with classification
-
-### Test 3: Make a Real Call
-
-1. Call your configured Twilio number
-2. Listen for the AI greeting
-3. Speak your request
-4. Verify call appears in MightyChat inbox
-5. Verify SMS alert received (if hot lead)
 
 ---
 
 ## Troubleshooting
 
-### Issue: "No org found for number"
+### Common Issues
 
-**Cause**: The Twilio number isn't registered in `organization_phone_settings`
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| No greeting plays | Webhook not configured | Verify Twilio webhook URL |
+| Wrong company name | Org lookup failed | Check `twilio_phone_number` in settings |
+| SMS not sent | Twilio creds missing | Verify env secrets or org settings |
+| Forwarding not detected | Carrier doesn't send headers | Use porting instead |
+| AI classification fails | LOVABLE_API_KEY missing | Add secret in Supabase |
 
-**Solution**: 
-1. Add the phone number to settings at `/settings/phone`
-2. Ensure `phone_agent_enabled` is true
+### Debug Logs
 
-### Issue: "Twilio credentials not configured"
-
-**Cause**: Missing Twilio secrets or org settings
-
-**Solution**:
-1. Verify environment secrets are set
-2. Or configure org-specific Twilio credentials
-
-### Issue: "AI API error"
-
-**Cause**: LOVABLE_API_KEY not configured or rate limited
-
-**Solution**:
-1. Verify LOVABLE_API_KEY secret exists
-2. Check AI gateway logs for rate limiting
-
-### Issue: No SMS received
-
-**Cause**: SMS alerts disabled or wrong alert number
-
-**Solution**:
-1. Check `sms_alerts_enabled` in org settings
-2. Verify `alert_phone_number` is correct
-3. Check Twilio SMS logs for delivery status
+Check edge function logs:
+```bash
+# Via Supabase Dashboard or CLI
+supabase functions logs receive-phone-call
+supabase functions logs process-phone-speech
+supabase functions logs send-phone-alert
+```
 
 ---
 
-## Summary
+## Summary of Changes
 
-| Component | Type | Location |
-|-----------|------|----------|
-| `receive-phone-call` | Edge Function | `supabase/functions/receive-phone-call/index.ts` |
-| `process-phone-speech` | Edge Function | `supabase/functions/process-phone-speech/index.ts` |
-| `send-phone-alert` | Edge Function | `supabase/functions/send-phone-alert/index.ts` |
-| `organization_phone_settings` | DB Table | PostgreSQL |
-| `phone_calls` | DB Table | PostgreSQL |
-| `PhoneAgentSettings` | UI Component | `src/components/settings/PhoneAgentSettings.tsx` |
-| `usePhoneSettings` | React Hook | `src/hooks/usePhoneSettings.ts` |
-| `PhoneSettings` | Page | `src/pages/settings/PhoneSettings.tsx` |
+### Edge Functions Modified/Created
 
----
+| Function | Status | Changes |
+|----------|--------|---------|
+| `receive-phone-call` | **Modified** | Added forwarding detection (`ForwardedFrom`, `SipHeader_Diversion`), stores `forwarded_from` and `forwarding_detected` in phone_calls |
+| `process-phone-speech` | **Existing** | No changes required |
+| `send-phone-alert` | **Existing** | No changes required |
 
-## Deployment Checklist
+### Database Tables Modified
 
-- [ ] Database tables created with RLS
-- [ ] Edge functions deployed (automatic with Lovable)
-- [ ] Twilio secrets configured in Supabase
-- [ ] Twilio webhook configured to point to `receive-phone-call`
-- [ ] Route added to App.tsx
-- [ ] Settings UI accessible at `/settings/phone`
-- [ ] Test call completed successfully
-- [ ] SMS alerts working for hot leads
+| Table | Changes |
+|-------|---------|
+| `organization_phone_settings` | Added: `connection_method`, `original_business_number`, `setup_completed`, `setup_completed_at` |
+| `phone_calls` | Added: `forwarded_from`, `original_called_number`, `forwarding_detected`; Added index on `forwarded_from` |
+
+### Frontend Components Created
+
+| Component | Path | Purpose |
+|-----------|------|---------|
+| `PhoneSetupWizard` | `src/components/settings/PhoneSetupWizard.tsx` | Guided setup for new/forward/port |
+| `PhoneAgentSettings` | `src/components/settings/PhoneAgentSettings.tsx` | Main settings panel |
+| `usePhoneSettings` | `src/hooks/usePhoneSettings.ts` | React Query hook for CRUD |
+| `PhoneSettings` | `src/pages/settings/PhoneSettings.tsx` | Page wrapper |
