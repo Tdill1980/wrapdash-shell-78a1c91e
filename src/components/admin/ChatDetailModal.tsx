@@ -489,6 +489,31 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                 <CardTitle className="text-sm">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                {/* Create Quote in MightyCustomer */}
+                <Button
+                  variant="default"
+                  className="w-full gap-2 justify-start bg-green-600 hover:bg-green-700"
+                  size="sm"
+                  onClick={() => {
+                    const vehicle = chatState?.vehicle || {};
+                    const params = new URLSearchParams();
+                    params.set('mode', 'wpw_internal');
+                    params.set('conversation_id', conversation.id);
+                    if (contact?.name) params.set('customer', contact.name);
+                    if (contact?.email && !contact.email.includes('@capture.local')) {
+                      params.set('email', contact.email);
+                    }
+                    if (contact?.phone) params.set('phone', contact.phone);
+                    if (vehicle.year) params.set('year', vehicle.year);
+                    if (vehicle.make) params.set('make', vehicle.make);
+                    if (vehicle.model) params.set('model', vehicle.model);
+                    window.open(`/mighty-customer?${params.toString()}`, '_blank');
+                  }}
+                >
+                  <Receipt className="h-4 w-4" />
+                  Create Quote in MightyCustomer
+                </Button>
+
                 {/* Reply to Customer */}
                 {contact?.email && !contact.email.includes('@capture.local') ? (
                   <Button
