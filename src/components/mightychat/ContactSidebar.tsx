@@ -246,7 +246,15 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
             variant="outline" 
             size="sm" 
             className="w-full justify-start"
-            onClick={() => window.location.href = `/mighty-customer?customer=${encodeURIComponent(contact.name)}&email=${encodeURIComponent(contact.email || '')}`}
+            onClick={() => {
+              const params = new URLSearchParams();
+              params.set('mode', 'wpw_internal');
+              if (conversationId) params.set('conversation_id', conversationId);
+              if (contact.name) params.set('customer', contact.name);
+              if (contact.email) params.set('email', contact.email);
+              if (contact.phone) params.set('phone', contact.phone);
+              window.location.href = `/mighty-customer?${params.toString()}`;
+            }}
           >
             <FileText className="w-4 h-4 mr-2" />
             Create Quote

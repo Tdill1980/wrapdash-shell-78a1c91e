@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ import {
   Palette,
   AlertCircle,
   ExternalLink,
-  Loader2
+  Loader2,
+  Receipt
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { evaluateEscalationStatus, type EscalationStatus } from "@/hooks/useEscalationStatus";
@@ -50,6 +52,12 @@ const TYPE_CONFIG: Record<string, { label: string; icon: React.ElementType; colo
   'lance': { label: 'Lance', icon: User, color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' },
 };
 
+interface VehicleInfo {
+  year?: string;
+  make?: string;
+  model?: string;
+}
+
 interface EscalationItem {
   conversationId: string;
   contactName: string;
@@ -61,6 +69,7 @@ interface EscalationItem {
   missing: string[];
   age: string;
   priority: number;
+  vehicle?: VehicleInfo;
 }
 
 interface EscalationsDashboardProps {
@@ -69,6 +78,7 @@ interface EscalationsDashboardProps {
 
 export function EscalationsDashboard({ onSelectConversation }: EscalationsDashboardProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showResolutionModal, setShowResolutionModal] = useState(false);
@@ -95,7 +105,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
 
       const { data: conversations } = await supabase
         .from('conversations')
-        .select('id, contact:contacts(name, email, phone)')
+        .select('id, chat_state, contact:contacts(name, email, phone)')
         .in('id', conversationIds);
 
       const queueItems: EscalationItem[] = [];
@@ -108,6 +118,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
         const escalation = escalationEvents?.find(e => e.conversation_id === convId);
         const contact = conv?.contact as { name?: string; email?: string; phone?: string } | null;
         const escalationType = escalation?.subtype || 'general';
+        const chatState = conv?.chat_state as { vehicle?: VehicleInfo } | null;
 
         queueItems.push({
           conversationId: convId,
@@ -122,6 +133,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
             ? formatDistanceToNow(new Date(escalation.created_at), { addSuffix: true })
             : '',
           priority: TYPE_PRIORITY[escalationType] || 10,
+          vehicle: chatState?.vehicle,
         });
       }
 
@@ -315,6 +327,28 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                       
                       {/* Quick actions - always visible */}
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-green-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const vehicle = item.vehicle || {};
+                            const params = new URLSearchParams();
+                            params.set('mode', 'wpw_internal');
+                            params.set('conversation_id', item.conversationId);
+                            if (item.contactName) params.set('customer', item.contactName);
+                            if (item.contactEmail) params.set('email', item.contactEmail);
+                            if (item.contactPhone) params.set('phone', item.contactPhone);
+                            if (vehicle.year) params.set('year', vehicle.year);
+                            if (vehicle.make) params.set('make', vehicle.make);
+                            if (vehicle.model) params.set('model', vehicle.model);
+                            navigate(`/mighty-customer?${params.toString()}`);
+                          }}
+                          title="Create Quote"
+                        >
+                          <Receipt className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
