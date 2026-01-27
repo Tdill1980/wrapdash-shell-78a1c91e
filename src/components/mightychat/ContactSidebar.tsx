@@ -45,6 +45,9 @@ interface ContactSidebarProps {
 export function ContactSidebar({ contactId, channel, conversationId, subject }: ContactSidebarProps) {
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
+  const [chatState, setChatState] = useState<{
+    vehicle?: { year?: string; make?: string; model?: string };
+  } | null>(null);
 
   useEffect(() => {
     if (contactId) {
@@ -53,6 +56,27 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
       setContact(null);
     }
   }, [contactId]);
+
+  useEffect(() => {
+    const loadChatState = async () => {
+      if (!conversationId) {
+        setChatState(null);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("chat_state")
+        .eq("id", conversationId)
+        .maybeSingle();
+      
+      if (!error && data) {
+        setChatState(data.chat_state as any);
+      }
+    };
+    
+    loadChatState();
+  }, [conversationId]);
 
   const loadContact = async (id: string) => {
     setLoading(true);
@@ -253,6 +277,10 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
               if (contact.name) params.set('customer', contact.name);
               if (contact.email) params.set('email', contact.email);
               if (contact.phone) params.set('phone', contact.phone);
+              // Add vehicle data from chat_state
+              if (chatState?.vehicle?.year) params.set('year', chatState.vehicle.year);
+              if (chatState?.vehicle?.make) params.set('make', chatState.vehicle.make);
+              if (chatState?.vehicle?.model) params.set('model', chatState.vehicle.model);
               window.location.href = `/mighty-customer?${params.toString()}`;
             }}
           >
