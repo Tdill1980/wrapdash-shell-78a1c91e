@@ -1,82 +1,225 @@
 
 
-# Update Favicon and Sidebar Logo to New WrapCommand AI Logo
+# Wire Escalation Desk to MightyCustomer with Create Quote Button
 
 ## Overview
 
-Replace the current favicon and sidebar logo with the new WrapCommand AI logo (cyber car with circuit board design) that the user has uploaded.
+Add a "Create Quote" button to the Escalation Desk that navigates to MightyCustomer with full context (conversation_id, customer name, email, phone, and vehicle details from chat_state). This enables staff to create quotes directly from escalated conversations while maintaining the existing "Check My File" download, artwork review, and AI chat features.
 
 ---
 
-## Files to Update
+## Current State Analysis
 
-| File | Change |
-|------|--------|
-| `public/favicon.ico` | Replace with new logo (converted to ICO format or use PNG) |
-| `public/pwa-192x192.png` | Replace with new logo at 192x192 |
-| `public/pwa-512x512.png` | Replace with new logo at 512x512 |
-| `src/assets/wrapcommand-logo-new.png` | Replace with new logo (used by Sidebar and TopBar) |
-| `index.html` | Add explicit favicon link tag pointing to the new favicon |
+### What Exists
 
----
+| Component | Location | Current Behavior |
+|-----------|----------|------------------|
+| EscalationsDashboard | `src/components/admin/EscalationsDashboard.tsx` | Shows escalation queue, clicking opens Chat tab - no quote creation button |
+| MightyCustomer | `src/pages/MightyCustomer.tsx` | Already accepts URL params: `conversation_id`, `customer`, `email`, `phone`, `year`, `make`, `model`, `mode` |
+| ContactSidebar | `src/components/mightychat/ContactSidebar.tsx` | Has "Create Quote" button but only passes `customer` and `email` - missing `conversation_id` |
+| ChatDetailModal | `src/components/admin/ChatDetailModal.tsx` | Shows conversation details with Quotes tab, but no direct "Create Quote" link to MightyCustomer |
+| Check My File | ArtworkReviewsPanel, ChatTranscriptRow | Download button already works - exports JSON with messages |
 
-## Implementation Steps
+### Data Available in Escalation Item
 
-### Step 1: Copy Uploaded Logo to Project
-
-Copy the new logo to the appropriate locations:
+From the `EscalationsDashboard.tsx` query:
 
 ```text
-user-uploads://android-chrome-512x512.png → public/pwa-512x512.png   (PWA icon)
-user-uploads://android-chrome-512x512.png → public/favicon.png       (Favicon as PNG)
-user-uploads://android-chrome-512x512.png → src/assets/wrapcommand-logo-new.png (Sidebar/TopBar)
-```
-
-### Step 2: Update index.html
-
-Add an explicit favicon link tag to ensure browsers pick up the new favicon:
-
-```html
-<!-- Add inside <head> section -->
-<link rel="icon" type="image/png" href="/favicon.png" />
-```
-
-### Step 3: Generate 192x192 PWA Icon
-
-The uploaded image is 512x512. For the 192x192 PWA icon, I'll copy the same file - modern browsers will handle the scaling, or we can note that a properly resized version should be created for optimal quality.
-
-### Step 4: Update vite.config.ts (if needed)
-
-The current config references `favicon.ico` - update to use `favicon.png`:
-
-```typescript
-includeAssets: ["favicon.png", "pwa-192x192.png", "pwa-512x512.png"],
+- conversationId (from conversation_events)
+- contactName (from contacts.name)
+- contactEmail (from contacts.email)
+- contactPhone (from contacts.phone)
+- Vehicle info available in conversation.chat_state.vehicle (year, make, model)
 ```
 
 ---
 
-## Files Affected
+## Implementation Plan
 
-### 1. Copy Operations
-- `user-uploads://android-chrome-512x512.png` → `public/favicon.png`
-- `user-uploads://android-chrome-512x512.png` → `public/pwa-512x512.png`
-- `user-uploads://android-chrome-512x512.png` → `public/pwa-192x192.png`
-- `user-uploads://android-chrome-512x512.png` → `src/assets/wrapcommand-logo-new.png`
+### Step 1: Enhance EscalationsDashboard with Create Quote Button
 
-### 2. index.html
-Add favicon link tag to `<head>` section
+**File:** `src/components/admin/EscalationsDashboard.tsx`
 
-### 3. vite.config.ts
-Update `includeAssets` to reference `favicon.png` instead of `favicon.ico`
+Add a "Create Quote" button to each escalation row that:
+1. Fetches the conversation's `chat_state` to get vehicle details
+2. Navigates to MightyCustomer with full URL parameters
+
+Changes:
+- Add a new query to fetch `chat_state` for selected conversation
+- Add `Receipt` icon import from lucide-react
+- Add "Create Quote" button in the quick actions area (alongside "Open in Chat" and "Quick Resolve")
+- Button navigates to: `/mighty-customer?mode=wpw_internal&conversation_id={id}&customer={name}&email={email}&phone={phone}&year={year}&make={make}&model={model}`
+
+### Step 2: Fix ContactSidebar to Pass conversation_id
+
+**File:** `src/components/mightychat/ContactSidebar.tsx`
+
+Update the existing "Create Quote" button to include `conversation_id` so quotes are linked:
+
+```tsx
+// Current (broken)
+onClick={() => window.location.href = `/mighty-customer?customer=${...}&email=${...}`}
+
+// Fixed
+onClick={() => navigate(`/mighty-customer?mode=wpw_internal&conversation_id=${conversationId}&customer=${...}&email=${...}&phone=${...}`)}
+```
+
+### Step 3: Add Create Quote to ChatDetailModal Quick Actions
+
+**File:** `src/components/admin/ChatDetailModal.tsx`
+
+Add a "Create Quote" button in the Quick Actions card that opens MightyCustomer with full context:
+- Uses conversation.id, contact.name, contact.email, contact.phone
+- Pulls vehicle from chat_state.vehicle
+
+---
+
+## Data Flow
+
+```text
++-------------------+     +------------------------+     +------------------+
+| EscalationsDashboard | --> | Click "Create Quote"     | --> | MightyCustomer   |
+| (conversation_id,   |     | Builds URL with:         |     | Pre-fills:       |
+| contact info,       |     | - conversation_id        |     | - Customer name  |
+| escalation type)    |     | - customer name          |     | - Email          |
++-------------------+     | - email, phone           |     | - Phone          |
+                          | - vehicle Y/M/M          |     | - Vehicle info   |
+                          +------------------------+     | - Links quote to |
+                                                         |   conversation   |
+                                                         +------------------+
+                                                                   |
+                                                                   v
+                                                         +------------------+
+                                                         | quotes table     |
+                                                         | source_conversation_id |
+                                                         | set correctly    |
+                                                         +------------------+
+```
+
+---
+
+## Files to Modify
+
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `src/components/admin/EscalationsDashboard.tsx` | Modify | Add "Create Quote" button to escalation rows, fetch chat_state for vehicle info |
+| `src/components/mightychat/ContactSidebar.tsx` | Modify | Fix "Create Quote" button to pass conversation_id and phone |
+| `src/components/admin/ChatDetailModal.tsx` | Modify | Add "Create Quote" button in Quick Actions section |
+
+---
+
+## Technical Details
+
+### EscalationsDashboard Changes
+
+1. Add `useNavigate` import from react-router-dom
+2. Expand the query to include `chat_state` from conversations table
+3. Add `Receipt` icon import
+4. Add new button in the quick actions `<div>`:
+
+```tsx
+<Button
+  variant="ghost"
+  size="icon"
+  className="h-7 w-7 text-muted-foreground hover:text-green-600"
+  onClick={(e) => {
+    e.stopPropagation();
+    const vehicle = chatStates[item.conversationId]?.vehicle || {};
+    const params = new URLSearchParams({
+      mode: 'wpw_internal',
+      conversation_id: item.conversationId,
+      customer: item.contactName || '',
+      email: item.contactEmail || '',
+      phone: item.contactPhone || '',
+      year: vehicle.year || '',
+      make: vehicle.make || '',
+      model: vehicle.model || '',
+    });
+    navigate(`/mighty-customer?${params.toString()}`);
+  }}
+  title="Create Quote"
+>
+  <Receipt className="h-4 w-4" />
+</Button>
+```
+
+### ContactSidebar Changes
+
+1. Add `conversationId` to component usage (already passed as prop)
+2. Update button onClick to include all parameters:
+
+```tsx
+<Button 
+  variant="outline" 
+  size="sm" 
+  className="w-full justify-start"
+  onClick={() => {
+    const params = new URLSearchParams({
+      mode: 'wpw_internal',
+      ...(conversationId && { conversation_id: conversationId }),
+      customer: contact.name || '',
+      email: contact.email || '',
+      phone: contact.phone || '',
+    });
+    window.location.href = `/mighty-customer?${params.toString()}`;
+  }}
+>
+  <FileText className="w-4 h-4 mr-2" />
+  Create Quote
+</Button>
+```
+
+### ChatDetailModal Changes
+
+Add a button in the Quick Actions card:
+
+```tsx
+<Button
+  variant="default"
+  className="w-full gap-2 justify-start bg-green-600 hover:bg-green-700"
+  size="sm"
+  onClick={() => {
+    const vehicle = chatState?.vehicle || {};
+    const params = new URLSearchParams({
+      mode: 'wpw_internal',
+      conversation_id: conversation.id,
+      customer: contact?.name || '',
+      email: contact?.email || '',
+      phone: contact?.phone || '',
+      year: vehicle.year || '',
+      make: vehicle.make || '',
+      model: vehicle.model || '',
+    });
+    window.open(`/mighty-customer?${params.toString()}`, '_blank');
+  }}
+>
+  <Receipt className="h-4 w-4" />
+  Create Quote in MightyCustomer
+</Button>
+```
+
+---
+
+## Preserved Features (No Changes)
+
+| Feature | File | Status |
+|---------|------|--------|
+| Chat transcript download | ChatTranscriptRow.tsx | Preserved - downloads JSON |
+| Artwork reviews panel | ArtworkReviewsPanel.tsx | Preserved - download button intact |
+| Check My File workflow | website-chat, check-artwork-file edge functions | Preserved - no changes |
+| AI chat capabilities | AgentChatPanel.tsx | Preserved - no changes |
+| MightyMail retargeting | quotes table, run-quote-followups | Preserved - quotes will auto-retarget |
+| Existing quote creation flow | MightyCustomer.tsx | Preserved - adding params doesn't break existing |
 
 ---
 
 ## Result
 
 After implementation:
-- **Browser tab** will show the new WrapCommand AI cyber car logo as favicon
-- **Sidebar** (above navigation) will display the new logo
-- **TopBar** (mobile/header) will display the new logo
-- **PWA** (when installed) will use the new logo as app icon
-- **Apple touch icon** will use the new 192x192 logo
+- Staff can click "Create Quote" directly from an escalation row
+- MightyCustomer opens pre-filled with customer name, email, phone, and vehicle info
+- Quote is automatically linked to the source conversation via `source_conversation_id`
+- Quote appears in the ChatDetailModal Quotes tab
+- Quote is eligible for MightyMail retargeting (auto_retarget: true for non-WPW-internal)
+- All existing download/export functionality remains intact
 
