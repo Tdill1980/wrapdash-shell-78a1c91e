@@ -349,6 +349,21 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                         >
                           <Receipt className="h-4 w-4" />
                         </Button>
+                        {/* Call Back button - only if contact has phone */}
+                        {item.contactPhone && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-amber-500"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`tel:${item.contactPhone}`, '_self');
+                            }}
+                            title="Call Back"
+                          >
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

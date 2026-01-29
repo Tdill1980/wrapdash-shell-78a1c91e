@@ -287,6 +287,32 @@ export function ContactSidebar({ contactId, channel, conversationId, subject }: 
             <FileText className="w-4 h-4 mr-2" />
             Create Quote
           </Button>
+          
+          {/* Call Back button - only if contact has phone */}
+          {contact.phone && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full justify-start text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
+              onClick={() => window.open(`tel:${contact.phone}`, '_self')}
+            >
+              <Phone className="w-4 h-4 mr-2" />
+              Call Back
+            </Button>
+          )}
+
+          {/* SMS button - only if contact has phone */}
+          {contact.phone && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full justify-start text-blue-600 border-blue-500/30 hover:bg-blue-500/10"
+              onClick={() => window.open(`sms:${contact.phone}`, '_self')}
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Send SMS
+            </Button>
+          )}
         </div>
 
       </CardContent>

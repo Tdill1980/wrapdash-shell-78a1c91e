@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Mail, Palette, MessageCircle, Cog, TrendingUp, AlertTriangle, Flame, Users, ChevronDown, ChevronRight } from "lucide-react";
+import { Globe, Mail, Palette, MessageCircle, Cog, TrendingUp, AlertTriangle, Flame, Users, ChevronDown, ChevronRight, Phone } from "lucide-react";
 import { useState } from "react";
 
-export type WorkStream = "hello" | "design" | "jackson" | "dms" | "ops";
+export type WorkStream = "hello" | "design" | "jackson" | "dms" | "ops" | "website" | "phone";
 
 interface StreamConfig {
   id: WorkStream;
@@ -57,6 +57,24 @@ const STREAMS: StreamConfig[] = [
     activeColor: "bg-pink-500/10 border-pink-500/50 text-pink-600 shadow-sm"
   },
   { 
+    id: "website", 
+    label: "Website Chat", 
+    agentName: "Jordan Lee",
+    inboxLabel: "weprintwraps.com",
+    icon: <Globe className="w-4 h-4" />,
+    color: "text-cyan-500",
+    activeColor: "bg-cyan-500/10 border-cyan-500/50 text-cyan-600 shadow-sm"
+  },
+  { 
+    id: "phone", 
+    label: "Phone Calls", 
+    agentName: "Taylor Phone",
+    inboxLabel: "AI Phone Agent",
+    icon: <Phone className="w-4 h-4" />,
+    color: "text-amber-500",
+    activeColor: "bg-amber-500/10 border-amber-500/50 text-amber-600 shadow-sm"
+  },
+  { 
     id: "ops", 
     label: "Ops Desk", 
     agentName: "Ops Desk",
@@ -87,6 +105,8 @@ interface WorkStreamsSidebarProps {
     jackson?: number;
     dms?: number;
     ops?: number;
+    website?: number;
+    phone?: number;
   };
   signals?: {
     quoteValue?: number;
@@ -250,6 +270,8 @@ export function mapInboxToStream(inbox: string): WorkStream {
     case "jackson": return "jackson";
     case "dms": return "dms";
     case "ops_desk": return "ops";
+    case "website": return "website";
+    case "phone": return "phone";
     default: return "hello";
   }
 }
@@ -262,6 +284,8 @@ export function mapStreamToInbox(stream: WorkStream): string {
     case "jackson": return "jackson";
     case "dms": return "dms";
     case "ops": return "ops_desk";
+    case "website": return "website";
+    case "phone": return "phone";
     default: return "hello";
   }
 }

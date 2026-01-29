@@ -36,7 +36,7 @@ export function MightyChatShell() {
       setSelectedConversationId(id);
       setMode("chat");
 
-      if (stream && ["hello", "design", "jackson", "dms", "ops"].includes(stream)) {
+      if (stream && ["hello", "design", "jackson", "dms", "ops", "website", "phone"].includes(stream)) {
         setInitialStream(stream);
       }
     }

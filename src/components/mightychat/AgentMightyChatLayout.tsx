@@ -220,6 +220,20 @@ function EmptyStreamState({ stream }: { stream: WorkStream }) {
       reason: "No affiliate communications in last 48h.",
       action: "Check MightyAffiliate portal for pending messages"
     },
+    website: {
+      title: "Website Chat",
+      agent: "Jordan Lee",
+      inputs: ["weprintwraps.com chat widget", "Pricing questions", "Check My File uploads"],
+      reason: "No website chat conversations in last 30 days.",
+      action: "Verify chat widget is active on weprintwraps.com"
+    },
+    phone: {
+      title: "Phone Calls",
+      agent: "Taylor Phone",
+      inputs: ["AI Phone Agent", "Inbound calls", "Voicemails"],
+      reason: "No phone calls received recently.",
+      action: "Verify Twilio phone agent is configured"
+    },
     ops: {
       title: "Ops Desk",
       agent: "Ops Desk",
@@ -319,11 +333,14 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       const channel = initialConversationChannel.toLowerCase();
       if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') {
         setActiveStream('dms');
+      } else if (channel === 'website' || channel === 'website_chat') {
+        setActiveStream('website');
+      } else if (channel === 'phone') {
+        setActiveStream('phone');
       } else if (channel === 'email') {
         // Default to hello@ for email, the specific inbox will be shown
         setActiveStream('hello');
       } else {
-        // MightyChats = Social + Email only (website chat lives in Website Page Chat dashboard)
         setActiveStream('hello');
       }
     }
@@ -365,8 +382,8 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
         *,
         contacts:contact_id (name, email)
       `)
-      // MightyChats is ONLY Social DMs + Email
-      .in("channel", ["instagram", "facebook", "messenger", "email"])
+      // MightyChats: Social DMs + Email + Website Chat + Phone
+      .in("channel", ["instagram", "facebook", "messenger", "email", "website", "website_chat", "phone"])
       .or(`last_message_at.gte.${sinceIso},and(last_message_at.is.null,created_at.gte.${sinceIso})`)
       .order("last_message_at", { ascending: false })
       .order("created_at", { ascending: false })
@@ -440,6 +457,12 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
     // Social DMs (Instagram, Facebook)
     if (channel === 'instagram' || channel === 'facebook' || channel === 'messenger') return 'dms';
 
+    // Website chat (Jordan Lee)
+    if (channel === 'website' || channel === 'website_chat') return 'website';
+
+    // Phone calls (Taylor Phone)
+    if (channel === 'phone') return 'phone';
+
     // Email routing based on inbox
     if (channel === 'email') {
       const inbox = conv.recipient_inbox?.toLowerCase() || '';
@@ -463,7 +486,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
 
   // Compute stream counts - use same logic as getConversationStream
   const streamCounts = useMemo(() => {
-    const counts: Record<WorkStream, number> = { hello: 0, design: 0, jackson: 0, dms: 0, ops: 0 };
+    const counts: Record<WorkStream, number> = { hello: 0, design: 0, jackson: 0, dms: 0, ops: 0, website: 0, phone: 0 };
     conversations.forEach(conv => {
       const stream = getConversationStream(conv);
       counts[stream]++;
