@@ -8,6 +8,10 @@ export const APPROVED_LINKS = {
     commercialpro: "https://weprintwraps.com/pages/commercialpro",
     restylepro: "https://weprintwraps.com/pages/restylepro",
     laminates: "https://weprintwraps.com/collections/laminates",
+    // Core product pages
+    wall_wrap: "https://weprintwraps.com/our-products/wall-wrap-printed-vinyl/",
+    avery_1105: "https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/",
+    "3m_ij180": "https://weprintwraps.com/our-products/3m-ij180-printed-wrap-film/",
   },
   ordering: {
     homepage_quote: "https://weprintwraps.com/#quote",
