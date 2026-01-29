@@ -172,9 +172,22 @@ const operationsItems: NavigationItem[] = [
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Website </span>
-        <span className="bg-gradient-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent">Quotes</span>
-      </span>
-    )
+      <span className="bg-gradient-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent">Quotes</span>
+    </span>
+  )
+},
+{ 
+  name: "Quote Tool", 
+  path: "/quote-admin", 
+  icon: DollarSign,
+  roles: ["admin", "beta_shop"],
+  customRender: (
+    <span className="font-['Poppins',sans-serif] font-semibold">
+      <span className="text-white">Quote </span>
+      <span className="bg-gradient-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent">Tool</span>
+      <span className="text-[8px] align-super ml-1 text-green-400">$21K</span>
+    </span>
+  )
   },
   { 
     name: "ShopFlow Internal", 

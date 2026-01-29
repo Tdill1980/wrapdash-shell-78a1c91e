@@ -993,6 +993,7 @@ export type Database = {
           resolved: boolean | null
           resolved_at: string | null
           resolved_by: string | null
+          scheduled_for: string | null
           status: string | null
         }
         Insert: {
@@ -1011,6 +1012,7 @@ export type Database = {
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
+          scheduled_for?: string | null
           status?: string | null
         }
         Update: {
@@ -1029,6 +1031,7 @@ export type Database = {
           resolved?: boolean | null
           resolved_at?: string | null
           resolved_by?: string | null
+          scheduled_for?: string | null
           status?: string | null
         }
         Relationships: [
@@ -3194,6 +3197,9 @@ export type Database = {
           chat_state: Json | null
           contact_id: string | null
           created_at: string | null
+          escalated: boolean | null
+          escalated_at: string | null
+          escalation_reason: string | null
           id: string
           last_message_at: string | null
           metadata: Json | null
@@ -3214,6 +3220,9 @@ export type Database = {
           chat_state?: Json | null
           contact_id?: string | null
           created_at?: string | null
+          escalated?: boolean | null
+          escalated_at?: string | null
+          escalation_reason?: string | null
           id?: string
           last_message_at?: string | null
           metadata?: Json | null
@@ -3234,6 +3243,9 @@ export type Database = {
           chat_state?: Json | null
           contact_id?: string | null
           created_at?: string | null
+          escalated?: boolean | null
+          escalated_at?: string | null
+          escalation_reason?: string | null
           id?: string
           last_message_at?: string | null
           metadata?: Json | null
@@ -6302,6 +6314,7 @@ export type Database = {
           auto_retarget: boolean | null
           category: string | null
           click_count: number | null
+          contact_id: string | null
           conversion_date: string | null
           conversion_revenue: number | null
           converted_to_order: boolean | null
@@ -6370,6 +6383,7 @@ export type Database = {
           auto_retarget?: boolean | null
           category?: string | null
           click_count?: number | null
+          contact_id?: string | null
           conversion_date?: string | null
           conversion_revenue?: number | null
           converted_to_order?: boolean | null
@@ -6438,6 +6452,7 @@ export type Database = {
           auto_retarget?: boolean | null
           category?: string | null
           click_count?: number | null
+          contact_id?: string | null
           conversion_date?: string | null
           conversion_revenue?: number | null
           converted_to_order?: boolean | null
@@ -6493,6 +6508,13 @@ export type Database = {
           woo_order_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quotes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quotes_organization_id_fkey"
             columns: ["organization_id"]

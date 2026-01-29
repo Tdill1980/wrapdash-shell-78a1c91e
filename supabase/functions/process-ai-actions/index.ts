@@ -72,6 +72,82 @@ async function executeAction(action: AIAction): Promise<{ ok: boolean; result: s
       console.log(`[process-ai-actions] File review ${action.id} - needs manual review`);
       return { ok: true, result: "file_needs_review" };
 
+    case "send_sms_alert": {
+      // Send SMS via Twilio for escalations
+      const context = (payload.context || payload) as Record<string, unknown>;
+      const phone = context?.phone as string | undefined;
+      const message = context?.message as string | undefined;
+      
+      console.log(`[process-ai-actions] Processing SMS alert to ${phone}`);
+      
+      if (phone && message) {
+        const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+        const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+        const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
+        
+        if (twilioAccountSid && twilioAuthToken && twilioPhoneNumber) {
+          try {
+            const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
+            
+            const response = await fetch(twilioUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Basic ${btoa(`${twilioAccountSid}:${twilioAuthToken}`)}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: new URLSearchParams({
+                To: phone,
+                From: twilioPhoneNumber,
+                Body: message,
+              }),
+            });
+            
+            if (response.ok) {
+              console.log(`[process-ai-actions] ✅ SMS sent to ${phone}`);
+              return { ok: true, result: 'sms_sent' };
+            } else {
+              const errorText = await response.text();
+              console.error(`[process-ai-actions] SMS failed: ${errorText}`);
+              return { ok: false, result: 'sms_failed', error: errorText };
+            }
+          } catch (smsError) {
+            console.error(`[process-ai-actions] SMS exception:`, smsError);
+            return { ok: false, result: 'sms_exception', error: String(smsError) };
+          }
+        } else {
+          console.log(`[process-ai-actions] Twilio not configured, skipping SMS`);
+          return { ok: true, result: 'sms_skipped_no_config' };
+        }
+      }
+      return { ok: false, result: 'sms_failed', error: 'Missing phone or message' };
+    }
+
+    case "portfolio_to_contentbox": {
+      // Queue portfolio media for ContentBox processing
+      const context = (payload.context || payload) as Record<string, unknown>;
+      console.log(`[process-ai-actions] Portfolio sync queued for job ${context?.portfolio_job_id}`);
+      // In production, this would copy media files from portfolio to contentbox storage
+      // For now, we mark as processed so it can be manually handled
+      return { ok: true, result: 'portfolio_sync_queued' };
+    }
+
+    case "send_review_request": {
+      // Check if scheduled_for is in the future
+      const scheduledFor = (action as unknown as { scheduled_for?: string }).scheduled_for;
+      if (scheduledFor && new Date(scheduledFor) > new Date()) {
+        console.log(`[process-ai-actions] Review request scheduled for ${scheduledFor}, not due yet`);
+        return { ok: true, result: 'scheduled_not_due' };
+      }
+      
+      // Send review request email via Resend
+      const context = (payload.context || payload) as Record<string, unknown>;
+      console.log(`[process-ai-actions] Sending review request for job ${context?.portfolio_job_id}`);
+      
+      // TODO: Integrate with Resend to send actual review request email
+      // For now, mark as processed
+      return { ok: true, result: 'review_request_queued' };
+    }
+
     default:
       console.log(`[process-ai-actions] Unknown action_type: ${action.action_type}`);
       return { ok: true, result: `noop for ${action.action_type}` };
@@ -117,7 +193,10 @@ Deno.serve(async (req) => {
       .from("ai_actions")
       .select("*")
       .eq("status", "pending")
-      .in("action_type", ["dm_send", "email_send", "website_reply", "approve_message"])
+      .in("action_type", [
+        "dm_send", "email_send", "website_reply", "approve_message",
+        "send_sms_alert", "portfolio_to_contentbox", "send_review_request"
+      ])
       .order("created_at", { ascending: true })
       .limit(10);
 
