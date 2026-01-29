@@ -93,6 +93,7 @@ import RevenueHealth from "./pages/RevenueHealth";
 import AIApprovals from "./pages/AIApprovals";
 import BulkVariationReview from "./pages/BulkVariationReview";
 import QuoteStatsDashboard from "./pages/QuoteStatsDashboard";
+import QuoteToolAdmin from "./pages/QuoteToolAdmin";
 import TagManager from "./pages/TagManager";
 import Backlog from "./pages/Backlog";
 import ContentDrafts from "./pages/ContentDrafts";
@@ -197,6 +198,7 @@ const App = () => (
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
             <Route path="/admin/website-quotes" element={<WebsiteChatQuotesPage />} />
+            <Route path="/quote-admin" element={<QuoteToolAdmin />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/admin/add-organization" element={<AddOrganizationWizard />} />
             <Route path="/admin/asset-tagging" element={<AssetTaggingAdmin />} />

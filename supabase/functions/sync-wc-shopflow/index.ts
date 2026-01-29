@@ -707,6 +707,18 @@ function extractFiles(payload: any): any[] {
 }
 
 function extractAffiliateRefCode(payload: any): string | null {
+  // Check coupon_lines for affiliate coupon codes (most common pattern)
+  if (payload.coupon_lines && Array.isArray(payload.coupon_lines)) {
+    for (const coupon of payload.coupon_lines) {
+      const code = coupon.code?.toUpperCase();
+      // Affiliate codes are typically 4-15 chars, uppercase
+      if (code && code.length >= 4 && code.length <= 15) {
+        console.log(`[sync-wc-shopflow] Found coupon code: ${code}, treating as potential affiliate code`);
+        return code;
+      }
+    }
+  }
+
   // Check meta_data array for affiliate ref codes
   if (payload.meta_data) {
     const refMeta = payload.meta_data.find((m: any) => 
