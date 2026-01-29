@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Mail, Palette, PenTool, Settings2, Upload } from "lucide-react";
+import { Mail, Palette, PenTool, Settings2, Upload, Workflow } from "lucide-react";
 import SequenceManager from "@/components/mightymail/SequenceManager";
 import BrandingManager from "@/components/mightymail/BrandingManager";
 import CSVUploader from "@/components/mightymail/CSVUploader";
@@ -9,6 +9,7 @@ import { UTIMAnalyticsDashboard } from "@/components/UTIMAnalyticsDashboard";
 import { ToneDesignPerformance } from "@/components/ToneDesignPerformance";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
+import { Button } from "@/components/ui/button";
 
 export default function MightyMailAdmin() {
   const navigate = useNavigate();
@@ -29,6 +30,15 @@ export default function MightyMailAdmin() {
           <span className="text-xs px-2 py-1 rounded bg-gradient-to-r from-[#00AFFF]/20 to-[#4EEAFF]/20 text-[#00AFFF] border border-[#00AFFF]/30">
             ✓ Connected to Resend
           </span>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate("/mightymail/sequences")}
+            className="text-xs"
+          >
+            <Workflow size={12} className="mr-1" />
+            Sequence Dashboard
+          </Button>
         </div>
       </div>
 
