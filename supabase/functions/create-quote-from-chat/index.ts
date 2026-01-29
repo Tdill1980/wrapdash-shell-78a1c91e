@@ -519,6 +519,58 @@ serve(async (req) => {
       }
     }
 
+    // ============================================
+    // MIGHTYMAIL WIRING: Enroll in email sequence
+    // ============================================
+    if (customer_email && !customer_email.includes('@capture.local')) {
+      try {
+        // Get or find contact
+        const { data: contact } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('email', customer_email.toLowerCase())
+          .eq('organization_id', organization_id)
+          .maybeSingle();
+
+        if (contact) {
+          // Find quote follow-up sequence
+          const { data: sequence } = await supabase
+            .from('email_sequences')
+            .select('id')
+            .ilike('name', '%quote%follow%')
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (sequence) {
+            // Check if not already enrolled
+            const { data: existingEnrollment } = await supabase
+              .from('email_sequence_enrollments')
+              .select('id')
+              .eq('customer_email', customer_email)
+              .eq('sequence_id', sequence.id)
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (!existingEnrollment) {
+              await supabase.from('email_sequence_enrollments').insert({
+                contact_id: contact.id,
+                quote_id: quote.id,
+                sequence_id: sequence.id,
+                customer_email: customer_email,
+                customer_name: customer_name || 'Website Lead',
+                enrolled_at: new Date().toISOString(),
+                emails_sent: 0,
+                is_active: true
+              });
+              console.log(`[MightyMail] Enrolled ${customer_email} in quote follow-up sequence`);
+            }
+          }
+        }
+      } catch (mailError) {
+        console.warn('[MightyMail] Enrollment warning (non-blocking):', mailError);
+      }
+    }
+
     // Log AI action
     await supabase
       .from('ai_actions')

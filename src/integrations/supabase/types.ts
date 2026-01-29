@@ -2169,8 +2169,16 @@ export type Database = {
           company: string | null
           created_at: string | null
           email: string | null
+          email_bounced: boolean | null
+          email_clicks_count: number | null
+          email_opens_count: number | null
+          email_sends_count: number | null
+          email_unsubscribed: boolean | null
           id: string
           last_contacted_at: string | null
+          last_email_sent_at: string | null
+          last_quote_amount: number | null
+          last_quote_at: string | null
           metadata: Json | null
           name: string
           organization_id: string | null
@@ -2184,8 +2192,16 @@ export type Database = {
           company?: string | null
           created_at?: string | null
           email?: string | null
+          email_bounced?: boolean | null
+          email_clicks_count?: number | null
+          email_opens_count?: number | null
+          email_sends_count?: number | null
+          email_unsubscribed?: boolean | null
           id?: string
           last_contacted_at?: string | null
+          last_email_sent_at?: string | null
+          last_quote_amount?: number | null
+          last_quote_at?: string | null
           metadata?: Json | null
           name: string
           organization_id?: string | null
@@ -2199,8 +2215,16 @@ export type Database = {
           company?: string | null
           created_at?: string | null
           email?: string | null
+          email_bounced?: boolean | null
+          email_clicks_count?: number | null
+          email_opens_count?: number | null
+          email_sends_count?: number | null
+          email_unsubscribed?: boolean | null
           id?: string
           last_contacted_at?: string | null
+          last_email_sent_at?: string | null
+          last_quote_amount?: number | null
+          last_quote_at?: string | null
           metadata?: Json | null
           name?: string
           organization_id?: string | null
@@ -4040,6 +4064,7 @@ export type Database = {
       email_sequence_enrollments: {
         Row: {
           completed_at: string | null
+          contact_id: string | null
           created_at: string
           customer_email: string
           customer_name: string | null
@@ -4055,6 +4080,7 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          contact_id?: string | null
           created_at?: string
           customer_email: string
           customer_name?: string | null
@@ -4070,6 +4096,7 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          contact_id?: string | null
           created_at?: string
           customer_email?: string
           customer_name?: string | null
@@ -4084,6 +4111,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_sequence_enrollments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_sequence_enrollments_quote_id_fkey"
             columns: ["quote_id"]

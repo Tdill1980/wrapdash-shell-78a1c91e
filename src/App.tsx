@@ -34,6 +34,7 @@ import MightyMailPerformance from "./pages/MightyMailPerformance";
 import MightyMailAI from "./pages/MightyMailAI";
 import MightyMailWinback from "./pages/MightyMailWinback";
 import MightyMailCampaignSender from "./pages/MightyMailCampaignSender";
+import MightyMailSequences from "./pages/MightyMailSequences";
 import AIPipeline from "./pages/AIPipeline";
 import ContentBox from "./pages/ContentBox";
 import ContentSchedule from "./pages/ContentSchedule";
@@ -153,6 +154,7 @@ const App = () => (
             <Route path="/mightymail-ai" element={<MightyMailAI />} />
             <Route path="/mightymail/winback" element={<MightyMailWinback />} />
             <Route path="/mightymail/campaign-sender" element={<MightyMailCampaignSender />} />
+            <Route path="/mightymail/sequences" element={<MightyMailSequences />} />
             <Route path="/quote-drafts" element={<QuoteDrafts />} />
             <Route path="/ai-pipeline" element={<AIPipeline />} />
             {/* DISABLED: MightyChats frozen - Instagram/Email ingestion stopped */}

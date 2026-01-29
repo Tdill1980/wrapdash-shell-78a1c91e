@@ -188,6 +188,62 @@ Rules:
         sender_name: classification.customer_name || "Caller",
         metadata: { source: "phone_transcript" },
       });
+
+      // ============================================
+      // MIGHTYMAIL WIRING: Enroll phone leads in sequence
+      // ============================================
+      const customerEmail = (classification.customer_name && classification.customer_name.includes('@')) 
+        ? classification.customer_name 
+        : null; // Phone calls may not capture email
+      
+      // Check conversation metadata for email
+      const { data: convWithEmail } = await supabase
+        .from('conversations')
+        .select('chat_state')
+        .eq('id', conversation.id)
+        .maybeSingle();
+      
+      const extractedEmail = customerEmail || convWithEmail?.chat_state?.customer_email;
+      
+      if (extractedEmail && !extractedEmail.includes('@capture.local')) {
+        try {
+          // Get contact
+          const { data: contact } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('phone', callerPhone)
+            .eq('organization_id', organizationId)
+            .maybeSingle();
+
+          if (contact) {
+            // Find phone lead sequence
+            const { data: phoneSequence } = await supabase
+              .from('email_sequences')
+              .select('id')
+              .or('name.ilike.%phone%,name.ilike.%call%')
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (phoneSequence) {
+              const { error: enrollError } = await supabase.from('email_sequence_enrollments').insert({
+                contact_id: contact.id,
+                sequence_id: phoneSequence.id,
+                customer_email: extractedEmail,
+                customer_name: classification.customer_name || 'Phone Caller',
+                enrolled_at: new Date().toISOString(),
+                emails_sent: 0,
+                is_active: true
+              });
+              
+              if (!enrollError) {
+                console.log(`[MightyMail] Enrolled phone lead ${extractedEmail} in sequence`);
+              }
+            }
+          }
+        } catch (mailError) {
+          console.warn('[MightyMail] Phone enrollment warning:', mailError);
+        }
+      }
     }
 
     // If hot lead or upset customer, send SMS alert
