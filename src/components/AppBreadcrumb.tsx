@@ -1,3 +1,4 @@
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ChevronRight, Home } from "lucide-react";
 import {
@@ -86,26 +87,28 @@ export const AppBreadcrumb = () => {
             </BreadcrumbLink>
           </BreadcrumbItem>
 
-          {breadcrumbItems.map((item, index) => (
-            <BreadcrumbItem key={item.path}>
+          {breadcrumbItems.map((item) => (
+            <React.Fragment key={item.path}>
               <BreadcrumbSeparator>
                 <ChevronRight className="h-3.5 w-3.5 text-white/30" />
               </BreadcrumbSeparator>
-              {item.isLast ? (
-                <BreadcrumbPage className="text-foreground font-medium">
-                  {item.label}
-                </BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link 
-                    to={item.path}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
+              <BreadcrumbItem>
+                {item.isLast ? (
+                  <BreadcrumbPage className="text-foreground font-medium">
                     {item.label}
-                  </Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
+                  </BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link 
+                      to={item.path}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </React.Fragment>
           ))}
         </BreadcrumbList>
       </Breadcrumb>
