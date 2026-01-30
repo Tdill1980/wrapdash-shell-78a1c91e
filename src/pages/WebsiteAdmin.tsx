@@ -24,6 +24,7 @@ const TABS = [
 export default function JordanLeeAdminDashboard() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "chats";
+  const initialFilter = searchParams.get("filter"); // "hot" for hot leads filter
   const [activeTab, setActiveTab] = useState(initialTab);
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -194,6 +195,7 @@ export default function JordanLeeAdminDashboard() {
             <ChatSessionsTab 
               initialConversationId={pendingConversationId} 
               onConversationOpened={() => setPendingConversationId(null)}
+              initialFilter={initialFilter}
             />
           </TabsContent>
 
