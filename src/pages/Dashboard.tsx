@@ -66,6 +66,8 @@ export default function Dashboard() {
       const { data } = await supabase
         .from("shopflow_orders")
         .select("id, woo_order_number, order_number, status, updated_at, customer_name")
+        .neq("hidden", true)
+        .neq("is_paid", false)
         .order("updated_at", { ascending: false })
         .limit(5);
       return data || [];
