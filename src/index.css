@@ -48,11 +48,11 @@ All colors MUST be HSL.
       --destructive: 0 62.8% 30.6%;
       --destructive-foreground: 240 10% 98%;
       
-      /* Borders - separated HSL and opacity for browser compatibility */
+      /* Borders - very subtle, near-invisible for dark theme cohesion */
       --border: 0 0% 100%;
-      --border-opacity: 0.06;
+      --border-opacity: 0.03;
       --input: 0 0% 100%;
-      --input-opacity: 0.06;
+      --input-opacity: 0.05;
       --ring: 198 100% 50%;
       --radius: 0.5rem;                   /* 8px radius */
       
@@ -69,7 +69,7 @@ All colors MUST be HSL.
       --sidebar-accent: 214 21% 21%;
       --sidebar-accent-foreground: 240 10% 98%;
       --sidebar-border: 0 0% 100%;
-      --sidebar-border-opacity: 0.06;
+      --sidebar-border-opacity: 0.03;
       --sidebar-ring: 198 100% 50%;
       
       /* Instagram gradient colors */
