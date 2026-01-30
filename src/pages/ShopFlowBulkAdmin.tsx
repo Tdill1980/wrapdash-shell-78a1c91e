@@ -24,6 +24,8 @@ export default function ShopFlowBulkAdmin() {
       const { data, error } = await supabase
         .from("shopflow_orders")
         .select("*")
+        .neq("hidden", true)
+        .neq("is_paid", false)
         .order("created_at", { ascending: false })
         .limit(100);
 

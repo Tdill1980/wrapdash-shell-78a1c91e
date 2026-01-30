@@ -125,10 +125,12 @@ export async function syncFromServer(): Promise<void> {
       console.log(`[Sync] Cached ${customers.length} customers`);
     }
 
-    // Sync orders
+    // Sync orders - only paid orders
     const { data: ordersData } = await supabase
       .from('shopflow_orders')
       .select('*')
+      .neq('hidden', true)
+      .neq('is_paid', false)
       .order('created_at', { ascending: false })
       .limit(200);
     
