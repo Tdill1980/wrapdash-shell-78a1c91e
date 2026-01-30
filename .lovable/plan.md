@@ -1,129 +1,169 @@
 
 
-# Plan: Complete External Quote Database Integration
+# Dashboard Cards & AI Agent Fix Verification Report
 
-## Problem Summary
+## Executive Summary
 
-The `fetch-external-quotes` and `quote-status-webhook` edge functions are ready, but the **`EXTERNAL_QUOTE_DB_SERVICE_KEY` secret is missing**. This key is required to authenticate against the external Quote Tool database (`lqxnwskrrshythrydzcs`) using the service role (bypassing user auth).
+I've verified the dashboard cards are properly wired to their data sources. The Jordan AI "installation" fix is **already deployed** in the codebase. Here's what I found:
 
 ---
 
-## Architecture Clarification
+## Dashboard Card Wiring Status
+
+### MightyChatCard ✅ Correct
+```text
+Data Source: conversations table + ai_actions table
+Channels Tracked: Instagram, Email, Website, Phone
+Metrics: Hot leads, pending reviews, quote requests
+Realtime: ✅ Subscribed to postgres_changes
+```
+
+### PhoneCallsDashboardCard ✅ Correct
+```text
+Data Source: phone_calls table
+Metrics: Total calls (24h), Hot leads, Pending (needs response)
+Realtime: ✅ Refetches every 30 seconds
+Note: Currently shows 0 calls (no data in table yet)
+```
+
+### QuoteRequestCard ✅ Correct
+```text
+Data Source: ai_actions table (action_type = 'create_quote')
+Shows: Pending quote requests with vehicle info
+Realtime: ✅ Subscribed to ai_actions changes
+```
+
+---
+
+## Data Current State
+
+| Source | Total Records | Last 7 Days |
+|--------|---------------|-------------|
+| Conversations | 741 | 1 |
+| Phone Calls | 0 | 0 |
+| AI Actions (pending) | 408 | Active |
+
+**Channel Breakdown (conversations):**
+- Email: 336
+- Instagram: 223  
+- Website: 182
+
+---
+
+## Jordan AI Installation Fix ✅ Already Deployed
+
+The `website-chat/index.ts` file contains the complete fix:
+
+**Location: Lines 17-46 (Critical Identity Block)**
+```javascript
+const WPW_IDENTITY = `
+⚠️⚠️⚠️ CRITICAL IDENTITY RULE - NEVER VIOLATE ⚠️⚠️⚠️
+
+WePrintWraps.com is a PRINT SHOP ONLY.
+
+WE DO NOT:
+❌ Install wraps - WE HAVE NO INSTALLATION TEAM
+❌ Do local pickup - shipping only
+...
+
+IF ASKED ABOUT INSTALLATION:
+Say EXACTLY: "No, we're a print shop - we print and ship..."
+`;
+```
+
+**Additional Reinforcement Locations:**
+- Line 515: System prompt rule
+- Lines 756-762: Explicit installation response template
+- Lines 1203, 1276: Email template consistency
+
+---
+
+## Vapi Webhook ✅ Correct Format
+
+The `vapi-webhook/index.ts` returns proper format:
+```javascript
+return new Response(JSON.stringify({ results }), ...)
+```
+
+Functions implemented:
+- `lookup_vehicle_quote` - Vehicle dimension lookup
+- `submit_quote_request` - Calls ai-auto-quote
+
+---
+
+## Issues Identified
+
+### 1. Phone Calls Table Empty
+**Status:** Dashboard is wired correctly, but no data exists
+**Likely Cause:** 
+- Twilio webhook URL may need verification
+- No incoming calls yet
+- Need to test `receive-phone-call` edge function
+
+### 2. MightyChat V2 Missing Phone Tab
+**Current tabs:** All, DMs, Email, Website, Internal
+**Missing:** Phone channel filter
+
+**Fix Required:** Add phone tab to MightyChatV2.tsx
+
+---
+
+## Recommended Verification Steps
+
+### Step 1: Test Jordan (Website Chat)
+```text
+Test Query: "Do you offer installation?"
+Expected: "No, we're a print shop - we print and ship..."
+```
+
+### Step 2: Test Phone System
+```text
+1. Verify Twilio webhook URL is set to:
+   https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/receive-phone-call
+
+2. Make test call to the Twilio number
+
+3. Check edge function logs for receive-phone-call
+```
+
+### Step 3: Add Phone Tab to MightyChat V2
+Add `phone` as a channel option in the Tabs component (line ~338)
+
+---
+
+## Technical Architecture Diagram
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         WRAPCOMMAND PROJECT                             │
-│                      (wzwqhfbmymrengjqikjl)                             │
-│                                                                         │
-│  ┌─────────────┐     ┌───────────────────────────────────────┐         │
-│  │ Admin User  │────▶│ Auth against WrapCommand DB           │  ✅     │
-│  │ (Jackson)   │     │ (Your Lovable Cloud)                  │         │
-│  └─────────────┘     └───────────────────────────────────────┘         │
-│         │                                                               │
-│         ▼                                                               │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ Edge Function: fetch-external-quotes                            │   │
-│  │ Uses: EXTERNAL_QUOTE_DB_SERVICE_KEY (service role)              │   │
-│  │ Status: ⚠️ KEY NOT CONFIGURED                                   │   │
-│  └──────────────────────────────┬──────────────────────────────────┘   │
-│                                 │                                       │
-└─────────────────────────────────┼───────────────────────────────────────┘
-                                  │
-                                  ▼ (Service Role - No User Auth Required)
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     EXTERNAL QUOTE TOOL PROJECT                         │
-│                      (lqxnwskrrshythrydzcs)                            │
-│                      (Separate Lovable Cloud)                           │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ quotes table                                                    │   │
-│  │ - 218+ quotes from WePrintWraps.com                            │   │
-│  │ - $21K+ revenue data                                           │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  Auth Settings: ❌ You don't have access to configure                  │
-│  (But we don't need user auth - service role bypasses it)              │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      DASHBOARD CARDS                            │
+├─────────────────┬─────────────────┬─────────────────────────────┤
+│ MightyChatCard  │ PhoneCallsCard  │ QuoteRequestCard            │
+│       │         │       │         │        │                    │
+│       ▼         │       ▼         │        ▼                    │
+│ conversations   │  phone_calls    │   ai_actions                │
+│    table        │     table       │     table                   │
+│  (741 rows)     │   (0 rows)      │  (408 pending)              │
+└────────┬────────┴────────┬────────┴────────┬────────────────────┘
+         │                 │                 │
+         ▼                 ▼                 ▼
+┌─────────────────┬─────────────────┬─────────────────────────────┐
+│  website-chat   │ receive-phone   │ Various AI actions          │
+│  edge function  │   -call         │ create_quote, escalation    │
+│    ✅ Fixed     │  ⚠️ No data    │      ✅ Working              │
+└─────────────────┴─────────────────┴─────────────────────────────┘
 ```
-
----
-
-## Required Action
-
-### Step 1: Get the Service Role Key
-
-Contact the owner of the Quote Tool Lovable project and ask them to:
-
-1. Open their Lovable project
-2. Click **Cloud** (backend button)
-3. Go to **Settings** or **API Keys**
-4. Copy the **Service Role Key** (NOT the anon key)
-5. Share it with you securely (Signal, encrypted email, etc.)
-
-### Step 2: Add the Secret to WrapCommand
-
-Once you have the key, add it as a secret:
-- **Secret Name**: `EXTERNAL_QUOTE_DB_SERVICE_KEY`
-- **Value**: The service role key from the Quote Tool project
-
-### Step 3: Test the Integration
-
-After adding the secret, test the edge function:
-```
-POST /fetch-external-quotes
-Body: { "limit": 10 }
-```
-
-Expected response:
-```json
-{
-  "success": true,
-  "tenant_id": "wpw",
-  "quotes": [...],
-  "count": 218,
-  "analytics": {
-    "total": 218,
-    "converted_count": 17,
-    "converted_revenue": 21456
-  }
-}
-```
-
----
-
-## Alternative: Self-Owned Database
-
-If the Quote Tool is **your own** project on a different Lovable account, you have two options:
-
-### Option A: Get the Key from Your Other Account
-1. Log into the Lovable account that owns the Quote Tool
-2. Open the Cloud dashboard for that project
-3. Find the service role key
-4. Add it to this project as `EXTERNAL_QUOTE_DB_SERVICE_KEY`
-
-### Option B: Migrate Data to WrapCommand
-If you can't access the service key, we could:
-1. Export the quotes data from the external project
-2. Import it into your WrapCommand database
-3. Update the Quote Tool to write to WrapCommand instead
-
-This would eliminate the external database dependency entirely.
-
----
-
-## Files Already Created (Ready to Use)
-
-| File | Purpose | Status |
-|------|---------|--------|
-| `supabase/functions/fetch-external-quotes/index.ts` | Read quotes from external DB | ✅ Ready |
-| `supabase/functions/quote-status-webhook/index.ts` | Update quote status on external DB | ✅ Ready |
-| `.lovable/wrapcommand-integration-guide.md` | Documentation for schema/integration | ✅ Ready |
 
 ---
 
 ## Summary
 
-The "requested path is invalid" error is from the **other** Lovable project's auth settings - but you don't need to fix it. The edge functions use the **service role key** which bypasses user authentication entirely.
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Dashboard card wiring | ✅ | All cards query correct tables |
+| Jordan AI installation fix | ✅ | Already deployed in website-chat |
+| Vapi webhook format | ✅ | Returns `{ results: [...] }` |
+| Phone data | ⚠️ | Table empty - needs Twilio verification |
+| MightyChat V2 phone tab | ⚠️ | Missing from UI |
 
-**Next step**: Get the `EXTERNAL_QUOTE_DB_SERVICE_KEY` from whoever owns the Quote Tool project and add it as a secret here.
+**Bottom Line:** The fix package you shared is already deployed. The main gap is the phone system has no data flowing yet (likely a Twilio webhook configuration issue) and MightyChat V2 needs a phone channel tab added.
 
