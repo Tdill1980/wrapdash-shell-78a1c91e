@@ -547,7 +547,7 @@ serve(async (req) => {
   }
 
   try {
-    const { org, agent, mode, session_id, message_text, page_url, referrer, geo } = await req.json();
+    const { org, agent, mode, session_id, message_text, page_url, referrer, geo, attachments } = await req.json();
 
     if (!message_text || !session_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -556,7 +556,23 @@ serve(async (req) => {
       });
     }
 
-    console.log('[JordanLee] Message:', { session_id, message_text: message_text.substring(0, 50) });
+    // Handle attachments if present
+    let attachmentContext = '';
+    if (attachments && attachments.length > 0) {
+      console.log('[JordanLee] Attachments received:', attachments.length);
+      attachmentContext = `\n\n📎 CUSTOMER ATTACHED FILE(S):\n`;
+      for (const att of attachments) {
+        const isImage = att.type?.startsWith('image/');
+        attachmentContext += `- ${att.name} (${att.type || 'unknown type'})\n`;
+        attachmentContext += `  URL: ${att.url}\n`;
+        if (isImage) {
+          attachmentContext += `  (This is an image - you can reference it in your response)\n`;
+        }
+      }
+      attachmentContext += `\nAcknowledge you received the file and ask how you can help with it.`;
+    }
+
+    console.log('[JordanLee] Message:', { session_id, message_text: message_text.substring(0, 50), hasAttachments: !!(attachments?.length) });
 
     // Initialize Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -591,13 +607,18 @@ serve(async (req) => {
       conversationId = newConv?.id || '';
     }
 
-    // Save inbound message
+    // Save inbound message with attachments
+    const messageMetadata: Record<string, any> = { session_id };
+    if (attachments?.length) {
+      messageMetadata.attachments = attachments;
+    }
+    
     await supabase.from('messages').insert({
       conversation_id: conversationId,
       channel: 'website',
       direction: 'inbound',
       content: message_text,
-      metadata: { session_id }
+      metadata: messageMetadata
     });
 
     // Extract info from message
@@ -1396,6 +1417,7 @@ ${WPW_KNOWLEDGE.contact}`;
 
 CURRENT CONTEXT:
 ${contextNotes}
+${attachmentContext}
 
 KNOWLEDGE BASE:
 ${knowledgeContext}
@@ -1464,6 +1486,7 @@ ${!chatState.customer_name || !chatState.customer_email || !chatState.customer_p
     return new Response(JSON.stringify({
       success: true,
       reply: aiReply,
+      response: aiReply, // Also include as 'response' for widget compatibility
       conversation_id: conversationId
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
