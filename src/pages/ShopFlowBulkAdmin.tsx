@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { RefreshCw, Zap, Search, Package, DollarSign } from "lucide-react";
+import { RefreshCw, Zap, Search, Package, DollarSign, MapPin, Clock } from "lucide-react";
+import { formatTimeAZ } from "@/lib/timezone";
 import { useQuery } from "@tanstack/react-query";
 
 export default function ShopFlowBulkAdmin() {
@@ -286,6 +287,11 @@ export default function ShopFlowBulkAdmin() {
                         <Badge variant="outline" className="text-xs">
                           {order.status}
                         </Badge>
+                        {order.order_total > 0 && (
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                            ${Number(order.order_total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-1">
                         {order.customer_name}
@@ -293,21 +299,29 @@ export default function ShopFlowBulkAdmin() {
                       <p className="text-xs text-muted-foreground">
                         {order.product_type}
                       </p>
-                      {order.order_total > 0 && (
-                        <p className="text-sm font-semibold text-green-400 mt-1">
-                          ${order.order_total.toFixed(2)}
-                        </p>
-                      )}
-                      {(!order.order_total || order.order_total === 0) && (
-                        <p className="text-xs text-yellow-500 mt-1">
-                          ⚠️ Missing order total
-                        </p>
-                      )}
+                      <div className="flex items-center gap-4 mt-2">
+                        {(order.shipping_city || order.shipping_state) && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {[order.shipping_city, order.shipping_state].filter(Boolean).join(', ')}
+                          </span>
+                        )}
+                        {(!order.order_total || order.order_total === 0) && (
+                          <span className="text-xs text-yellow-500">
+                            ⚠️ Missing total
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-right text-xs text-muted-foreground">
-                      <p>Created: {new Date(order.created_at).toLocaleDateString()}</p>
-                      {order.updated_at && (
-                        <p>Updated: {new Date(order.updated_at).toLocaleDateString()}</p>
+                    <div className="text-right text-xs text-muted-foreground space-y-1">
+                      <div className="flex items-center justify-end gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatTimeAZ(order.created_at)}</span>
+                      </div>
+                      {order.updated_at && order.updated_at !== order.created_at && (
+                        <p className="text-muted-foreground/70">
+                          Updated: {formatTimeAZ(order.updated_at)}
+                        </p>
                       )}
                     </div>
                   </div>

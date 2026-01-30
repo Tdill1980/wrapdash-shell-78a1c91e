@@ -6863,6 +6863,8 @@ export type Database = {
           product_image_url: string | null
           product_type: string
           shipped_at: string | null
+          shipping_city: string | null
+          shipping_state: string | null
           source_organization_id: string | null
           status: string
           timeline: Json | null
@@ -6901,6 +6903,8 @@ export type Database = {
           product_image_url?: string | null
           product_type: string
           shipped_at?: string | null
+          shipping_city?: string | null
+          shipping_state?: string | null
           source_organization_id?: string | null
           status?: string
           timeline?: Json | null
@@ -6939,6 +6943,8 @@ export type Database = {
           product_image_url?: string | null
           product_type?: string
           shipped_at?: string | null
+          shipping_city?: string | null
+          shipping_state?: string | null
           source_organization_id?: string | null
           status?: string
           timeline?: Json | null

@@ -29,6 +29,9 @@ export interface ShopFlowOrder {
   timeline?: any;
   line_items?: any[];
   proof_url?: string;
+  order_total?: number | null;
+  shipping_city?: string | null;
+  shipping_state?: string | null;
 }
 
 export interface ShopFlowLog {
