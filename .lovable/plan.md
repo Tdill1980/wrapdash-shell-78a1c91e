@@ -1,207 +1,134 @@
 
+# Fix Hot Leads Count & Consolidate Escalation Types
 
-# Fix MightyCustomer VoiceCommand Card, Add Escalations Card, and Stabilize Dashboard Layout
+## Problem Analysis
 
-## Summary of Issues Found
+### Issue 1: Hot Leads Shows 0
+**Current logic** queries:
+- `phone_calls.is_hot_lead = true` → Returns 0
+- `conversations.escalated = true` → Returns 0
 
-1. **MightyCustomerCard Missing VoiceCommand**: The current `MightyCustomerCard.tsx` is a simple navigation card - it does NOT have VoiceCommand integration. The VoiceCommand component exists at `src/components/VoiceCommand.tsx` and is correctly integrated in the full MightyCustomer PAGE (`src/pages/MightyCustomer.tsx`), but NOT in the dashboard card.
+**Correct definition**: A hot lead is a quote request not yet marked complete. The database shows:
+- 182 `auto_quote_generated` (unresolved)
+- 34 `create_quote` (unresolved)
+- **Total: 216 pending quote requests** should be hot leads!
 
-2. **No Escalations Dashboard Card**: An `EscalationsDashboard` component exists at `src/components/admin/EscalationsDashboard.tsx` and is used on `/escalations` page - but there's no compact dashboard card for the main dashboard homepage.
-
-3. **MightyChatCard is Present**: MightyChatCard exists at `src/components/dashboard/MightyChatCard.tsx` and is correctly rendered in Dashboard.tsx (line 275). It's not disappearing - both cards are in a 2-column grid.
-
-4. **Dashboard Card Position**: Currently MightyCustomerCard is secondary to MightyChatCard. User wants MightyCustomer to be prominent as "the brain of the system."
+### Issue 2: Escalation Types Not Consolidated
+**Current database subtypes:**
+| Subtype | Count | Problem |
+|---------|-------|---------|
+| `bulk_inquiry` | 19 | Separate from... |
+| `bulk_inquiry_with_email` | 13 | ...this one |
+| `jackson` | 7 | Named after person, not category |
+| `quality_issue` | 6 | Separate from... |
+| `unhappy_customer` | 2 | ...this one |
+| `lance` | 9 | Quote requests (belongs in MightyChat) |
+| `design` | 7 | OK as-is |
 
 ---
 
-## Implementation Plan
+## Solution
 
-### 1. Upgrade MightyCustomerCard with VoiceCommand
+### 1. MightyChatCard - Fix Hot Leads Query
 
-**File: `src/components/dashboard/MightyCustomerCard.tsx`**
-
-Transform the card to include the VoiceCommand trigger that:
-- Shows the collapsible VoiceCommand panel when clicked
-- Parses voice input for customer/vehicle data
-- Navigates to `/mighty-customer` with pre-filled URL parameters
+Change hot leads to count **unresolved quote requests** from `ai_actions`:
 
 ```typescript
-// New structure:
-import VoiceCommand from "@/components/VoiceCommand";
-import { Mic, Sparkles } from "lucide-react";
+// NEW: Hot leads = pending quote requests (any type, not resolved)
+const { count: hotLeadsCount } = await supabase
+  .from("ai_actions")
+  .select("id", { count: "exact", head: true })
+  .eq("resolved", false)
+  .in("action_type", ["create_quote", "auto_quote_generated", "quote_request"]);
 
-export function MightyCustomerCard() {
-  const navigate = useNavigate();
-  const [showVoice, setShowVoice] = useState(false);
-  
-  const handleVoiceTranscript = (transcript: string, parsedData: any) => {
-    const params = new URLSearchParams();
-    if (parsedData.customerName) params.set('customer', parsedData.customerName);
-    if (parsedData.email) params.set('email', parsedData.email);
-    if (parsedData.phone) params.set('phone', parsedData.phone);
-    if (parsedData.vehicleYear) params.set('year', parsedData.vehicleYear);
-    if (parsedData.vehicleMake) params.set('make', parsedData.vehicleMake);
-    if (parsedData.vehicleModel) params.set('model', parsedData.vehicleModel);
-    navigate(`/mighty-customer?${params.toString()}`);
-  };
-  
-  return (
-    <Card className="relative">
-      {/* VoiceCommand in top-right corner */}
-      <VoiceCommand onTranscript={handleVoiceTranscript} />
-      
-      {/* Large VoiceCommand CTA Banner */}
-      <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 p-4">
-        <div className="flex items-center gap-3">
-          <Mic className="w-6 h-6 text-emerald-500" />
-          <div>
-            <h3 className="font-bold">VoiceCommand AI™</h3>
-            <p className="text-xs text-muted-foreground">
-              Speak quote details: "2024 Bronco full wrap John Smith 555-1234"
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      {/* Quick action buttons */}
-    </Card>
-  );
-}
+setStats({
+  ...
+  hotLeads: hotLeadsCount || 0,  // Will show 216 instead of 0
+  ...
+});
 ```
 
-### 2. Create EscalationsDashboardCard
+Remove the separate `pendingQuotes` stat since it's redundant (same as hot leads).
 
-**New File: `src/components/dashboard/EscalationsDashboardCard.tsx`**
+### 2. EscalationsDashboardCard - Consolidate Subtypes
 
-Compact card showing:
-- Active escalations count (from `conversation_events` where `event_type = 'escalation_sent'`)
-- Blocked vs pending breakdown
-- "Hot" priority count
-- Navigate to `/escalations` when clicked
+Update subtype mapping to group related categories:
 
 ```typescript
-// Queries:
-const { count: activeEscalations } = await supabase
-  .from('conversation_events')
-  .select('conversation_id', { count: 'exact', head: true })
-  .eq('event_type', 'escalation_sent');
+// Consolidation map - multiple DB subtypes → single display category
+const consolidationMap: Record<string, string> = {
+  'bulk_inquiry': 'bulk',
+  'bulk_inquiry_with_email': 'bulk',
+  'jackson': 'sales',
+  'quality_issue': 'unhappy',
+  'unhappy_customer': 'unhappy',
+  'design': 'design',
+  'lance': 'quote',  // Standard quotes
+};
 
-// Visual:
-<Card>
-  <CardHeader>
-    <AlertTriangle className="text-orange-500" />
-    Escalations
-  </CardHeader>
-  <CardContent>
-    <div className="flex gap-4">
-      <div>
-        <p className="text-2xl font-bold">{activeCount}</p>
-        <p className="text-xs">Active</p>
-      </div>
-      <div>
-        <p className="text-2xl font-bold">{blockedCount}</p>
-        <p className="text-xs">Blocked</p>
-      </div>
-    </div>
-    <Button onClick={() => navigate('/escalations')}>
-      View Escalations →
-    </Button>
-  </CardContent>
-</Card>
-```
-
-### 3. Update Dashboard Layout - Make MightyCustomer Prominent
-
-**File: `src/pages/Dashboard.tsx`**
-
-Restructure the card section:
-- **Row 1**: MightyCustomerCard (FULL WIDTH) - The brain of the system gets top billing
-- **Row 2**: 2-column grid with MightyChatCard + EscalationsDashboardCard
-
-```typescript
-import { EscalationsDashboardCard } from "@/components/dashboard/EscalationsDashboardCard";
-
-// New layout structure:
-{/* Section 2: MightyCustomer - The Brain (Full Width) */}
-<MightyCustomerCard />
-
-{/* Section 3: MightyChat & Escalations */}
-<div className="grid md:grid-cols-2 gap-4">
-  <MightyChatCard />
-  <EscalationsDashboardCard />
-</div>
+const subtypeLabels = {
+  'bulk': { label: 'Bulk Quote', icon: Package, color: 'text-purple-500' },
+  'sales': { label: 'Sales Escalation', icon: Phone, color: 'text-blue-500' },
+  'unhappy': { label: 'Unhappy Customer', icon: Frown, color: 'text-orange-500' },
+  'design': { label: 'Design Review', icon: Palette, color: 'text-pink-500' },
+};
 ```
 
 ---
 
-## Technical Details
+## Expected Result
 
-| File | Action |
-|------|--------|
-| `src/components/dashboard/MightyCustomerCard.tsx` | **REWRITE** - Add VoiceCommand integration |
-| `src/components/dashboard/EscalationsDashboardCard.tsx` | **CREATE** - New escalations overview card |
-| `src/pages/Dashboard.tsx` | **UPDATE** - New layout with MightyCustomer prominent |
-
----
-
-## Database Queries
-
-**EscalationsDashboardCard:**
-```sql
--- Active escalations (unique conversations with escalation events)
-SELECT COUNT(DISTINCT conversation_id) 
-FROM conversation_events 
-WHERE event_type = 'escalation_sent';
-
--- Will use existing useEscalationStatus hook logic to determine:
--- - Blocked (needs quote but none sent)
--- - Pending (escalation sent, awaiting response)
--- - Resolved (resolution logged)
+### MightyChatCard
+```
+┌────────────────────────────────────────────────┐
+│  MightyChat                    [Open Inbox →]  │
+├────────────────────────────────────────────────┤
+│  🔥 216 Hot Leads              [Click to view] │
+│                                                │
+│  ┌──────────┐ ┌──────────┐ ┌──────────────┐   │
+│  │ Website  │ │  Phone   │ │ File Reviews │   │
+│  │  Chat    │ │  Agent   │ │              │   │
+│  │   42     │ │   15     │ │     114      │   │
+│  └──────────┘ └──────────┘ └──────────────┘   │
+│                                                │
+│  💬 Real-time conversations                    │
+└────────────────────────────────────────────────┘
 ```
 
----
-
-## Visual Result
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Dashboard                                      [Create Video Ad]           │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  TODAY: [Active Jobs] [Pending Approvals] [Open Orders] [Quote Requests]   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  🎙️ MightyCustomer - VoiceCommand AI™              [Open Tool →]   │   │
-│  │  ───────────────────────────────────────────────────────────────    │   │
-│  │  ┌──────────────────────────────────────────────────────────────┐   │   │
-│  │  │ 🎤 VoiceCommand AI™                                          │   │   │
-│  │  │ Hold & speak: "2024 Bronco full wrap John Smith 555-1234"    │   │   │
-│  │  └──────────────────────────────────────────────────────────────┘   │   │
-│  │                                                                     │   │
-│  │  [New Quote]    [Quote Drafts]                                      │   │
-│  │                                                                     │   │
-│  │  🚗 Vehicle wrap quotes | ⚡ Instant pricing                        │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌───────────────────────────────┐  ┌───────────────────────────────────┐  │
-│  │  💬 MightyChat                │  │  ⚠️ Escalations                   │  │
-│  │  ─────────────────            │  │  ─────────────────                │  │
-│  │  🔥 3 Hot Leads               │  │                                   │  │
-│  │  ┌───────┬───────┬──────┐     │  │  ┌──────────┐  ┌──────────┐      │  │
-│  │  │Website│ Phone │Files │     │  │  │    12    │  │    3     │      │  │
-│  │  │  42   │  15   │ 114  │     │  │  │  Active  │  │ Blocked  │      │  │
-│  │  └───────┴───────┴──────┘     │  │  └──────────┘  └──────────┘      │  │
-│  │  📋 2 quote requests          │  │  → View Escalations              │  │
-│  └───────────────────────────────┘  └───────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+### EscalationsDashboardCard
+```
+┌────────────────────────────────────────┐
+│  ⚠️ Escalations                    63  │
+├────────────────────────────────────────┤
+│  📦 Bulk Quote                      32 │  ← (19 + 13 combined)
+│  📞 Sales Escalation                 7 │  ← (jackson renamed)
+│  😟 Unhappy Customer                 8 │  ← (6 + 2 combined)
+│  🎨 Design Review                    7 │
+│                                        │
+│  → Review Queue                        │
+└────────────────────────────────────────┘
 ```
 
 ---
 
 ## Files to Modify
 
-1. `src/components/dashboard/MightyCustomerCard.tsx` - Add VoiceCommand integration
-2. `src/components/dashboard/EscalationsDashboardCard.tsx` - Create new escalations card
-3. `src/pages/Dashboard.tsx` - Update layout with MightyCustomer prominent + add EscalationsDashboardCard
+| File | Changes |
+|------|---------|
+| `src/components/dashboard/MightyChatCard.tsx` | Fix hot leads query to count unresolved ai_actions quote requests |
+| `src/components/dashboard/EscalationsDashboardCard.tsx` | Add consolidation map to group subtypes, update labels |
 
+---
+
+## Technical Details
+
+### MightyChatCard Changes
+1. Replace hot leads query with `ai_actions` count where `resolved = false` and `action_type` in quote types
+2. Remove redundant `pendingQuotes` stat (same data as hot leads)
+3. Update footer to remove quote request count (now shown as hot leads)
+
+### EscalationsDashboardCard Changes
+1. Add `consolidationMap` to normalize database subtypes to display categories
+2. Update grouping logic to consolidate counts before display
+3. Add new icons: `Frown` for unhappy customers, `Palette` for design, `Phone` for sales
+4. Remove `lance` from escalations (standard quotes belong in MightyChat hot leads)
