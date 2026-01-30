@@ -8,13 +8,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, Send, Pause, Play, Shield, Zap, MessageSquare, Mail, Globe, Users, CheckCircle, XCircle, Download, ExternalLink } from "lucide-react";
+import { RefreshCw, Send, Pause, Play, Shield, Zap, MessageSquare, Mail, Globe, Users, CheckCircle, XCircle, Download, ExternalLink, Phone } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ConversationStatusBadge } from "@/components/ConversationStatusBadge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type Channel = "instagram" | "email" | "website" | "internal" | "all";
+type Channel = "instagram" | "email" | "website" | "internal" | "phone" | "all";
 
 interface ConversationRow {
   id: string;
@@ -90,6 +90,7 @@ function getChannelIcon(channel: string) {
     case "instagram": return <MessageSquare className="h-4 w-4" />;
     case "email": return <Mail className="h-4 w-4" />;
     case "website": return <Globe className="h-4 w-4" />;
+    case "phone": return <Phone className="h-4 w-4" />;
     default: return <Users className="h-4 w-4" />;
   }
 }
@@ -336,6 +337,7 @@ export default function MightyChatV2() {
               <TabsTrigger value="instagram">DMs</TabsTrigger>
               <TabsTrigger value="email">Email</TabsTrigger>
               <TabsTrigger value="website">Website</TabsTrigger>
+              <TabsTrigger value="phone">Phone</TabsTrigger>
               <TabsTrigger value="internal">Internal</TabsTrigger>
             </TabsList>
           </Tabs>
