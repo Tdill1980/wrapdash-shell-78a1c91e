@@ -100,6 +100,7 @@ import Backlog from "./pages/Backlog";
 import ContentDrafts from "./pages/ContentDrafts";
 import ContentStudio from "./pages/ContentStudio";
 import EmbedChat from "./pages/EmbedChat";
+import Systems from "./pages/Systems";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -206,6 +207,7 @@ const App = () => (
             <Route path="/admin/asset-tagging" element={<AssetTaggingAdmin />} />
             <Route path="/admin/saved-views" element={<SavedViewsAdmin />} />
             <Route path="/admin/availability" element={<AvailabilityManagerPage />} />
+            <Route path="/systems" element={<Systems />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />

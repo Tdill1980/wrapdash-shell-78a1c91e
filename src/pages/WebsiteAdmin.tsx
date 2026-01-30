@@ -5,19 +5,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BarChart3, MessageSquare, FileText, Power, Loader2, AlertTriangle, Bell, FileImage } from "lucide-react";
+import { BarChart3, MessageSquare, FileText, Loader2, AlertTriangle, Bell, FileImage } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { ChatSessionsTab } from "@/components/admin/jordan-dashboard/ChatSessionsTab";
 import { QuotesTab } from "@/components/admin/jordan-dashboard/QuotesTab";
-import AgentControlPanel from "@/components/admin/jordan-dashboard/AgentControlPanel";
 import { EscalationsDashboard } from "@/components/admin/EscalationsDashboard";
 import { ArtworkReviewsPanel } from "@/components/admin/ArtworkReviewsPanel";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Session } from "@supabase/supabase-js";
 
-// MVP CORE TABS ONLY — Everything else is contextual or gone
+// MVP CORE TABS ONLY — Agent Control moved to /systems
 const TABS = [
-  { id: "control", label: "Agent Control", icon: Power, color: "bg-primary" },
   { id: "chats", label: "All Chats", icon: MessageSquare, color: "bg-blue-500" },
   { id: "escalations", label: "Escalations", icon: Bell, color: "bg-orange-500", highlight: true },
   { id: "artwork", label: "Artwork Reviews", icon: FileImage, color: "bg-purple-500" },
@@ -27,7 +25,7 @@ const TABS = [
 
 export default function JordanLeeAdminDashboard() {
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") || "control";
+  const initialTab = searchParams.get("tab") || "chats";
   const [activeTab, setActiveTab] = useState(initialTab);
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -183,9 +181,6 @@ export default function JordanLeeAdminDashboard() {
           </TabsList>
 
           {/* Tab Contents — MVP CORE ONLY */}
-          <TabsContent value="control" className="mt-6">
-            <AgentControlPanel />
-          </TabsContent>
 
           <TabsContent value="chats" className="mt-6">
             <ChatSessionsTab 
