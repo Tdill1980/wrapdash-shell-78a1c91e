@@ -303,12 +303,14 @@
       flex: 1;
       overflow-y: auto;
       padding: 16px;
+      padding-bottom: 28px; /* prevent last line from visually “kissing” the edge */
       display: flex;
       flex-direction: column;
       gap: 12px;
       background: #16213e;
       min-height: 100px;
       max-height: 340px;
+      scroll-padding-bottom: 28px;
     }
     .wcai-message {
       max-width: 85%;
@@ -487,8 +489,13 @@
       border-radius: 4px;
       font-weight: 600;
     }
+    /*
+      IMPORTANT:
+      overflow:hidden can visually clip multi-line messages during typing
+      (especially with dynamic height + scroll).
+    */
     .wcai-typewriter {
-      overflow: hidden;
+      overflow: visible;
       border-right: 2px solid ${colors.primary};
       animation: wcai-cursor 0.7s step-end infinite;
     }
