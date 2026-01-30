@@ -5,6 +5,7 @@
 export type ConversationEventType = 
   | 'message_received'
   | 'escalation_sent'
+  | 'escalation_blocked'
   | 'email_sent'
   | 'email_drafted'
   | 'ai_response_sent'
@@ -35,12 +36,18 @@ export interface EventPayload {
   // Customer info
   customer_email?: string;
   customer_name?: string;
+  customer_phone?: string;
+  shop_name?: string;
   
   // Order/Quote info
   order_number?: string;
   quote_id?: string;
   quote_number?: string;
   quote_total?: number;
+  
+  // Bulk/Fleet info
+  bulk_vehicle_count?: string;
+  bulk_vehicle_types?: string;
   
   // File/Asset info
   file_url?: string;
@@ -51,6 +58,13 @@ export interface EventPayload {
   priority?: string;
   reason?: string;
   escalation_target?: string;
+  escalation_type?: string;
+  target?: string;
+  was_pending?: boolean;
+  pending_since?: string;
+  has_name?: boolean;
+  has_email?: boolean;
+  has_phone?: boolean;
   
   // Error tracking
   error?: string;
