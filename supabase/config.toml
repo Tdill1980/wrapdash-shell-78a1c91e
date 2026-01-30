@@ -383,3 +383,6 @@ verify_jwt = false
 
 [functions.send-phone-alert]
 verify_jwt = false
+
+[functions.run-orphan-quote-check]
+verify_jwt = false
