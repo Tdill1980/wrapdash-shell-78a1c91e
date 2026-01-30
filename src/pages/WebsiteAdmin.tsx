@@ -5,19 +5,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BarChart3, MessageSquare, FileText, Loader2, AlertTriangle, Bell, FileImage } from "lucide-react";
+import { BarChart3, MessageSquare, FileText, Loader2, AlertTriangle, FileImage, ExternalLink } from "lucide-react";
 import { AnalyticsTab } from "@/components/admin/jordan-dashboard/AnalyticsTab";
 import { ChatSessionsTab } from "@/components/admin/jordan-dashboard/ChatSessionsTab";
 import { QuotesTab } from "@/components/admin/jordan-dashboard/QuotesTab";
-import { EscalationsDashboard } from "@/components/admin/EscalationsDashboard";
 import { ArtworkReviewsPanel } from "@/components/admin/ArtworkReviewsPanel";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Session } from "@supabase/supabase-js";
 
-// MVP CORE TABS ONLY — Agent Control moved to /systems
+// MVP CORE TABS ONLY — No emails (V2), no systems
 const TABS = [
-  { id: "chats", label: "All Chats", icon: MessageSquare, color: "bg-blue-500" },
-  { id: "escalations", label: "Escalations", icon: Bell, color: "bg-orange-500", highlight: true },
+  { id: "chats", label: "Website Chat", icon: MessageSquare, color: "bg-blue-500" },
   { id: "artwork", label: "Artwork Reviews", icon: FileImage, color: "bg-purple-500" },
   { id: "quotes", label: "Quotes", icon: FileText, color: "bg-indigo-500" },
   { id: "analytics", label: "Analytics", icon: BarChart3, color: "bg-green-500" },
@@ -143,6 +141,16 @@ export default function JordanLeeAdminDashboard() {
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+              onClick={() => navigate('/escalations')}
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Escalations Dashboard
+              <ExternalLink className="h-3 w-3" />
+            </Button>
             {orgMembership && (
               <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                 {orgMembership.organizationName} ({orgMembership.role})
@@ -189,14 +197,6 @@ export default function JordanLeeAdminDashboard() {
             />
           </TabsContent>
 
-          <TabsContent value="escalations" className="mt-6">
-            <EscalationsDashboard 
-              onSelectConversation={(conversationId) => {
-                setPendingConversationId(conversationId);
-                setActiveTab("chats");
-              }}
-            />
-          </TabsContent>
 
           <TabsContent value="artwork" className="mt-6">
             <ArtworkReviewsPanel />

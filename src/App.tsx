@@ -102,6 +102,7 @@ import ContentStudio from "./pages/ContentStudio";
 import EmbedChat from "./pages/EmbedChat";
 import Systems from "./pages/Systems";
 import Ops from "./pages/Ops";
+import EscalationsPage from "./pages/EscalationsPage";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -210,6 +211,7 @@ const App = () => (
             <Route path="/admin/availability" element={<AvailabilityManagerPage />} />
             <Route path="/systems" element={<Systems />} />
             <Route path="/ops" element={<Ops />} />
+            <Route path="/escalations" element={<EscalationsPage />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />
