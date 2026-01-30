@@ -114,8 +114,9 @@ export default function Auth() {
           <CardTitle className="font-poppins">
             <span className="text-foreground">Wrap</span>
             <span className="text-gradient">
-              Command
+              CommandAI
             </span>
+            <span className="text-xs align-super text-muted-foreground ml-0.5">™</span>
           </CardTitle>
           <CardDescription>
             {isLogin ? "Sign in to your account" : "Create a new account"}
