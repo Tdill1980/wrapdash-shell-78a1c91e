@@ -4,21 +4,6 @@
 // Last Updated: January 30, 2026
 // VERSION: 3.0 - FINAL LOCKED PRODUCTION VERSION
 // 
-// FEATURES (LOCKED - ALL 13 CONFIRMED):
-// 1. ✅ PRINT ONLY - NO INSTALLATION enforced
-// 2. ✅ 4-field collection (name, email, phone, shop name)
-// 3. ✅ Auto-email quote on every pricing
-// 4. ✅ Smart vehicle fallback with estimates
-// 5. ✅ Trailer handling (asks for dimensions)
-// 6. ✅ Window clarification (perf vs cut vinyl)
-// 7. ✅ Fade wrap with URL
-// 8. ✅ Design service pricing ($750)
-// 9. ✅ Bulk discount tiers (5-20% based on sqft)
-// 10. ✅ Dimension-based pricing
-// 11. ✅ Complete FAQ knowledge
-// 12. ✅ All product URLs
-// 13. ✅ NO coupon codes
-// 
 // AI PROVIDER: Lovable AI Gateway (google/gemini-3-flash-preview)
 // ORG ID: 51aa96db-c06d-41ae-b3cb-25b045c75caf
 //
