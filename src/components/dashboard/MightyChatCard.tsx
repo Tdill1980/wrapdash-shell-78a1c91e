@@ -19,7 +19,6 @@ interface WorkStreamStats {
   phone: number;
   fileReviews: number;
   hotLeads: number;
-  pendingQuotes: number;
 }
 
 const CHANNEL_CARDS = [
@@ -55,8 +54,7 @@ export function MightyChatCard() {
     website: 0,
     phone: 0,
     fileReviews: 0,
-    hotLeads: 0,
-    pendingQuotes: 0
+    hotLeads: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -78,7 +76,7 @@ export function MightyChatCard() {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Parallel queries for real data
-      const [websiteResult, phoneResult, fileReviewsResult, hotLeadsResult, pendingQuotesResult] = await Promise.all([
+      const [websiteResult, phoneResult, fileReviewsResult, hotLeadsResult] = await Promise.all([
         // Website chat conversations
         supabase
           .from("conversations")
@@ -99,39 +97,22 @@ export function MightyChatCard() {
           .eq("resolved", false)
           .eq("action_type", "file_review"),
         
-        // Hot leads (urgent phone calls + escalated conversations)
-        supabase
-          .from("phone_calls")
-          .select("id", { count: "exact", head: true })
-          .eq("is_hot_lead", true)
-          .gte("created_at", thirtyDaysAgo),
-        
-        // Pending quotes
+        // Hot leads = pending quote requests (any type, not resolved)
         supabase
           .from("ai_actions")
           .select("id", { count: "exact", head: true })
           .eq("resolved", false)
-          .in("action_type", ["create_quote", "auto_quote_generated"])
+          .in("action_type", ["create_quote", "auto_quote_generated", "quote_request"])
       ]);
-
-      // Also count escalated conversations as hot leads
-      const { count: escalatedCount } = await supabase
-        .from("conversations")
-        .select("id", { count: "exact", head: true })
-        .eq("escalated", true)
-        .gte("last_message_at", thirtyDaysAgo);
-
-      const hotLeadsTotal = (hotLeadsResult.count || 0) + (escalatedCount || 0);
 
       setStats({
         website: websiteResult.count || 0,
         phone: phoneResult.count || 0,
         fileReviews: fileReviewsResult.count || 0,
-        hotLeads: hotLeadsTotal,
-        pendingQuotes: pendingQuotesResult.count || 0
+        hotLeads: hotLeadsResult.count || 0
       });
 
-      console.log(`[MightyChatCard] Website: ${websiteResult.count}, Phone: ${phoneResult.count}, File Reviews: ${fileReviewsResult.count}, Hot Leads: ${hotLeadsTotal}`);
+      console.log(`[MightyChatCard] Website: ${websiteResult.count}, Phone: ${phoneResult.count}, File Reviews: ${fileReviewsResult.count}, Hot Leads: ${hotLeadsResult.count}`);
     } catch (err) {
       console.error("Error loading work streams:", err);
     } finally {
@@ -212,11 +193,7 @@ export function MightyChatCard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/30">
-          <span className="flex items-center gap-1">
-            <Bell className="w-3 h-3" />
-            {stats.pendingQuotes} quote requests
-          </span>
+        <div className="flex items-center justify-center text-xs text-muted-foreground pt-1 border-t border-border/30">
           <span className="flex items-center gap-1">
             💬 Real-time conversations
           </span>

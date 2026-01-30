@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight, Users, Package, FileText } from "lucide-react";
+import { AlertTriangle, ArrowRight, Package, Phone, Frown, Palette } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { ConversationEvent } from "@/hooks/useConversationEvents";
@@ -29,31 +29,46 @@ export function EscalationsDashboardCard() {
 
       if (error) throw error;
 
-      // Count unique conversations by subtype
+      // Consolidation map - multiple DB subtypes → single display category
+      const consolidationMap: Record<string, string> = {
+        'bulk_inquiry': 'bulk',
+        'bulk_inquiry_with_email': 'bulk',
+        'jackson': 'sales',
+        'quality_issue': 'unhappy',
+        'unhappy_customer': 'unhappy',
+        'design': 'design',
+        'design_file': 'design',
+      };
+
+      // Count unique conversations by consolidated category
       const typeMap: Record<string, Set<string>> = {};
       
       (events || []).forEach((event) => {
-        const subtype = event.subtype || 'general';
-        if (!typeMap[subtype]) {
-          typeMap[subtype] = new Set();
+        const rawSubtype = event.subtype || 'general';
+        // Skip 'lance' - those are standard quotes handled in MightyChat hot leads
+        if (rawSubtype === 'lance') return;
+        
+        const consolidatedType = consolidationMap[rawSubtype] || 'general';
+        if (!typeMap[consolidatedType]) {
+          typeMap[consolidatedType] = new Set();
         }
-        typeMap[subtype].add(event.conversation_id);
+        typeMap[consolidatedType].add(event.conversation_id);
       });
+
+      // Display labels for consolidated categories
+      const subtypeLabels: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+        'bulk': { label: 'Bulk Quote', icon: Package, color: 'text-purple-500' },
+        'sales': { label: 'Sales Escalation', icon: Phone, color: 'text-blue-500' },
+        'unhappy': { label: 'Unhappy Customer', icon: Frown, color: 'text-orange-500' },
+        'design': { label: 'Design Review', icon: Palette, color: 'text-pink-500' },
+        'general': { label: 'Other Escalation', icon: AlertTriangle, color: 'text-cyan-500' },
+      };
 
       // Convert to counts with labels
       const typeCounts: EscalationTypeCount[] = [];
-      
-      const subtypeLabels: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-        'bulk': { label: 'Bulk Orders', icon: Package, color: 'text-purple-500' },
-        'order_question': { label: 'Order Questions', icon: FileText, color: 'text-blue-500' },
-        'quote_request': { label: 'Quote Requests', icon: FileText, color: 'text-green-500' },
-        'pricing': { label: 'Pricing Help', icon: FileText, color: 'text-amber-500' },
-        'design': { label: 'Design Review', icon: FileText, color: 'text-pink-500' },
-        'general': { label: 'Escalation Messages', icon: Users, color: 'text-cyan-500' },
-      };
 
-      Object.entries(typeMap).forEach(([subtype, conversationIds]) => {
-        const config = subtypeLabels[subtype] || subtypeLabels['general'];
+      Object.entries(typeMap).forEach(([category, conversationIds]) => {
+        const config = subtypeLabels[category] || subtypeLabels['general'];
         typeCounts.push({
           label: config.label,
           count: conversationIds.size,
