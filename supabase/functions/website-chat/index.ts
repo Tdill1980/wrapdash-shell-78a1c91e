@@ -1,12 +1,30 @@
-// ===========================================
-// ⚠️ LOCKED - WEBSITE CHAT - DO NOT MODIFY ⚠️
+// =====================================================
+// ⚠️⚠️⚠️ LOCKED - DO NOT MODIFY - FINAL V3.0 ⚠️⚠️⚠️
+// =====================================================
 // Last Updated: January 30, 2026
-// VERSION: 3.0 - COMPLETE WITH ALL FIXES
-// - Lovable AI Gateway (no Anthropic key needed)
-// - Correct WPW Org ID
-// - Price FIRST, then collect email
-// - RestyleProAI + Wrap By Yard knowledge
-// ===========================================
+// VERSION: 3.0 - FINAL LOCKED PRODUCTION VERSION
+// 
+// FEATURES (LOCKED - ALL 13 CONFIRMED):
+// 1. ✅ PRINT ONLY - NO INSTALLATION enforced
+// 2. ✅ 4-field collection (name, email, phone, shop name)
+// 3. ✅ Auto-email quote on every pricing
+// 4. ✅ Smart vehicle fallback with estimates
+// 5. ✅ Trailer handling (asks for dimensions)
+// 6. ✅ Window clarification (perf vs cut vinyl)
+// 7. ✅ Fade wrap with URL
+// 8. ✅ Design service pricing ($750)
+// 9. ✅ Bulk discount tiers (5-20% based on sqft)
+// 10. ✅ Dimension-based pricing
+// 11. ✅ Complete FAQ knowledge
+// 12. ✅ All product URLs
+// 13. ✅ NO coupon codes
+// 
+// AI PROVIDER: Lovable AI Gateway (google/gemini-3-flash-preview)
+// ORG ID: 51aa96db-c06d-41ae-b3cb-25b045c75caf
+//
+// ⚠️ ANY MODIFICATION REQUIRES EXPLICIT APPROVAL ⚠️
+// Contact: @jackson or @trish before ANY changes
+// =====================================================
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -1617,3 +1635,7 @@ ${!chatState.customer_email ? '📧 No email yet - try to get it for quote!' : '
     });
   }
 });
+
+// =====================================================
+// ⚠️ END OF LOCKED FILE - DO NOT ADD CODE BELOW ⚠️
+// =====================================================
