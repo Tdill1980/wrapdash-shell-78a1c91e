@@ -2,13 +2,28 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, ArrowRight, FileText, Calculator } from "lucide-react";
+import { UserPlus, ArrowRight, FileText, Calculator, Mic, Sparkles } from "lucide-react";
+import VoiceCommand from "@/components/VoiceCommand";
 
 export function MightyCustomerCard() {
   const navigate = useNavigate();
 
+  const handleVoiceTranscript = (transcript: string, parsedData: any) => {
+    const params = new URLSearchParams();
+    if (parsedData.customerName) params.set('customer', parsedData.customerName);
+    if (parsedData.email) params.set('email', parsedData.email);
+    if (parsedData.phone) params.set('phone', parsedData.phone);
+    if (parsedData.vehicleYear) params.set('year', parsedData.vehicleYear);
+    if (parsedData.vehicleMake) params.set('make', parsedData.vehicleMake);
+    if (parsedData.vehicleModel) params.set('model', parsedData.vehicleModel);
+    navigate(`/mighty-customer?${params.toString()}`);
+  };
+
   return (
-    <Card className="border-border bg-card">
+    <Card className="bg-card relative overflow-hidden">
+      {/* VoiceCommand positioned in top-right */}
+      <VoiceCommand onTranscript={handleVoiceTranscript} />
+
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -29,6 +44,29 @@ export function MightyCustomerCard() {
       </CardHeader>
 
       <CardContent className="pt-0 space-y-4">
+        {/* VoiceCommand CTA Banner */}
+        <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+              <Mic className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground text-sm">VoiceCommand AI™</h3>
+                <Sparkles className="h-3 w-3 text-primary animate-pulse" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Click badge above → Hold & speak quote details
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 bg-background/50 rounded-md p-2">
+            <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+              💡 "2024 Bronco full wrap customer John Smith phone 555-1234"
+            </p>
+          </div>
+        </div>
+
         {/* Quick Action Banner */}
         <div 
           className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-teal-500/10 cursor-pointer hover:from-emerald-500/20 hover:to-teal-500/20 transition-colors"
