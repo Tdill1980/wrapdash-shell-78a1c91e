@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, Car, Palette, Package, Search, Mail, Clock } from "lucide-react";
+import { MessageCircle, X, Send, Car, Palette, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -12,12 +12,9 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { icon: Car, label: "How much does a wrap cost?", message: "How much does a wrap cost?", primary: true },
+  { icon: Car, label: "How much is my wrap project?", message: "How much is my wrap project?", primary: true },
   { icon: Package, label: "How do I order?", message: "How do I place an order?" },
-  { icon: Mail, label: "Email my quote", message: "I need my quote emailed to me" },
-  { icon: Search, label: "Order status", message: "I want to check my order or quote status" },
-  { icon: Palette, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
-  { icon: Clock, label: "Production time", message: "Tell me about production time and shipping" },
+  { icon: Palette, label: "Ask me about RestyleProAI", message: "Tell me about RestyleProAI and how it can help visualize my wrap" },
 ];
 
 export function WebsiteChatWidget() {
@@ -256,16 +253,16 @@ export function WebsiteChatWidget() {
               </button>
             ))}
 
-            {/* Secondary Actions Grid - Dark */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Secondary Actions - Single column */}
+            <div className="space-y-2">
               {QUICK_ACTIONS.filter(a => !a.primary).map((action, i) => (
                 <button
                   key={action.label}
                   onClick={() => handleSend(action.message)}
                   className={cn(
-                    "flex items-center gap-2 p-3",
+                    "w-full flex items-center justify-center gap-2 p-3",
                     "bg-[#2a2a4a] hover:bg-purple-500/20",
-                    "rounded-xl text-xs font-medium",
+                    "rounded-xl text-sm font-medium",
                     "border border-purple-500/30 hover:border-purple-400",
                     "transition-all duration-200 hover:scale-[1.02]",
                     "text-white"
