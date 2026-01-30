@@ -10,7 +10,11 @@ import { WebsiteChatWidget } from "@/components/chat/WebsiteChatWidget";
 export default function ChatWidgetDemo() {
   const [copied, setCopied] = useState(false);
 
-  const embedCode = `<script defer src="https://wrapcommandai.com/embed/chat-widget.js"
+  // Production WPW widget hosted on Lovable Cloud file storage.
+  // Install this snippet on weprintwraps.com (footer, before </body>).
+  const embedCode = `<script
+  defer
+  src="https://wzwqhfbmymrengjqikjl.supabase.co/storage/v1/object/public/shopflow-files/chat-widget.js"
   data-org="wpw"
   data-agent="wpw_ai_team"
   data-mode="live"></script>`;
