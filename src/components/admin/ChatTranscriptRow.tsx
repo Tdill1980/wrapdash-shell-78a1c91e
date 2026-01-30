@@ -78,8 +78,10 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
   return (
     <div
       onClick={onClick}
-      className={`p-4 border border-border rounded-lg mb-3 hover:bg-muted/50 cursor-pointer transition-colors ${
-        isSelected ? 'bg-muted/70 border-primary/50' : 'bg-card/50'
+      className={`p-4 border rounded-lg mb-3 cursor-pointer transition-all duration-200 ${
+        isSelected 
+          ? 'bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
+          : 'bg-[#1a1a2e] border-purple-500/20 hover:bg-[#2a2a4a] hover:border-purple-500/40'
       }`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -114,7 +116,7 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           </div>
 
           {/* DateTime */}
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1 text-sm text-gray-400">
             <Clock className="h-4 w-4" />
             {conversation.created_at && (
               <span>{format(new Date(conversation.created_at), 'M/d/yyyy, h:mm:ss a')}</span>
@@ -122,19 +124,19 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           </div>
 
           {/* Message count */}
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1 text-sm text-gray-400">
             <MessageSquare className="h-4 w-4" />
             <span>{messageCount} messages</span>
           </div>
 
           {/* Geolocation */}
           <div className="flex items-center gap-1 text-sm">
-            <MapPin className="h-4 w-4 text-red-500" />
-            <span className="text-primary font-medium">{locationStr}</span>
+            <MapPin className="h-4 w-4 text-pink-500" />
+            <span className="text-fuchsia-400 font-medium">{locationStr}</span>
           </div>
 
           {/* Duration */}
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-gray-400">
             Duration: {duration}
           </div>
 
@@ -164,9 +166,9 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
         {/* Right: Download button */}
         <div className="flex-shrink-0">
           <Button 
-            variant="default" 
+            variant="outline" 
             size="sm" 
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 text-purple-400"
             onClick={handleDownload}
           >
             <Download className="h-4 w-4" />

@@ -50,7 +50,7 @@ export function ChatTranscriptViewer({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [escalationFilter, setEscalationFilter] = useState<string>("all");
-  const [todayOnly, setTodayOnly] = useState(false);
+  const [todayOnly, setTodayOnly] = useState(false); // Show all by default, toggle for today
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -148,45 +148,45 @@ export function ChatTranscriptViewer({
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
+      {/* Stats Cards - Dark themed with gradient accents */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-card/50">
+        <Card className="bg-[#1a1a2e] border-purple-500/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <MessageSquare className="h-5 w-5 text-primary" />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20">
+                <MessageSquare className="h-5 w-5 text-fuchsia-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.totalToday || 0}</p>
-                <p className="text-xs text-muted-foreground">Website Chats Today</p>
+                <p className="text-2xl font-bold text-white">{stats?.totalToday || 0}</p>
+                <p className="text-xs text-gray-400">Website Chats Today</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50">
+        <Card className="bg-[#1a1a2e] border-green-500/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-green-500/10">
-                <Mail className="h-5 w-5 text-green-500" />
+                <Mail className="h-5 w-5 text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.emailsCaptured || 0}</p>
-                <p className="text-xs text-muted-foreground">Emails Captured</p>
+                <p className="text-2xl font-bold text-white">{stats?.emailsCaptured || 0}</p>
+                <p className="text-xs text-gray-400">Emails Captured</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50">
+        <Card className="bg-[#1a1a2e] border-orange-500/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-orange-500/10">
-                <AlertCircle className="h-5 w-5 text-orange-500" />
+                <AlertCircle className="h-5 w-5 text-orange-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{escalationStats?.total || escalationCount}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-2xl font-bold text-white">{escalationStats?.total || escalationCount}</p>
+                <p className="text-xs text-gray-400">
                   Escalations ({escalationStats?.today || 0} today)
                 </p>
               </div>
@@ -194,15 +194,15 @@ export function ChatTranscriptViewer({
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50">
+        <Card className="bg-[#1a1a2e] border-blue-500/20">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-500/10">
-                <Users className="h-5 w-5 text-blue-500" />
+                <Users className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.activeConversations || 0}</p>
-                <p className="text-xs text-muted-foreground">Website Chats Active</p>
+                <p className="text-2xl font-bold text-white">{stats?.activeConversations || 0}</p>
+                <p className="text-xs text-gray-400">Website Chats Active</p>
               </div>
             </div>
           </CardContent>
@@ -245,12 +245,13 @@ export function ChatTranscriptViewer({
               <Button 
                 variant={todayOnly ? "default" : "outline"} 
                 size="sm"
+                className={todayOnly ? "bg-gradient-to-r from-purple-500 to-fuchsia-500" : "border-purple-500/30"}
                 onClick={() => setTodayOnly(!todayOnly)}
               >
                 <Calendar className="h-4 w-4 mr-1" />
                 Today Only
               </Button>
-              <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => refetch()}>
+              <Button size="sm" className="bg-gradient-to-r from-purple-500 to-fuchsia-500 hover:opacity-90" onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4 mr-1" />
                 Refresh
               </Button>
@@ -258,18 +259,18 @@ export function ChatTranscriptViewer({
           </div>
           
           {/* OS Transparency: Total DB count badge */}
-          <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-lg border">
-            <Badge variant="outline" className="text-sm font-mono">
+          <div className="flex items-center gap-3 mb-4 p-3 bg-[#1a1a2e] rounded-lg border border-purple-500/20">
+            <Badge variant="outline" className="text-sm font-mono bg-purple-500/10 text-purple-400 border-purple-500/30">
               DB Total: {totalDbCount ?? '...'}
             </Badge>
-            <Badge variant="secondary" className="text-sm">
+            <Badge className="text-sm bg-blue-500/20 text-blue-400 border-blue-500/30">
               Loaded: {conversations.length}
             </Badge>
-            <Badge variant={filteredConversations.length === conversations.length ? "default" : "destructive"} className="text-sm">
+            <Badge className={`text-sm ${filteredConversations.length === conversations.length ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
               Showing: {filteredConversations.length}
             </Badge>
             {filteredConversations.length < conversations.length && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-gray-400">
                 (filters active)
               </span>
             )}
@@ -358,7 +359,7 @@ export function ChatTranscriptViewer({
         </div>
 
         {/* Right: Session Details Panel */}
-        <Card className="bg-card/50 h-fit">
+        <Card className="bg-[#1a1a2e] border-purple-500/20 h-fit">
           <CardContent className="pt-6">
             {selectedConversation ? (
               <div className="space-y-4">
