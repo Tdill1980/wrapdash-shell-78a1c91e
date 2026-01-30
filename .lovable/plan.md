@@ -1,141 +1,109 @@
 
-# Deploy Chat Widget + Fix Jordan AI Pricing + Design Team Alerts
+# Fix White Outlines, Remove Phone Card & Wire MightyChat to Real Data
 
-## Current Situation Analysis
+## Summary of Issues Found
 
-| Component | Status |
-|-----------|--------|
-| `public/embed/chat-widget.js` | ✅ Dark UI, file upload, Check My File - but NOT deployed to Supabase storage |
-| `website-chat` edge function | ✅ Already defaults to **NO ROOF** pricing (`sqft: data.noRoof`) |
-| `check-artwork-file` function | ⚠️ Sends email but no escalation alert if AI can't verify print-ready |
-| WordPress embed | ❌ Loading old cached widget - needs fresh deploy |
+1. **White Outline Problem**: The issue is that components are using `border-border` class alongside Card's built-in `border border-white/[0.03]`. This causes double borders—some from CSS variables, some from explicit Tailwind classes. Cards already have `border-white/[0.03]` baked into the component, so adding `border-border` duplicates it.
+
+2. **Phone Calls Dashboard Card**: Currently shows on main dashboard redundantly since Phone tab exists in MightyChat.
+
+3. **MightyChat Missing "Pending File Reviews"**: MightyChat card should show real pending file reviews count (114 pending in database), not generic "pending reviews".
+
+4. **MightyChat Real Data Wiring**: Needs to pull from actual `conversations` table (Website Chat), `phone_calls` table (VAPI), and `ai_actions` table (File Reviews).
 
 ---
 
-## Pricing Rule Confirmation
+## Implementation Plan
 
-The current `website-chat/index.ts` **ALREADY quotes MINUS ROOF by default**:
+### 1. Fix White Outline Issue
+
+**File: `src/components/ui/card.tsx`**
+
+Remove all border styling completely—make it borderless by default:
 
 ```typescript
-// Line 392 in findVehicleSqft()
-return { 
-  sqft: data.noRoof,       // ← THIS is the default quote
-  sqftWithRoof: data.total, 
-  ...
-};
+// FROM:
+className={cn("rounded-lg border border-white/[0.03] bg-card text-card-foreground shadow-sm", className)}
+
+// TO:
+className={cn("rounded-lg bg-card text-card-foreground shadow-sm", className)}
 ```
 
-**Example**: F-150 shows `279 sqft` (no roof) not `312 sqft` (with roof)
+This eliminates ALL white outlines globally and gives a cleaner dark theme aesthetic.
 
-The AI prompt at line 1190-1195 says:
-```
-Vehicle: ${vehicleDisplay}
-SQFT: ${chatState.sqft} (no roof)    ← Already labeled "no roof"
-PRICE: $${price}
-```
+### 2. Remove Phone Calls Dashboard Card
 
-**NO CODE CHANGE NEEDED** for the minus-roof default. ✅
+**File: `src/pages/Dashboard.tsx`**
 
----
-
-## Changes Required
-
-### 1. Deploy Chat Widget to Supabase Storage
-
-**Action**: Upload `public/embed/chat-widget.js` to the `shopflow-files` storage bucket
-
-This fixes WordPress loading the old design. The embed URL stays the same:
-```
-https://wzwqhfbmymrengjqikjl.supabase.co/storage/v1/object/public/shopflow-files/chat-widget.js
-```
-
-### 2. Apply Jordan AI Fix from Uploaded Files
-
-**File**: `supabase/functions/website-chat/index.ts`
-
-Add the explicit installation blocking from `website-chat-index_8.ts`:
-
-| Change | Why |
-|--------|-----|
-| Add `INSTALL_KEYWORDS` array | Catch more installation-related phrases |
-| Add response safety filter | Block any AI response that accidentally claims installation |
-| Strengthen persona prompt | Add explicit "NEVER SAY" list |
-
-The uploaded file already has these fixes - merge them into the current production function.
-
-### 3. Add Design Team Escalation for Low AI Scores
-
-**File**: `supabase/functions/check-artwork-file/index.ts`
-
-When AI file score is below 6 OR has critical issues, create an escalation alert:
+- Remove `PhoneCallsDashboardCard` import and usage
+- Change grid from 3 columns back to 2:
 
 ```typescript
-// After line 206 (after creating the ai_action record)
-if (assessment.score < 6 || !assessment.fileTypeOk) {
-  // Create urgent design alert
-  await supabase.from('ai_actions').insert({
-    action_type: 'design_team_alert',
-    priority: 'urgent',
-    status: 'pending',
-    resolved: false,
-    action_payload: {
-      alert_type: 'file_check_uncertain',
-      file_name,
-      file_url,
-      ai_score: assessment.score,
-      issues: assessment.quickIssues,
-      customer_email: customer_email || null,
-      recipients: ['lance@weprintwraps.com'],
-      cc: ['trish@weprintwraps.com', 'brice@weprintwraps.com'],
-      message: `AI unable to verify print-readiness (score ${assessment.score}/10)`
-    },
-    preview: `⚠️ DESIGN ALERT: ${file_name} - AI score ${assessment.score}/10 - needs human review`
-  });
-}
+// FROM:
+<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <MightyChatCard />
+  <MightyCustomerCard />
+  <PhoneCallsDashboardCard />
+</div>
+
+// TO:
+<div className="grid md:grid-cols-2 gap-4">
+  <MightyChatCard />
+  <MightyCustomerCard />
+</div>
 ```
 
----
+### 3. Wire MightyChat to Real Data
 
-## Uploaded Files Analysis
+**File: `src/components/dashboard/MightyChatCard.tsx`**
 
-### `wpw_product_urls-2.pdf`
-Product catalog with URLs - useful for knowledge base. Contains:
-- Wall Wrap, Custom Design, Design Setup, Fade Wraps
-- Avery 1105, 3M IJ180, Cut Contour vinyl
-- Window Perf, Wrap by the Yard options
+Update to show:
+- **Website Chat**: Count from `conversations` table where `channel = 'website_chat'`
+- **Phone Calls**: Count from `phone_calls` table (new query)
+- **Pending File Reviews**: Count from `ai_actions` table where `action_type = 'file_review' AND resolved = false`
+- **Remove Instagram/Email channels** (V2 features)
 
-### `List_Export_2026-01-29_4.csv`
-Contact list export (451 contacts) - appears to be Klaviyo/email list export. Not needed for chat widget deployment.
-
----
-
-## File Changes Summary
-
-| File | Action |
-|------|--------|
-| `public/embed/chat-widget.js` → Supabase Storage | Deploy to `shopflow-files` bucket |
-| `supabase/functions/website-chat/index.ts` | Add installation keyword blocking from uploaded fix |
-| `supabase/functions/check-artwork-file/index.ts` | Add design team escalation for low AI scores |
-
----
-
-## Post-Deployment Verification
-
-1. **Test WordPress Embed**: Visit weprintwraps.com → chat bubble should show dark UI
-2. **Test Installation Question**: Ask "Do you install?" → Jordan MUST say "No, we're a print shop"
-3. **Test File Upload**: Upload a file → design team should receive email notification
-4. **Test Pricing**: Ask about F-150 → should quote ~$1,470 (279 sqft × $5.27) - NO ROOF
-
----
-
-## WordPress Embed Code (Unchanged)
-
-```html
-<script
-  defer
-  src="https://wzwqhfbmymrengjqikjl.supabase.co/storage/v1/object/public/shopflow-files/chat-widget.js"
-  data-org="wpw"
-  data-agent="jordan"
-  data-mode="live">
-</script>
+New channel structure:
+```typescript
+const CHANNEL_CARDS = [
+  { key: 'website', label: 'Website', icon: Globe, color: 'text-cyan-500' },
+  { key: 'phone', label: 'Phone', icon: Phone, color: 'text-amber-500' },
+  { key: 'fileReviews', label: 'File Reviews', icon: FileImage, color: 'text-purple-500' },
+] as const;
 ```
+
+Add new query for phone calls:
+```typescript
+const { data: phoneCount } = await supabase
+  .from("phone_calls")
+  .select("id", { count: "exact", head: true });
+```
+
+Update stats display:
+- Show real pending file reviews count (currently 114)
+- Wire to actual WebsiteAdmin pages when clicked
+
+---
+
+## Technical Details
+
+| Change | File | Action |
+|--------|------|--------|
+| Remove card borders | `src/components/ui/card.tsx` | Remove `border border-white/[0.03]` |
+| Remove Phone Card | `src/pages/Dashboard.tsx` | Delete import + usage |
+| Wire MightyChat | `src/components/dashboard/MightyChatCard.tsx` | Add phone_calls query, add file_reviews count, remove email/instagram |
+
+## Files to Modify
+
+1. `src/components/ui/card.tsx` - Remove all border classes
+2. `src/pages/Dashboard.tsx` - Remove PhoneCallsDashboardCard
+3. `src/components/dashboard/MightyChatCard.tsx` - Wire to real data sources
+
+---
+
+## Result
+
+- No more white outlines anywhere
+- Phone is accessed only through MightyChat (no redundant card)
+- MightyChat shows **"Pending File Reviews"** wired to real `ai_actions` data (114 pending)
+- Website Chat and Phone counts pull from actual tables
