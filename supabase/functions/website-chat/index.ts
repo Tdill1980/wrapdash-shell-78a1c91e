@@ -170,8 +170,33 @@ ${emotionalTriggers.length > 0 ? `- Emotional triggers that resonate: ${emotiona
 YOUR ROLE:
 - Answer questions about wraps naturally
 - Calculate and provide SPECIFIC pricing based on vehicle SQFT
-- Collect name + email before giving detailed pricing
-- Route formal quote requests to the quoting team
+- Collect contact info BEFORE any pricing or escalation
+- Empower customers with direct links - don't make them wait
+
+🚨🚨🚨 ESCALATION GATE - MANDATORY BEFORE ESCALATING 🚨🚨🚨
+
+**YOU MUST COLLECT ALL 4 ITEMS BEFORE ESCALATING OR ROUTING TO ANYONE:**
+1. ✅ Name (first name minimum)
+2. ✅ Email address  
+3. ✅ Phone number
+4. ✅ For bulk/fleet: Vehicle count AND types
+
+**IF CUSTOMER MENTIONS BULK/FLEET/MULTIPLE VEHICLES:**
+DO NOT say "I'll connect you with Jackson" until you have ALL info above.
+
+INSTEAD SAY: "Fleet pricing - I can definitely help! Jackson on our team handles bulk orders personally. Let me grab your info so he can put together the best pricing:
+- Your name?
+- Best email?
+- Phone number to reach you?
+- How many vehicles in your fleet?"
+
+**ONLY AFTER YOU HAVE ALL 4, SAY:**
+"Perfect, [Name]! I'm sending your info to Jackson now. He'll reach out at [phone] with custom fleet pricing. Expect to hear from him shortly!"
+
+**NEVER ESCALATE WITH MISSING INFO:**
+❌ "Email not yet captured" = USELESS to Jackson
+❌ No phone = Can't call them back
+❌ No vehicle count = Can't quote bulk pricing
 
 🎯 LEAD QUALIFICATION FLOW:
 
@@ -179,14 +204,15 @@ YOUR ROLE:
 - Ask what they're looking for naturally
 - Example: "Hey! What kind of wrap are you working on?"
 
-**STEP 2 - GET VEHICLE + CONTACT** (Before any pricing):
-- What vehicle? (Year, make, model)
-- What's your name and email?
-- Keep it casual: "What vehicle is this for? And drop your email so I can send the quote."
+**STEP 2 - GET CONTACT INFO** (Before ANY pricing or escalation):
+- Name, email, phone
+- For bulk: also vehicle count and types
+- Keep it casual: "What's your name, email, and best number to reach you?"
 
-**STEP 3 - GIVE PRICE + CONFIRM EMAIL** (Only after getting email):
-- Give specific price based on vehicle sqft
-- Confirm: "I'm sending this quote to your email right now!"
+**STEP 3 - GIVE PRICE OR ESCALATE** (Only after getting ALL info):
+- Regular quote: Give price, send quote email
+- Bulk/fleet: Route to Jackson with COMPLETE info
+- Quality issue: Route to Lance with COMPLETE info
 
 HARD RULES FOR OFFERS/PROMOS:
 - NEVER mention "WrapRewards" or "WRAPREWARDS code" more than ONCE per conversation
@@ -202,31 +228,31 @@ HARD RULES FOR OFFERS/PROMOS:
 IF customer jumps straight to "how much?":
 SAY: "I can definitely get you pricing! What vehicle is this for? And what's your name and email so I can send the quote?"
 
-🚨 LEAD CAPTURE PROTOCOL - HIGH PRIORITY SIGNALS (CRITICAL):
+🚨 HIGH PRIORITY SIGNALS - COLLECT ALL INFO IMMEDIATELY:
 
-When a customer mentions ANY of these, you MUST immediately collect contact info:
-- Quality issue (defect, wrong, damaged, reprint, issue, problem)
-- Bulk/fleet inquiry (multiple vehicles, commercial, fleet, bulk)
-- Unhappy/frustrated language (angry, upset, complaint, terrible, refund)
-- Partnership/sponsorship interest
+**BULK/FLEET INQUIRY** (fleet, bulk, multiple vehicles, commercial, 5+ trucks):
+SAY: "Fleet pricing - love it! 🔥 Jackson handles our bulk orders personally. Let me grab your details:
+- Your name?
+- Email address?
+- Phone number?
+- How many vehicles are we talking?"
 
-QUALITY ISSUE TEMPLATE (use immediately when quality concern detected):
-"I'm so sorry to hear that! I want to make sure our team gets this resolved ASAP. What's your name, email, and phone number so someone can call you directly?"
+**QUALITY ISSUE** (defect, wrong, damaged, reprint, problem with my order):
+SAY: "I'm so sorry to hear that! Let me get someone on this right away. What's your name, email, and phone so we can call you directly?"
 
-BULK INQUIRY TEMPLATE (use immediately when bulk/fleet interest detected):
-"That's exciting! For fleet and bulk orders, our team (especially Jackson) handles custom pricing personally. What's your name, email, and phone number so he can reach out with the best pricing?"
+**UNHAPPY/FRUSTRATED CUSTOMER** (angry, upset, complaint, terrible, refund):
+SAY: "I completely understand your frustration. Let me get someone to help you personally. What's your name, email, and phone number?"
 
-UNHAPPY CUSTOMER TEMPLATE (use immediately when frustration detected):
-"I completely understand your frustration, and I'm sorry for any trouble. Let me get someone on this right away. What's your name, email, and phone number so we can call you directly to make this right?"
+**AFTER COLLECTING ALL INFO, CONFIRM:**
+"Got it, [Name]! I'm flagging this for [Jackson/our team] right now. Someone will call you at [phone] shortly."
 
-DO NOT proceed with normal conversation until you have:
-1. Name (or at minimum first name)
-2. Email
-3. Phone number
+📁 FILE UPLOADS - GIVE THE LINK DIRECTLY:
+When customer asks about uploading files or artwork:
+SAY: "You can upload here: https://weprintwraps.com/pages/upload-artwork
+Or email to hello@weprintwraps.com - we offer FREE file review!
+Want me to get you a quote while you send the file over?"
 
-If they only give one, ask for the others: "And what's your phone number so we can call if needed?" or "And what's the best email to reach you?"
-
-Once you have all contact info AND there's a quality/bulk/unhappy signal, confirm: "Got it! I'm flagging this for [Jackson/our team] right now. Someone will reach out to you at [their phone] shortly."
+DO NOT say "Grant will reach out" or make them wait - give the link NOW!
 
 YOUR TEAM (mention naturally when routing):
 - Alex (Quoting Team) - handles formal quotes and pricing
@@ -820,31 +846,271 @@ serve(async (req) => {
       console.log('[JordanLee] Bulk inquiry detected - need email for coupon code');
     }
 
-    // Handle escalation if detected (existing team escalation)
+    // ============================================
+    // ESCALATION GATE: REQUIRE CONTACT INFO BEFORE ESCALATING
+    // ============================================
+    // CRITICAL: Never send useless escalations with "Email not yet captured"
+    // Jackson needs: Name, Email, Phone, and for bulk: vehicle count/types
+    
     let escalationSent = false;
+    const hasRequiredContactInfo = chatState.customer_name && chatState.customer_email && chatState.customer_phone;
+    const hasBulkDetails = chatState.bulk_vehicle_count || chatState.bulk_vehicle_types;
+    
+    // Detect if this is a bulk/fleet inquiry that needs special handling
+    const isBulkEscalation = escalationType === 'jackson' || bulkInquirySignal;
+    
     if (escalationType && resendKey) {
       const teamMember = WPW_TEAM[escalationType];
       const escalationsSent = (chatState.escalations_sent as string[]) || [];
       const alreadyEscalated = escalationsSent.includes(escalationType);
       
       if (teamMember && !alreadyEscalated) {
-        console.log('[JordanLee] Sending escalation to:', teamMember.email);
+        // ============================================
+        // GATE CHECK: Do we have enough info to escalate?
+        // ============================================
+        if (!hasRequiredContactInfo) {
+          // NOT ENOUGH INFO - Store as pending, do NOT send email yet
+          console.log('[JordanLee] ⚠️ ESCALATION BLOCKED - Missing contact info:', {
+            hasName: !!chatState.customer_name,
+            hasEmail: !!chatState.customer_email,
+            hasPhone: !!chatState.customer_phone,
+            escalationType
+          });
+          
+          chatState.pending_team_escalation = {
+            type: escalationType,
+            team_member: teamMember.email,
+            detected_at: new Date().toISOString(),
+            trigger_message: message_text.substring(0, 500),
+            missing: {
+              name: !chatState.customer_name,
+              email: !chatState.customer_email,
+              phone: !chatState.customer_phone,
+              bulk_details: isBulkEscalation && !hasBulkDetails
+            }
+          };
+          chatState.needs_contact_before_escalation = true;
+          
+          // Log the blocked escalation
+          await logConversationEvent(
+            supabase,
+            conversationId,
+            'escalation_blocked',
+            'jordan_lee',
+            {
+              reason: 'Missing required contact info',
+              escalation_type: escalationType,
+              target: teamMember.email,
+              has_name: !!chatState.customer_name,
+              has_email: !!chatState.customer_email,
+              has_phone: !!chatState.customer_phone,
+              message_excerpt: message_text.substring(0, 200),
+            },
+            escalationType
+          );
+        } else {
+          // ============================================
+          // FULL CONTACT INFO - Now we can escalate properly!
+          // ============================================
+          console.log('[JordanLee] ✅ Sending escalation with full contact info to:', teamMember.email);
+          
+          // Build detailed escalation email with ALL the info Jackson needs
+          const customerName = String(chatState.customer_name);
+          const customerEmail = String(chatState.customer_email);
+          const customerPhone = String(chatState.customer_phone);
+          const shopName = chatState.shop_name ? String(chatState.shop_name) : null;
+          const vehicleInfo = hasCompleteVehicle ? `${extractedVehicle.year} ${extractedVehicle.make} ${extractedVehicle.model}` : null;
+          const bulkVehicleCount = chatState.bulk_vehicle_count ? String(chatState.bulk_vehicle_count) : null;
+          const bulkVehicleTypes = chatState.bulk_vehicle_types ? String(chatState.bulk_vehicle_types) : null;
+          
+          const escalationHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2 style="color: #0066cc;">🔔 Customer Escalation - ${teamMember.role}</h2>
+              <p><strong>Agent:</strong> Jordan Lee (Website Chat)</p>
+              <p><strong>Type:</strong> ${escalationType.toUpperCase()}</p>
+              
+              <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+                <h3 style="margin: 0 0 10px 0; color: #856404;">📞 CUSTOMER CONTACT INFO:</h3>
+                <table style="width: 100%;">
+                  <tr><td style="padding: 5px 0;"><strong>Name:</strong></td><td>${customerName}</td></tr>
+                  <tr><td style="padding: 5px 0;"><strong>Email:</strong></td><td><a href="mailto:${customerEmail}">${customerEmail}</a></td></tr>
+                  <tr><td style="padding: 5px 0;"><strong>Phone:</strong></td><td><a href="tel:${customerPhone}">${customerPhone}</a></td></tr>
+                  ${shopName ? `<tr><td style="padding: 5px 0;"><strong>Shop/Company:</strong></td><td>${shopName}</td></tr>` : ''}
+                </table>
+              </div>
+              
+              ${isBulkEscalation && (bulkVehicleCount || bulkVehicleTypes) ? `
+              <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+                <h3 style="margin: 0 0 10px 0; color: #155724;">🚛 FLEET/BULK DETAILS:</h3>
+                <table style="width: 100%;">
+                  ${bulkVehicleCount ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Count:</strong></td><td>${bulkVehicleCount} vehicles</td></tr>` : ''}
+                  ${bulkVehicleTypes ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Types:</strong></td><td>${bulkVehicleTypes}</td></tr>` : ''}
+                  ${vehicleInfo ? `<tr><td style="padding: 5px 0;"><strong>Example Vehicle:</strong></td><td>${vehicleInfo}</td></tr>` : ''}
+                </table>
+              </div>
+              ` : vehicleInfo ? `
+              <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #0066cc;">
+                <h3 style="margin: 0 0 10px 0; color: #004085;">🚗 VEHICLE:</h3>
+                <p style="margin: 0;">${vehicleInfo}</p>
+              </div>
+              ` : ''}
+              
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <h3 style="margin: 0 0 10px 0;">💬 CUSTOMER REQUEST:</h3>
+                <blockquote style="margin: 0; padding: 10px; background: white; border-left: 3px solid #0066cc; font-style: italic;">
+                  ${message_text.substring(0, 500)}
+                </blockquote>
+              </div>
+              
+              <p style="color: #666; font-size: 12px;"><strong>Page:</strong> ${page_url}</p>
+              
+              <div style="margin-top: 20px;">
+                <a href="https://wrapcommandai.com/mightychat" style="background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">View Full Conversation</a>
+              </div>
+              
+              ${mode === 'test' ? '<p style="color: red; margin-top: 20px;"><strong>[TEST MODE]</strong></p>' : ''}
+            </div>
+          `;
+
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                from: 'Jordan @ WPW <hello@weprintwraps.com>',
+                to: [teamMember.email],
+                cc: SILENT_CC,
+                subject: `${mode === 'test' ? '[TEST] ' : ''}🔔 ${escalationType.toUpperCase()}: ${customerName} - ${customerPhone}`,
+                html: escalationHtml
+              })
+            });
+            
+            escalationSent = true;
+            chatState.escalations_sent = [...escalationsSent, escalationType];
+            delete chatState.pending_team_escalation;
+            delete chatState.needs_contact_before_escalation;
+            console.log('[JordanLee] ✅ Escalation email sent with full contact info');
+            
+            // ============================================
+            // OS SPINE: Log escalation event
+            // ============================================
+            await logConversationEvent(
+              supabase,
+              conversationId,
+              'escalation_sent',
+              'jordan_lee',
+              {
+                customer_email: customerEmail,
+                customer_name: customerName,
+                customer_phone: customerPhone,
+                shop_name: shopName || undefined,
+                bulk_vehicle_count: bulkVehicleCount || undefined,
+                bulk_vehicle_types: bulkVehicleTypes || undefined,
+                message_excerpt: message_text.substring(0, 200),
+                escalation_target: teamMember.email,
+                email_sent_to: [teamMember.email, ...SILENT_CC],
+                email_subject: `🔔 ${escalationType.toUpperCase()}: ${customerName} - ${customerPhone}`,
+                email_sent_at: new Date().toISOString(),
+                priority: 'high',
+              },
+              escalationType
+            );
+            
+            // Also log the email receipt
+            await logConversationEvent(
+              supabase,
+              conversationId,
+              'email_sent',
+              'jordan_lee',
+              {
+                email_sent_to: [teamMember.email, ...SILENT_CC],
+                email_subject: `🔔 ${escalationType.toUpperCase()}: ${customerName} - ${customerPhone}`,
+                email_body: escalationHtml.substring(0, 2000),
+                email_sent_at: new Date().toISOString(),
+                customer_email: customerEmail,
+              },
+              escalationType
+            );
+            
+            console.log('[JordanLee] Escalation events logged to conversation_events');
+          } catch (emailErr) {
+            console.error('[JordanLee] Escalation email error:', emailErr);
+          }
+        }
+      }
+    }
+    
+    // ============================================
+    // CHECK: Did we just collect contact info for a pending escalation?
+    // ============================================
+    if (chatState.pending_team_escalation && hasRequiredContactInfo && resendKey) {
+      const pending = chatState.pending_team_escalation as { 
+        type: string; 
+        team_member: string; 
+        detected_at: string; 
+        trigger_message: string;
+      };
+      
+      console.log('[JordanLee] ✅ Contact info now complete - sending pending escalation:', pending.type);
+      
+      const teamMember = WPW_TEAM[pending.type];
+      if (teamMember) {
+        const customerName = String(chatState.customer_name);
+        const customerEmail = String(chatState.customer_email);
+        const customerPhone = String(chatState.customer_phone);
+        const shopName = chatState.shop_name ? String(chatState.shop_name) : null;
+        const vehicleInfo = hasCompleteVehicle ? `${extractedVehicle.year} ${extractedVehicle.make} ${extractedVehicle.model}` : null;
+        const bulkVehicleCount = chatState.bulk_vehicle_count ? String(chatState.bulk_vehicle_count) : null;
+        const bulkVehicleTypes = chatState.bulk_vehicle_types ? String(chatState.bulk_vehicle_types) : null;
         
         const escalationHtml = `
-          <h2>🔔 Customer Request via Website Chat</h2>
-          <p><strong>Agent:</strong> Jordan Lee (Website Chat)</p>
-          <p><strong>Type:</strong> ${teamMember.role}</p>
-          <hr>
-          <p><strong>Customer Message:</strong></p>
-          <blockquote style="background:#f5f5f5;padding:15px;border-left:4px solid #0066cc;">
-            ${message_text}
-          </blockquote>
-          ${chatState.customer_email ? `<p><strong>Customer Email:</strong> ${chatState.customer_email}</p>` : '<p><em>Email not yet captured</em></p>'}
-          ${hasCompleteVehicle ? `<p><strong>Vehicle:</strong> ${extractedVehicle.year} ${extractedVehicle.make} ${extractedVehicle.model}</p>` : ''}
-          <p><strong>Page:</strong> ${page_url}</p>
-          <hr>
-          <p><a href="https://wrapcommandai.com/mightychat" style="background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">View in MightyChat</a></p>
-          ${mode === 'test' ? '<p style="color:red;"><strong>[TEST MODE]</strong></p>' : ''}
+          <div style="font-family: Arial, sans-serif; max-width: 600px;">
+            <h2 style="color: #0066cc;">🔔 Customer Escalation - ${teamMember.role}</h2>
+            <p><strong>Agent:</strong> Jordan Lee (Website Chat)</p>
+            <p><strong>Originally detected:</strong> ${pending.detected_at}</p>
+            
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+              <h3 style="margin: 0 0 10px 0; color: #856404;">📞 CUSTOMER CONTACT INFO:</h3>
+              <table style="width: 100%;">
+                <tr><td style="padding: 5px 0;"><strong>Name:</strong></td><td>${customerName}</td></tr>
+                <tr><td style="padding: 5px 0;"><strong>Email:</strong></td><td><a href="mailto:${customerEmail}">${customerEmail}</a></td></tr>
+                <tr><td style="padding: 5px 0;"><strong>Phone:</strong></td><td><a href="tel:${customerPhone}">${customerPhone}</a></td></tr>
+                ${shopName ? `<tr><td style="padding: 5px 0;"><strong>Shop/Company:</strong></td><td>${shopName}</td></tr>` : ''}
+              </table>
+            </div>
+            
+            ${bulkVehicleCount || bulkVehicleTypes ? `
+            <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
+              <h3 style="margin: 0 0 10px 0; color: #155724;">🚛 FLEET/BULK DETAILS:</h3>
+              <table style="width: 100%;">
+                ${bulkVehicleCount ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Count:</strong></td><td>${bulkVehicleCount} vehicles</td></tr>` : ''}
+                ${bulkVehicleTypes ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Types:</strong></td><td>${bulkVehicleTypes}</td></tr>` : ''}
+                ${vehicleInfo ? `<tr><td style="padding: 5px 0;"><strong>Example Vehicle:</strong></td><td>${vehicleInfo}</td></tr>` : ''}
+              </table>
+            </div>
+            ` : vehicleInfo ? `
+            <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #0066cc;">
+              <h3 style="margin: 0 0 10px 0; color: #004085;">🚗 VEHICLE:</h3>
+              <p style="margin: 0;">${vehicleInfo}</p>
+            </div>
+            ` : ''}
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3 style="margin: 0 0 10px 0;">💬 ORIGINAL REQUEST:</h3>
+              <blockquote style="margin: 0; padding: 10px; background: white; border-left: 3px solid #0066cc; font-style: italic;">
+                ${pending.trigger_message}
+              </blockquote>
+            </div>
+            
+            <p style="color: #666; font-size: 12px;"><strong>Page:</strong> ${page_url}</p>
+            
+            <div style="margin-top: 20px;">
+              <a href="https://wrapcommandai.com/mightychat" style="background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">View Full Conversation</a>
+            </div>
+          </div>
         `;
 
         try {
@@ -858,55 +1124,38 @@ serve(async (req) => {
               from: 'Jordan @ WPW <hello@weprintwraps.com>',
               to: [teamMember.email],
               cc: SILENT_CC,
-              subject: `${mode === 'test' ? '[TEST] ' : ''}Customer Request: ${teamMember.role}`,
+              subject: `🔔 ${pending.type.toUpperCase()}: ${customerName} - ${customerPhone}`,
               html: escalationHtml
             })
           });
           
           escalationSent = true;
-          chatState.escalations_sent = [...escalationsSent, escalationType];
-          console.log('[JordanLee] Escalation email sent');
+          const escalationsSent = (chatState.escalations_sent as string[]) || [];
+          chatState.escalations_sent = [...escalationsSent, pending.type];
+          delete chatState.pending_team_escalation;
+          delete chatState.needs_contact_before_escalation;
           
-          // ============================================
-          // OS SPINE: Log escalation event
-          // ============================================
+          console.log('[JordanLee] ✅ Pending escalation sent with full contact info');
+          
           await logConversationEvent(
             supabase,
             conversationId,
             'escalation_sent',
             'jordan_lee',
             {
-              customer_email: String(chatState.customer_email) || undefined,
-              customer_name: chatState.customer_name as string || undefined,
-              message_excerpt: message_text.substring(0, 200),
+              customer_email: customerEmail,
+              customer_name: customerName,
+              customer_phone: customerPhone,
+              was_pending: true,
+              pending_since: pending.detected_at,
+              message_excerpt: pending.trigger_message.substring(0, 200),
               escalation_target: teamMember.email,
-              email_sent_to: [teamMember.email, ...SILENT_CC],
-              email_subject: `${mode === 'test' ? '[TEST] ' : ''}Customer Request: ${teamMember.role}`,
-              email_sent_at: new Date().toISOString(),
               priority: 'high',
             },
-            escalationType
+            pending.type
           );
-          
-          // Also log the email receipt
-          await logConversationEvent(
-            supabase,
-            conversationId,
-            'email_sent',
-            'jordan_lee',
-            {
-              email_sent_to: [teamMember.email, ...SILENT_CC],
-              email_subject: `${mode === 'test' ? '[TEST] ' : ''}Customer Request: ${teamMember.role}`,
-              email_body: escalationHtml.substring(0, 2000),
-              email_sent_at: new Date().toISOString(),
-              customer_email: String(chatState.customer_email) || undefined,
-            },
-            escalationType
-          );
-          
-          console.log('[JordanLee] Escalation events logged to conversation_events');
         } catch (emailErr) {
-          console.error('[JordanLee] Escalation email error:', emailErr);
+          console.error('[JordanLee] Pending escalation email error:', emailErr);
         }
       }
     }

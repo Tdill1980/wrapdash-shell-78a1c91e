@@ -14,7 +14,6 @@ interface Message {
 
 const QUICK_ACTIONS = [
   { icon: BarChart3, label: 'Quote Stats', message: 'How many quotes this week?' },
-  { icon: FileText, label: 'Active Directives', message: 'What are the active directives?' },
   { icon: Zap, label: 'Top Questions', message: 'What are customers asking about?' },
 ];
 

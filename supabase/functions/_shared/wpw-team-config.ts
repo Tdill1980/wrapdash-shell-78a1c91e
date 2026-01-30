@@ -12,10 +12,10 @@ export interface TeamMember {
 export const WPW_TEAM: Record<string, TeamMember> = {
   jackson: {
     email: 'Jackson@WePrintWraps.com',
-    name: 'Jackson',
-    role: 'Operations Manager',
+    name: 'Jackson Obregon',
+    role: 'VP Marketing / Fleet Specialist',
     customerFacing: true,
-    triggers: ['bulk', 'fleet', 'wholesale', 'rush', 'urgent', 'discount', 'multiple vehicles', '10+', '10 trucks', '10 vans', 'volume']
+    triggers: ['bulk', 'fleet', 'wholesale', 'rush', 'urgent', 'discount', 'multiple vehicles', '10+', '10 trucks', '10 vans', 'volume', 'commercial', 'business', 'company fleet']
   },
   lance: {
     email: 'Lance@WePrintWraps.com',
