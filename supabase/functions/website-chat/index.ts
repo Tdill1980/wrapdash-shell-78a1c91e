@@ -2003,11 +2003,12 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
     }
 
     // 🚨 OS ASSERTION: Never allow price without contact info (name + email)
-    const pricePattern = /\$[\d,]+(?:\.\d{2})?/;
+    // Instead of crashing, strip price and redirect to contact collection
+    const pricePattern = /\$[\d,]+(?:\.\d{2})?/g;
     const responseHasPrice = pricePattern.test(aiReply);
 
     if (responseHasPrice && (!chatState.customer_email || !chatState.customer_name)) {
-      console.error('[JordanLee] 🚨 OS_VIOLATION: Price shown without contact info!', {
+      console.warn('[JordanLee] ⚠️ Price detected without contact info - suppressing and redirecting', {
         conversationId,
         tenant,
         stage: chatState.stage,
@@ -2018,8 +2019,20 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
         response_preview: aiReply.substring(0, 100)
       });
       
-      // HARD FAIL - contact info is required before pricing
-      throw new Error('OS_VIOLATION: Price shown without contact info');
+      // Suppress the price and redirect to contact collection instead of crashing
+      const missingInfo = [];
+      if (!chatState.customer_name) missingInfo.push('name');
+      if (!chatState.customer_email) missingInfo.push('email');
+      
+      // Replace the AI response with a contact collection message
+      const redirectMessage = chatState.customer_name 
+        ? `I've got your vehicle info! To send you a quote, I just need your email address.`
+        : `I've got your vehicle info and I'm ready to calculate your price! To send you a personalized quote, what's your name?`;
+      
+      response.reply = redirectMessage;
+      response.message = redirectMessage;
+      
+      console.log('[JordanLee] Redirected to contact collection for:', missingInfo.join(', '));
     }
 
     return new Response(JSON.stringify(response), {
