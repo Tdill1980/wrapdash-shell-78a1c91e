@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ShopFlowStatusTag } from "./ShopFlowStatusTag";
 import { ShopFlowOrder } from "@/hooks/useShopFlow";
 import { InternalStatus } from "@/lib/status-mapping";
-import { Package } from "lucide-react";
+import { Package, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ShopFlowCardProps {
@@ -36,6 +36,14 @@ export function ShopFlowCard({ order, internalStatus }: ShopFlowCardProps) {
           <p className="text-xs text-muted-foreground mt-1 truncate">
             {order.customer_name}
           </p>
+          {order.order_total && order.order_total > 0 && (
+            <p className="text-xs mt-1 flex items-center gap-1">
+              <DollarSign className="w-3 h-3 text-green-400" />
+              <span className="text-green-400 font-medium">
+                ${Number(order.order_total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </p>
+          )}
           <div className="mt-2">
             <ShopFlowStatusTag status={internalStatus} />
           </div>

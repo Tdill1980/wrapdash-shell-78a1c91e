@@ -44,28 +44,58 @@ serve(async (req) => {
 
     for (const order of ordersToFix || []) {
       try {
-        // Try to find WooCommerce order by order_number
-        const searchNumber = order.woo_order_id || order.order_number;
+        // Use woo_order_id if available, otherwise use order_number
+        const orderId = order.woo_order_id || order.order_number;
         
-        // Search WooCommerce for order
-        const wooSearchUrl = `${wooUrl}/wp-json/wc/v3/orders?search=${searchNumber}&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+        // Fetch order directly by ID (not search)
+        const wooOrderUrl = `${wooUrl}/wp-json/wc/v3/orders/${orderId}?consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
         
-        const wooResponse = await fetch(wooSearchUrl);
+        const wooResponse = await fetch(wooOrderUrl);
         
         if (!wooResponse.ok) {
-          console.error(`WooCommerce API error for ${order.order_number}: ${wooResponse.status}`);
-          results.failed++;
-          results.errors.push(`${order.order_number}: WooCommerce API error`);
+          // Try searching if direct fetch fails
+          const wooSearchUrl = `${wooUrl}/wp-json/wc/v3/orders?include=${orderId}&consumer_key=${consumerKey}&consumer_secret=${consumerSecret}`;
+          const searchResponse = await fetch(wooSearchUrl);
+          
+          if (!searchResponse.ok) {
+            console.error(`WooCommerce API error for ${order.order_number}: ${searchResponse.status}`);
+            results.failed++;
+            results.errors.push(`${order.order_number}: WooCommerce API error`);
+            continue;
+          }
+          
+          const searchResults = await searchResponse.json();
+          if (!searchResults || searchResults.length === 0) {
+            console.log(`⚠️ No WooCommerce match for ${order.order_number}`);
+            results.skipped++;
+            continue;
+          }
+          
+          const matchingOrder = searchResults[0];
+          const orderTotal = parseFloat(matchingOrder.total || '0');
+          
+          if (orderTotal > 0) {
+            const { error: updateError } = await supabase
+              .from('shopflow_orders')
+              .update({ order_total: orderTotal, updated_at: new Date().toISOString() })
+              .eq('id', order.id);
+
+            if (updateError) {
+              results.failed++;
+              results.errors.push(`${order.order_number}: ${updateError.message}`);
+            } else {
+              console.log(`✅ Updated ${order.order_number}: $${orderTotal}`);
+              results.success++;
+            }
+          } else {
+            results.skipped++;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 200));
           continue;
         }
 
-        const wooOrders = await wooResponse.json();
-        
-        // Find matching order
-        const matchingOrder = wooOrders.find((wo: any) => 
-          wo.id?.toString() === order.woo_order_id?.toString() ||
-          wo.number?.toString() === order.order_number?.toString()
-        );
+        const matchingOrder = await wooResponse.json();
 
         if (!matchingOrder) {
           console.log(`⚠️ No WooCommerce match for ${order.order_number}`);
