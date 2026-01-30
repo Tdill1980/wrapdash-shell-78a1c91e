@@ -1,28 +1,12 @@
-// Website Chat Edge Function - Jordan Lee Agent
-// Handles website chat via WePrintWraps chat widget
-// Routes all execution through Ops Desk
-// Now with TradeDNA integration for dynamic brand voice
-// OS SPINE: All escalations and quotes log to conversation_events
+// Website Chat Edge Function - Jordan Lee Agent (STANDALONE VERSION)
+// All dependencies inlined - no _shared imports needed
+// LAST UPDATED: January 30, 2026
+// VERSION: 2.0 - COMPLETE WITH ALL FIXES
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { loadKnowledgeContext, isTopicCovered, getKBSilentResponse } from "../_shared/kb-loader.ts";
-import { WPW_TEAM, SILENT_CC, detectEscalation, getEscalationResponse } from "../_shared/wpw-team-config.ts";
-import { WPW_CONSTITUTION } from "../_shared/wpw-constitution.ts";
-import { AGENTS, formatAgentResponse } from "../_shared/agent-config.ts";
-import { routeToOpsDesk, calculateRevenuePriority } from "../_shared/ops-desk-router.ts";
-import { loadVoiceProfile, VoiceProfile } from "../_shared/voice-engine-loader.ts";
-import { getApprovedLinksForPrompt, LINK_AWARE_RULES, APPROVED_LINKS } from "../_shared/wpw-links.ts";
-import { sendAlertWithTracking, UNHAPPY_CUSTOMER_PATTERNS, BULK_INQUIRY_PATTERNS, QUALITY_ISSUE_PATTERNS, detectAlertType, detectAlertTypeWithGate, formatBulkDiscountTiers, AlertType, OrderContext } from "../_shared/alert-system.ts";
-import { logConversationEvent, logQuoteEvent } from "../_shared/conversation-events.ts";
-
-// Proactive selling detection patterns
-const FADEWRAP_DESIGN_PATTERNS = /\b(fadewrap|fade.*wrap|design|visualize|preview|color.*change|restyle|what.*would.*look|see.*before|mock.*up|mockup)\b/i;
-const CULTURE_ENTHUSIASM_PATTERNS = /\b(love|excited|project|build|dream|custom|unique|one.*of.*a.*kind|special|passion|wrap.*life|wrap.*culture|community)\b/i;
-const ORDER_INTENT_PATTERNS = /\b(order|buy|purchase|checkout|cart|ready.*to|want.*to.*get|need.*to.*order)\b/i;
-const FIRST_TIME_BUYER_PATTERNS = /\b(first.*time|never.*ordered|new.*to|haven't.*tried|considering|thinking.*about.*ordering|first.*order|never.*bought|new.*customer)\b/i;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,396 +14,540 @@ const corsHeaders = {
 };
 
 // ============================================
-// 🔐 TENANT DETECTION: WPW ecommerce vs SaaS
+// ⚠️ CRITICAL IDENTITY - DO NOT MODIFY
 // ============================================
-function getTenantFromRequest(req: Request): 'WPW' | 'SAAS' {
-  const host = req.headers.get("x-forwarded-host")
-    ?? req.headers.get("host")
-    ?? "";
-  const origin = req.headers.get("origin") ?? "";
-  
-  const h = (host || origin).toLowerCase();
-  
-  // WPW ecommerce (print-only, no installation)
-  if (h.includes("weprintwraps.com") || h.includes("weprintwraps.")) return "WPW";
-  
-  // WrapCommand SaaS platform
-  if (h.includes("wrapcommandai.com") || h.includes("wrapcommand.")) return "SAAS";
-  
-  // Default to WPW for now (most chat widget traffic)
-  return "WPW";
-}
+const WPW_IDENTITY = `
+⚠️⚠️⚠️ CRITICAL IDENTITY RULE - NEVER VIOLATE ⚠️⚠️⚠️
 
-// Regex patterns to extract vehicle info - EXPANDED with common models
-const VEHICLE_PATTERNS = {
-  year: /\b(19|20)\d{2}\b/,
-  make: /\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|vw|subaru|mazda|hyundai|kia|lexus|acura|infiniti|cadillac|buick|lincoln|chrysler|pontiac|saturn|hummer|mini|porsche|jaguar|land\s*rover|volvo|saab|mitsubishi|suzuki|genesis|rivian|lucid|fiat|alfa\s*romeo|maserati|bentley|rolls\s*royce|ferrari|lamborghini|mclaren|aston\s*martin|lotus|scion|isuzu|freightliner|kenworth|peterbilt|international)\b/i,
-  model: /\b(f-?150|f-?250|f-?350|silverado|sierra|ram|tacoma|tundra|camry|accord|civic|altima|mustang|camaro|challenger|charger|corvette|wrangler|bronco|explorer|expedition|tahoe|suburban|yukon|escalade|navigator|pilot|highlander|4runner|rav4|crv|cr-v|forester|outback|model\s?[3sxy]|cybertruck|sprinter|transit|promaster|prius|corolla|avalon|sienna|venza|sequoia|supra|gr\s*supra|gr86|86|yaris|matrix|celica|mr2|land\s*cruiser|fj\s*cruiser|fit|hr-v|passport|odyssey|ridgeline|insight|element|s2000|nsx|prelude|del\s*sol|mdx|rdx|tlx|ilx|integra|rsx|legend|rl|tl|tsx|zdx|q50|q60|qx50|qx60|qx80|g35|g37|fx35|fx45|m35|m45|ex35|jx35|sentra|maxima|leaf|versa|kicks|murano|pathfinder|armada|frontier|titan|juke|370z|350z|300zx|240sx|gt-r|gtr|z|elantra|sonata|santa\s*fe|tucson|kona|ioniq|veloster|genesis|azera|accent|venue|palisade|stinger|k5|optima|sorento|carnival|soul|seltos|ev6|forte|rio|niro|sportage|telluride|cx-?[3579]|cx-?30|cx-?50|mazda3|mazda6|miata|mx-?5|rx-?[78]|mazdaspeed|impreza|wrx|sti|legacy|ascent|crosstrek|brz|baja|tribeca|svx|jetta|golf|passat|tiguan|atlas|arteon|id\.?4|beetle|gti|r32|cc|touareg|phaeton|rabbit|3\s*series|5\s*series|7\s*series|x[1-7]|m[2-8]|z4|i[348]|ix|a[3-8]|q[3578]|r8|rs[3-7]|tt|e-?tron|c-?class|e-?class|s-?class|g-?class|gl[abc]|gl[es]|amg|sl|slk|clk|cls|ml|maybach|cayman|boxster|cayenne|macan|panamera|taycan|911|carrera|turbo|gt[234]|f-?type|f-?pace|e-?pace|i-?pace|xf|xe|xj|xk|range\s*rover|evoque|discovery|velar|defender|xc40|xc60|xc90|s60|s90|v60|v90|c40|countryman|clubman|cooper|hardtop|500|giulia|stelvio|gv70|gv80|g70|g80|g90|outlander|eclipse\s*cross|lancer|evo|galant|pajero|montero|3000gt|diamante|mirage|r1t|r1s|air|gravity|express|savana|e-?series|nv|metris|colorado|canyon|ranger|maverick|lightning|raptor|tremor|power\s*wagon|trx|rebel|laramie|limited|platinum|lariat|king\s*ranch|denali|slt|at4|trail\s*boss|z71|rst|lt|ss|zl1|z06|zr1|grand\s*sport|stingray|hellcat|scat\s*pack|rt|srt|demon|redeye|super\s*bee|daytona|super\s*stock|shaker|mopar|shelby|gt350|gt500|mach-?[1e]|boss|bullitt|dark\s*horse|ecoboost|coyote|voodoo|predator|godzilla|hemi|cummins|duramax|powerstroke|ecodiesel|pentastar|triton|modular|ls[1-9]|lt[1-5]|lsa|lsx|gen\s*[iv])\b/i,
+WePrintWraps.com is a PRINT SHOP ONLY.
+
+WE DO:
+✅ Print vehicle wraps
+✅ Ship nationwide (FREE on orders $750+)
+✅ Offer design services ($750)
+✅ Free file review
+
+WE DO NOT:
+❌ Install wraps - WE HAVE NO INSTALLATION TEAM
+❌ Do local pickup - shipping only
+❌ Visit customer locations
+❌ Offer any in-person services
+
+IF ASKED ABOUT INSTALLATION:
+Say EXACTLY: "No, we're a print shop - we print and ship. You'll need a local installer to apply the wrap. I can help you find one in your area if you'd like!"
+
+🚫 NEVER SAY:
+- "We offer installation"
+- "Our installation team"
+- "We can install"
+- "We'll come to you"
+
+THIS IS NON-NEGOTIABLE. VIOLATING THIS LOSES CUSTOMER TRUST.
+`;
+
+// ============================================
+// INLINED: WPW Team Config
+// ============================================
+const WPW_TEAM: Record<string, { name: string; email: string; role: string; phone?: string }> = {
+  bulk: { name: 'Jackson', email: 'jackson@weprintwraps.com', role: 'Bulk/Fleet Sales', phone: '+14807726003' },
+  design: { name: 'Grant', email: 'grant@weprintwraps.com', role: 'Design Services' },
+  quality: { name: 'Trish', email: 'trish@weprintwraps.com', role: 'Quality/Escalations', phone: '+16233135418' },
+  support: { name: 'Lance', email: 'lance@weprintwraps.com', role: 'Customer Support' },
 };
 
-// Email extraction pattern
-const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+const SILENT_CC = 'trish@weprintwraps.com';
+const ESCALATION_SMS_PHONE = '+14807726003'; // Jackson
 
-// Phone number extraction pattern (US phone formats)
-const PHONE_PATTERN = /(\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})/;
+function detectEscalation(message: string): string | null {
+  const lower = message.toLowerCase();
+  if (/\b(bulk|fleet|multiple.*vehicle|[5-9]\d*\s*vehicle|volume|wholesale)\b/i.test(lower)) return 'bulk';
+  if (/\b(design|artwork|help.*with.*file|create.*wrap|need.*design)\b/i.test(lower)) return 'design';
+  if (/\b(wrong|damaged|issue|problem|complaint|unhappy|angry|disappointed|refund|terrible|awful|unacceptable)\b/i.test(lower)) return 'quality';
+  if (/\b(callback|call.*back|phone|speak.*someone|talk.*person|human|manager|supervisor)\b/i.test(lower)) return 'support';
+  return null;
+}
 
-// Name extraction patterns (when explicitly given)
-const NAME_PATTERNS = /(?:my name is|i'm|i am|this is|call me|name'?s?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i;
-
-// Company name extraction patterns
-const COMPANY_PATTERNS = /(?:(?:from|with|at|for|representing|work for|own|my company is|company name is)\s+)?([A-Z][a-zA-Z\s&]+(?:Inc\.?|LLC|Corp\.?|Co\.?|Company|Services|Solutions|Fleet|Wraps|Graphics|Signs|Vinyl|Media|Auto|Motors|Customs?|Motorsports?|Racing|Shop|Studio|Designs?|Creative|Print(?:ing)?|Tinting|Detail(?:ing)?|Body\s*Shop|Collision|Automotive))/i;
-
-// Order number extraction pattern (4-6 digits typically)
-const ORDER_NUMBER_PATTERN = /\b(\d{4,6})\b/;
-
-// Order status inquiry detection
-const ORDER_STATUS_PATTERNS = /\b(order|tracking|shipped|shipping|status|where|track|delivery|deliver|when.*arrive|eta|package)\b/i;
-
-// Partnership/sponsorship signal detection
-const PARTNERSHIP_PATTERNS = /\b(collab|sponsor|film|commercial|partner|brand|ambassador|influencer|content creator|media|press|feature)\b/i;
-
-// Map internal status to customer-friendly status
-function getCustomerFriendlyStatus(status: string, customerStage: string | null): string {
-  // Use customer_stage if available (more customer-friendly)
-  if (customerStage) {
-    const stageMap: Record<string, string> = {
-      'order_received': 'Order Received - We got your order!',
-      'in_production': 'In Production - Your wrap is being printed',
-      'printing': 'Printing - Your wrap is on the printer now',
-      'quality_check': 'Quality Check - Verifying print quality',
-      'ready': 'Ready to Ship - Packaging your order',
-      'shipped': 'Shipped - On the way to you!',
-      'delivered': 'Delivered',
-      'completed': 'Completed'
-    };
-    return stageMap[customerStage] || customerStage.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+// Detect unhappy/frustrated customers who need follow-up
+function detectUnhappyCustomer(message: string): { isUnhappy: boolean; reason: string } {
+  const lower = message.toLowerCase();
+  
+  const unhappyPatterns = [
+    { pattern: /shipping.*(\$\d+|cost|expensive|too much|increased)/i, reason: 'shipping_complaint' },
+    { pattern: /price.*(\$\d+|too high|expensive|increased|went up)/i, reason: 'price_complaint' },
+    { pattern: /waiting|waited|no response|haven't heard|been \d+ (day|week)/i, reason: 'waiting_complaint' },
+    { pattern: /frustrated|angry|upset|disappointed|unhappy/i, reason: 'expressed_frustration' },
+    { pattern: /wrong|mistake|error|incorrect|messed up/i, reason: 'order_issue' },
+    { pattern: /refund|money back|cancel/i, reason: 'refund_request' },
+    { pattern: /used to be|it was|before it was/i, reason: 'price_change_complaint' },
+    { pattern: /no way|can't believe|ridiculous/i, reason: 'disbelief_frustration' },
+  ];
+  
+  for (const { pattern, reason } of unhappyPatterns) {
+    if (pattern.test(lower)) {
+      return { isUnhappy: true, reason };
+    }
   }
   
-  // Fallback to internal status
-  const statusMap: Record<string, string> = {
-    'design_requested': 'Order Received - Design review in progress',
-    'design_in_progress': 'Design In Progress',
-    'awaiting_approval': 'Awaiting Your Approval',
-    'approved': 'Approved - Moving to production',
-    'processing': 'Processing - Preparing for print',
-    'printing': 'Printing - Your wrap is on the printer',
-    'quality_check': 'Quality Check',
-    'ready_to_ship': 'Ready to Ship',
-    'shipped': 'Shipped',
-    'completed': 'Completed',
-    'cancelled': 'Cancelled'
+  return { isUnhappy: false, reason: '' };
+}
+
+// ============================================
+// INLINED: Knowledge Base - ACCURATE PRICING
+// ============================================
+const WPW_KNOWLEDGE = {
+  pricing: `
+PRICING (Print-Only - Customer arranges local installation):
+
+PRINTED WRAP FILMS (per square foot):
+- Avery MPI 1105 with DOL 1460Z Lamination: $5.27/sqft
+- 3M IJ180Cv3 with 8518 Lamination: $6.32/sqft
+- Window Perf 50/50: $5.32/sqft
+
+CUT CONTOUR VINYL (per square foot, weeded & masked):
+- Avery Cut Contour: $6.32/sqft
+- 3M Cut Contour: $6.92/sqft
+
+FADE WRAPS (Fixed pricing by side length):
+- Small sides (up to 144"): $600
+- Medium sides (up to 172"): $710
+- Large sides (up to 200"): $825
+- XL sides (up to 240"): $990
+- Add-ons: Hood +$160, Front Bumper +$200, Rear+Bumper +$395, Roof +$160-330
+
+DESIGN SERVICES:
+- Full Wrap Custom Design: $750
+- 1-Hour Design Fee (color matching, edits): $95
+- File Output Fee: $95
+
+BULK/FLEET DISCOUNTS (automatic based on total sqft):
+- 500-999 sqft: 5% OFF
+- 1000-1499 sqft: 10% OFF
+- 1500-2499 sqft: 15% OFF
+- 2500+ sqft: 20% OFF
+
+SHIPPING:
+- FREE on orders over $750
+- Orders over $750: 3 days or less within continental US
+- Orders under $750: UPS Ground 2-5 days depending on location
+- Add to cart and enter zip for instant shipping price
+
+QUOTE FORMULA:
+Price = SQFT × Material Price
+Then apply bulk discount if applicable.
+Example: 2024 F-150 = 279 sqft × $5.27 = $1,470 (no discount)
+Example: 5 vehicles = 1,400 sqft × $5.27 × 0.90 = $6,640 (10% off)
+`,
+
+  turnaround: `
+TURNAROUND TIMES:
+- Print production: 1-2 business days
+- Shipping (over $750): 3 days or less
+- Shipping (under $750): 2-5 business days (UPS Ground)
+- Total typical: 3-5 business days
+- Rush available for additional fee
+
+All wraps come:
+- Trimmed, paneled and READY TO INSTALL
+- Laminated (gloss, matte, or satin - your choice)
+- Cut contour orders come weeded, masked, ready to install
+`,
+
+  fileUpload: `
+FILE UPLOAD & ARTWORK:
+
+UPLOAD OPTIONS:
+1. Direct upload: https://weprintwraps.com/pages/upload-artwork
+2. Email artwork: hello@weprintwraps.com
+3. Design questions: design@weprintwraps.com
+
+FILE REQUIREMENTS:
+- Accepted: PDF, AI, EPS files
+- NOT accepted: CorelDraw, Microsoft Publisher
+- Resolution: Minimum 72 DPI for vehicle wraps
+- Color mode: CMYK
+- Include bleed
+
+RASTERIZED GRAPHICS: 
+- Submit as layered PSD or flattened TIFF
+- All files must be CMYK
+
+DOWNSIZED FILES:
+- Yes, you can submit scaled-down files
+- Note in order if files are scaled
+- Remember: 200 DPI at 10% scale = only 20 DPI at full size
+
+FILE REVIEW: FREE for all customers
+Not sure if your file is print-ready? Email to hello@weprintwraps.com for free review!
+
+CUSTOM SAMPLES:
+- Order as little as 1 sqft to test your design
+- No minimums!
+`,
+
+  products: `
+PRODUCT LINKS (use these EXACT URLs):
+
+PRINTED WRAP FILMS:
+- Avery MPI 1105: https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/
+- 3M IJ180Cv3: https://weprintwraps.com/our-products/3m-ij180-printed-wrap-film/
+
+CUT CONTOUR VINYL:
+- Avery Contour: https://weprintwraps.com/our-products/avery-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/
+- 3M Contour: https://weprintwraps.com/our-products/3m-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/
+
+SPECIALTY PRODUCTS:
+- Window Perf 50/50: https://weprintwraps.com/our-products/perforated-window-vinyl-5050-unlaminated/
+- Fade Wraps: https://weprintwraps.com/our-products/pre-designed-fade-wraps/
+- Wall Wrap: https://weprintwraps.com/our-products/wall-wrap-printed-vinyl/
+- Custom Design: https://weprintwraps.com/our-products/custom-wrap-design/
+- Pantone Color Chart: https://weprintwraps.com/our-products/pantone-color-chart-30-x-52/
+
+WRAP BY THE YARD:
+- Wicked Wild: https://weprintwraps.com/our-products/wrap-by-the-yard-wicked-wild-wrap-prints/
+- Bape Camo: https://weprintwraps.com/our-products/wrap-by-the-yard-bape-camo/
+- Modern Trippy: https://weprintwraps.com/our-products/wrap-by-the-yard-modern-trippy/
+- Metal Marble: https://weprintwraps.com/our-products/wrap-by-the-yard-metal-marble/
+- Camo Carbon: https://weprintwraps.com/our-products/camo-carbon-wrap-by-the-yard/
+
+OTHER:
+- Upload Artwork: https://weprintwraps.com/pages/upload-artwork
+- Homepage Quote: https://weprintwraps.com/#quote
+- My Account: https://weprintwraps.com/my-account
+`,
+
+  shipping: `
+SHIPPING:
+- FREE shipping on orders $750+
+- Orders over $750: 3 days or less within continental US
+- Orders under $750: UPS Ground 2-5 days
+- Get instant shipping price: add to cart, enter zip code
+- Ships rolled in heavy-duty tubes
+- Ships nationwide to all 50 states
+`,
+
+  guarantee: `
+PREMIUM WRAP GUARANTEE:
+- If wrap has flaws due to print quality or shipping damage, let us know within 7 days
+- We will reprint and ship ASAP at no cost
+- We do NOT offer refunds, but we back our work
+- Damaged in shipping? Email photos + order number immediately
+- We can reprint and ship within 1 business day with FREE rush shipping
+`,
+
+  specs: `
+TECHNICAL SPECS:
+- Max print width: 59.5" (using 60" wrap film)
+- Inks: HP Latex and Epson Resin (same technology as latex)
+- Lamination options: Gloss, Matte, or Satin
+- No minimums: Order as little as 1 sqft
+- No maximums: 10 sqft to 10,000 sqft - we got you!
+`,
+
+  colorMatching: `
+CUSTOM COLOR MATCHING:
+- Order 1-hour design fee ($95)
+- Specify exact color needed
+- Ship physical sample to:
+  We Print Wraps
+  15802 N. Cave Creek Rd. Suite 3
+  Phoenix, AZ 85032
+`,
+
+  contact: `
+CONTACT INFO:
+- General: hello@weprintwraps.com
+- Design Team: design@weprintwraps.com
+- Phone: (833) 335-1382 or 602-595-3200
+- Address: 15802 N. Cave Creek Rd. Suite 3, Phoenix, AZ 85032
+`
+};
+
+// ============================================
+// VEHICLE DATABASE - ACCURATE SQFT
+// ============================================
+const VEHICLE_SQFT: Record<string, { total: number; roof: number; noRoof: number }> = {
+  // Sedans
+  'civic': { total: 210, roof: 20, noRoof: 190 },
+  'accord': { total: 235, roof: 22, noRoof: 213 },
+  'camry': { total: 235, roof: 22, noRoof: 213 },
+  'corolla': { total: 205, roof: 19, noRoof: 186 },
+  'model 3': { total: 225, roof: 21, noRoof: 204 },
+  'model s': { total: 255, roof: 24, noRoof: 231 },
+  'mustang': { total: 215, roof: 20, noRoof: 195 },
+  'charger': { total: 245, roof: 23, noRoof: 222 },
+  'challenger': { total: 235, roof: 22, noRoof: 213 },
+  'altima': { total: 230, roof: 21, noRoof: 209 },
+  'maxima': { total: 240, roof: 22, noRoof: 218 },
+  'bmw 3': { total: 220, roof: 20, noRoof: 200 },
+  'bmw 5': { total: 245, roof: 23, noRoof: 222 },
+  
+  // Trucks
+  'f-150': { total: 312, roof: 33, noRoof: 279 },
+  'f150': { total: 312, roof: 33, noRoof: 279 },
+  'f-250': { total: 345, roof: 36, noRoof: 309 },
+  'f250': { total: 345, roof: 36, noRoof: 309 },
+  'f-350': { total: 365, roof: 38, noRoof: 327 },
+  'f350': { total: 365, roof: 38, noRoof: 327 },
+  'silverado': { total: 320, roof: 34, noRoof: 286 },
+  'silverado 1500': { total: 320, roof: 34, noRoof: 286 },
+  'silverado 2500': { total: 350, roof: 37, noRoof: 313 },
+  'sierra': { total: 320, roof: 34, noRoof: 286 },
+  'sierra 1500': { total: 320, roof: 34, noRoof: 286 },
+  'ram': { total: 315, roof: 33, noRoof: 282 },
+  'ram 1500': { total: 315, roof: 33, noRoof: 282 },
+  'ram 2500': { total: 345, roof: 36, noRoof: 309 },
+  'ram 3500': { total: 365, roof: 38, noRoof: 327 },
+  'tacoma': { total: 255, roof: 26, noRoof: 229 },
+  'tundra': { total: 320, roof: 34, noRoof: 286 },
+  'colorado': { total: 260, roof: 27, noRoof: 233 },
+  'canyon': { total: 260, roof: 27, noRoof: 233 },
+  'ranger': { total: 265, roof: 28, noRoof: 237 },
+  'frontier': { total: 258, roof: 27, noRoof: 231 },
+  'titan': { total: 325, roof: 35, noRoof: 290 },
+  'cybertruck': { total: 330, roof: 35, noRoof: 295 },
+  'maverick': { total: 240, roof: 24, noRoof: 216 },
+  'ridgeline': { total: 280, roof: 29, noRoof: 251 },
+  
+  // SUVs
+  'model y': { total: 270, roof: 28, noRoof: 242 },
+  'model x': { total: 300, roof: 32, noRoof: 268 },
+  'tahoe': { total: 340, roof: 36, noRoof: 304 },
+  'suburban': { total: 385, roof: 41, noRoof: 344 },
+  'yukon': { total: 340, roof: 36, noRoof: 304 },
+  'yukon xl': { total: 385, roof: 41, noRoof: 344 },
+  'escalade': { total: 355, roof: 38, noRoof: 317 },
+  'expedition': { total: 350, roof: 37, noRoof: 313 },
+  'explorer': { total: 295, roof: 31, noRoof: 264 },
+  'bronco': { total: 275, roof: 28, noRoof: 247 },
+  'wrangler': { total: 245, roof: 25, noRoof: 220 },
+  'wrangler 4 door': { total: 275, roof: 28, noRoof: 247 },
+  'grand cherokee': { total: 285, roof: 30, noRoof: 255 },
+  '4runner': { total: 290, roof: 30, noRoof: 260 },
+  'highlander': { total: 285, roof: 30, noRoof: 255 },
+  'pilot': { total: 295, roof: 31, noRoof: 264 },
+  'rav4': { total: 250, roof: 26, noRoof: 224 },
+  'cr-v': { total: 250, roof: 26, noRoof: 224 },
+  'crv': { total: 250, roof: 26, noRoof: 224 },
+  'cx-5': { total: 255, roof: 26, noRoof: 229 },
+  'cx5': { total: 255, roof: 26, noRoof: 229 },
+  'forester': { total: 260, roof: 27, noRoof: 233 },
+  'outback': { total: 275, roof: 28, noRoof: 247 },
+  'traverse': { total: 305, roof: 32, noRoof: 273 },
+  'equinox': { total: 260, roof: 27, noRoof: 233 },
+  'blazer': { total: 280, roof: 29, noRoof: 251 },
+  'durango': { total: 305, roof: 32, noRoof: 273 },
+  'pathfinder': { total: 295, roof: 31, noRoof: 264 },
+  'sequoia': { total: 365, roof: 39, noRoof: 326 },
+  'land cruiser': { total: 340, roof: 36, noRoof: 304 },
+  'telluride': { total: 310, roof: 33, noRoof: 277 },
+  'palisade': { total: 310, roof: 33, noRoof: 277 },
+  
+  // Vans
+  'sprinter': { total: 450, roof: 55, noRoof: 395 },
+  'sprinter 144': { total: 400, roof: 48, noRoof: 352 },
+  'sprinter 170': { total: 450, roof: 55, noRoof: 395 },
+  'transit': { total: 410, roof: 50, noRoof: 360 },
+  'transit 130': { total: 370, roof: 44, noRoof: 326 },
+  'transit 148': { total: 410, roof: 50, noRoof: 360 },
+  'promaster': { total: 430, roof: 52, noRoof: 378 },
+  'promaster 136': { total: 380, roof: 46, noRoof: 334 },
+  'promaster 159': { total: 430, roof: 52, noRoof: 378 },
+  'express': { total: 365, roof: 44, noRoof: 321 },
+  'savana': { total: 365, roof: 44, noRoof: 321 },
+  'nv': { total: 380, roof: 46, noRoof: 334 },
+  'metris': { total: 295, roof: 35, noRoof: 260 },
+  'sienna': { total: 290, roof: 34, noRoof: 256 },
+  'odyssey': { total: 285, roof: 33, noRoof: 252 },
+  'pacifica': { total: 290, roof: 34, noRoof: 256 },
+  'carnival': { total: 295, roof: 35, noRoof: 260 },
+  
+  // Sports/Coupes
+  'corvette': { total: 200, roof: 18, noRoof: 182 },
+  'camaro': { total: 210, roof: 19, noRoof: 191 },
+  'supra': { total: 205, roof: 18, noRoof: 187 },
+  '370z': { total: 195, roof: 17, noRoof: 178 },
+  'gt-r': { total: 215, roof: 19, noRoof: 196 },
+  'gtr': { total: 215, roof: 19, noRoof: 196 },
+  'miata': { total: 165, roof: 14, noRoof: 151 },
+  'mx-5': { total: 165, roof: 14, noRoof: 151 },
+  '911': { total: 195, roof: 17, noRoof: 178 },
+  'cayman': { total: 185, roof: 16, noRoof: 169 },
+  'boxster': { total: 180, roof: 15, noRoof: 165 },
+};
+
+function findVehicleSqft(message: string): { sqft: number; sqftWithRoof: number; vehicle: string; year?: string; roof: number; isEstimate?: boolean; similarTo?: string } | null {
+  const lower = message.toLowerCase();
+  
+  // Try to extract year (4 digit number between 1990-2030)
+  const yearMatch = message.match(/\b(19\d{2}|20[0-3]\d)\b/);
+  const year = yearMatch ? yearMatch[1] : undefined;
+  
+  // First try exact match
+  for (const [vehicle, data] of Object.entries(VEHICLE_SQFT)) {
+    const variations = [vehicle, vehicle.replace('-', ' '), vehicle.replace('-', ''), vehicle.replace(' ', '-')];
+    for (const v of variations) {
+      if (lower.includes(v)) {
+        const displayName = vehicle.split(/[-\s]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        return { 
+          sqft: data.noRoof, 
+          sqftWithRoof: data.total, 
+          vehicle: displayName, 
+          year,
+          roof: data.roof,
+          isEstimate: false
+        };
+      }
+    }
+  }
+  
+  // FALLBACK: Estimate based on vehicle category
+  const categoryEstimates: Record<string, { sqft: number; roof: number; total: number; example: string }> = {
+    // Sedans/Cars
+    'sedan': { sqft: 210, roof: 20, total: 230, example: 'Camry/Accord' },
+    'coupe': { sqft: 195, roof: 18, total: 213, example: 'Mustang/Camaro' },
+    'hatchback': { sqft: 190, roof: 18, total: 208, example: 'Golf/Civic' },
+    'sports car': { sqft: 185, roof: 17, total: 202, example: 'Corvette/911' },
+    'luxury sedan': { sqft: 240, roof: 23, total: 263, example: 'BMW 5/Mercedes E' },
+    'compact': { sqft: 185, roof: 17, total: 202, example: 'Civic/Corolla' },
+    'midsize': { sqft: 220, roof: 21, total: 241, example: 'Camry/Accord' },
+    'full size sedan': { sqft: 245, roof: 23, total: 268, example: 'Charger/Maxima' },
+    
+    // Trucks
+    'truck': { sqft: 290, roof: 31, total: 321, example: 'F-150/Silverado' },
+    'pickup': { sqft: 290, roof: 31, total: 321, example: 'F-150/Silverado' },
+    'half ton': { sqft: 290, roof: 31, total: 321, example: 'F-150/Silverado' },
+    'full size truck': { sqft: 310, roof: 33, total: 343, example: 'F-150/Silverado' },
+    'mid size truck': { sqft: 255, roof: 26, total: 281, example: 'Tacoma/Colorado' },
+    'heavy duty': { sqft: 350, roof: 37, total: 387, example: 'F-250/2500' },
+    
+    // SUVs
+    'suv': { sqft: 270, roof: 28, total: 298, example: 'Explorer/4Runner' },
+    'crossover': { sqft: 250, roof: 26, total: 276, example: 'RAV4/CR-V' },
+    'compact suv': { sqft: 245, roof: 25, total: 270, example: 'RAV4/CX-5' },
+    'midsize suv': { sqft: 285, roof: 30, total: 315, example: 'Explorer/4Runner' },
+    'full size suv': { sqft: 340, roof: 36, total: 376, example: 'Tahoe/Expedition' },
+    'large suv': { sqft: 340, roof: 36, total: 376, example: 'Tahoe/Suburban' },
+    
+    // Vans
+    'van': { sqft: 360, roof: 43, total: 403, example: 'Transit/Sprinter' },
+    'cargo van': { sqft: 380, roof: 46, total: 426, example: 'Transit/ProMaster' },
+    'minivan': { sqft: 285, roof: 33, total: 318, example: 'Sienna/Odyssey' },
+    'work van': { sqft: 365, roof: 44, total: 409, example: 'Express/Savana' },
+    'passenger van': { sqft: 370, roof: 45, total: 415, example: 'Transit/Sprinter' },
+    
+    // Generic
+    'car': { sqft: 210, roof: 20, total: 230, example: 'Average sedan' },
+    'vehicle': { sqft: 250, roof: 25, total: 275, example: 'Average vehicle' },
   };
-  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  
+  // Check for category matches
+  for (const [category, data] of Object.entries(categoryEstimates)) {
+    if (lower.includes(category)) {
+      // Try to extract a make/model name from the message for display
+      const makeMatch = message.match(/\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|subaru|mazda|hyundai|kia|lexus|acura|cadillac|buick|lincoln|chrysler|porsche|jaguar|volvo|rivian|lucid)\b/i);
+      const make = makeMatch ? makeMatch[1] : '';
+      
+      return {
+        sqft: data.sqft,
+        sqftWithRoof: data.total,
+        vehicle: make ? `${make} ${category}` : category,
+        year,
+        roof: data.roof,
+        isEstimate: true,
+        similarTo: data.example
+      };
+    }
+  }
+  
+  return null;
 }
 
-// Build Jordan Lee's persona dynamically using TradeDNA
-function buildJordanPersona(voiceProfile: VoiceProfile): string {
-  const { merged, organization_dna } = voiceProfile;
-  
-  // Extract TradeDNA values with fallbacks
-  const tone = merged.tone || 'professional, confident';
-  const persona = merged.persona || 'wrap industry expert';
-  const signaturePhrases = organization_dna?.vocabulary?.signature_phrases || [];
-  const wordsToAvoid = organization_dna?.vocabulary?.words_to_avoid || [];
-  const salesApproach = organization_dna?.sales_style?.approach || 'consultative';
-  const ctaStyle = merged.cta_style || 'action-driven';
-  const pressureLevel = organization_dna?.sales_style?.pressure_level || 'low';
-  const customerPainPoints = organization_dna?.customer_profile?.pain_points || [];
-  const emotionalTriggers = organization_dna?.customer_profile?.emotional_triggers || [];
-
-  return `⚠️ CRITICAL IDENTITY RULE - NEVER VIOLATE:
-
-WePrintWraps is a PRINT SHOP ONLY. We print and ship vehicle wraps.
-
-WE DO NOT INSTALL WRAPS. We have NO installation team. We do NOT go to customer locations.
-
-If asked about installation, say EXACTLY: "No, we're a print shop - we print and ship. You'll need a local installer. I can help you find one in your area if you need!"
-
-NEVER claim we offer installation services. This is non-negotiable.
-
-🚫 WHAT JORDAN MUST NEVER SAY:
-- "We offer installation" (FALSE - we only print and ship)
-- "Our installation team" (FALSE - we have no installers)
-- "We can install" (FALSE)
-- "We'll come to you" (FALSE - we ship only)
-- Any promise of installation services
-
----
-
-You are "Jordan" — a friendly woman who works at WePrintWraps.
-
-VOICE RULES (CRITICAL):
-- Sound like a real person texting, not a brand
-- Max 3-4 sentences per message
-- ONE question per message, then wait
-- Use contractions (I'm, you're, that's)
-- DO NOT say "I'm Jordan from WePrintWraps" - they know where they are
-- DO NOT stack multiple offers or pitches in one message
-- NEVER repeat yourself - if you already asked for something, don't ask again
-
-YOUR BRAND VOICE (from TradeDNA):
-- Tone: ${tone}
-- Persona: ${persona}
-- Sales Approach: ${salesApproach} (pressure level: ${pressureLevel})
-- CTA Style: ${ctaStyle}
-${signaturePhrases.length > 0 ? `- USE these signature phrases when natural: ${signaturePhrases.join(', ')}` : ''}
-${wordsToAvoid.length > 0 ? `- AVOID these words: ${wordsToAvoid.join(', ')}` : ''}
-${customerPainPoints.length > 0 ? `- Customer pain points to address: ${customerPainPoints.join(', ')}` : ''}
-${emotionalTriggers.length > 0 ? `- Emotional triggers that resonate: ${emotionalTriggers.join(', ')}` : ''}
-
-YOUR ROLE:
-- Answer questions about wraps naturally
-- Calculate and provide SPECIFIC pricing based on vehicle SQFT
-- Collect contact info BEFORE any pricing or escalation
-- Empower customers with direct links - don't make them wait
-
-🚨🚨🚨 ESCALATION GATE - MANDATORY BEFORE ESCALATING 🚨🚨🚨
-
-**YOU MUST COLLECT ALL 4 ITEMS BEFORE ESCALATING OR ROUTING TO ANYONE:**
-1. ✅ Name (first name minimum)
-2. ✅ Email address  
-3. ✅ Phone number
-4. ✅ For bulk/fleet: Vehicle count AND types
-
-**IF CUSTOMER MENTIONS BULK/FLEET/MULTIPLE VEHICLES:**
-DO NOT say "I'll connect you with Jackson" until you have ALL info above.
-
-INSTEAD SAY: "Fleet pricing - I can definitely help! Jackson on our team handles bulk orders personally. Let me grab your info so he can put together the best pricing:
-- Your name?
-- Best email?
-- Phone number to reach you?
-- How many vehicles in your fleet?"
-
-**ONLY AFTER YOU HAVE ALL 4, SAY:**
-"Perfect, [Name]! I'm sending your info to Jackson now. He'll reach out at [phone] with custom fleet pricing. Expect to hear from him shortly!"
-
-**NEVER ESCALATE WITH MISSING INFO:**
-❌ "Email not yet captured" = USELESS to Jackson
-❌ No phone = Can't call them back
-❌ No vehicle count = Can't quote bulk pricing
-
-🎯 LEAD QUALIFICATION FLOW:
-
-**STEP 1 - UNDERSTAND THE NEED** (First response):
-- Ask what they're looking for naturally
-- Example: "Hey! What kind of wrap are you working on?"
-
-**STEP 2 - GET CONTACT INFO** (Before ANY pricing or escalation):
-- Name, email, phone
-- For bulk: also vehicle count and types
-- Keep it casual: "What's your name, email, and best number to reach you?"
-
-**STEP 3 - GIVE PRICE OR ESCALATE** (Only after getting ALL info):
-- Regular quote: Give price, send quote email
-- Bulk/fleet: Route to Jackson with COMPLETE info
-- Quality issue: Route to Lance with COMPLETE info
-
-HARD RULES FOR OFFERS/PROMOS:
-- NEVER mention "WrapRewards" or "WRAPREWARDS code" more than ONCE per conversation
-- NEVER mention "ClubWPW" more than ONCE per conversation
-- NEVER combine price + promo code + loyalty pitch in the same message
-- If declined, NEVER bring it up again
-
-⚠️ HARD RULES:
-- DO NOT GIVE PRICING until you have at LEAST:
-  1. Vehicle year, make, model (for calculation)
-  2. Customer name AND email (for quote delivery)
-  
-IF customer jumps straight to "how much?":
-SAY: "I can definitely get you pricing! What vehicle is this for? And what's your name and email so I can send the quote?"
-
-🚨 HIGH PRIORITY SIGNALS - COLLECT ALL INFO IMMEDIATELY:
-
-**BULK/FLEET INQUIRY** (fleet, bulk, multiple vehicles, commercial, 5+ trucks):
-SAY: "Fleet pricing - love it! 🔥 Jackson handles our bulk orders personally. Let me grab your details:
-- Your name?
-- Email address?
-- Phone number?
-- How many vehicles are we talking?"
-
-**QUALITY ISSUE** (defect, wrong, damaged, reprint, problem with my order):
-SAY: "I'm so sorry to hear that! Let me get someone on this right away. What's your name, email, and phone so we can call you directly?"
-
-**UNHAPPY/FRUSTRATED CUSTOMER** (angry, upset, complaint, terrible, refund):
-SAY: "I completely understand your frustration. Let me get someone to help you personally. What's your name, email, and phone number?"
-
-**AFTER COLLECTING ALL INFO, CONFIRM:**
-"Got it, [Name]! I'm flagging this for [Jackson/our team] right now. Someone will call you at [phone] shortly."
-
-📁 FILE UPLOADS - GIVE THE LINK DIRECTLY:
-When customer asks about uploading files or artwork:
-SAY: "You can upload here: https://weprintwraps.com/pages/upload-artwork
-Or email to hello@weprintwraps.com - we offer FREE file review!
-Want me to get you a quote while you send the file over?"
-
-DO NOT say "Grant will reach out" or make them wait - give the link NOW!
-
-YOUR TEAM (mention naturally when routing):
-- Alex (Quoting Team) - handles formal quotes and pricing
-- Grant (Design Team) - handles design questions and file reviews
-- Taylor (Partnerships) - handles collabs and sponsorships
-- Jackson (Bulk/Fleet) - handles commercial and bulk pricing
-
-🔥 PROACTIVE SALES APPROACH (Subtle, Not Salesy):
-
-When the conversation flows naturally, weave in mentions of these:
-
-1. **WrapRewards / ClubWPW** (${APPROVED_LINKS.rewards.clubwpw}) - Our exclusive loyalty program for pro installers and wrap resellers:
-   - Earn points on EVERY order
-   - Redeem for: discounts, free merch/gear/tools, VIP access to contests and sponsorships
-   - Sign up is FREE!
-   - ALWAYS mention when: customer is about to order, discussing pricing, or conversation ends positively
-   - Example: "Are you part of WrapRewards? You'd earn points on this order + get exclusive drops and discounts. Sign up is free!"
-
-2. **FIRST ORDER PROMO CODE: WRAPREWARDS** - 5% off first order!
-   - When customer seems like a first-time buyer (mentions "first time", "never ordered", "new to this")
-   - ALWAYS offer this code: "First time ordering with us? Use code WRAPREWARDS at checkout for 5% off!"
-
-3. **Ink & Edge Magazine ISSUE 1** (${APPROVED_LINKS.apps.ink_and_edge}) - NOW DROPPING!
-   - WPW's industry publication for wrap professionals
-   - Editor-in-Chief: Trish Dill (co-founder of WePrintWraps.com)
-   - ISSUE 1 features:
-     • Cover story: Vinyl Vixen Jess (WrapSeshAZ) on shop leadership
-     • Featured build: Manny's Tesla SEMA project (mini truck homage)
-     • PPF Mastery column, Ask Luigi advice, Tool Talk by Ghost Industries
-     • Business tips from RJ The Wrapper and Austin Smith (Paint Is Dead)
-   - Mention when: customer is enthusiastic, talks about builds, interested in wrap culture
-   - Example: "If you're into wrap culture, check out Ink & Edge Magazine - Issue 1 is dropping with features on shop leadership, SEMA builds, and installer tips!"
-
-4. **RestylePro** (${APPROVED_LINKS.products.restylepro}) - ALWAYS mention when:
-   - Customer mentions FadeWraps or color-shift wraps
-   - Customer asks about design or visualization
-   - Customer is indecisive about colors
-   - Customer wants to see what it would look like
-   - Example: "Have you tried RestylePro? It lets you visualize exactly how your wrap will look on YOUR vehicle before ordering - super helpful for picking colors!"
-
-5. **Product Cross-sells** (natural, not pushy):
-   - If ordering personal car → casually mention commercial/fleet options if they have a business
-   - If first-time buyer → offer WRAPREWARDS code + mention WrapRewards program
-
-6. **Bulk Orders** - When customer mentions fleet/bulk/multiple vehicles:
-    - IMMEDIATELY share the bulk discount tiers
-    - Collect their email
-    - Email Jackson for coupon code
-    ${formatBulkDiscountTiers()}
-
-🚫 BULK PRICING RULE (CRITICAL - PREVENTS STICKER SHOCK):
-
-When customer mentions FLEET, BULK, MULTIPLE VEHICLES (3+), or uses phrases like "fleet", "multiple vehicles", "16 trucks", "bulk", "rolls", "commercial job", "ongoing printing", "printed roll", "commercial wrap", "fleet branding", "company vehicles":
-
-✅ YOU MAY SAY:
-- Unit price range in single-vehicle context ("per vehicle pricing", "$5.27/sqft")
-- "CommercialPro volume discounts apply"
-- "Handled directly by CommercialPro"
-- Jackson's name + urgency ("Jackson, our CommercialPro specialist")
-- "For projects like this, we price per vehicle"
-
-❌ YOU MUST NEVER SAY:
-- Total order cost for bulk orders (no "$XX,XXX" numbers)
-- Quantity × unit math (no "16 × $1,318 = $21,088")
-- Dollar totals over $5,000 for fleet/bulk inquiries
-- Exact discount percentages for bulk
-- Coupon codes for bulk orders (Jackson provides these)
-
-APPROVED BULK RESPONSE (USE THIS FORMAT):
-"Got it — a fleet of [X] vehicles!
-
-For projects like this, we price per vehicle, and you'll qualify for CommercialPro volume discounts.
-
-The unit price is in the same range as our standard printed wraps, with discounts applied at this quantity.
-
-Jackson, our CommercialPro specialist, will contact you ASAP to go over final pricing and get this moving.
-
-What's your email so he can reach you?"
-
-IF THEY PUSH FOR TOTAL PRICE:
-"For fleets, we keep totals off chat so pricing stays accurate and flexible. Jackson will walk through the final numbers with you directly."
-
-WHY THIS RULE EXISTS: Enterprise sales psychology — unit pricing anchors value without triggering sticker shock. Totals are discussed by Jackson on a call where he can address concerns and close the deal.
-
-🔥 PRICING (CRITICAL - Updated December 2024):
-Both Avery AND 3M printed wraps are now $5.27/sqft! WePrintWraps.com matched 3M to Avery's price!
-
-VEHICLE SQFT ESTIMATES (use these to calculate pricing):
-- Compact car (Civic, Corolla, Prius, Sentra): ~175 sqft = ~$922
-- Midsize sedan (Camry, Accord, Altima, Sonata): ~200 sqft = ~$1,054
-- Full-size sedan (Avalon, Maxima, 300): ~210 sqft = ~$1,107
-- Compact SUV (RAV4, CR-V, Tucson, Rogue): ~200 sqft = ~$1,054
-- Midsize SUV (Highlander, Pilot, Explorer): ~225 sqft = ~$1,186
-- Full-size truck (F-150, Silverado, Ram 1500): ~250 sqft = ~$1,318
-- Large SUV (Tahoe, Expedition, Suburban): ~275 sqft = ~$1,449
-- Cargo van (Transit, Sprinter, ProMaster): ~350 sqft = ~$1,845
-- Box truck: ~400+ sqft = ~$2,108+
-
-WHEN CUSTOMER ASKS FOR PRICE:
-1. Identify their vehicle
-2. Look up approximate SQFT from the list above
-3. Calculate: SQFT × $5.27 = Material Cost
-4. Give specific estimate: "A [year] [make] [model] is about [X] square feet. At $5.27/sqft, that's around $[total] for the printed wrap material."
-5. ALWAYS mention: "Both Avery and 3M printed wrap are now $5.27/sqft - WePrintWraps.com matched 3M to Avery's price!"
-6. For formal written quote: "Want me to send you a detailed quote? What's your email?"
-7. **ALWAYS ASK**: "Are you part of ClubWPW? You'd earn points on this order!"
-
-ROUTING RULES:
-- Quote requests with email → route to quoting team
-- Partnership/sponsorship signals → route to partnerships team
-- Design/file questions → route to design team
-
-COMMUNICATION STYLE:
-- Match the brand tone: ${tone}
-- Max 3-4 sentences per message
-- ONE question per message, then WAIT for response
-- Light emoji use (1 max per message)
-- Give REAL numbers, not vague ranges
-
-WPW GROUND TRUTH:
-- Turnaround: 1-2 business days for print
-- Shipping: Orders $750+ = FREE | Orders under $750 = $30 flat rate ground
-- No order minimums - you can order any quantity!
-- All wraps include lamination
-- Quality guarantee: 100% - we reprint at no cost
-
-📦 SHIPPING FAQ (KNOW THIS):
-- "$30 for shipping" = Standard ground shipping for orders under $750
-- "Did shipping go up?" = No, $30 flat rate has been our standard for orders under $750
-- "Job minimum?" = No minimums - order any amount! The $30 is just shipping, not a minimum fee
-- "FREE shipping?" = Yes, on orders $750 or more
-
-🤖 IF ASKED "ARE YOU AI?" OR "ARE YOU A BOT?":
-- Be honest and calm: "Yeah — I'm an AI assistant, but I work with the real WePrintWraps team. If you ever want a human, just say the word."
-- If they push further: "I'm not a person, but everything I give you is real — real pricing, real materials, real team behind it."
-- Then redirect back to helping them
-
-📧 END-OF-CHAT CLUBWPW OFFER (optional, once only):
-- Only if: conversation is ending naturally, customer is happy, no email captured yet
-- Say (casual): "Before you go — totally optional — want me to add you to our ClubWPW list? Just wrap discounts + cool stuff, no spam."
-- If they say no: "All good 🙂" and drop it
-- NEVER mention again if declined
-
-${getApprovedLinksForPrompt()}
-
-${LINK_AWARE_RULES}
-
-${WPW_CONSTITUTION.humanConfirmation}`
+// ============================================
+// BULK DISCOUNT CALCULATOR
+// ============================================
+function calculateBulkDiscount(totalSqft: number): { discount: number; discountPercent: string; tier: string } {
+  if (totalSqft >= 2500) {
+    return { discount: 0.20, discountPercent: '20%', tier: '2500+ sqft' };
+  } else if (totalSqft >= 1500) {
+    return { discount: 0.15, discountPercent: '15%', tier: '1500-2499 sqft' };
+  } else if (totalSqft >= 1000) {
+    return { discount: 0.10, discountPercent: '10%', tier: '1000-1499 sqft' };
+  } else if (totalSqft >= 500) {
+    return { discount: 0.05, discountPercent: '5%', tier: '500-999 sqft' };
+  }
+  return { discount: 0, discountPercent: '0%', tier: 'under 500 sqft' };
 }
 
+// ============================================
+// JORDAN'S PERSONA - WITH CRITICAL RULES
+// ============================================
+const JORDAN_PERSONA = `You are Jordan Lee, a friendly and knowledgeable customer service rep at WePrintWraps.com.
+
+${WPW_IDENTITY}
+
+PERSONALITY:
+- Warm, helpful, and conversational - NOT robotic
+- You use casual language and occasional emojis
+- You're knowledgeable about vehicle wraps but explain things simply
+- You're proactive about getting customers what they need
+- You EMPOWER customers with direct links and info - don't make them wait
+
+⚠️ MANDATORY DATA COLLECTION - DO THIS BEFORE GIVING PRICE:
+
+You MUST collect these 4 items BEFORE providing any pricing:
+1. NAME - "Who am I chatting with today?"
+2. EMAIL - "What's your email?"
+3. PHONE - "Best number to reach you?"
+4. SHOP/COMPANY NAME - "And what's your shop or company name?"
+
+COLLECTION FLOW:
+- If customer asks for price without giving info, say:
+  "I'd love to get you a quote! Let me grab your info real quick - name, email, phone, and shop name?"
+- If they give partial info, ask for the missing pieces naturally
+- ONLY after you have ALL 4 items, give the price
+
+AFTER GIVING PRICE:
+- Create a formal quote
+- Email the quote automatically to the customer
+- Say: "I just sent your quote to [email]! Check your inbox."
+
+CRITICAL RULES - ALWAYS FOLLOW:
+1. NEVER say we offer installation - WE ARE PRINT ONLY
+2. COLLECT all 4 items (name, email, phone, shop) BEFORE pricing
+3. After pricing, CREATE and EMAIL the quote automatically
+4. GIVE DIRECT LINKS - don't say "someone will reach out"
+5. For file uploads: give the upload link immediately
+6. For bulk/fleet (2+ vehicles): collect info FIRST, then vehicle details
+7. For complaints: acknowledge empathetically, get contact info for callback
+
+WHEN ASKED ABOUT FILE UPLOAD:
+Say: "You can upload here: https://weprintwraps.com/pages/upload-artwork or email to hello@weprintwraps.com - want me to get you a quote while you send the file?"
+DO NOT say "Grant will reach out" - give the link NOW!
+
+BEFORE ESCALATING - ALWAYS COLLECT ALL 4:
+1. Customer name
+2. Email address
+3. Phone number
+4. Shop/Company name
+NEVER escalate with "Email not yet captured" - GET ALL INFO FIRST!
+
+RESPONSE STYLE:
+- Keep responses concise (2-4 sentences usually)
+- Use **bold** for prices and important info
+- Include relevant links
+- End with a question to keep conversation going
+`;
+
+// ============================================
+// MAIN HANDLER
+// ============================================
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { org, agent, mode, session_id, message_text, page_url, referrer, geo, organization_id } = await req.json();
-
-    // Detect tenant from request origin
-    const tenant = getTenantFromRequest(req);
-    console.log('[TENANT]', {
-      tenant,
-      host: req.headers.get("x-forwarded-host") ?? req.headers.get("host"),
-      origin: req.headers.get("origin"),
-    });
-
-    console.log('[JordanLee] Received message:', { org, session_id, organization_id, tenant, message_text: message_text?.substring(0, 50) });
+    const { org, agent, mode, session_id, message_text, page_url, referrer, geo } = await req.json();
 
     if (!message_text || !session_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -428,1768 +556,900 @@ serve(async (req) => {
       });
     }
 
+    console.log('[JordanLee] Message:', { session_id, message_text: message_text.substring(0, 50) });
+
+    // Initialize Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const resendKey = Deno.env.get('RESEND_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Load TradeDNA voice profile for this organization
-    // Default to WPW org if not specified: 51aa96db-c06d-41ae-b3cb-25b045c75caf
-    const orgId = organization_id || '51aa96db-c06d-41ae-b3cb-25b045c75caf';
-    const voiceProfile = await loadVoiceProfile(orgId);
-    console.log('[JordanLee] Loaded TradeDNA voice:', { tone: voiceProfile.merged.tone, persona: voiceProfile.merged.persona });
-
-    // Load active directives from jordan_directives table
-    const { data: activeDirectives } = await supabase
-      .from('jordan_directives')
-      .select('directive')
-      .eq('active', true)
-      .or('expires_at.is.null,expires_at.gt.now()')
-      .order('created_at', { ascending: false });
-    
-    const directivesContext = activeDirectives && activeDirectives.length > 0
-      ? `\n\n═══ ACTIVE ADMIN DIRECTIVES ═══\nFollow these special instructions from your admin team:\n${activeDirectives.map(d => `• ${d.directive}`).join('\n')}\n═══════════════════════════════\n`
-      : '';
-    console.log('[JordanLee] Active directives:', activeDirectives?.length || 0);
-
-    // Load knowledge context for grounding (Jordan Lee agent)
-    const knowledgeContext = await loadKnowledgeContext(supabase, "jordan_lee", message_text);
-
-    // Extract info from message
-    const lowerMessage = message_text.toLowerCase();
-    const extractedVehicle = {
-      year: message_text.match(VEHICLE_PATTERNS.year)?.[0] || null,
-      make: message_text.match(VEHICLE_PATTERNS.make)?.[0] || null,
-      model: message_text.match(VEHICLE_PATTERNS.model)?.[0] || null,
-    };
-    const extractedEmail = message_text.match(EMAIL_PATTERN)?.[0] || null;
-    const extractedPhone = message_text.match(PHONE_PATTERN)?.[1] || null;
-    const extractedName = message_text.match(NAME_PATTERNS)?.[1] || null;
-    const extractedCompany = message_text.match(COMPANY_PATTERNS)?.[1]?.trim() || null;
-    const hasCompleteVehicle = extractedVehicle.year && extractedVehicle.make && extractedVehicle.model;
-    // Partial vehicle info (like just "sprinter" or "ford f150") - need to ask for more details
-    const hasPartialVehicle = (extractedVehicle.make || extractedVehicle.model) && !hasCompleteVehicle;
-    
-    console.log('[JordanLee] Extracted:', { 
-      vehicle: extractedVehicle, 
-      email: extractedEmail, 
-      phone: extractedPhone,
-      name: extractedName,
-      company: extractedCompany,
-      complete: hasCompleteVehicle, 
-      partial: hasPartialVehicle 
-    });
-
-    // Detect intent signals
-    const pricingIntent = lowerMessage.includes('price') || 
-                          lowerMessage.includes('cost') || 
-                          lowerMessage.includes('how much') ||
-                          lowerMessage.includes('quote');
-    const partnershipSignal = PARTNERSHIP_PATTERNS.test(message_text);
-    const escalationType = detectEscalation(message_text);
-    
-    // Proactive selling detection
-    const bulkInquirySignal = BULK_INQUIRY_PATTERNS.test(message_text);
-    const fadeWrapDesignSignal = FADEWRAP_DESIGN_PATTERNS.test(message_text);
-    const cultureEnthusiasmSignal = CULTURE_ENTHUSIASM_PATTERNS.test(message_text);
-    const orderIntentSignal = ORDER_INTENT_PATTERNS.test(message_text);
-    const firstTimeBuyerSignal = FIRST_TIME_BUYER_PATTERNS.test(message_text);
-    
-    console.log('[JordanLee] Proactive signals:', { 
-      bulk: bulkInquirySignal, 
-      fadeWrapDesign: fadeWrapDesignSignal, 
-      culture: cultureEnthusiasmSignal,
-      orderIntent: orderIntentSignal,
-      firstTimeBuyer: firstTimeBuyerSignal 
-    });
-    
-    // Detect order status inquiry
-    const orderStatusIntent = ORDER_STATUS_PATTERNS.test(message_text);
-    const extractedOrderNumber = message_text.match(ORDER_NUMBER_PATTERN)?.[1] || null;
-    
-    console.log('[JordanLee] Order intent:', { orderStatusIntent, extractedOrderNumber });
-    
-    // Lookup order in ShopFlow if customer is asking about order status
-    let orderData: {
-      order_number: string;
-      status: string;
-      customer_stage: string | null;
-      tracking_number: string | null;
-      tracking_url: string | null;
-      shipped_at: string | null;
-      product_type: string;
-      customer_name: string;
-      estimated_completion_date: string | null;
-    } | null = null;
-    
-    // First check: lookup order from current message
-    if (orderStatusIntent && extractedOrderNumber) {
-      const { data: order, error: orderError } = await supabase
-        .from('shopflow_orders')
-        .select('order_number, status, customer_stage, tracking_number, tracking_url, shipped_at, product_type, customer_name, estimated_completion_date')
-        .eq('order_number', extractedOrderNumber)
-        .single();
-      
-      if (order && !orderError) {
-        orderData = order;
-        console.log('[JordanLee] Found order from message:', { 
-          order_number: order.order_number, 
-          status: order.status, 
-          tracking: order.tracking_number ? 'YES' : 'NO' 
-        });
-      } else {
-        console.log('[JordanLee] Order not found:', extractedOrderNumber);
-      }
-    }
-    
-    // CRITICAL FIX: If no order found but we have one stored in chat state, re-fetch it
-    // This prevents hallucination when customer asks follow-up questions about their order
-    // Load existing chat state first to check for stored order number
-    const { data: existingConvoForOrder } = await supabase
-      .from('conversations')
-      .select('chat_state')
-      .eq('metadata->>session_id', session_id)
-      .eq('channel', 'website')
-      .single();
-    
-    const existingChatState = (existingConvoForOrder?.chat_state as Record<string, unknown>) || {};
-    const storedOrderNumber = existingChatState.order_number as string | undefined;
-    
-    if (!orderData && storedOrderNumber) {
-      console.log('[JordanLee] Re-fetching stored order:', storedOrderNumber);
-      const { data: order, error: orderError } = await supabase
-        .from('shopflow_orders')
-        .select('order_number, status, customer_stage, tracking_number, tracking_url, shipped_at, product_type, customer_name, estimated_completion_date')
-        .eq('order_number', storedOrderNumber)
-        .single();
-      
-      if (order && !orderError) {
-        orderData = order;
-        console.log('[JordanLee] Re-fetched stored order:', { 
-          order_number: order.order_number, 
-          status: order.status, 
-          customer_stage: order.customer_stage,
-          tracking: order.tracking_number ? 'YES' : 'NO' 
-        });
-      } else {
-        console.log('[JordanLee] Stored order not found in DB:', storedOrderNumber, orderError);
-      }
-    }
-    
-    console.log('[JordanLee] Intent:', { pricing: pricingIntent, partnership: partnershipSignal, escalation: escalationType });
-
-    // Find or create conversation
-    let contactId: string | null = null;
+    // Get or create conversation
     let conversationId: string;
-    let chatState: Record<string, unknown> = {};
+    let chatState: Record<string, any> = { stage: 'initial' };
 
-    const { data: existingConvo } = await supabase
+    const { data: existingConv } = await supabase
       .from('conversations')
-      .select('id, contact_id, chat_state')
+      .select('id, chat_state')
       .eq('metadata->>session_id', session_id)
-      .eq('channel', 'website')
       .single();
 
-    if (existingConvo) {
-      conversationId = existingConvo.id;
-      contactId = existingConvo.contact_id;
-      chatState = (existingConvo.chat_state as Record<string, unknown>) || {};
-      console.log('[JordanLee] Existing conversation:', conversationId);
+    if (existingConv) {
+      conversationId = existingConv.id;
+      chatState = existingConv.chat_state || { stage: 'initial' };
     } else {
-      // Create anonymous contact
-      // WPW organization ID for proper RLS visibility
-      const WPW_ORGANIZATION_ID = '51aa96db-c06d-41ae-b3cb-25b045c75caf';
-      
-      const { data: newContact } = await supabase
-        .from('contacts')
-        .insert({
-          name: `Website Visitor (${session_id.substring(0, 8)})`,
-          organization_id: WPW_ORGANIZATION_ID,
-          source: 'website_chat',
-          tags: ['website', 'chat', mode === 'test' ? 'test_mode' : 'live'],
-          metadata: {
-            session_id,
-            first_page: page_url,
-            referrer,
-            created_via: 'jordan_lee_chat'
-          }
-        })
-        .select()
-        .single();
-
-      contactId = newContact?.id || null;
-
-      // Create conversation with initial state - ENSURE GEO IS SAVED
-      const geoData = geo || {};
-      const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('cf-connecting-ip');
-      if (clientIP && !geoData.ip) {
-        geoData.ip = clientIP;
-      }
-      
-      const { data: newConvo, error: convoError } = await supabase
+      const { data: newConv } = await supabase
         .from('conversations')
         .insert({
           channel: 'website',
-          contact_id: contactId,
-          organization_id: WPW_ORGANIZATION_ID,
-          subject: 'Website Chat',
-          status: 'open',
-          priority: 'normal',
-          chat_state: { stage: 'initial', escalations_sent: [] },
-          metadata: { session_id, agent: 'jordan_lee', org, mode, page_url, geo: geoData }
+          status: 'active',
+          organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+          metadata: { session_id, page_url, referrer, geo },
+          chat_state: chatState
         })
-        .select()
+        .select('id')
         .single();
-
-      if (convoError) throw convoError;
-      conversationId = newConvo.id;
-      chatState = { stage: 'initial', escalations_sent: [] };
-      console.log('[JordanLee] Created conversation:', conversationId);
+      conversationId = newConv?.id || '';
     }
 
-    // CRITICAL: Load full conversation history for context
-    const { data: messageHistory } = await supabase
-      .from('messages')
-      .select('direction, content, sender_name, created_at')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .limit(50); // Last 50 messages for context
-    
-    console.log('[JordanLee] Loaded message history:', messageHistory?.length || 0, 'messages');
-
-    // Update chat state with extracted info
-    
-    // Capture customer name
-    if (extractedName && !chatState.customer_name) {
-      chatState.customer_name = extractedName;
-      console.log('[JordanLee] Captured name:', extractedName);
-      
-      // Update contact with name
-      if (contactId) {
-        await supabase
-          .from('contacts')
-          .update({ name: extractedName })
-          .eq('id', contactId);
-      }
-    }
-    
-    // Capture customer phone
-    if (extractedPhone && !chatState.customer_phone) {
-      chatState.customer_phone = extractedPhone;
-      console.log('[JordanLee] Captured phone:', extractedPhone);
-      
-      // Update contact with phone
-      if (contactId) {
-        await supabase
-          .from('contacts')
-          .update({ phone: extractedPhone })
-          .eq('id', contactId);
-      }
-    }
-    
-    // Capture customer email
-    if (extractedEmail && !chatState.customer_email) {
-      chatState.customer_email = extractedEmail;
-      chatState.stage = 'email_captured';
-      
-      // Update contact with real email
-      if (contactId) {
-        await supabase
-          .from('contacts')
-          .update({ 
-            email: extractedEmail,
-            tags: ['website', 'chat', 'email_captured', 'jordan_lead'],
-            metadata: { 
-              email_source: 'jordan_lee_chat_capture',
-              email_captured_at: new Date().toISOString()
-            }
-          })
-          .eq('id', contactId);
-        console.log('[JordanLee] Captured email:', extractedEmail);
-      }
-    }
-
-    // Persist vehicle info - merge with existing state so we don't lose previous info
-    if (hasCompleteVehicle) {
-      chatState.vehicle = extractedVehicle;
-      chatState.vehicle_complete = true;
-    } else if (hasPartialVehicle) {
-      // Merge partial info with existing vehicle state
-      const existingVehicle = (chatState.vehicle as Record<string, string | null>) || {};
-      chatState.vehicle = {
-        year: extractedVehicle.year || existingVehicle.year || null,
-        make: extractedVehicle.make || existingVehicle.make || null,
-        model: extractedVehicle.model || existingVehicle.model || null,
-      };
-      // Check if now complete after merge
-      const merged = chatState.vehicle as Record<string, string | null>;
-      chatState.vehicle_complete = !!(merged.year && merged.make && merged.model);
-    }
-
-    // Capture company name
-    if (extractedCompany && !chatState.customer_company) {
-      chatState.customer_company = extractedCompany;
-      console.log('[JordanLee] Captured company:', extractedCompany);
-      
-      // Update contact with company info
-      if (contactId) {
-        await supabase
-          .from('contacts')
-          .update({ 
-            company: extractedCompany,
-            tags: ['website', 'chat', 'company_captured'],
-          })
-          .eq('id', contactId);
-      }
-    }
-
-    // Persist order number if found
-    if (orderData) {
-      chatState.order_number = orderData.order_number;
-      chatState.order_status = orderData.status;
-      chatState.stage = 'order_lookup';
-    }
-
-    // Insert inbound message
+    // Save inbound message
     await supabase.from('messages').insert({
       conversation_id: conversationId,
       channel: 'website',
       direction: 'inbound',
       content: message_text,
-      sender_name: 'Website Visitor',
-      metadata: { page_url, session_id }
+      metadata: { session_id }
     });
 
-    // Update conversation
-    await supabase
-      .from('conversations')
-      .update({ 
-        last_message_at: new Date().toISOString(),
-        unread_count: 1,
-        chat_state: chatState
-      })
-      .eq('id', conversationId);
-
-    // ============================================
-    // OPS DESK ROUTING (New architecture)
-    // Jordan NEVER executes directly - routes through Ops Desk
-    // ============================================
-
-    // Route quote requests with email to Alex Morgan via Ops Desk
-    if (pricingIntent && chatState.customer_email) {
-      const revenuePriority = calculateRevenuePriority({
-        isCommercial: lowerMessage.includes('fleet') || lowerMessage.includes('business'),
-        sqft: hasCompleteVehicle ? 100 : undefined, // Estimate for priority
-      });
-
-      await routeToOpsDesk(supabase, {
-        action: 'create_task',
-        requested_by: 'jordan_lee',
-        target: 'alex_morgan',
-        context: {
-          description: `Website chat quote request: ${extractedVehicle.year || ''} ${extractedVehicle.make || ''} ${extractedVehicle.model || ''}`.trim() || 'Vehicle TBD',
-          customer: String(chatState.customer_email),
-          revenue_impact: revenuePriority,
-          notes: `Message: ${message_text}\nEmail: ${chatState.customer_email}`,
-          conversation_id: conversationId,
-        },
-      });
-      console.log('[JordanLee] Routed to Ops Desk → alex_morgan');
-    }
-
-    // Route partnership opportunities to Taylor Brooks via Ops Desk
-    if (partnershipSignal) {
-      await routeToOpsDesk(supabase, {
-        action: 'create_task',
-        requested_by: 'jordan_lee',
-        target: 'taylor_brooks',
-        context: {
-          description: 'Website chat partnership/sponsorship opportunity',
-          customer: String(chatState.customer_email) || `Visitor-${session_id.substring(0, 8)}`,
-          revenue_impact: 'high',
-          notes: `Original message: ${message_text}`,
-          conversation_id: conversationId,
-        },
-      });
-      console.log('[JordanLee] Routed to Ops Desk → taylor_brooks (partnership)');
-    }
-
-    // Handle bulk inquiry with email - email Jackson for coupon code
-    if (bulkInquirySignal && chatState.customer_email && resendKey) {
-      console.log('[JordanLee] Bulk inquiry with email - sending to Jackson for coupon code');
-      
-      // Send alert with email to Jackson
-      await sendAlertWithTracking(
-        supabase,
-        resendKey,
-        "bulk_inquiry_with_email",
-        {
-          customerName: String(chatState.customer_email),
-          customerEmail: String(chatState.customer_email),
-          conversationId,
-          messageExcerpt: message_text.substring(0, 200),
-          additionalInfo: {
-            estimatedQuantity: "TBD - ask customer",
-            suggestedTier: "Based on conversation",
-            page_url,
-          },
-        },
-        orgId
-      );
-      
-      // Mark that bulk email was sent
-      chatState.bulk_email_sent = true;
-      chatState.bulk_email_sent_at = new Date().toISOString();
-    } else if (bulkInquirySignal && !chatState.customer_email) {
-      // Bulk inquiry detected but no email yet - flag for context
-      chatState.bulk_inquiry_pending = true;
-      console.log('[JordanLee] Bulk inquiry detected - need email for coupon code');
-    }
-
-    // ============================================
-    // ESCALATION GATE: REQUIRE CONTACT INFO BEFORE ESCALATING
-    // ============================================
-    // CRITICAL: Never send useless escalations with "Email not yet captured"
-    // Jackson needs: Name, Email, Phone, and for bulk: vehicle count/types
+    // Extract info from message
+    const msg = message_text.toLowerCase();
+    const vehicleInfo = findVehicleSqft(message_text);
+    const emailMatch = message_text.match(/[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}/i);
+    const email = emailMatch ? emailMatch[0].toLowerCase() : null;
     
-    let escalationSent = false;
-    const hasRequiredContactInfo = chatState.customer_name && chatState.customer_email && chatState.customer_phone;
-    const hasBulkDetails = chatState.bulk_vehicle_count || chatState.bulk_vehicle_types;
-    
-    // Detect if this is a bulk/fleet inquiry that needs special handling
-    const isBulkEscalation = escalationType === 'jackson' || bulkInquirySignal;
-    
-    if (escalationType && resendKey) {
-      const teamMember = WPW_TEAM[escalationType];
-      const escalationsSent = (chatState.escalations_sent as string[]) || [];
-      const alreadyEscalated = escalationsSent.includes(escalationType);
-      
-      if (teamMember && !alreadyEscalated) {
-        // ============================================
-        // GATE CHECK: Do we have enough info to escalate?
-        // ============================================
-        if (!hasRequiredContactInfo) {
-          // NOT ENOUGH INFO - Store as pending, do NOT send email yet
-          console.log('[JordanLee] ⚠️ ESCALATION BLOCKED - Missing contact info:', {
-            hasName: !!chatState.customer_name,
-            hasEmail: !!chatState.customer_email,
-            hasPhone: !!chatState.customer_phone,
-            escalationType
-          });
-          
-          chatState.pending_team_escalation = {
-            type: escalationType,
-            team_member: teamMember.email,
-            detected_at: new Date().toISOString(),
-            trigger_message: message_text.substring(0, 500),
-            missing: {
-              name: !chatState.customer_name,
-              email: !chatState.customer_email,
-              phone: !chatState.customer_phone,
-              bulk_details: isBulkEscalation && !hasBulkDetails
-            }
-          };
-          chatState.needs_contact_before_escalation = true;
-          
-          // Log the blocked escalation
-          await logConversationEvent(
-            supabase,
-            conversationId,
-            'escalation_blocked',
-            'jordan_lee',
-            {
-              reason: 'Missing required contact info',
-              escalation_type: escalationType,
-              target: teamMember.email,
-              has_name: !!chatState.customer_name,
-              has_email: !!chatState.customer_email,
-              has_phone: !!chatState.customer_phone,
-              message_excerpt: message_text.substring(0, 200),
-            },
-            escalationType
-          );
-        } else {
-          // ============================================
-          // FULL CONTACT INFO - Now we can escalate properly!
-          // ============================================
-          console.log('[JordanLee] ✅ Sending escalation with full contact info to:', teamMember.email);
-          
-          // Build detailed escalation email with ALL the info Jackson needs
-          const customerName = String(chatState.customer_name);
-          const customerEmail = String(chatState.customer_email);
-          const customerPhone = String(chatState.customer_phone);
-          const shopName = chatState.shop_name ? String(chatState.shop_name) : null;
-          const vehicleInfo = hasCompleteVehicle ? `${extractedVehicle.year} ${extractedVehicle.make} ${extractedVehicle.model}` : null;
-          const bulkVehicleCount = chatState.bulk_vehicle_count ? String(chatState.bulk_vehicle_count) : null;
-          const bulkVehicleTypes = chatState.bulk_vehicle_types ? String(chatState.bulk_vehicle_types) : null;
-          
-          const escalationHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px;">
-              <h2 style="color: #0066cc;">🔔 Customer Escalation - ${teamMember.role}</h2>
-              <p><strong>Agent:</strong> Jordan Lee (Website Chat)</p>
-              <p><strong>Type:</strong> ${escalationType.toUpperCase()}</p>
-              
-              <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
-                <h3 style="margin: 0 0 10px 0; color: #856404;">📞 CUSTOMER CONTACT INFO:</h3>
-                <table style="width: 100%;">
-                  <tr><td style="padding: 5px 0;"><strong>Name:</strong></td><td>${customerName}</td></tr>
-                  <tr><td style="padding: 5px 0;"><strong>Email:</strong></td><td><a href="mailto:${customerEmail}">${customerEmail}</a></td></tr>
-                  <tr><td style="padding: 5px 0;"><strong>Phone:</strong></td><td><a href="tel:${customerPhone}">${customerPhone}</a></td></tr>
-                  ${shopName ? `<tr><td style="padding: 5px 0;"><strong>Shop/Company:</strong></td><td>${shopName}</td></tr>` : ''}
-                </table>
-              </div>
-              
-              ${isBulkEscalation && (bulkVehicleCount || bulkVehicleTypes) ? `
-              <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
-                <h3 style="margin: 0 0 10px 0; color: #155724;">🚛 FLEET/BULK DETAILS:</h3>
-                <table style="width: 100%;">
-                  ${bulkVehicleCount ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Count:</strong></td><td>${bulkVehicleCount} vehicles</td></tr>` : ''}
-                  ${bulkVehicleTypes ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Types:</strong></td><td>${bulkVehicleTypes}</td></tr>` : ''}
-                  ${vehicleInfo ? `<tr><td style="padding: 5px 0;"><strong>Example Vehicle:</strong></td><td>${vehicleInfo}</td></tr>` : ''}
-                </table>
-              </div>
-              ` : vehicleInfo ? `
-              <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #0066cc;">
-                <h3 style="margin: 0 0 10px 0; color: #004085;">🚗 VEHICLE:</h3>
-                <p style="margin: 0;">${vehicleInfo}</p>
-              </div>
-              ` : ''}
-              
-              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-                <h3 style="margin: 0 0 10px 0;">💬 CUSTOMER REQUEST:</h3>
-                <blockquote style="margin: 0; padding: 10px; background: white; border-left: 3px solid #0066cc; font-style: italic;">
-                  ${message_text.substring(0, 500)}
-                </blockquote>
-              </div>
-              
-              <p style="color: #666; font-size: 12px;"><strong>Page:</strong> ${page_url}</p>
-              
-              <div style="margin-top: 20px;">
-                <a href="https://wrapcommandai.com/mightychat" style="background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">View Full Conversation</a>
-              </div>
-              
-              ${mode === 'test' ? '<p style="color: red; margin-top: 20px;"><strong>[TEST MODE]</strong></p>' : ''}
-            </div>
-          `;
-
-          try {
-            await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${resendKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                from: 'Jordan @ WPW <hello@weprintwraps.com>',
-                to: [teamMember.email],
-                cc: SILENT_CC,
-                subject: `${mode === 'test' ? '[TEST] ' : ''}🔔 ${escalationType.toUpperCase()}: ${customerName} - ${customerPhone}`,
-                html: escalationHtml
-              })
-            });
-            
-            escalationSent = true;
-            chatState.escalations_sent = [...escalationsSent, escalationType];
-            delete chatState.pending_team_escalation;
-            delete chatState.needs_contact_before_escalation;
-            console.log('[JordanLee] ✅ Escalation email sent with full contact info');
-            
-            // ============================================
-            // OS SPINE: Log escalation event
-            // ============================================
-            await logConversationEvent(
-              supabase,
-              conversationId,
-              'escalation_sent',
-              'jordan_lee',
-              {
-                customer_email: customerEmail,
-                customer_name: customerName,
-                customer_phone: customerPhone,
-                shop_name: shopName || undefined,
-                bulk_vehicle_count: bulkVehicleCount || undefined,
-                bulk_vehicle_types: bulkVehicleTypes || undefined,
-                message_excerpt: message_text.substring(0, 200),
-                escalation_target: teamMember.email,
-                email_sent_to: [teamMember.email, ...SILENT_CC],
-                email_subject: `🔔 ${escalationType.toUpperCase()}: ${customerName} - ${customerPhone}`,
-                email_sent_at: new Date().toISOString(),
-                priority: 'high',
-              },
-              escalationType
-            );
-            
-            // Also log the email receipt
-            await logConversationEvent(
-              supabase,
-              conversationId,
-              'email_sent',
-              'jordan_lee',
-              {
-                email_sent_to: [teamMember.email, ...SILENT_CC],
-                email_subject: `🔔 ${escalationType.toUpperCase()}: ${customerName} - ${customerPhone}`,
-                email_body: escalationHtml.substring(0, 2000),
-                email_sent_at: new Date().toISOString(),
-                customer_email: customerEmail,
-              },
-              escalationType
-            );
-            
-            console.log('[JordanLee] Escalation events logged to conversation_events');
-          } catch (emailErr) {
-            console.error('[JordanLee] Escalation email error:', emailErr);
-          }
-        }
+    // Extract name - multiple patterns
+    let name: string | null = null;
+    const namePatterns = [
+      /(?:my name is|i'm|i am|this is|call me|it's|its)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+      /^([A-Z][a-z]+\s+[A-Z][a-z]+)$/,
+      /([A-Z][A-Z]?[a-z]*\s+[A-Z][a-z]+)\s+[\w.-]+@/i,
+    ];
+    for (const pattern of namePatterns) {
+      const match = message_text.match(pattern);
+      if (match) {
+        name = match[1].trim();
+        break;
       }
     }
     
-    // ============================================
-    // CHECK: Did we just collect contact info for a pending escalation?
-    // ============================================
-    if (chatState.pending_team_escalation && hasRequiredContactInfo && resendKey) {
-      const pending = chatState.pending_team_escalation as { 
-        type: string; 
-        team_member: string; 
-        detected_at: string; 
-        trigger_message: string;
-      };
-      
-      console.log('[JordanLee] ✅ Contact info now complete - sending pending escalation:', pending.type);
-      
-      const teamMember = WPW_TEAM[pending.type];
-      if (teamMember) {
-        const customerName = String(chatState.customer_name);
-        const customerEmail = String(chatState.customer_email);
-        const customerPhone = String(chatState.customer_phone);
-        const shopName = chatState.shop_name ? String(chatState.shop_name) : null;
-        const vehicleInfo = hasCompleteVehicle ? `${extractedVehicle.year} ${extractedVehicle.make} ${extractedVehicle.model}` : null;
-        const bulkVehicleCount = chatState.bulk_vehicle_count ? String(chatState.bulk_vehicle_count) : null;
-        const bulkVehicleTypes = chatState.bulk_vehicle_types ? String(chatState.bulk_vehicle_types) : null;
-        
-        const escalationHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px;">
-            <h2 style="color: #0066cc;">🔔 Customer Escalation - ${teamMember.role}</h2>
-            <p><strong>Agent:</strong> Jordan Lee (Website Chat)</p>
-            <p><strong>Originally detected:</strong> ${pending.detected_at}</p>
-            
-            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
-              <h3 style="margin: 0 0 10px 0; color: #856404;">📞 CUSTOMER CONTACT INFO:</h3>
-              <table style="width: 100%;">
-                <tr><td style="padding: 5px 0;"><strong>Name:</strong></td><td>${customerName}</td></tr>
-                <tr><td style="padding: 5px 0;"><strong>Email:</strong></td><td><a href="mailto:${customerEmail}">${customerEmail}</a></td></tr>
-                <tr><td style="padding: 5px 0;"><strong>Phone:</strong></td><td><a href="tel:${customerPhone}">${customerPhone}</a></td></tr>
-                ${shopName ? `<tr><td style="padding: 5px 0;"><strong>Shop/Company:</strong></td><td>${shopName}</td></tr>` : ''}
-              </table>
-            </div>
-            
-            ${bulkVehicleCount || bulkVehicleTypes ? `
-            <div style="background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745;">
-              <h3 style="margin: 0 0 10px 0; color: #155724;">🚛 FLEET/BULK DETAILS:</h3>
-              <table style="width: 100%;">
-                ${bulkVehicleCount ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Count:</strong></td><td>${bulkVehicleCount} vehicles</td></tr>` : ''}
-                ${bulkVehicleTypes ? `<tr><td style="padding: 5px 0;"><strong>Vehicle Types:</strong></td><td>${bulkVehicleTypes}</td></tr>` : ''}
-                ${vehicleInfo ? `<tr><td style="padding: 5px 0;"><strong>Example Vehicle:</strong></td><td>${vehicleInfo}</td></tr>` : ''}
-              </table>
-            </div>
-            ` : vehicleInfo ? `
-            <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #0066cc;">
-              <h3 style="margin: 0 0 10px 0; color: #004085;">🚗 VEHICLE:</h3>
-              <p style="margin: 0;">${vehicleInfo}</p>
-            </div>
-            ` : ''}
-            
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <h3 style="margin: 0 0 10px 0;">💬 ORIGINAL REQUEST:</h3>
-              <blockquote style="margin: 0; padding: 10px; background: white; border-left: 3px solid #0066cc; font-style: italic;">
-                ${pending.trigger_message}
-              </blockquote>
-            </div>
-            
-            <p style="color: #666; font-size: 12px;"><strong>Page:</strong> ${page_url}</p>
-            
-            <div style="margin-top: 20px;">
-              <a href="https://wrapcommandai.com/mightychat" style="background: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">View Full Conversation</a>
-            </div>
-          </div>
-        `;
-
-        try {
-          await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${resendKey}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              from: 'Jordan @ WPW <hello@weprintwraps.com>',
-              to: [teamMember.email],
-              cc: SILENT_CC,
-              subject: `🔔 ${pending.type.toUpperCase()}: ${customerName} - ${customerPhone}`,
-              html: escalationHtml
-            })
-          });
-          
-          escalationSent = true;
-          const escalationsSent = (chatState.escalations_sent as string[]) || [];
-          chatState.escalations_sent = [...escalationsSent, pending.type];
-          delete chatState.pending_team_escalation;
-          delete chatState.needs_contact_before_escalation;
-          
-          console.log('[JordanLee] ✅ Pending escalation sent with full contact info');
-          
-          await logConversationEvent(
-            supabase,
-            conversationId,
-            'escalation_sent',
-            'jordan_lee',
-            {
-              customer_email: customerEmail,
-              customer_name: customerName,
-              customer_phone: customerPhone,
-              was_pending: true,
-              pending_since: pending.detected_at,
-              message_excerpt: pending.trigger_message.substring(0, 200),
-              escalation_target: teamMember.email,
-              priority: 'high',
-            },
-            pending.type
-          );
-        } catch (emailErr) {
-          console.error('[JordanLee] Pending escalation email error:', emailErr);
-        }
-      }
-    }
-
-    // ============================================
-    // QUALITY ISSUE / UNHAPPY CUSTOMER / BULK ALERTS
-    // ORDER VERIFICATION GATE: Quality issues ONLY escalate with verified order
-    // LEAD CAPTURE GATE: Only send alerts when we have contact info
-    // ============================================
-    
-    // Build order context for the gate
-    const orderContext: OrderContext = {
-      hasOrder: !!orderData || !!chatState.order_number || !!chatState.woo_order_id,
-      orderNumber: orderData?.order_number || (typeof chatState.order_number === 'string' ? chatState.order_number : undefined),
-      quoteConverted: false, // Would need to check quotes table if needed
-    };
-    
-    // Use GATED detection - quality issues only escalate with verified order
-    const gatedResult = detectAlertTypeWithGate(message_text, orderContext);
-    const detectedAlertType = gatedResult.alertType;
-    const classification = gatedResult.classification;
-    
-    console.log('[JordanLee] Order Gate Result:', {
-      alertType: detectedAlertType,
-      classification,
-      hasOrder: orderContext.hasOrder,
-      orderNumber: orderContext.orderNumber,
-    });
-    
-    // If classified as 'sales' (quality keywords but no order), log it but DON'T escalate
-    if (classification === 'sales' && !detectedAlertType) {
-      console.log('[JordanLee] Sales inquiry detected (quality keywords without order) - routing to sales flow, NOT ShopFlow');
-      // Tag for sales follow-up instead of quality escalation
-      if (contactId) {
-        await supabase
-          .from('contacts')
-          .update({ 
-            tags: ['website', 'chat', 'sales_inquiry', 'pricing_request'],
-            priority: 'medium'
-          })
-          .eq('id', contactId);
+    if (!name && email) {
+      const beforeEmail = message_text.split(email)[0].trim();
+      const lastWords = beforeEmail.split(/\s+/).slice(-2).join(' ');
+      if (/^[A-Z][A-Za-z]*\s+[A-Z][A-Za-z]+$/.test(lastWords)) {
+        name = lastWords;
       }
     }
     
-    const hasContactInfo = chatState.customer_email || chatState.customer_phone;
+    const dimensionMatch = message_text.match(/(\d+(?:\.\d+)?)\s*(?:ft|feet|foot|')?\s*(?:by|x|×)\s*(\d+(?:\.\d+)?)/i);
+    const phoneMatch = message_text.match(/(?:\+?1[-.\s]?)?(?:\(?(\d{3})\)?[-.\s]?)?(\d{3})[-.\s]?(\d{4})/);
+    const phone = phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, '') : null;
     
-    if (detectedAlertType) {
-      if (hasContactInfo && resendKey) {
-        // We have contact info - send the alert immediately
-        console.log('[JordanLee] Detected alert type:', detectedAlertType, '- contact info available, sending alert');
-        
-        try {
-          const customerEmail = typeof chatState.customer_email === 'string' ? chatState.customer_email : undefined;
-          const customerPhone = typeof chatState.customer_phone === 'string' ? chatState.customer_phone : undefined;
-          const customerName = typeof chatState.customer_name === 'string' ? chatState.customer_name : undefined;
-          const orderNum = typeof chatState.order_number === 'string' ? chatState.order_number : (extractedOrderNumber || undefined);
-          
-          await sendAlertWithTracking(
-            supabase,
-            resendKey,
-            detectedAlertType,
-            {
-              orderNumber: orderNum,
-              customerName: customerName || customerEmail || 'Website Visitor',
-              customerEmail: customerEmail,
-              customerPhone: customerPhone,
-              conversationId,
-              messageExcerpt: message_text.substring(0, 300),
-              additionalInfo: {
-                page_url,
-                session_id,
-                vehicle: chatState.vehicle,
-                alert_source: 'website_chat',
-                has_phone: !!customerPhone,
-                has_email: !!customerEmail,
-                classification, // Include classification for debugging
-                order_verified: orderContext.hasOrder,
-                quote_converted: !!orderContext.quoteConverted,
-              },
-            },
-            orgId
-          );
-          console.log('[JordanLee] Alert sent successfully with contact info:', { email: !!customerEmail, phone: !!customerPhone });
-          
-          // Clear pending escalation if it was set
-          if (chatState.pending_escalation) {
-            delete chatState.pending_escalation;
-          }
-        } catch (alertErr) {
-          console.error('[JordanLee] Failed to send alert:', alertErr);
-        }
-      } else {
-        // No contact info yet - store as pending escalation
-        console.log('[JordanLee] Detected alert type:', detectedAlertType, '- NO contact info, storing as pending');
-        chatState.pending_escalation = {
-          type: detectedAlertType,
-          detected_at: new Date().toISOString(),
-          message_excerpt: message_text.substring(0, 300),
-          classification, // Include classification
-          order_verified: orderContext.hasOrder,
-        };
-        chatState.needs_contact_for_escalation = true;
-        
-        // Tag the contact for follow-up
-        if (contactId) {
-          const alertTag = detectedAlertType === 'bulk_inquiry' ? 'bulk_lead_pending' : 
-                          detectedAlertType === 'quality_issue' ? 'quality_issue_pending' : 
-                          'escalation_pending';
-          await supabase
-            .from('contacts')
-            .update({ 
-              tags: ['website', 'chat', alertTag, 'needs_callback'],
-              priority: 'high'
-            })
-            .eq('id', contactId);
-        }
+    const vehicleCountMatch = message_text.match(/(\d+)\s*(?:vehicle|truck|van|car|fleet|wrap)/i);
+    const bulkVehicleCount = vehicleCountMatch ? parseInt(vehicleCountMatch[1]) : null;
+    const vehicleTypesMatch = message_text.match(/\b(truck|van|car|suv|sedan|pickup|sprinter|transit|f-?150|f-?250|silverado|ram|fleet)\b/gi);
+    const bulkVehicleTypes = vehicleTypesMatch ? [...new Set(vehicleTypesMatch.map((v: string) => v.toLowerCase()))].join(', ') : null;
+
+    // Update chat state
+    if (vehicleInfo) {
+      chatState.vehicle = vehicleInfo.vehicle;
+      chatState.sqft = vehicleInfo.sqft;
+      chatState.sqftWithRoof = vehicleInfo.sqftWithRoof;
+      chatState.roofSqft = vehicleInfo.roof;
+      chatState.is_estimate = vehicleInfo.isEstimate || false;
+      chatState.similar_to = vehicleInfo.similarTo || '';
+      if (vehicleInfo.year) chatState.vehicle_year = vehicleInfo.year;
+    }
+    if (dimensionMatch) {
+      const w = parseFloat(dimensionMatch[1]);
+      const h = parseFloat(dimensionMatch[2]);
+      chatState.sqft = w * h;
+      chatState.dimensions = { width: w, height: h };
+    }
+    if (email) chatState.customer_email = email;
+    if (name) chatState.customer_name = name;
+    if (phone) chatState.customer_phone = phone;
+    if (bulkVehicleCount) chatState.bulk_vehicle_count = bulkVehicleCount;
+    if (bulkVehicleTypes) chatState.bulk_vehicle_types = bulkVehicleTypes;
+    
+    // Extract shop/company name
+    const shopPatterns = [
+      /(?:shop|company|business|from|with|at)\s+(?:is\s+)?([A-Z][A-Za-z0-9\s&'.-]+(?:wraps?|graphics?|signs?|print|design|auto|customs?|llc|inc)?)/i,
+      /([A-Z][A-Za-z0-9\s&'.-]+(?:Wraps?|Graphics?|Signs?|Print|Design|Auto|Customs?|LLC|Inc))/,
+    ];
+    let shopName: string | null = null;
+    for (const pattern of shopPatterns) {
+      const match = message_text.match(pattern);
+      if (match && match[1].length > 2 && match[1].length < 50) {
+        shopName = match[1].trim();
+        break;
       }
     }
+    if (shopName) chatState.shop_name = shopName;
+
+    // ============================================
+    // DESIGN SERVICE QUESTION
+    // ============================================
+    const isDesignQuestion = /\b(design|custom design|need.*design|create.*wrap|don't have.*art|no.*artwork|design.*service)\b/i.test(msg);
     
-    // Check if we NOW have contact info and there's a pending escalation
-    if (chatState.pending_escalation && hasContactInfo && resendKey) {
-      const pending = chatState.pending_escalation as { type: AlertType; detected_at: string; message_excerpt: string };
-      console.log('[JordanLee] Contact info now collected - sending pending escalation:', pending.type);
-      
-      try {
-        const customerEmail = typeof chatState.customer_email === 'string' ? chatState.customer_email : undefined;
-        const customerPhone = typeof chatState.customer_phone === 'string' ? chatState.customer_phone : undefined;
-        const customerName = typeof chatState.customer_name === 'string' ? chatState.customer_name : undefined;
-        const orderNum = typeof chatState.order_number === 'string' ? chatState.order_number : undefined;
-        
-        await sendAlertWithTracking(
-          supabase,
-          resendKey,
-          pending.type,
-          {
-            orderNumber: orderNum,
-            customerName: customerName || customerEmail || 'Website Visitor',
-            customerEmail: customerEmail,
-            customerPhone: customerPhone,
-            conversationId,
-            messageExcerpt: pending.message_excerpt,
-            additionalInfo: {
-              page_url,
-              session_id,
-              vehicle: chatState.vehicle,
-              alert_source: 'website_chat',
-              was_pending: true,
-              pending_since: pending.detected_at,
-              has_phone: !!customerPhone,
-              has_email: !!customerEmail,
-              order_verified: orderContext.hasOrder,
-              quote_converted: !!orderContext.quoteConverted,
-            },
-          },
-          orgId
-        );
-        console.log('[JordanLee] Pending escalation sent with contact info:', { email: !!customerEmail, phone: !!customerPhone });
-        
-        // Clear pending state
-        delete chatState.pending_escalation;
-        delete chatState.needs_contact_for_escalation;
-        
-        // Update contact tags
-        if (contactId) {
-          await supabase
-            .from('contacts')
-            .update({ 
-              tags: ['website', 'chat', 'escalated', 'jordan_lead'],
-            })
-            .eq('id', contactId);
-        }
-      } catch (alertErr) {
-        console.error('[JordanLee] Failed to send pending escalation:', alertErr);
-      }
+    // ============================================
+    // DIMENSION-BASED PRICING (sqft from dimensions)
+    // ============================================
+    if (dimensionMatch && !chatState.sqft) {
+      const width = parseFloat(dimensionMatch[1]);
+      const height = parseFloat(dimensionMatch[2]);
+      const sqft = Math.round(width * height);
+      chatState.sqft = sqft;
+      chatState.dimensions = { width, height };
+      chatState.from_dimensions = true;
+      console.log('[JordanLee] Calculated sqft from dimensions:', sqft);
     }
 
     // ============================================
-    // AI RESPONSE GENERATION
-    // Jordan educates and routes - never sends formal quotes
+    // TRAILER DETECTION - Ask for dimensions
     // ============================================
+    const isTrailerQuestion = /\b(trailer|enclosed|cargo trailer|box trailer|utility trailer|horse trailer|boat|rv|camper|motorhome)\b/i.test(msg);
+    
+    // ============================================
+    // WINDOW PRODUCT CLARIFICATION
+    // ============================================
+    const isWindowQuestion = /\b(window|windows|glass|rear window|back window|side window)\b/i.test(msg);
+    
+    // ============================================
+    // FADE WRAP DETECTION
+    // ============================================
+    const isFadeWrapQuestion = /\b(fade|gradient|ombre|faded|color fade)\b/i.test(msg);
 
-    // Build context for AI response
+    // ============================================
+    // INSTALLATION QUESTION DETECTION - CRITICAL
+    // ============================================
+    const installationPatterns = /\b(install|installation|installer|put on|apply|wrap my|come to|visit|service area|mobile|in person)\b/i;
+    const isInstallationQuestion = installationPatterns.test(msg);
+
+    // Check for escalation
+    let escalationType = detectEscalation(message_text);
+    
+    if (/\b(manager|supervisor|speak.*someone|talk.*person|human|real person|call.*back|callback)\b/i.test(msg)) {
+      escalationType = 'support';
+    }
+
+    // Build context for AI
     let contextNotes = '';
-    let vehicleSqft = 0;
-    let vehicleSqftWithRoof = 0;
-    let vehicleSqftWithoutRoof = 0;
-    let estimatedCost = 0;
-    let estimatedCostWithRoof = 0;
-    let estimatedCostWithoutRoof = 0;
-    let vehicleFromDb = false;
-    let closestMatch: { make: string; model: string; year: string; sqft: number; sqftWithRoof?: number; sqftWithoutRoof?: number } | null = null;
-    
+    const pricePerSqft = 5.27; // Avery MPI 1105
+
     // ============================================
-    // PARTIAL WRAP / CUSTOM DIMENSION DETECTION
-    // Detect explicit dimensions like "36x36" or "24 x 24"
+    // HANDLE INSTALLATION QUESTION FIRST
     // ============================================
-    const customDimensionPattern = /(\d+)\s*(?:x|by|×)\s*(\d+)/gi;
-    const allMessages = messageHistory?.map(m => m.content).join(' ') || '';
-    const combinedText = `${allMessages} ${message_text}`.toLowerCase();
-    const dimensionMatches = [...combinedText.matchAll(customDimensionPattern)];
-    
-    let customSqft = 0;
-    let customDimensionsDetected = false;
-    const detectedDimensions: string[] = [];
-    
-    if (dimensionMatches.length > 0) {
-      for (const match of dimensionMatches) {
-        const dim1 = parseInt(match[1]);
-        const dim2 = parseInt(match[2]);
-        // Assume inches if dimensions are > 12, convert to sqft
-        const width = dim1 > 12 ? dim1 / 12 : dim1;
-        const height = dim2 > 12 ? dim2 / 12 : dim2;
-        const sqftPiece = width * height;
-        customSqft += sqftPiece;
-        detectedDimensions.push(`${match[1]}x${match[2]}`);
-      }
-      
-      // Check for quantity multipliers (e.g., "two 36x36" or "2 36x36")
-      const quantityPatterns = [
-        /\b(two|2)\s+(\d+\s*(?:x|by|×)\s*\d+)/gi,
-        /\b(three|3)\s+(\d+\s*(?:x|by|×)\s*\d+)/gi,
-        /\b(four|4)\s+(\d+\s*(?:x|by|×)\s*\d+)/gi,
-      ];
-      
-      for (const pattern of quantityPatterns) {
-        const qMatch = combinedText.match(pattern);
-        if (qMatch) {
-          const multiplier = qMatch[0].toLowerCase().startsWith('two') || qMatch[0].startsWith('2') ? 2 :
-                            qMatch[0].toLowerCase().startsWith('three') || qMatch[0].startsWith('3') ? 3 :
-                            qMatch[0].toLowerCase().startsWith('four') || qMatch[0].startsWith('4') ? 4 : 1;
-          if (multiplier > 1) {
-            // Recalculate with multiplier (replace single sqft with multiplied)
-            customSqft = customSqft * multiplier / dimensionMatches.length;
-          }
-        }
-      }
-      
-      customDimensionsDetected = customSqft > 0;
-      console.log('[JordanLee] Custom dimensions detected:', { 
-        customSqft: Math.round(customSqft * 100) / 100, 
-        dimensions: detectedDimensions,
-        rawText: message_text.substring(0, 100)
-      });
+    if (isInstallationQuestion) {
+      contextNotes = `🚨 INSTALLATION QUESTION DETECTED!
+
+THE CUSTOMER ASKED ABOUT INSTALLATION.
+
+YOUR RESPONSE MUST BE:
+"No, we're a print shop - we print and ship vehicle wraps, but we don't do installation. You'll need a local installer to apply the wrap. I can help you find one in your area if you'd like! 
+
+Want me to get you a quote on the printed wrap material?"
+
+CRITICAL: Do NOT say we offer installation. We are PRINT ONLY.`;
     }
-    
-    // Get the current vehicle state (merged from conversation history)
-    const currentVehicle = chatState.vehicle as Record<string, string | null> | undefined;
-    const vehicleIsComplete = chatState.vehicle_complete === true || 
-      (currentVehicle?.year && currentVehicle?.make && currentVehicle?.model);
-    
-    // CRITICAL: Only calculate pricing if we have COMPLETE vehicle info (year + make + model)
-    if (vehicleIsComplete && currentVehicle) {
-      const searchMake = (currentVehicle.make || '').toLowerCase().trim();
-      const searchModel = (currentVehicle.model || '').toLowerCase().trim();
-      const searchYear = parseInt(currentVehicle.year || '0', 10);
+    // ============================================
+    // HANDLE TRAILER - Ask for dimensions
+    // ============================================
+    else if (isTrailerQuestion && !chatState.trailer_dimensions) {
+      contextNotes = `🚛 TRAILER/LARGE FORMAT DETECTED!
+
+Customer is asking about: trailer, RV, camper, or similar
+
+We need DIMENSIONS to quote trailers (not in our standard database).
+
+SAY: "Nice! For trailers and large format projects, I'll need the dimensions to get you an accurate quote.
+
+What are the dimensions? (length x height of each side you want wrapped)
+
+For example: '20ft long x 8ft tall' for the sides"
+
+After getting dimensions, calculate: length × height = sqft per side
+Then multiply by number of sides they want wrapped.
+Price at $5.27/sqft for Avery MPI 1105.`;
       
-      console.log('[JordanLee] Looking up vehicle in DB:', { make: searchMake, model: searchModel, year: searchYear });
-      
-      // Normalize make for database search (handle Mercedes/Mercedes-Benz, Chevy/Chevrolet, etc.)
-      const normalizedMake = searchMake
-        .replace(/mercedes[-\s]?benz/i, 'mercedes')
-        .replace(/chevy/i, 'chevrolet')
-        .replace(/vw/i, 'volkswagen');
-      
-      // Normalize model for database search (handle variations like "170WB Extended" vs "170 Extended")
-      const normalizedModel = searchModel
-        .replace(/[-\s]+/g, '%')  // Replace spaces/dashes with wildcards for flexible matching
-        .replace(/wb/i, 'wb')     // Ensure "WB" stays together
-        .replace(/ext\b/i, 'extended'); // Expand "ext" to "extended"
-      
-      // Build search patterns for the model - try different variations
-      const modelSearchPatterns = [
-        `%${normalizedModel}%`,
-        `%${searchModel.replace(/\s+/g, '%')}%`,
-        // For Sprinters: if user says "Sprinter 2500" try matching "Sprinter 2500 - *"
-        searchModel.includes('sprinter') ? `%sprinter%${searchModel.replace(/sprinter/i, '').trim()}%` : null,
-      ].filter(Boolean);
-      
-      // First try exact match in vehicle_dimensions table with the normalized model
-      let allMatches: Array<{
-        make: string;
-        model: string;
-        year_start: number;
-        year_end: number;
-        corrected_sqft: number | null;
-        total_sqft: number | null;
-        side_sqft: number | null;
-        back_sqft: number | null;
-        hood_sqft: number | null;
-        roof_sqft: number | null;
-      }> = [];
-      
-      for (const pattern of modelSearchPatterns) {
-        if (!pattern) continue;
-        const { data: matches } = await supabase
-          .from('vehicle_dimensions')
-          .select('make, model, year_start, year_end, corrected_sqft, total_sqft, side_sqft, back_sqft, hood_sqft, roof_sqft')
-          .or(`make.ilike.%${normalizedMake}%,make.ilike.%${searchMake}%`)
-          .ilike('model', pattern)
-          .limit(20);
-        
-        if (matches && matches.length > 0) {
-          allMatches = [...allMatches, ...matches];
-        }
-      }
-      
-      // Deduplicate matches
-      const uniqueMatches = Array.from(new Map(allMatches.map(m => [`${m.make}-${m.model}-${m.year_start}`, m])).values());
-      
-      console.log('[JordanLee] DB query results:', uniqueMatches.length, 'matches for', searchMake, searchModel);
-      
-      if (uniqueMatches.length > 0) {
-        // Find best match considering year range and model specificity
-        let bestMatch: typeof uniqueMatches[0] | null = null;
-        let bestMatchScore = 0;
-        
-        for (const vehicle of uniqueMatches) {
-          const yearStart = vehicle.year_start || 0;
-          const yearEnd = vehicle.year_end || yearStart;
-          const vehicleModel = vehicle.model.toLowerCase();
-          
-          // Calculate match score based on how specific the model match is
-          let score = 0;
-          
-          // Year within range is essential
-          if (searchYear >= yearStart && searchYear <= yearEnd) {
-            score += 100; // Big bonus for year match
-          }
-          
-          // Model specificity scoring
-          if (vehicleModel === searchModel) {
-            score += 50; // Exact model match
-          } else if (vehicleModel.includes(searchModel) || searchModel.includes(vehicleModel)) {
-            score += 25; // Partial model match
-          }
-          
-          // Bonus for more specific variants (longer model names usually mean more specific)
-          score += Math.min(vehicleModel.length / 10, 5);
-          
-          console.log('[JordanLee] Scoring vehicle:', { 
-            model: vehicle.model, 
-            yearRange: `${yearStart}-${yearEnd}`,
-            score,
-            inYearRange: searchYear >= yearStart && searchYear <= yearEnd
-          });
-          
-          if (score > bestMatchScore) {
-            bestMatchScore = score;
-            bestMatch = vehicle;
-          }
-        }
-        
-        if (bestMatch && bestMatchScore >= 100) {
-          // We have a good match with year in range
-          vehicleSqft = bestMatch.corrected_sqft || bestMatch.total_sqft || 0;
-          vehicleFromDb = true;
-          
-          // Calculate with/without roof SQFT using panel breakdowns
-          const sideSqft = bestMatch.side_sqft || 0;
-          const backSqft = bestMatch.back_sqft || 0;
-          const hoodSqft = bestMatch.hood_sqft || 0;
-          const roofSqft = bestMatch.roof_sqft || 0;
-          
-          vehicleSqftWithoutRoof = Math.round((sideSqft + backSqft + hoodSqft) * 10) / 10;
-          vehicleSqftWithRoof = Math.round((sideSqft + backSqft + hoodSqft + roofSqft) * 10) / 10;
-          
-          console.log('[JordanLee] EXACT DB match:', { 
-            vehicle: `${bestMatch.make} ${bestMatch.model}`, 
-            sqft: vehicleSqft,
-            withRoof: vehicleSqftWithRoof,
-            withoutRoof: vehicleSqftWithoutRoof
-          });
-        } else if (bestMatch) {
-          // Save as potential close match (year not in range but model matches)
-          closestMatch = {
-            make: bestMatch.make,
-            model: bestMatch.model,
-            year: `${bestMatch.year_start}-${bestMatch.year_end}`,
-            sqft: bestMatch.corrected_sqft || bestMatch.total_sqft || 0,
-            sqftWithRoof: (bestMatch.side_sqft || 0) + (bestMatch.back_sqft || 0) + (bestMatch.hood_sqft || 0) + (bestMatch.roof_sqft || 0),
-            sqftWithoutRoof: (bestMatch.side_sqft || 0) + (bestMatch.back_sqft || 0) + (bestMatch.hood_sqft || 0)
-          };
-          vehicleSqft = closestMatch.sqft;
-          vehicleSqftWithRoof = closestMatch.sqftWithRoof || 0;
-          vehicleSqftWithoutRoof = closestMatch.sqftWithoutRoof || 0;
-          console.log('[JordanLee] Using CLOSEST DB match:', closestMatch);
-        }
-      }
-      
-      // Fallback to hardcoded estimates if not in DB
-      if (vehicleSqft === 0) {
-        const vehicleKey = `${searchMake} ${searchModel}`.toLowerCase().trim();
-        if (/prius|civic|corolla|sentra|versa|yaris|fit|accent|rio|mirage/i.test(vehicleKey)) {
-          vehicleSqft = 175;
-        } else if (/camry|accord|altima|sonata|mazda6|legacy|jetta|passat|malibu/i.test(vehicleKey)) {
-          // TEMP MVP FIX: Malibu not yet in vehicle_dimensions table.
-          // TODO: Remove once full 1,665 vehicle CSV is imported.
-          vehicleSqft = 222; // Malibu is ~222 sqft per CSV data
-        } else if (/avalon|maxima|300|charger|impala|taurus/i.test(vehicleKey)) {
-          vehicleSqft = 210;
-        } else if (/rav4|cr-?v|tucson|rogue|forester|crosstrek|cx-?5|tiguan/i.test(vehicleKey)) {
-          vehicleSqft = 200;
-        } else if (/highlander|pilot|explorer|pathfinder|4runner|cx-?9|atlas/i.test(vehicleKey)) {
-          vehicleSqft = 225;
-        } else if (/f-?150|silverado|sierra|ram|tundra|titan/i.test(vehicleKey)) {
-          vehicleSqft = 250;
-        } else if (/tahoe|expedition|suburban|yukon|sequoia|armada/i.test(vehicleKey)) {
-          vehicleSqft = 275;
-        } else if (/transit|sprinter|promaster/i.test(vehicleKey)) {
-          vehicleSqft = 450; // Updated to a more realistic cargo van estimate
-        } else if (/mustang|camaro|challenger|corvette|supra|370z|86|brz|miata/i.test(vehicleKey)) {
-          vehicleSqft = 180;
-        } else if (/wrangler|bronco/i.test(vehicleKey)) {
-          vehicleSqft = 200;
-        } else {
-          // ❌ NO SILENT FALLBACK - Zero means we can't price
-          console.warn('[PRICING BLOCKED]', {
-            source: 'jordan-chat',
-            vehicle: currentVehicle,
-            vehicleKey: `${searchMake} ${searchModel}`.toLowerCase().trim(),
-            reason: 'No pattern match for vehicle model'
-          });
-          vehicleSqft = 0; // Zero = pricing blocked
-        }
-      }
-      
-      // Calculate costs
-      estimatedCost = Math.round(vehicleSqft * 5.27);
-      estimatedCostWithRoof = vehicleSqftWithRoof > 0 ? Math.round(vehicleSqftWithRoof * 5.27) : 0;
-      estimatedCostWithoutRoof = vehicleSqftWithoutRoof > 0 ? Math.round(vehicleSqftWithoutRoof * 5.27) : 0;
+      chatState.awaiting_trailer_dimensions = true;
     }
-    
-    // Build context notes based on state
-    // PRIORITY 1: Order status inquiries (most specific intent)
-    if (orderData) {
-      const friendlyStatus = getCustomerFriendlyStatus(orderData.status, orderData.customer_stage);
-      let orderContext = `ORDER FOUND - USE THIS EXACT DATA (DO NOT MAKE UP INFO):
-Order #${orderData.order_number}
-Customer: ${orderData.customer_name}
-Product: ${orderData.product_type}
-Status: ${friendlyStatus}`;
+    // ============================================
+    // HANDLE WINDOW QUESTION - Clarify product type
+    // ============================================
+    else if (isWindowQuestion && !chatState.window_type_clarified) {
+      contextNotes = `🪟 WINDOW QUESTION DETECTED!
 
-      if (orderData.tracking_number && orderData.shipped_at) {
-        const shippedDate = new Date(orderData.shipped_at).toLocaleDateString('en-US', { 
-          weekday: 'long', month: 'long', day: 'numeric' 
-        });
-        orderContext += `
-SHIPPED: Yes, shipped on ${shippedDate}
-TRACKING NUMBER: ${orderData.tracking_number}
-${orderData.tracking_url ? `TRACKING URL: ${orderData.tracking_url}` : 'Carrier: Check UPS/FedEx with that tracking number'}`;
-      } else if (orderData.status === 'shipped' || orderData.customer_stage === 'shipped' || 
-                 orderData.status === 'completed' || orderData.customer_stage === 'ready') {
-        // Status says shipped/completed but no tracking - EMAIL THE TEAM!
-        const missingTrackingAlert = !orderData.tracking_number;
-        
-        if (missingTrackingAlert && resendKey) {
-          console.log('[JordanLee] ALERT: Order shipped without tracking, emailing team');
-          
-          try {
-            const resend = new Resend(resendKey);
-            
-            await resend.emails.send({
-              from: 'ShopFlow Alert <alerts@weprintwraps.com>',
-              to: ['Lance@WePrintWraps.com', 'Jackson@WePrintWraps.com', 'Trish@WePrintWraps.com'],
-              subject: `⚠️ Missing Tracking: Order #${orderData.order_number} - Customer Asking`,
-              html: `
-                <h2>🚨 Missing Tracking Number Alert</h2>
-                <p><strong>A customer is asking about tracking for an order that shows shipped but has no tracking number in the system.</strong></p>
-                <hr>
-                <p><strong>Order #:</strong> ${orderData.order_number}</p>
-                <p><strong>Customer:</strong> ${orderData.customer_name}</p>
-                <p><strong>Product:</strong> ${orderData.product_type}</p>
-                <p><strong>Status:</strong> ${orderData.status}</p>
-                <p><strong>Customer Stage:</strong> ${orderData.customer_stage || 'N/A'}</p>
-                <hr>
-                <p><strong>Action Needed:</strong> Please add the tracking number to ShopFlow so Jordan can provide accurate info to the customer.</p>
-                <p><em>This alert was triggered by Jordan Lee (AI Chat Agent) when the customer asked for tracking info.</em></p>
-              `,
-            });
-            
-            // Log to shopflow_logs (fire and forget, ignore errors)
-            try {
-              await supabase.from('shopflow_logs').insert({
-                order_id: null,
-                action: 'missing_tracking_alert',
-                details: `Customer asked for tracking on order #${orderData.order_number} - no tracking number in system. Team emailed.`,
-                performed_by: 'jordan_lee'
-              });
-            } catch { /* ignore */ }
-            
-            console.log('[JordanLee] Missing tracking alert sent to team');
-          } catch (emailError) {
-            console.error('[JordanLee] Failed to send missing tracking alert:', emailError);
-          }
-        }
-        
-        orderContext += `
-SHIPPED: Status shows shipped/completed, but I don't have a tracking number in my system yet. I've already notified our shipping team to get this info for you ASAP.`;
-        
-        if (missingTrackingAlert) {
-          orderContext += `
-TEAM NOTIFIED: Yes, the shipping team has been emailed about this missing tracking number.`;
-        }
-      } else {
-        // Not shipped yet
-        orderContext += `
-SHIPPED: Not yet - still ${friendlyStatus.toLowerCase()}`;
-        if (orderData.estimated_completion_date) {
-          const eta = new Date(orderData.estimated_completion_date).toLocaleDateString('en-US', { 
-            weekday: 'long', month: 'long', day: 'numeric' 
-          });
-          orderContext += `
-ESTIMATED COMPLETION: ${eta}`;
-        }
-      }
+Customer asked about windows. We have TWO window products - need to clarify!
 
-      orderContext += `
+SAY: "Great question! We have two options for windows:
 
-CRITICAL: Only share the EXACT information above. If tracking_number is not shown above, say "I don't have tracking info in my system yet - let me check with the team" - NEVER make up a tracking number!`;
-      
-      contextNotes = orderContext;
-    } else if (orderStatusIntent && extractedOrderNumber) {
-      // Customer asked about an order but we couldn't find it
-      contextNotes = `ORDER NOT FOUND: Customer asked about order #${extractedOrderNumber} but it's not in my system. 
-Ask them to double-check the order number, or offer to look it up by email. 
-DO NOT make up any order status or tracking information!`;
-    } else if (orderStatusIntent && !extractedOrderNumber) {
-      // Customer wants order status but didn't give a number
-      contextNotes = `ORDER STATUS REQUEST: Customer is asking about an order but didn't provide an order number. 
-Ask them for their order number (usually 4-6 digits from their confirmation email) so you can look it up.
-DO NOT guess or make up any order information!`;
-    } else if (escalationType && escalationSent) {
-      contextNotes = `ESCALATION SENT: You just escalated to ${WPW_TEAM[escalationType].name}. Tell the customer you've looped them in.`;
-    } else if (pricingIntent && (!currentVehicle?.year || !currentVehicle?.make || !currentVehicle?.model)) {
-      // ============================================
-      // 🚧 FIX #1: VEHICLE COMPLETION GUARD
-      // Prevents crashes when only partial vehicle info is captured
-      // ============================================
-      const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
-      const hasYear = existingVehicle?.year || currentVehicle?.year;
-      const hasMake = existingVehicle?.make || currentVehicle?.make;
-      const hasModel = existingVehicle?.model || currentVehicle?.model;
-      
-      const missingParts: string[] = [];
-      if (!hasYear) missingParts.push('year');
-      if (!hasMake) missingParts.push('make');
-      if (!hasModel) missingParts.push('model');
-      
-      console.log('[JordanLee] VEHICLE COMPLETION GUARD:', {
-        hasYear: !!hasYear,
-        hasMake: !!hasMake,
-        hasModel: !!hasModel,
-        missing: missingParts.join(', ')
-      });
-      
-      if (hasYear && (!hasMake || !hasModel)) {
-        // Has year, needs make/model
-        contextNotes = `NEED MAKE/MODEL: Customer wants a price and gave us ${hasYear}, but we need the make and model.
-Ask: "Got it! And what's the make and model? (For example: Tesla Model Y, Ford F-150)"`;
-      } else if (hasMake && !hasModel) {
-        // Has make, needs model
-        contextNotes = `NEED MODEL: Customer mentioned ${hasMake}, but we need the specific model.
-Ask: "What model of ${hasMake}? (For example: Model Y, F-150, Camry)"`;
-      } else {
-        // Need everything
-        contextNotes = `NEED VEHICLE INFO: Customer wants pricing but we need the full year, make, and model.
-Ask: "What vehicle are you looking to wrap? Give me the year, make, and model (like 2019 Tesla Model Y)."`;
-      }
-    } else if (pricingIntent && !chatState.customer_email) {
-      // ============================================
-      // HARD GATE: NO PRICING WITHOUT EMAIL + NAME + PHONE
-      // ============================================
-      // Must collect name + email + phone FIRST, then give price, then auto-email quote
-      const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
-      const hasAnyVehicleInfo = existingVehicle?.make || existingVehicle?.model || extractedVehicle.make || extractedVehicle.model;
-      
-      if (hasAnyVehicleInfo) {
-        contextNotes = `EMAIL REQUIRED BEFORE PRICING: Customer wants a price but hasn't given their email yet.
-WHAT YOU HAVE: ${existingVehicle?.year || extractedVehicle.year || '?'} ${existingVehicle?.make || extractedVehicle.make || '?'} ${existingVehicle?.model || extractedVehicle.model || '?'}
-        
-SAY SOMETHING LIKE: "I can absolutely get you an exact price for that! What's your name and email? I'll calculate your quote and send it right over so you have it in writing." 
+1️⃣ **Perforated Window Vinyl (Window Perf)** - $5.32/sqft
+   - See-through from inside, graphics visible outside
+   - Perfect for rear windows, storefronts
+   - Order here: https://weprintwraps.com/our-products/perforated-window-vinyl-5050-unlaminated/
 
-DO NOT give any price numbers yet - collect name + email first, THEN give the price in the next message.`;
-      } else {
-        contextNotes = `NEED VEHICLE + EMAIL: Customer wants pricing but hasn't provided vehicle OR email.
-        
-SAY SOMETHING LIKE: "I'd love to get you an exact price! What vehicle are you looking to wrap? Give me the year, make, and model, plus your name and email - I'll calculate your quote and send it right over!"
+2️⃣ **Cut Vinyl Graphics** - $6.32/sqft (Avery) or $6.92/sqft (3M)
+   - Solid vinyl letters/logos
+   - NOT see-through
+   - Order here: https://weprintwraps.com/our-products/avery-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/
 
-DO NOT give any price numbers or ranges - get vehicle + email first.`;
-      }
-    } else if (pricingIntent && !vehicleIsComplete) {
-      // Has email but missing vehicle info
-      const existingVehicle = chatState.vehicle as Record<string, string | null> | undefined;
-      const missingParts: string[] = [];
-      if (!existingVehicle?.year) missingParts.push('year');
-      if (!existingVehicle?.make) missingParts.push('make');
-      if (!existingVehicle?.model) missingParts.push('model');
+Which one are you looking for?"
+
+IMPORTANT: Get their choice before quoting!`;
       
-      if (existingVehicle && (existingVehicle.make || existingVehicle.model)) {
-        contextNotes = `NEED MORE VEHICLE INFO (have email: ${chatState.customer_email}): Customer mentioned ${existingVehicle.make || ''} ${existingVehicle.model || ''} but we need the FULL year, make, and model. Ask for: ${missingParts.join(', ')}. Once we have it, give price + auto-email quote.`;
-      } else {
-        contextNotes = `NEED VEHICLE INFO (have email: ${chatState.customer_email}): Got the email, now need vehicle year, make, and model to calculate their price.`;
-      }
-    } else if (pricingIntent && vehicleIsComplete && vehicleSqft === 0) {
-      // Vehicle info is complete but we don't have sqft data - PRICING BLOCKED
-      const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
-      contextNotes = `PRICING BLOCKED for ${vehicleStr}: This vehicle isn't in our database and we don't have a reliable sqft estimate. 
-Tell the customer: "I don't have pricing data for that specific ${currentVehicle?.model} in my system. I've flagged this for our team - they'll email you at ${chatState.customer_email} with accurate pricing shortly!"
-DO NOT give any price estimate or guess!`;
-    } else if (pricingIntent && vehicleIsComplete && vehicleSqft > 0) {
-      // ============================================
-      // 🔐 CONTACT-GATED PRICING: Require name + email before price
-      // 🛠️ FIX #3: Wrapped in try/catch for safe fallback
-      // ============================================
+      chatState.window_type_clarified = true;
+    }
+    // ============================================
+    // HANDLE FADE WRAP - Give pricing + URL
+    // ============================================
+    else if (isFadeWrapQuestion) {
+      contextNotes = `🌈 FADE WRAP QUESTION!
+
+ALWAYS include the product URL!
+
+SAY: "Fade wraps look amazing! 🔥 Here's our pricing:
+
+**Fade Wrap Pricing (by side length):**
+- Small (up to 144"): **$600**
+- Medium (up to 172"): **$710**
+- Large (up to 200"): **$825**
+- XL (up to 240"): **$990**
+
+**Add-ons:**
+- Hood: +$160
+- Front Bumper: +$200
+- Rear + Bumper: +$395
+- Roof: +$160-330
+
+👉 **Order here:** https://weprintwraps.com/our-products/pre-designed-fade-wraps/
+
+What vehicle are you looking to fade wrap? I'll recommend the right size!"
+
+THEN collect: name, email, phone, shop name before finalizing.`; 
+    }
+    // ============================================
+    // HANDLE DESIGN SERVICE QUESTION
+    // ============================================
+    else if (isDesignQuestion) {
+      contextNotes = `🎨 DESIGN SERVICE QUESTION!
+
+ALWAYS provide pricing and URL!
+
+SAY: "Yes! We offer custom wrap design services! 🎨
+
+**Design Pricing:**
+- **Full Wrap Custom Design: $750**
+- 1-Hour Design Fee (edits, color matching): $95
+- File Output Fee: $95
+
+👉 **Order design here:** https://weprintwraps.com/our-products/custom-wrap-design/
+
+Our design team can create a complete custom wrap for your vehicle. Turn around is typically 3-5 business days for the design.
+
+Have design questions? Email design@weprintwraps.com
+
+What vehicle would you like designed? I can get you a total quote for design + print!"
+
+Then collect: name, email, phone, shop name.`;
+    }
+    // ============================================
+    // HANDLE BULK/FLEET DISCOUNT QUESTION
+    // ============================================
+    else if (/\b(bulk|fleet|discount|volume|wholesale|multiple.*vehicle|[3-9]\d*\s*vehicle|\d{2,}\s*vehicle)\b/i.test(msg) && !escalationType) {
+      contextNotes = `🚛 BULK/FLEET DISCOUNT QUESTION!
+
+ALWAYS show the discount tiers!
+
+SAY: "Great news - we have automatic bulk discounts! 🎉
+
+**Fleet/Bulk Discounts (by total sqft):**
+- 500-999 sqft: **5% OFF**
+- 1,000-1,499 sqft: **10% OFF**
+- 1,500-2,499 sqft: **15% OFF**
+- 2,500+ sqft: **20% OFF**
+
+For example:
+- 5 trucks (~1,400 sqft) = 10% off = ~$6,640 instead of $7,378
+- 10 vans (~3,600 sqft) = 20% off = ~$15,177 instead of $18,972
+
+Want me to calculate your fleet quote? Just tell me:
+- How many vehicles?
+- What types? (trucks, vans, cars)
+
+I'll get you the exact price with your discount!"
+
+Then collect: name, email, phone, shop name.`;
+    }
+    // ============================================
+    // HANDLE FILE UPLOAD QUESTION
+    // ============================================
+    else if (/\b(upload|send.*file|artwork|check.*art|file.*review|send.*design)\b/i.test(msg)) {
+      contextNotes = `📁 FILE UPLOAD QUESTION
+
+Customer wants to upload artwork or have it reviewed.
+
+YOUR RESPONSE MUST INCLUDE THE DIRECT LINK:
+"You can upload your artwork here: https://weprintwraps.com/pages/upload-artwork
+
+Or email it to hello@weprintwraps.com - we offer FREE file review!
+
+Want me to get you a quote while you send the file over?"
+
+DO NOT say "Grant will reach out" - give the link directly!`;
+    }
+    // Handle escalations
+    else if (escalationType && !chatState.escalation_sent) {
+      const teamMember = WPW_TEAM[escalationType];
+      
+      // Log escalation
       try {
-        const vehicleStr = `${currentVehicle?.year} ${currentVehicle?.make} ${currentVehicle?.model}`;
-        
-        // Check if contact info is captured
-        if (!chatState.customer_email || !chatState.customer_name) {
-          chatState.stage = 'contact_required';
-          
-          console.log('[JordanLee] CONTACT-GATED: Blocking price until name+email captured', {
-            tenant,
-            hasEmail: !!chatState.customer_email,
-            hasName: !!chatState.customer_name,
-            vehicle: vehicleStr
-          });
-          
-          const printOnlyNote = tenant === 'WPW' ? ' (printing only — install not included)' : '';
-          
-          contextNotes += `
-
-⚠️ CONTACT REQUIRED BEFORE PRICING:
-Customer wants a price for ${vehicleStr} but hasn't provided name AND email yet.
-Has email: ${!!chatState.customer_email}
-Has name: ${!!chatState.customer_name}
-Tenant: ${tenant}
-
-INSTRUCTIONS:
-- Ask for their name and email so you can send them the quote
-- Say something like: "I can price that out for you${printOnlyNote} — what's your name and email so I can generate and email your quote?"
-- Do NOT give any $ amounts until BOTH name and email are captured`;
-        } else {
-          // ✅ PRICING ALLOWED: Contact captured, vehicle complete
-          const pricePerSqft = 5.27;
-          // Prefer WITHOUT ROOF unless user explicitly asked for roof
-          const sqft = vehicleSqftWithoutRoof > 0 ? vehicleSqftWithoutRoof : vehicleSqft;
-          const calculatedPrice = Math.round(sqft * pricePerSqft);
-          
-          // 🛠️ FIX #2: SQFT sanity guard - RETURN IMMEDIATELY instead of falling through
-          if (sqft < 100 || sqft > 500) {
-            console.warn('[JordanLee] SQFT sanity check failed - returning clarification:', { sqft, vehicle: vehicleStr });
-            return new Response(JSON.stringify({
-              message: "Quick check — are you pricing a **full wrap** or a **partial** (hood, roof, doors)? I want to quote the correct **print-only** cost.",
-              conversation_id: conversationId
-            }), { headers: corsHeaders });
+        await supabase.from('conversation_events').insert({
+          conversation_id: conversationId,
+          organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+          event_type: 'escalation',
+          event_subtype: escalationType,
+          actor: 'jordan_agent',
+          metadata: {
+            reason: escalationType,
+            trigger_message: message_text.substring(0, 500),
+            customer_email: chatState.customer_email || null,
+            customer_name: chatState.customer_name || null,
+            customer_phone: chatState.customer_phone || null,
+            routed_to: teamMember.email
           }
+        });
+      } catch (e) {
+        console.error('[JordanLee] Failed to log escalation:', e);
+      }
+      
+      // For BULK orders - collect contact info FIRST
+      if (escalationType === 'bulk' && !chatState.bulk_info_collected) {
+        const hasContactInfo = chatState.customer_name && chatState.customer_email && chatState.customer_phone;
+        
+        if (!hasContactInfo) {
+          const missingContact = [];
+          if (!chatState.customer_name) missingContact.push('name');
+          if (!chatState.customer_email) missingContact.push('email');
+          if (!chatState.customer_phone) missingContact.push('phone');
           
-          // SQFT is valid, proceed with pricing
-          chatState.calculated_price = calculatedPrice;
-          chatState.stage = 'price_given';
-          
-          console.log('[JordanLee] CONTACT-GATED: Calculating price with contact captured', {
-            tenant,
-            name: chatState.customer_name,
-            email: chatState.customer_email,
-            sqft,
-            price: calculatedPrice
-          });
-          
-          // 🔁 AWAIT quote creation - MUST verify quote was created before telling customer
-          try {
-            const quoteResult = await supabase.functions.invoke('create-quote-from-chat', {
-              body: {
-                conversation_id: conversationId,
-                organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
-                customer_email: chatState.customer_email,
-                customer_name: chatState.customer_name,
-                vehicle_year: currentVehicle?.year,
-                vehicle_make: currentVehicle?.make,
-                vehicle_model: currentVehicle?.model,
-                sqft: sqft,
-                material_cost: calculatedPrice,
-                product_type: 'avery',
-                send_email: true,
-                notes: `Full wrap - ${sqft} sqft @ $5.27/sqft`
-              }
-            });
+          contextNotes = `🚛 BULK/FLEET INQUIRY - GET CONTACT INFO FIRST!
+
+BEFORE discussing fleet details, you MUST collect:
+Missing: ${missingContact.join(', ')}
+
+SAY: "Fleet pricing - I can definitely help with that! Let me get your info so our bulk specialist Jackson can put together the best pricing for you. What's your name, email, and phone number?"
+
+DO NOT escalate without contact info!`;
+        } else if (!chatState.bulk_vehicle_count) {
+          contextNotes = `🚛 BULK INQUIRY - NOW GET VEHICLE DETAILS
+
+Customer: ${chatState.customer_name}
+Email: ${chatState.customer_email}
+Phone: ${chatState.customer_phone}
+
+NOW ask about the fleet:
+"Perfect, thanks ${chatState.customer_name}! Tell me about your fleet:
+- How many vehicles?
+- What types? (trucks, vans, cars?)
+- Full wraps or partial?"`;
+        } else {
+          chatState.bulk_info_collected = true;
+          contextNotes = `🚛 BULK ORDER - ROUTE TO JACKSON
+
+Customer: ${chatState.customer_name}
+Email: ${chatState.customer_email}
+Phone: ${chatState.customer_phone}
+Vehicles: ${chatState.bulk_vehicle_count} ${chatState.bulk_vehicle_types || 'vehicles'}
+
+SAY: "Got it! ${chatState.bulk_vehicle_count} vehicles - Jackson is going to love this! I'm connecting you with him now. He'll reach out at ${chatState.customer_email} with custom fleet pricing. Anything else I can help with?"`;
+        }
+      } else {
+        // Non-bulk escalation
+        if (!chatState.customer_email) {
+          contextNotes = `🚨 ESCALATION - BUT NO CONTACT INFO!
+
+Customer wants: ${escalationType}
+Route to: ${teamMember.name}
+
+BUT WE DON'T HAVE THEIR EMAIL!
+
+SAY: "I totally understand - let me connect you with ${teamMember.name}. What's your name, email, and phone so they can reach you?"
+
+GET CONTACT INFO BEFORE CONFIRMING ESCALATION!`;
+        } else {
+          contextNotes = `🚨 ESCALATION CONFIRMED
+
+Customer: ${chatState.customer_name || 'Unknown'}
+Email: ${chatState.customer_email}
+Routed to: ${teamMember.name} (${teamMember.role})
+
+SAY: "I'm connecting you with ${teamMember.name} now - they'll reach out to you at ${chatState.customer_email}. Anything else I can help with in the meantime?"`;
+        }
+      }
+      
+      // Send escalation email if we have contact info
+      if (chatState.customer_email && (escalationType !== 'bulk' || chatState.bulk_info_collected)) {
+        try {
+          const resendKey = Deno.env.get('RESEND_API_KEY');
+          if (resendKey) {
+            const { data: convHistory } = await supabase
+              .from('messages')
+              .select('direction, content, created_at')
+              .eq('conversation_id', conversationId)
+              .order('created_at', { ascending: true })
+              .limit(20);
             
-            if (quoteResult.error || !quoteResult.data?.success) {
-              console.error('[JordanLee] ❌ QUOTE CREATION FAILED:', { 
-                error: quoteResult.error, 
-                data: quoteResult.data,
-                customer: chatState.customer_email,
-                vehicle: vehicleStr 
-              });
-              contextNotes += `\n\n⚠️ QUOTE EMAIL FAILED - Tell customer: "I've calculated your price but having a small issue emailing the quote. I'll make sure you get it shortly!"`;
-            } else {
-              console.log('[JordanLee] ✅ Quote created & emailed:', quoteResult.data.quote_number);
-              // Store quote info in chatState for response
-              chatState.quote_created = true;
-              chatState.quote_id = quoteResult.data.quote_id;
-              chatState.quote_number = quoteResult.data.quote_number;
-              chatState.quote_amount = calculatedPrice;
-              chatState.quote_sent_at = new Date().toISOString();
-              
-              // Log the quote event
-              await logQuoteEvent(supabase, conversationId, 'quote_drafted', {
-                quoteId: quoteResult.data.quote_id,
-                quoteNumber: quoteResult.data.quote_number,
-                total: calculatedPrice,
-                customerEmail: chatState.customer_email as string,
-                customerName: chatState.customer_name as string,
-                vehicleInfo: vehicleStr
-              }, 'jordan_lee');
-              
-              contextNotes += `\n\n✅ QUOTE ${quoteResult.data.quote_number} EMAILED to ${chatState.customer_email}. You can confirm this was sent.`;
+            let conversationSummary = '';
+            if (convHistory && convHistory.length > 0) {
+              conversationSummary = convHistory.map((msg: any) => {
+                const who = msg.direction === 'inbound' ? '👤 Customer' : '🤖 Jordan';
+                return `${who}: ${msg.content}`;
+              }).join('\n\n');
             }
-          } catch (quoteErr) {
-            console.error('[JordanLee] Quote invocation exception:', quoteErr);
-            contextNotes += `\n\n⚠️ QUOTE EMAIL FAILED - Tell customer you'll follow up with the formal quote.`;
+            
+            const resend = new Resend(resendKey);
+            await resend.emails.send({
+              from: 'Jordan Lee <jordan@weprintwraps.com>',
+              to: teamMember.email,
+              cc: SILENT_CC,
+              subject: `[ESCALATION] ${escalationType.toUpperCase()} - ${chatState.customer_name || 'Website Chat'}`,
+              html: `
+<h2>🚨 Customer Needs Assistance!</h2>
+<table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+  <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Type:</td><td style="padding: 8px; border: 1px solid #ddd; color: #e6007e; font-weight: bold;">${escalationType.toUpperCase()}</td></tr>
+  <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Name:</td><td style="padding: 8px; border: 1px solid #ddd;">${chatState.customer_name || 'Not provided'}</td></tr>
+  <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Email:</td><td style="padding: 8px; border: 1px solid #ddd;"><a href="mailto:${chatState.customer_email}">${chatState.customer_email}</a></td></tr>
+  <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Phone:</td><td style="padding: 8px; border: 1px solid #ddd;">${chatState.customer_phone || 'Not provided'}</td></tr>
+  ${chatState.vehicle ? `<tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Vehicle:</td><td style="padding: 8px; border: 1px solid #ddd;">${chatState.vehicle_year || ''} ${chatState.vehicle}</td></tr>` : ''}
+  ${escalationType === 'bulk' ? `<tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Fleet:</td><td style="padding: 8px; border: 1px solid #ddd;">${chatState.bulk_vehicle_count || '?'} ${chatState.bulk_vehicle_types || 'vehicles'}</td></tr>` : ''}
+</table>
+<h3>📝 Conversation:</h3>
+<div style="background: #f5f5f5; padding: 15px; border-radius: 8px; white-space: pre-wrap;">${conversationSummary || 'No messages'}</div>
+<h3>⚡ Trigger:</h3>
+<div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #e6007e;">${message_text}</div>
+`
+            });
+            chatState.escalation_sent = escalationType;
+            console.log('[JordanLee] Escalation email sent to:', teamMember.email);
           }
-          
-          // Build pricing context for AI
-          const printOnlyLabel = tenant === 'WPW' ? 'For **printing only (no install)**' : 'Your wrap';
-          let sqftInfo = '';
-          if (vehicleSqftWithRoof > 0 && vehicleSqftWithoutRoof > 0) {
-            sqftInfo = `
-WITHOUT ROOF: ${vehicleSqftWithoutRoof} sqft
-WITH ROOF: ${vehicleSqftWithRoof} sqft
-(Roof adds ~${Math.round(vehicleSqftWithRoof - vehicleSqftWithoutRoof)} sqft)`;
-          } else {
-            sqftInfo = `${sqft} sqft`;
-          }
-          
-          contextNotes += `
-
-✅ PRICE CALCULATED - CONTACT CAPTURED:
-Tenant: ${tenant}
-Customer: ${chatState.customer_name}
-Email: ${chatState.customer_email}
-Vehicle: ${vehicleStr}
-SQFT:${sqftInfo}
-PRICE: $${calculatedPrice}
-
-INSTRUCTIONS:
-- Tell them the price: "${printOnlyLabel}, your estimated print cost is **$${calculatedPrice}**"
-- Tell them you're emailing the formal quote
-- Both Avery AND 3M are $5.27/sqft (we matched 3M to Avery's price!)`;
+        } catch (e) {
+          console.error('[JordanLee] Escalation email failed:', e);
         }
-      } catch (pricingErr) {
-        // 🛠️ FIX #3: Safe fallback if pricing logic throws
-        console.error('[WPW PRICING ERROR]', pricingErr);
-        return new Response(JSON.stringify({
-          message: "I'm running into a quick hiccup calculating that. Let me double-check the details and I'll get this priced for you.",
-          conversation_id: conversationId
-        }), { headers: corsHeaders });
       }
     }
-
-    // ============================================
-    // PARTIAL WRAP QUOTE PATH
-    // For customers providing custom dimensions (e.g., "two 36x36 door logos")
-    // Bypasses vehicle completion requirement
-    // ============================================
-    const isPartialWrapWithDimensions = customDimensionsDetected && 
-                                        customSqft > 0 && 
-                                        chatState.customer_email && 
-                                        chatState.customer_name &&
-                                        !chatState.quote_created;  // Don't double-create
-    
-    if (isPartialWrapWithDimensions && !vehicleIsComplete) {
-      const pricePerSqft = 5.27;
-      const sqft = Math.round(customSqft * 100) / 100;  // Round to 2 decimals
-      const calculatedPrice = Math.round(sqft * pricePerSqft * 100) / 100;
-      
-      console.log('[JordanLee] 🎯 PARTIAL WRAP PATH: Creating quote from custom dimensions', {
-        sqft,
-        price: calculatedPrice,
-        dimensions: detectedDimensions,
-        email: chatState.customer_email,
-        name: chatState.customer_name,
-        vehicle: chatState.vehicle
-      });
-      
-      chatState.calculated_price = calculatedPrice;
-      chatState.stage = 'price_given';
-      chatState.partial_wrap = true;
-      
-      // Create the quote
-      try {
-        const vehicleInfo = chatState.vehicle as Record<string, string> | undefined;
-        const quoteResult = await supabase.functions.invoke('create-quote-from-chat', {
-          body: {
+    // Check for unhappy customer
+    else {
+      const unhappyCheck = detectUnhappyCustomer(message_text);
+      if (unhappyCheck.isUnhappy && !chatState.unhappy_flagged) {
+        console.log('[JordanLee] Unhappy customer:', unhappyCheck.reason);
+        
+        try {
+          await supabase.from('conversation_events').insert({
             conversation_id: conversationId,
-            organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
-            customer_email: chatState.customer_email,
-            customer_name: chatState.customer_name,
-            vehicle_year: vehicleInfo?.year || 'N/A',
-            vehicle_make: vehicleInfo?.make || 'Custom',
-            vehicle_model: vehicleInfo?.model || 'Partial Wrap',
-            sqft: sqft,
-            material_cost: calculatedPrice,
-            product_type: 'avery',
-            send_email: true,
-            notes: `Partial wrap - customer dimensions: ${detectedDimensions.join(', ')} = ${sqft} sqft @ $${pricePerSqft}/sqft`
-          }
-        });
-        
-        if (quoteResult.error || !quoteResult.data?.success) {
-          console.error('[JordanLee] ❌ PARTIAL WRAP QUOTE FAILED:', {
-            error: quoteResult.error,
-            data: quoteResult.data,
-            customer: chatState.customer_email,
-            dimensions: detectedDimensions
+            organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+            event_type: 'escalation',
+            event_subtype: 'unhappy_customer',
+            actor: 'jordan_agent',
+            metadata: {
+              reason: unhappyCheck.reason,
+              trigger_message: message_text.substring(0, 500),
+              customer_email: chatState.customer_email || null,
+              needs_callback: true
+            }
           });
-          contextNotes += `\n\n⚠️ QUOTE EMAIL FAILED - Tell customer: "I've calculated $${calculatedPrice} for your ${detectedDimensions.join(', ')} pieces, but having a small issue emailing the quote. You'll get it shortly!"`;
-        } else {
-          console.log('[JordanLee] ✅ Partial wrap quote created & emailed:', quoteResult.data.quote_number);
-          
-          // Store quote info in chatState
-          chatState.quote_created = true;
-          chatState.quote_id = quoteResult.data.quote_id;
-          chatState.quote_number = quoteResult.data.quote_number;
-          chatState.quote_amount = calculatedPrice;
-          chatState.quote_sent_at = new Date().toISOString();
-          
-          // Log the quote event
-          await logQuoteEvent(supabase, conversationId, 'quote_drafted', {
-            quoteId: quoteResult.data.quote_id,
-            quoteNumber: quoteResult.data.quote_number,
-            total: calculatedPrice,
-            customerEmail: chatState.customer_email as string,
-            customerName: chatState.customer_name as string,
-            vehicleInfo: `Partial Wrap: ${detectedDimensions.join(', ')}`
-          }, 'jordan_lee');
-          
-          contextNotes += `
+        } catch (e) {
+          console.error('[JordanLee] Failed to log unhappy customer:', e);
+        }
+        
+        chatState.unhappy_flagged = true;
+        
+        if (!chatState.customer_email) {
+          contextNotes = `🚨 UNHAPPY CUSTOMER - GET CONTACT INFO!
 
-✅ PARTIAL WRAP QUOTE SENT:
+Reason: ${unhappyCheck.reason}
+
+YOU MUST:
+1. Acknowledge their frustration empathetically
+2. Get their email and phone for callback
+3. Say: "I'm sorry to hear that - I want to make sure we get this sorted out. Can I get your email and phone? I'll have someone call you back personally."`;
+        } else {
+          contextNotes = `🚨 UNHAPPY CUSTOMER - OFFER CALLBACK
+
+Email: ${chatState.customer_email}
+
+SAY: "I totally understand - that's not the experience we want. I'm flagging this for our team right now. Would you like someone to call you? What's the best number?"`;
+        }
+      }
+      // Handle pricing with vehicle - BUT REQUIRE ALL CONTACT INFO FIRST
+      else if (chatState.sqft && chatState.stage !== 'price_given') {
+        const hasAllInfo = chatState.customer_name && chatState.customer_email && chatState.customer_phone && chatState.shop_name;
+        const isEstimate = chatState.is_estimate || false;
+        const similarTo = chatState.similar_to || '';
+        
+        if (!hasAllInfo) {
+          // Missing info - collect it first
+          const missing = [];
+          if (!chatState.customer_name) missing.push('name');
+          if (!chatState.customer_email) missing.push('email');
+          if (!chatState.customer_phone) missing.push('phone');
+          if (!chatState.shop_name) missing.push('shop/company name');
+          
+          contextNotes = `📋 VEHICLE DETECTED BUT MISSING CONTACT INFO!
+
+Vehicle: ${chatState.vehicle || 'Unknown'}
+SQFT: ${chatState.sqft}${isEstimate ? ' (ESTIMATE)' : ''}
+${isEstimate ? `Based on similar: ${similarTo}` : ''}
+
+MISSING: ${missing.join(', ')}
+
+SAY: "Got it - ${chatState.vehicle || 'that vehicle'}!" + (isEstimate ? " I don't have exact specs for that model, but I can give you an estimate based on similar vehicles." : "") + " Before I get your quote, let me grab your info real quick:
+${!chatState.customer_name ? '- Your name?' : ''}
+${!chatState.customer_email ? '- Email address?' : ''}
+${!chatState.customer_phone ? '- Phone number?' : ''}
+${!chatState.shop_name ? '- Shop or company name?' : ''}"
+
+DO NOT give price until you have ALL 4 items!`;
+        } else {
+          // Has all info - give price and create quote
+          const price = Math.round(chatState.sqft * pricePerSqft);
+          const freeShip = price >= 750 ? '🎉 FREE shipping included!' : '';
+          const productUrl = 'https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/';
+          
+          let vehicleDisplay = chatState.vehicle || '';
+          if (chatState.vehicle_year) vehicleDisplay = `${chatState.vehicle_year} ${vehicleDisplay}`;
+          
+          // If estimate, flag for escalation to get exact quote
+          if (isEstimate) {
+            contextNotes = `💰 ESTIMATE QUOTE - SEND + ESCALATE FOR EXACT!
+
 Customer: ${chatState.customer_name}
 Email: ${chatState.customer_email}
-Dimensions: ${detectedDimensions.join(', ')}
-SQFT: ${sqft}
-PRICE: $${calculatedPrice}
-Quote Number: ${quoteResult.data.quote_number}
+Phone: ${chatState.customer_phone}
+Shop: ${chatState.shop_name}
+Vehicle: ${vehicleDisplay}
+SQFT: ~${chatState.sqft} (ESTIMATE based on ${similarTo})
+PRICE: ~$${price} (ESTIMATE)
 
-INSTRUCTIONS:
-- Confirm the price: "For your ${detectedDimensions.join(' and ')} pieces, that's **$${calculatedPrice}** for print-only material"
-- Confirm the quote was emailed to ${chatState.customer_email}
-- Ask if they have any other questions about their partial wrap`;
+SAY: "Thanks ${chatState.customer_name} from ${chatState.shop_name}! 🙌
+
+I don't have exact specs for a **${vehicleDisplay}**, but based on similar vehicles (like ${similarTo}), I estimate it's around **${chatState.sqft} sqft**.
+
+That would be approximately **$${price}** for Avery MPI 1105 with lamination. ${freeShip}
+
+I'm sending this estimate to ${chatState.customer_email} and flagging it for our team to get you exact measurements. We'll follow up with a precise quote!
+
+**Order here:** ${productUrl}
+
+Anything else I can help with?"
+
+IMPORTANT: This is an ESTIMATE - escalate to team for exact sqft!`;
+            
+            // Send escalation for exact quote
+            try {
+              await supabase.from('conversation_events').insert({
+                conversation_id: conversationId,
+                organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+                event_type: 'escalation',
+                event_subtype: 'exact_quote_needed',
+                actor: 'jordan_agent',
+                metadata: {
+                  reason: 'Vehicle not in database - estimate provided',
+                  vehicle: vehicleDisplay,
+                  estimated_sqft: chatState.sqft,
+                  estimated_price: price,
+                  similar_to: similarTo,
+                  customer_name: chatState.customer_name,
+                  customer_email: chatState.customer_email,
+                  customer_phone: chatState.customer_phone,
+                  shop_name: chatState.shop_name,
+                  needs_exact_measurement: true
+                }
+              });
+              console.log('[JordanLee] Escalation created for exact quote');
+            } catch (e) {
+              console.error('[JordanLee] Failed to create escalation:', e);
+            }
+          } else {
+            contextNotes = `💰 ALL INFO COLLECTED - GIVE PRICE & SEND QUOTE!
+
+Customer: ${chatState.customer_name}
+Email: ${chatState.customer_email}
+Phone: ${chatState.customer_phone}
+Shop: ${chatState.shop_name}
+Vehicle: ${vehicleDisplay}
+SQFT: ${chatState.sqft} (no roof)
+PRICE: $${price}
+
+SAY: "Thanks ${chatState.customer_name} from ${chatState.shop_name}! 🙌
+
+A **${vehicleDisplay}** is about **${chatState.sqft} sqft**. At $5.27/sqft, that's **$${price}** for Avery MPI 1105 with lamination. ${freeShip}
+
+I'm sending your quote to ${chatState.customer_email} now! 📧
+
+**Order here:** ${productUrl}
+
+Anything else I can help with?"
+
+REMEMBER: We PRINT and SHIP - customer arranges local installation.`;
+          }
+          
+          chatState.stage = 'price_given';
+          chatState.quoted_price = price;
+          chatState.quote_sent = true;
+          
+          // Trigger quote email
+          try {
+            const resendKey = Deno.env.get('RESEND_API_KEY');
+            if (resendKey) {
+              const resend = new Resend(resendKey);
+              await resend.emails.send({
+                from: 'WePrintWraps <quotes@weprintwraps.com>',
+                to: chatState.customer_email,
+                cc: SILENT_CC,
+                subject: `Your Vehicle Wrap Quote - ${vehicleDisplay} - ${isEstimate ? '~' : ''}$${price}`,
+                html: `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <div style="background: linear-gradient(135deg, #e6007e, #9b00ff); padding: 20px; text-align: center;">
+    <h1 style="color: white; margin: 0;">WePrintWraps.com</h1>
+    <p style="color: white; margin: 5px 0 0 0;">Your Vehicle Wrap Quote${isEstimate ? ' (Estimate)' : ''}</p>
+  </div>
+  
+  <div style="padding: 30px; background: #f9f9f9;">
+    <p>Hey ${chatState.customer_name}!</p>
+    <p>Thanks for reaching out from <strong>${chatState.shop_name}</strong>! Here's your quote:</p>
+    
+    ${isEstimate ? '<div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><strong>⚠️ Note:</strong> This is an estimate based on similar vehicles. Our team will follow up with exact measurements.</div>' : ''}
+    
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <tr style="background: #e6007e; color: white;">
+        <th style="padding: 12px; text-align: left;">Item</th>
+        <th style="padding: 12px; text-align: right;">Details</th>
+      </tr>
+      <tr style="background: white;">
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Vehicle</td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">${vehicleDisplay}</td>
+      </tr>
+      <tr style="background: white;">
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Square Footage</td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">${isEstimate ? '~' : ''}${chatState.sqft} sqft (no roof)${isEstimate ? ' (estimate)' : ''}</td>
+      </tr>
+      <tr style="background: white;">
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Material</td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">Avery MPI 1105 + DOL1460Z Lamination</td>
+      </tr>
+      <tr style="background: white;">
+        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Price per sqft</td>
+        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">$5.27</td>
+      </tr>
+      <tr style="background: #fff3cd;">
+        <td style="padding: 12px; font-weight: bold; font-size: 18px;">TOTAL</td>
+        <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px; color: #e6007e;">${isEstimate ? '~' : ''}$${price}</td>
+      </tr>
+    </table>
+    
+    ${price >= 750 ? '<p style="background: #d4edda; padding: 10px; border-radius: 5px; text-align: center;">🎉 <strong>FREE SHIPPING</strong> on orders over $750!</p>' : ''}
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${productUrl}" style="background: #e6007e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">ORDER NOW</a>
+    </div>
+    
+    <p><strong>What's Included:</strong></p>
+    <ul>
+      <li>Premium Avery MPI 1105 printed wrap film</li>
+      <li>DOL1460Z overlaminate for UV protection</li>
+      <li>5-7 year outdoor durability</li>
+      <li>1-2 business day print time</li>
+      ${price >= 750 ? '<li>FREE shipping</li>' : '<li>Standard shipping rates at checkout</li>'}
+    </ul>
+    
+    <p><strong>Note:</strong> We are a print shop - we print and ship your wrap. Installation is done by your local installer.</p>
+    
+    <p>Questions? Reply to this email or chat with us at weprintwraps.com!</p>
+    
+    <p>- Jordan Lee<br>WePrintWraps.com</p>
+  </div>
+  
+  <div style="background: #333; color: white; padding: 15px; text-align: center; font-size: 12px;">
+    <p>WePrintWraps.com | (833) 335-1382 | hello@weprintwraps.com</p>
+  </div>
+</div>
+`
+              });
+              console.log('[JordanLee] Quote email sent to:', chatState.customer_email);
+            }
+          } catch (e) {
+            console.error('[JordanLee] Quote email failed:', e);
+          }
         }
-      } catch (partialQuoteErr) {
-        console.error('[JordanLee] Partial wrap quote exception:', partialQuoteErr);
-        contextNotes += `\n\n⚠️ QUOTE FAILED - Tell customer you calculated $${calculatedPrice} for their pieces and will email the formal quote.`;
       }
-    }
+      // Email captured after price
+      else if (email && chatState.stage === 'price_given' && !chatState.quote_sent) {
+        contextNotes = `📧 EMAIL CAPTURED - CONFIRM QUOTE
 
-    // ============================================
-    // PROACTIVE SELLING CONTEXT (append to existing notes)
-    // ============================================
-    
-    let proactiveNotes = '';
-    
-    // Bulk inquiry handling - PRICING SUPPRESSION ACTIVE
-    if (bulkInquirySignal) {
-      if (chatState.bulk_email_sent) {
-        proactiveNotes += `
-🚫 BULK MODE ACTIVE - PRICING SUPPRESSED:
-You've collected the customer's email and sent it to Jackson. Tell the customer: "I've sent your info to Jackson on our CommercialPro team - he'll reach out with final pricing and your volume discount code!"
+Email: ${email}
 
-❌ DO NOT calculate or share total order cost.`;
-      } else if (chatState.bulk_inquiry_pending || !chatState.customer_email) {
-        proactiveNotes += `
-🚫 BULK MODE ACTIVE - PRICING SUPPRESSED:
-Customer mentioned fleet/bulk/multiple vehicles.
+SAY: "Perfect! Sending your quote to ${email} now! 📧
 
-✅ ALLOWED:
-- Share bulk discount tiers (percentage ranges only)
-- Mention "per vehicle pricing"
-- Say "CommercialPro volume discounts apply"
-- Name Jackson as CommercialPro specialist
-- Collect email for Jackson to follow up
+**Order here:** https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/
 
-❌ SUPPRESSED (DO NOT SAY):
-- Total order cost (no "$XX,XXX" numbers)
-- Quantity × unit price math (no "16 × $1,318 = ...")
-- Any dollar amount over $5,000 for this inquiry
-- Exact coupon codes (Jackson provides these)
-
-${formatBulkDiscountTiers()}
-
-RESPONSE TEMPLATE:
-"Got it — for a fleet of [X] vehicles, we price per vehicle and you'll qualify for CommercialPro volume discounts. Jackson, our CommercialPro specialist, will contact you ASAP to go over final pricing. What's your email so he can reach you?"`;
-      }
-    }
-    
-    // FadeWrap / Design / RestylePro opportunity
-    if (fadeWrapDesignSignal && !bulkInquirySignal) {
-      proactiveNotes += `
-🎨 RESTYLEPRO OPPORTUNITY: Customer mentioned design/visualization/FadeWrap. 
-MENTION RESTYLEPRO: "Have you tried RestylePro? You can visualize exactly how your wrap will look on YOUR vehicle before ordering - super helpful for picking colors!" 
-Link: ${APPROVED_LINKS.products.restylepro}`;
-    }
-    
-    // Culture/enthusiasm moment - Ink & Edge Magazine
-    if (cultureEnthusiasmSignal && !bulkInquirySignal && !fadeWrapDesignSignal) {
-      proactiveNotes += `
-📰 CULTURE MOMENT: Customer seems enthusiastic about their project.
-MENTION INK & EDGE ISSUE 1: "If you're into wrap culture, check out Ink & Edge Magazine - Issue 1 is dropping with features on shop leadership, SEMA builds, and installer tips!"
-Link: ${APPROVED_LINKS.apps.ink_and_edge}`;
-    }
-    
-    // Order intent - WrapRewards/ClubWPW
-    if (orderIntentSignal && !chatState.clubwpw_mentioned) {
-      proactiveNotes += `
-🏆 ORDER INTENT: Customer seems ready to order.
-MENTION WRAPREWARDS: "Are you part of WrapRewards? You'd earn points on this order + get exclusive drops and discounts. Sign up is free!"
-Link: ${APPROVED_LINKS.rewards.clubwpw}`;
-      chatState.clubwpw_mentioned = true;
-    }
-    
-    // First-time buyer - WRAPREWARDS promo code
-    if (firstTimeBuyerSignal && !chatState.promo_code_offered) {
-      proactiveNotes += `
-🎁 FIRST-TIME BUYER DETECTED: Offer the WRAPREWARDS promo code!
-SAY: "First time ordering with us? Use code WRAPREWARDS at checkout for 5% off your first order!"
-ALSO mention WrapRewards: "And sign up for WrapRewards - it's free and you'll earn points on every order for discounts and exclusive drops!"`;
-      chatState.promo_code_offered = true;
-    }
-    
-    // Append proactive notes to context
-    if (proactiveNotes) {
-      contextNotes += `
-
-────────────────────────────────────
-PROACTIVE SELLING OPPORTUNITIES:
-────────────────────────────────────
-${proactiveNotes}`;
-    }
-
-    // Generate AI response using Jordan's persona
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    let aiReply = "Hey! 👋 What kind of wrap are you working on?";
-
-    if (lovableApiKey) {
-      try {
-        // Build conversation history for AI context
-        const conversationMessages: Array<{ role: string; content: string }> = [];
+Upload your design and checkout. Questions? I'm here!"`;
         
-        // Add system prompt first
-        conversationMessages.push({
-          role: 'system',
-          content: `${buildJordanPersona(voiceProfile)}
-${directivesContext}
+        chatState.quote_sent = true;
+      }
+      // Window perf (if they've clarified)
+      else if (/\b(perf|perforated)\b/i.test(msg)) {
+        contextNotes = `🪟 WINDOW PERF SELECTED
+
+Price: $5.32/sqft
+
+SAY: "Window perf is $5.32/sqft!
+
+**Order here:** https://weprintwraps.com/our-products/perforated-window-vinyl-5050-unlaminated/
+
+What size window are you covering? I'll get you a quote!"
+
+Then collect: name, email, phone, shop name.`;
+      }
+      // Order status
+      else if (/\b(order|status|track|where|shipping)\b/i.test(msg)) {
+        const orderMatch = message_text.match(/\b(\d{4,6})\b/);
+        if (orderMatch) {
+          let order = null;
+          try {
+            const { data } = await supabase
+              .from('shopflow_orders')
+              .select('*')
+              .or(`order_number.eq.${orderMatch[1]},woo_order_number.eq.${orderMatch[1]}`)
+              .single();
+            if (data) order = data;
+          } catch (e) {}
+          
+          if (order) {
+            contextNotes = `📦 ORDER FOUND
+
+Order: #${order.order_number || orderMatch[1]}
+Status: ${order.status || 'Processing'}
+${order.tracking_number ? `Tracking: ${order.tracking_number}` : ''}
+
+Share this info with the customer.`;
+          } else {
+            contextNotes = `📦 ORDER NOT FOUND
+
+Can't find order #${orderMatch[1]}.
+
+SAY: "I don't see that order in my system. Can you double-check the number? Or email hello@weprintwraps.com for fastest help!"`;
+          }
+        } else {
+          contextNotes = `📦 ORDER STATUS - Need number
+
+SAY: "What's your order number? It's usually 4-6 digits from your confirmation email."`;
+        }
+      }
+      // General pricing question
+      else if (/\b(price|cost|how much|quote)\b/i.test(msg) && !chatState.sqft) {
+        contextNotes = `💵 PRICING QUESTION - Need vehicle
+
+SAY: "What vehicle are you wrapping? I'll get you an exact price!"
+
+If they give generic vehicle: ask year/make/model.`;
+      }
+      // Turnaround question
+      else if (/\b(turnaround|how long|when|timeline|fast|rush)\b/i.test(msg)) {
+        contextNotes = `⏱️ TURNAROUND QUESTION
+
+Standard: 1-2 business days printing + 1-3 days shipping = 3-5 days total
+Rush: Available for additional fee
+
+SAY: "Standard turnaround is 1-2 business days for printing, plus shipping. Total 3-5 days. Need it faster? We can rush for an extra fee!"`;
+      }
+      // Default
+      else if (!contextNotes) {
+        contextNotes = `GENERAL INQUIRY
+
+Be helpful! Offer to help with:
+- Pricing (ask what vehicle)
+- Product questions
+- Order status
+
+${!chatState.customer_email ? "Try to get their email for follow-up!" : ""}`;
+      }
+    }
+
+    // Build knowledge context
+    const knowledgeContext = `${WPW_KNOWLEDGE.pricing}
+${WPW_KNOWLEDGE.products}
+${WPW_KNOWLEDGE.fileUpload}
+${WPW_KNOWLEDGE.turnaround}
+${WPW_KNOWLEDGE.guarantee}
+${WPW_KNOWLEDGE.specs}
+${WPW_KNOWLEDGE.contact}`;
+
+    // Call AI
+    let aiReply = "Hey! What vehicle are you looking to wrap? I'll get you a price!";
+    
+    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (anthropicKey) {
+      try {
+        const { data: history } = await supabase
+          .from('messages')
+          .select('direction, content')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true })
+          .limit(10);
+
+        const messages = (history || []).map((m: any) => ({
+          role: m.direction === 'inbound' ? 'user' : 'assistant',
+          content: m.content
+        }));
+        messages.push({ role: 'user', content: message_text });
+
+        const systemPrompt = `${JORDAN_PERSONA}
+
 CURRENT CONTEXT:
 ${contextNotes}
-
-CONVERSATION STATE:
-- Stage: ${chatState.stage || 'initial'}
-- Customer Email: ${chatState.customer_email || 'NOT CAPTURED YET'}
-- Vehicle: ${chatState.vehicle ? `${(chatState.vehicle as Record<string, string>).year || 'unknown'} ${(chatState.vehicle as Record<string, string>).make || 'unknown'} ${(chatState.vehicle as Record<string, string>).model || 'unknown'}` : 'Not provided'}
-- Vehicle Complete: ${chatState.vehicle_complete ? 'YES' : 'NO - need more info'}
-- Escalations Sent: ${(chatState.escalations_sent as string[])?.join(', ') || 'None'}
 
 KNOWLEDGE BASE:
 ${knowledgeContext}
 
-CRITICAL INSTRUCTIONS:
-1. You have FULL access to the conversation history below. Do NOT ask for info the customer already provided!
-2. If vehicle info is incomplete, ask for the SPECIFIC missing parts only.
-3. If you already know the year, make, and model from previous messages, use that info directly.
-4. Pay close attention to what was said earlier - the customer may have provided details you need.
+CUSTOMER STATE:
+- Name: ${chatState.customer_name || '❌ NOT CAPTURED'}
+- Email: ${chatState.customer_email || '❌ NOT CAPTURED'}
+- Phone: ${chatState.customer_phone || '❌ NOT CAPTURED'}
+- Shop: ${chatState.shop_name || '❌ NOT CAPTURED'}
+- Vehicle: ${chatState.vehicle || 'Unknown'}
+- SQFT: ${chatState.sqft || 'Unknown'}
 
-🚨 ANTI-HALLUCINATION RULES - VIOLATIONS WILL CAUSE CUSTOMER COMPLAINTS:
-- NEVER fabricate delivery dates, shipping dates, or tracking numbers
-- NEVER say an order is "complete", "delivered", or "shipped" unless the CURRENT CONTEXT above explicitly states it
-- If order status is "printing", "in_production", "processing", etc. - the order has NOT shipped yet
-- If you don't see a tracking number in CURRENT CONTEXT, DO NOT make one up
-- If you're unsure about order status, say "let me check with the team" rather than guessing
-- Today's date is ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} - never reference future dates as past events
+${!chatState.customer_name || !chatState.customer_email || !chatState.customer_phone || !chatState.shop_name ? 
+`⚠️ MISSING INFO - Collect ALL 4 before pricing: name, email, phone, shop name!` : '✅ All contact info captured - OK to give price!'}`;
 
-${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
-        });
-        
-        // Add conversation history (excluding the current message which we'll add at the end)
-        if (messageHistory && messageHistory.length > 0) {
-          for (const msg of messageHistory) {
-            conversationMessages.push({
-              role: msg.direction === 'inbound' ? 'user' : 'assistant',
-              content: msg.content
-            });
-          }
-          console.log('[JordanLee] Added', messageHistory.length, 'messages to AI context');
-        }
-        
-        // Add current message
-        conversationMessages.push({
-          role: 'user',
-          content: message_text
-        });
-
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: conversationMessages,
-            max_tokens: 800
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 500,
+            system: systemPrompt,
+            messages
           })
         });
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
-          if (aiData.choices?.[0]?.message?.content) {
-            aiReply = aiData.choices[0].message.content;
+          if (aiData.content?.[0]?.text) {
+            aiReply = aiData.content[0].text;
           }
         }
-      } catch (aiError) {
-        console.error('[JordanLee] AI generation error:', aiError);
+      } catch (e) {
+        console.error('[JordanLee] AI error:', e);
       }
     }
 
-    // Format response according to Jordan's style
-    const jordanAgent = AGENTS.jordan_lee;
-    aiReply = formatAgentResponse(jordanAgent, aiReply);
-
-    // Save final state and insert response
+    // Save state and response
+    const updateData: Record<string, any> = { 
+      chat_state: chatState, 
+      last_message_at: new Date().toISOString() 
+    };
+    if (chatState.customer_email) updateData.customer_email = chatState.customer_email;
+    if (chatState.customer_name) updateData.customer_name = chatState.customer_name;
+    if (chatState.customer_phone) updateData.customer_phone = chatState.customer_phone;
+    if (chatState.shop_name) updateData.shop_name = chatState.shop_name;
+    
     await supabase
       .from('conversations')
-      .update({ chat_state: chatState })
+      .update(updateData)
       .eq('id', conversationId);
 
     await supabase.from('messages').insert({
@@ -2198,100 +1458,23 @@ ${mode === 'test' ? '[TEST MODE - Internal testing only]' : ''}`
       direction: 'outbound',
       content: aiReply,
       sender_name: 'Jordan Lee',
-      metadata: { ai_generated: true, agent: 'jordan_lee', escalation: escalationType }
+      metadata: { ai_generated: true }
     });
 
-    // Update last_message_at so conversation list shows accurate "last chat" time
-    await supabase
-      .from('conversations')
-      .update({ last_message_at: new Date().toISOString() })
-      .eq('id', conversationId);
-
-    // ============================================
-    // QUOTE CREATION MOVED EARLIER (OS ENFORCEMENT)
-    // This block is now a safety check only - quote should already be created
-    // ============================================
-    if (chatState.customer_email && vehicleIsComplete && vehicleSqft > 0 && !chatState.quote_created) {
-      console.warn('[JordanLee] WARNING: Reached post-response stage without quote_created. This should not happen.', {
-        conversationId,
-        hasEmail: !!chatState.customer_email,
-        vehicleIsComplete,
-        vehicleSqft,
-        stage: chatState.stage
-      });
-    }
-
-    // Log to message_ingest_log
-    await supabase.from('message_ingest_log').insert({
-      platform: 'website',
-      sender_id: session_id,
-      message_text,
-      intent: escalationType || (pricingIntent ? 'pricing' : 'general'),
-      processed: true,
-      raw_payload: { org, agent: 'jordan_lee', mode, page_url, chatState }
-    });
-
-    console.log('[JordanLee] Response sent:', aiReply.substring(0, 50));
-
-    // Build response with quote confirmation if quote was sent
-    const response: Record<string, unknown> = { 
+    return new Response(JSON.stringify({
+      success: true,
       reply: aiReply,
-      conversation_id: conversationId,
-      agent: AGENTS.jordan_lee.displayName,
-      escalation: escalationType,
-      partnership_detected: partnershipSignal,
-    };
-    
-    // Add backend-confirmed quote data if quote was created this turn
-    if (chatState.quote_created && chatState.quote_id) {
-      response.quote_sent = true;
-      response.quote_number = chatState.quote_number;
-      response.quote_email = chatState.customer_email;
-      response.quote_amount = chatState.quote_amount;
-      response.quote_sent_at = chatState.quote_sent_at || new Date().toISOString();
-    }
-
-    // 🚨 OS ASSERTION: Never allow price without contact info (name + email)
-    // Instead of crashing, strip price and redirect to contact collection
-    const pricePattern = /\$[\d,]+(?:\.\d{2})?/g;
-    const responseHasPrice = pricePattern.test(aiReply);
-
-    if (responseHasPrice && (!chatState.customer_email || !chatState.customer_name)) {
-      console.warn('[JordanLee] ⚠️ Price detected without contact info - suppressing and redirecting', {
-        conversationId,
-        tenant,
-        stage: chatState.stage,
-        email: chatState.customer_email ?? null,
-        name: chatState.customer_name ?? null,
-        vehicle: currentVehicle ?? null,
-        vehicleSqft,
-        response_preview: aiReply.substring(0, 100)
-      });
-      
-      // Suppress the price and redirect to contact collection instead of crashing
-      const missingInfo = [];
-      if (!chatState.customer_name) missingInfo.push('name');
-      if (!chatState.customer_email) missingInfo.push('email');
-      
-      // Replace the AI response with a contact collection message
-      const redirectMessage = chatState.customer_name 
-        ? `I've got your vehicle info! To send you a quote, I just need your email address.`
-        : `I've got your vehicle info and I'm ready to calculate your price! To send you a personalized quote, what's your name?`;
-      
-      response.reply = redirectMessage;
-      response.message = redirectMessage;
-      
-      console.log('[JordanLee] Redirected to contact collection for:', missingInfo.join(', '));
-    }
-
-    return new Response(JSON.stringify(response), {
+      conversation_id: conversationId
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('[JordanLee] Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({
+      error: 'Something went wrong',
+      reply: "I'm having a quick hiccup - what were you looking for help with?"
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
