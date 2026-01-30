@@ -1,62 +1,44 @@
 
 
-# Remove Trade Secrets from Website Chat Header
+# Restore Feature List to Website Chat Header
 
 ## Summary
-Replace the detailed 13-feature list in the LOCKED header with a simpler version that protects trade secrets while still marking the file as locked.
+Restore the 13-feature documentation list back into the `website-chat/index.ts` header comments.
 
 ---
 
-## Current Problem
+## Change
 
-The current header (lines 1-30) exposes trade secret information:
-- Specific pricing logic details
-- Bulk discount tier structure
-- Feature implementation details
-- Internal workflow information
+Add back the removed lines (7-21) to the header in `supabase/functions/website-chat/index.ts`:
 
----
-
-## New Simplified Header
-
-Replace lines 1-30 with a clean, non-revealing header:
-
+**Current header (line 6):**
 ```typescript
-// =====================================================
-// ⚠️⚠️⚠️ LOCKED - DO NOT MODIFY - FINAL V3.0 ⚠️⚠️⚠️
-// =====================================================
-// Last Updated: January 30, 2026
 // VERSION: 3.0 - FINAL LOCKED PRODUCTION VERSION
 // 
-// AI PROVIDER: Lovable AI Gateway (google/gemini-3-flash-preview)
-// ORG ID: 51aa96db-c06d-41ae-b3cb-25b045c75caf
-//
-// ⚠️ ANY MODIFICATION REQUIRES EXPLICIT APPROVAL ⚠️
-// Contact: @jackson or @trish before ANY changes
-// =====================================================
+// AI PROVIDER: Lovable AI Gateway...
 ```
 
----
-
-## Changes Summary
-
-| Location | Action |
-|----------|--------|
-| Lines 1-30 | Replace with 12-line simplified header |
-| End of file | Keep footer lock warning (no secrets there) |
-
-**Removed from header:**
-- All 13 feature bullet points
-- Specific pricing mentions
-- Discount structure references
-- Workflow details
-
-**Kept in header:**
-- LOCKED status warning
-- Version number (3.0)
-- AI provider info
-- Org ID
-- Approval requirement
+**Updated header (after line 6):**
+```typescript
+// VERSION: 3.0 - FINAL LOCKED PRODUCTION VERSION
+// 
+// FEATURES (LOCKED - ALL 13 CONFIRMED):
+// 1. ✅ PRINT ONLY - NO INSTALLATION enforced
+// 2. ✅ 4-field collection (name, email, phone, shop name)
+// 3. ✅ Auto-email quote on every pricing
+// 4. ✅ Smart vehicle fallback with estimates
+// 5. ✅ Trailer handling (asks for dimensions)
+// 6. ✅ Window clarification (perf vs cut vinyl)
+// 7. ✅ Fade wrap with URL
+// 8. ✅ Design service pricing ($750)
+// 9. ✅ Bulk discount tiers (5-20% based on sqft)
+// 10. ✅ Dimension-based pricing
+// 11. ✅ Complete FAQ knowledge
+// 12. ✅ All product URLs
+// 13. ✅ NO coupon codes
+// 
+// AI PROVIDER: Lovable AI Gateway...
+```
 
 ---
 
@@ -65,6 +47,9 @@ Replace lines 1-30 with a clean, non-revealing header:
 ### File to Modify
 - `supabase/functions/website-chat/index.ts`
 
+### Action
+- Insert 15 lines after line 6 (after VERSION line, before AI PROVIDER line)
+
 ### No Logic Changes
-Header-only update - all functionality remains intact.
+Comment-only restoration - all functionality unchanged.
 
