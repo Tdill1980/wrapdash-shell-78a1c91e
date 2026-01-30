@@ -289,7 +289,7 @@
       gap: 12px;
       background: #16213e;
       min-height: 100px;
-      max-height: 280px;
+      max-height: 340px;
     }
     .wcai-message {
       max-width: 85%;
@@ -298,6 +298,8 @@
       font-size: 14px;
       line-height: 1.5;
       white-space: pre-wrap;
+      word-wrap: break-word;
+      flex-shrink: 0;
     }
     .wcai-message.user {
       align-self: flex-end;
