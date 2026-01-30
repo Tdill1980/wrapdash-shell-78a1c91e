@@ -126,8 +126,9 @@ export function MightyChatCard() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-primary" />
-            <span className="bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent font-semibold">
-              MightyChat
+            <span className="font-semibold">
+              <span className="text-white">Mighty</span>
+              <span className="bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent">Chat</span>
             </span>
           </CardTitle>
           <Button

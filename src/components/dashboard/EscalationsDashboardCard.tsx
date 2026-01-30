@@ -49,7 +49,7 @@ export function EscalationsDashboardCard() {
         'quote_request': { label: 'Quote Requests', icon: FileText, color: 'text-green-500' },
         'pricing': { label: 'Pricing Help', icon: FileText, color: 'text-amber-500' },
         'design': { label: 'Design Review', icon: FileText, color: 'text-pink-500' },
-        'general': { label: 'General', icon: Users, color: 'text-cyan-500' },
+        'general': { label: 'Escalation Messages', icon: Users, color: 'text-cyan-500' },
       };
 
       Object.entries(typeMap).forEach(([subtype, conversationIds]) => {
