@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +9,10 @@ import { useWebsiteChats, useWebsiteChatStats, useConversationTotalCount } from 
 import { useEscalationStats } from "@/hooks/useConversationEvents";
 import { ChatTranscriptRow } from "./ChatTranscriptRow";
 import { ChatDetailModal } from "./ChatDetailModal";
-import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap } from "lucide-react";
+import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 
 // Helper function to format date headers
@@ -36,11 +38,13 @@ const ESCALATION_QUICK_FILTERS = [
 interface ChatTranscriptViewerProps {
   initialConversationId?: string | null;
   onConversationOpened?: () => void;
+  initialFilter?: string | null;
 }
 
 export function ChatTranscriptViewer({ 
   initialConversationId,
-  onConversationOpened 
+  onConversationOpened,
+  initialFilter
 }: ChatTranscriptViewerProps) {
   const { conversations, isLoading, refetch } = useWebsiteChats();
   const { data: stats } = useWebsiteChatStats();
@@ -50,8 +54,26 @@ export function ChatTranscriptViewer({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [escalationFilter, setEscalationFilter] = useState<string>("all");
   const [todayOnly, setTodayOnly] = useState(false);
+  const [hotLeadsOnly, setHotLeadsOnly] = useState(initialFilter === 'hot');
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  
+  // Fetch hot lead conversation IDs (conversations with pending quote-related actions)
+  const { data: hotLeadConversationIds } = useQuery({
+    queryKey: ['hot-lead-conversation-ids'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ai_actions')
+        .select('conversation_id')
+        .in('action_type', ['create_quote', 'auto_quote_generated', 'quote_request'])
+        .eq('resolved', false)
+        .not('conversation_id', 'is', null);
+      
+      if (error) throw error;
+      return new Set((data || []).map(d => d.conversation_id).filter(Boolean));
+    },
+    staleTime: 30000,
+  });
 
   // Handle initial conversation selection from props
   useEffect(() => {
@@ -67,6 +89,11 @@ export function ChatTranscriptViewer({
 
   // Filter conversations
   const filteredConversations = conversations.filter((convo) => {
+    // Hot leads filter - only show conversations with pending quote actions
+    if (hotLeadsOnly && hotLeadConversationIds) {
+      if (!hotLeadConversationIds.has(convo.id)) return false;
+    }
+
     if (channelFilter !== "all" && convo.channel !== channelFilter) {
       return false;
     }
@@ -193,28 +220,49 @@ export function ChatTranscriptViewer({
         </Card>
       </div>
 
-      {/* Escalation Quick Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-          <Zap className="h-4 w-4" />
-          Escalations:
-        </span>
-        {ESCALATION_QUICK_FILTERS.map((filter) => (
+      {/* Quick Filter Bar - Hot Leads + Escalations */}
+      <div className="flex flex-wrap items-center gap-4">
+        {/* Hot Leads Toggle */}
+        <div className="flex items-center gap-2">
           <Button
-            key={filter.value}
-            variant={escalationFilter === filter.value ? "default" : "outline"}
+            variant={hotLeadsOnly ? "default" : "outline"}
             size="sm"
-            className={escalationFilter === filter.value ? "" : filter.color}
-            onClick={() => setEscalationFilter(filter.value)}
+            className={hotLeadsOnly ? "bg-orange-500 hover:bg-orange-600" : "border-orange-500/30 text-orange-500 hover:bg-orange-500/10"}
+            onClick={() => setHotLeadsOnly(!hotLeadsOnly)}
           >
-            {filter.label}
-            {filter.value !== 'all' && filter.value !== 'none' && escalationStats?.byType?.[filter.value] && (
+            <Flame className="h-4 w-4 mr-1" />
+            Hot Leads Only
+            {hotLeadConversationIds && (
               <Badge variant="secondary" className="ml-1 px-1.5">
-                {escalationStats.byType[filter.value]}
+                {hotLeadConversationIds.size}
               </Badge>
             )}
           </Button>
-        ))}
+        </div>
+
+        {/* Escalation Quick Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+            <Zap className="h-4 w-4" />
+            Escalations:
+          </span>
+          {ESCALATION_QUICK_FILTERS.map((filter) => (
+            <Button
+              key={filter.value}
+              variant={escalationFilter === filter.value ? "default" : "outline"}
+              size="sm"
+              className={escalationFilter === filter.value ? "" : filter.color}
+              onClick={() => setEscalationFilter(filter.value)}
+            >
+              {filter.label}
+              {filter.value !== 'all' && filter.value !== 'none' && escalationStats?.byType?.[filter.value] && (
+                <Badge variant="secondary" className="ml-1 px-1.5">
+                  {escalationStats.byType[filter.value]}
+                </Badge>
+              )}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Main Content - Split View */}
