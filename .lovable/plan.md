@@ -1,55 +1,116 @@
 
 
-# Restore Feature List to Website Chat Header
+# Reduce Quick Action Buttons to 3
 
 ## Summary
-Restore the 13-feature documentation list back into the `website-chat/index.ts` header comments.
+Simplify the chat widget to show only 3 quick action buttons while keeping all the knowledge/functionality intact in the edge function.
 
 ---
 
-## Change
+## Current State (6 buttons)
 
-Add back the removed lines (7-21) to the header in `supabase/functions/website-chat/index.ts`:
+| # | Label | Status |
+|---|-------|--------|
+| 1 | How much does a wrap cost? | ⚠️ Change text |
+| 2 | How do I order? | ✅ Keep |
+| 3 | Email my quote | ❌ Remove button |
+| 4 | Order status | ❌ Remove button |
+| 5 | Bulk / Fleet pricing | ❌ Remove button |
+| 6 | Production time | ❌ Remove button |
 
-**Current header (line 6):**
+---
+
+## New State (3 buttons)
+
+| # | Label | Icon | Style |
+|---|-------|------|-------|
+| 1 | **How much is my wrap project?** | 🚗 Car | Primary (orange) |
+| 2 | **How do I order?** | 📦 Package | Secondary (purple) |
+| 3 | **Ask me about RestyleProAI** | 🎨 Palette | Secondary (purple) |
+
+---
+
+## Technical Changes
+
+### File: `src/components/chat/WebsiteChatWidget.tsx`
+
+**Update QUICK_ACTIONS array (lines 14-21):**
+
 ```typescript
-// VERSION: 3.0 - FINAL LOCKED PRODUCTION VERSION
-// 
-// AI PROVIDER: Lovable AI Gateway...
+const QUICK_ACTIONS = [
+  { icon: Car, label: "How much is my wrap project?", message: "How much is my wrap project?", primary: true },
+  { icon: Package, label: "How do I order?", message: "How do I place an order?" },
+  { icon: Palette, label: "Ask me about RestyleProAI", message: "Tell me about RestyleProAI and how it can help visualize my wrap" },
+];
 ```
 
-**Updated header (after line 6):**
+**Update button grid layout (lines 259-279):**
+
+Change from 2-column grid to single column for the 2 secondary buttons:
+
 ```typescript
-// VERSION: 3.0 - FINAL LOCKED PRODUCTION VERSION
-// 
-// FEATURES (LOCKED - ALL 13 CONFIRMED):
-// 1. ✅ PRINT ONLY - NO INSTALLATION enforced
-// 2. ✅ 4-field collection (name, email, phone, shop name)
-// 3. ✅ Auto-email quote on every pricing
-// 4. ✅ Smart vehicle fallback with estimates
-// 5. ✅ Trailer handling (asks for dimensions)
-// 6. ✅ Window clarification (perf vs cut vinyl)
-// 7. ✅ Fade wrap with URL
-// 8. ✅ Design service pricing ($750)
-// 9. ✅ Bulk discount tiers (5-20% based on sqft)
-// 10. ✅ Dimension-based pricing
-// 11. ✅ Complete FAQ knowledge
-// 12. ✅ All product URLs
-// 13. ✅ NO coupon codes
-// 
-// AI PROVIDER: Lovable AI Gateway...
+{/* Secondary Actions - Single column */}
+<div className="space-y-2">
+  {QUICK_ACTIONS.filter(a => !a.primary).map((action) => (
+    // ... button code (no grid)
+  ))}
+</div>
 ```
 
 ---
 
-## Technical Details
+## What Stays Unchanged
 
-### File to Modify
-- `supabase/functions/website-chat/index.ts`
+- ✅ Dark UI theme (`#1a1a2e`)
+- ✅ Purple/magenta gradient header
+- ✅ Typing animation effect
+- ✅ All edge function knowledge (email quotes, order status, bulk pricing, production time)
+- ✅ V3 edge function with 13 features
+- ✅ RestylePro logic in AI responses
 
-### Action
-- Insert 15 lines after line 6 (after VERSION line, before AI PROVIDER line)
+---
 
-### No Logic Changes
-Comment-only restoration - all functionality unchanged.
+## Visual Result
+
+```text
+┌─────────────────────────────────┐
+│  [J] Jordan                  [X]│  ← Header
+├─────────────────────────────────┤
+│                                 │
+│  Hey! I'm Jordan with           │
+│  WePrintWraps.com...            │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │ 🚗 How much is my wrap  │    │  ← Primary (orange)
+│  │       project?          │    │
+│  └─────────────────────────┘    │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │ 📦 How do I order?      │    │  ← Secondary (purple)
+│  └─────────────────────────┘    │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │ 🎨 Ask me about         │    │  ← Secondary (purple)
+│  │    RestyleProAI         │    │
+│  └─────────────────────────┘    │
+│                                 │
+├─────────────────────────────────┤
+│  [Type a message...]     [Send] │
+│       Powered by weprintwraps   │
+└─────────────────────────────────┘
+```
+
+---
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/chat/WebsiteChatWidget.tsx` | Reduce QUICK_ACTIONS to 3, update grid to single column |
+
+---
+
+## No Changes Needed
+
+- `supabase/functions/website-chat/index.ts` - All knowledge intact (email, status, bulk, production)
 
