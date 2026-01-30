@@ -1,172 +1,157 @@
 
-# Fix Plan: Restore Email Modal & Quote Attachment Visibility
 
-## Problem Summary
+# Fix Plan: Grayed-Out Buttons & Missing Dimension Input in MightyCustomer
 
-You're experiencing **two UI issues** in the admin chat view:
+## Issues Identified
 
-1. **"Email modal gone"** — The Reply to Customer panel and Quote Upload panel don't appear
-2. **"No way to upload a quote"** — The upload button is invisible because email wasn't captured
+### 1. "Save Quote" Button is Grayed Out
+**Location:** `src/pages/MightyCustomer.tsx` line 1134
 
----
-
-## Root Cause (Already Partially Fixed)
-
-The **real issue** is that the email/reply functionality **still exists** in the code, but it's **hidden because customer email wasn't being saved**.
-
-In `ChatDetailModal.tsx` (lines 199-228):
+**Current Condition:**
 ```typescript
-{contact?.email && !contact.email.includes('@capture.local') ? (
-  // ✅ Show Reply + Upload buttons
-) : (
-  // ❌ Show "No email captured — cannot reply" message
-)}
+disabled={isSavingQuote || !selectedProduct || !total || !customerData.name || !customerData.email}
 ```
 
-Since the `chat_state` wasn't persisting `customer_email` (fixed in the last deployment), the contact record was never created/updated with the email → the buttons were hidden.
+**Why it's grayed:** The button requires ALL of these to be true:
+- A product must be selected
+- A total must be calculated (which requires SQFT > 0)
+- Customer name must be entered
+- Customer email must be entered
 
-**However**, the database triggers that sync `conversations.chat_state` to `contacts` may not be firing properly. We confirmed earlier there are **zero triggers** on the conversations table.
-
----
-
-## Current State of the UI Components
-
-| Component | Location | Status |
-|-----------|----------|--------|
-| **InternalReplyPanel** | Right sidebar in ChatDetailModal | ✅ Exists, but only shows when you click "Reply" button |
-| **QuoteUploadPanel** | Right sidebar in ChatDetailModal | ✅ Exists, but only shows when you click Upload icon |
-| **QuoteSelector** | Inside InternalReplyPanel | ✅ Exists — "Attach Quote" button shows this |
-| **Reply button** | Transcript tab footer | ⚠️ Hidden when `contact?.email` is null/capture.local |
-| **Upload icon** | Transcript tab footer | ⚠️ Hidden when `contact?.email` is null/capture.local |
+**Problem:** If the vehicle isn't in the database and SQFT is 0, there's no way to get a `total > 0`, so the button stays disabled.
 
 ---
 
-## Technical Fix Plan
+### 2. "Send Quote Email" Button is Grayed Out
+**Location:** `src/pages/MightyCustomer.tsx` line 1153
 
-### Fix 1: Create Missing Database Triggers
-
-The functions exist (`sync_conversation_to_contact`, `sync_quote_to_contact`) but **triggers are not attached**.
-
-**SQL Migration:**
-```sql
--- Trigger: conversations -> contacts sync
-CREATE TRIGGER trg_conversation_sync_contact
-AFTER INSERT OR UPDATE OF chat_state ON public.conversations
-FOR EACH ROW
-EXECUTE FUNCTION sync_conversation_to_contact();
-
--- Trigger: quotes -> contacts sync  
-CREATE TRIGGER trg_quote_sync_contact
-BEFORE INSERT ON public.quotes
-FOR EACH ROW
-EXECUTE FUNCTION sync_quote_to_contact();
+**Current Condition:**
+```typescript
+disabled={isSendingEmail || !selectedProduct || !total || !customerData.email || !customerData.name}
 ```
 
-**Result:** When `chat_state` is updated with `customer_email`, a contact record is automatically created/updated.
+Same issue — requires `total > 0` which requires SQFT.
 
-### Fix 2: Make Reply/Upload Buttons Always Visible
+---
 
-Currently the buttons are **hidden** if there's no email. Instead, we should:
-- **Always show the Upload Quote button** (you can upload a quote even without email)
-- Keep the Reply button email-gated (can't send email without address)
+### 3. No Direct Dimension Input for Trailers/Custom Vehicles
+**Current behavior:** 
+- The SQFT input box exists (line 930-936), but it only shows after selecting a vehicle
+- Users cannot easily enter Length × Height dimensions for trailers or custom items
+- The formula to convert dimensions to SQFT (e.g., 14ft × 6ft × 2 sides = 168 sqft) isn't exposed
 
-**File:** `src/components/admin/ChatDetailModal.tsx`
-**Lines:** 197-228
+---
 
+## Implementation Plan
+
+### Fix 1: Always Allow "Save Quote" (Remove Email Requirement)
+**File:** `src/pages/MightyCustomer.tsx`
+**Line:** 1134
+
+**Change:**
 ```typescript
-// Before: Both buttons gated behind email
-{contact?.email && !contact.email.includes('@capture.local') ? (
-  <div className="flex items-center gap-2">
-    <Button ... onClick={() => setShowReplyPanel(true)}>Reply</Button>
-    <Button ... onClick={() => setShowQuoteUpload(true)}><Upload /></Button>
-  </div>
-) : (
-  <div>No email captured — cannot reply</div>
-)}
+// Before:
+disabled={isSavingQuote || !selectedProduct || !total || !customerData.name || !customerData.email}
 
-// After: Upload always visible, Reply gated
-<div className="flex items-center gap-2">
-  {contact?.email && !contact.email.includes('@capture.local') ? (
-    <Button className="flex-1 gap-2" size="sm" onClick={() => setShowReplyPanel(true)}>
-      <Reply className="h-4 w-4" />
-      Reply to {contact.name || contact.email}
-    </Button>
-  ) : (
-    <div className="flex-1 flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded p-2">
-      <Mail className="h-4 w-4 flex-shrink-0" />
-      <span>No email — collect email to reply</span>
+// After - Allow saving without email (can add email later):
+disabled={isSavingQuote || !selectedProduct || !total}
+```
+
+**Reasoning:** Saving a quote to the database shouldn't require an email — that's only needed for *sending* the quote.
+
+---
+
+### Fix 2: Make SQFT Input Always Visible (Not Gated by Vehicle Match)
+**File:** `src/pages/MightyCustomer.tsx`
+**Lines:** 874-940 (the SQFT display section)
+
+**Current issue:** The SQFT input is inside a conditional block that may not render if vehicle data isn't complete.
+
+**Change:** Ensure the SQFT input block is always visible, even when `dbSqftOptions` is null (no vehicle match). Add clearer labeling that you can type any number directly.
+
+---
+
+### Fix 3: Add Dimension Calculator for Trailers/Custom
+**File:** `src/pages/MightyCustomer.tsx`
+**Location:** After line 940 (after the SQFT input section)
+
+**Add new UI section:**
+```typescript
+{/* Dimension Calculator for Trailers/Custom */}
+<div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-dashed">
+  <Label className="text-base font-semibold flex items-center gap-2">
+    <Ruler className="h-4 w-4" />
+    Dimension Calculator (Trailers, RVs, Custom)
+  </Label>
+  <div className="grid grid-cols-3 gap-3">
+    <div className="space-y-1">
+      <Label className="text-xs">Length (ft)</Label>
+      <Input type="number" placeholder="14" value={dimLength} onChange={...} />
     </div>
-  )}
-  <Button
-    variant="outline"
+    <div className="space-y-1">
+      <Label className="text-xs">Height (ft)</Label>
+      <Input type="number" placeholder="6" value={dimHeight} onChange={...} />
+    </div>
+    <div className="space-y-1">
+      <Label className="text-xs"># of Sides</Label>
+      <Input type="number" placeholder="2" min="1" max="4" value={dimSides} onChange={...} />
+    </div>
+  </div>
+  <Button 
+    variant="outline" 
     size="sm"
-    onClick={() => setShowQuoteUpload(true)}
-    title="Upload Quote"
+    onClick={() => {
+      const calculatedSqft = dimLength * dimHeight * dimSides;
+      handleSqftChange(calculatedSqft);
+    }}
   >
-    <Upload className="h-4 w-4" />
+    Calculate: {dimLength * dimHeight * dimSides} sq ft
   </Button>
 </div>
 ```
 
-### Fix 3: Add "Create Quote" Button in Sidebar
-
-Add a prominent "Create Quote" action in the right sidebar that navigates to MightyCustomer with pre-filled data.
-
-**File:** `src/components/admin/ChatDetailModal.tsx`
-**Lines:** After line 456 (after Vehicle Interest card)
-
+**Add state variables:**
 ```typescript
-{/* Quick Actions Card */}
-<Card>
-  <CardHeader className="pb-2">
-    <CardTitle className="text-sm flex items-center gap-2">
-      <FileText className="h-4 w-4" />
-      Quick Actions
-    </CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-2">
-    <Button 
-      variant="outline" 
-      size="sm" 
-      className="w-full justify-start"
-      onClick={() => {
-        const params = new URLSearchParams();
-        params.set('mode', 'wpw_internal');
-        if (conversation.id) params.set('conversation_id', conversation.id);
-        if (contact?.name) params.set('customer', contact.name);
-        if (contact?.email) params.set('email', contact.email);
-        if (contact?.phone) params.set('phone', contact.phone);
-        if (vehicle?.year) params.set('year', vehicle.year);
-        if (vehicle?.make) params.set('make', vehicle.make);
-        if (vehicle?.model) params.set('model', vehicle.model);
-        window.location.href = `/mighty-customer?${params.toString()}`;
-      }}
-    >
-      <Receipt className="w-4 h-4 mr-2" />
-      Create Quote
-    </Button>
-  </CardContent>
-</Card>
+const [dimLength, setDimLength] = useState(0);
+const [dimHeight, setDimHeight] = useState(0);
+const [dimSides, setDimSides] = useState(2);
 ```
 
 ---
 
-## Implementation Sequence
+### Fix 4: Update "Email" Label to Show It's Optional for Save
+**File:** `src/pages/MightyCustomer.tsx`
+**Line:** 1087
 
-1. **Database Migration** — Create the two missing triggers to enable contact sync
-2. **UI Fix** — Always show Upload Quote button; add Create Quote action
-3. **Verify** — Test a new chat session to confirm:
-   - Email persists in `chat_state`
-   - Contact record is created
-   - Reply/Upload buttons appear
-   - Create Quote navigates with pre-filled data
+**Change:**
+```typescript
+// Before:
+<Label>Email</Label>
+
+// After:
+<Label>Email (required to send quote)</Label>
+```
+
+This makes it clear that email is only required for sending, not saving.
 
 ---
 
-## Summary
+## Summary of Changes
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Reply button missing | Email not persisted → contact null → buttons hidden | Database triggers + always-visible upload |
-| Can't upload quote | Same as above | Separate upload button visibility from email gate |
-| AI didn't create quote | No quote record insertion in website-chat | (Future: add quote_insert after pricing) |
+| File | Change | Purpose |
+|------|--------|---------|
+| `MightyCustomer.tsx` line 1134 | Remove `!customerData.name \|\| !customerData.email` from Save Quote disabled condition | Allow saving quotes without customer info |
+| `MightyCustomer.tsx` lines 874-940 | Ensure SQFT input is always visible regardless of vehicle selection | Allow manual SQFT entry anytime |
+| `MightyCustomer.tsx` after line 940 | Add Dimension Calculator UI (Length × Height × Sides) | Quick SQFT calculation for trailers/custom |
+| `MightyCustomer.tsx` line 1087 | Update email label to "(required to send)" | Clarify when email is needed |
+
+---
+
+## Expected Result After Fix
+
+1. **Save Quote** → Enabled as long as product is selected and total > 0
+2. **Send Quote Email** → Enabled when product + total + name + email are filled
+3. **SQFT Input** → Always visible, can type any number directly
+4. **Dimension Calculator** → New section for trailers: enter Length × Height × Sides → auto-calculates SQFT
+5. **Preview Email** → Remains as-is (only needs product + total)
+
