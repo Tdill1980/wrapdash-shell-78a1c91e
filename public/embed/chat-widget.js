@@ -280,6 +280,25 @@
     .wcai-chat-close:hover {
       background: rgba(255,255,255,0.2);
     }
+
+    .wcai-chat-reset {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: ${colors.text};
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .wcai-chat-reset:hover {
+      background: rgba(255,255,255,0.2);
+    }
     .wcai-chat-messages {
       flex: 1;
       overflow-y: auto;
@@ -602,8 +621,12 @@
   document.head.appendChild(styleEl);
 
   // Session ID for conversation continuity
-  const sessionId = localStorage.getItem('wcai_session') || 
-    'wcai_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+  // (Used by the backend to associate messages into a single transcript + context.)
+  function generateSessionId() {
+    return 'wcai_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+  }
+
+  let sessionId = localStorage.getItem('wcai_session') || generateSessionId();
   localStorage.setItem('wcai_session', sessionId);
 
   // Create quick actions HTML - only 3 wired buttons
@@ -626,6 +649,9 @@
           <h3>Jordan</h3>
           <p><span class="wcai-live-dot"></span> WPW Live Chat Agent • Online</p>
         </div>
+        <button class="wcai-chat-reset" id="wcai-reset" title="Start a new quote (clears this chat)">
+          ↻ New quote
+        </button>
         <button class="wcai-chat-close" id="wcai-close">&times;</button>
       </div>
       <div class="wcai-chat-messages" id="wcai-messages">
@@ -675,6 +701,7 @@
   const askTrigger = document.getElementById('wcai-ask-trigger');
   const chatWindow = document.getElementById('wcai-window');
   const closeBtn = document.getElementById('wcai-close');
+  const resetBtn = document.getElementById('wcai-reset');
   const messagesContainer = document.getElementById('wcai-messages');
   const welcomeMessage = document.getElementById('wcai-welcome');
   const quickActionsContainer = document.getElementById('wcai-quick-actions');
@@ -725,10 +752,17 @@
         if (i < text.length) {
           element.textContent += text.charAt(i);
           i++;
+          // Keep viewport pinned to newest content while typing (prevents “cut off” look)
+          if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
           setTimeout(type, speed);
         } else {
           element.classList.remove('wcai-typewriter');
           element.classList.add('done');
+          if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
           resolve();
         }
       }
@@ -757,8 +791,37 @@
     }
   }
 
+  function resetConversation() {
+    // Fresh sessionId => fresh transcript + fresh backend context
+    sessionId = generateSessionId();
+    localStorage.setItem('wcai_session', sessionId);
+
+    // Clear messages and re-run welcome
+    if (messagesContainer && welcomeMessage) {
+      welcomeMessage.textContent = '';
+      messagesContainer.replaceChildren(welcomeMessage);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    hasInteracted = true;
+    showWelcomeMessage();
+
+    // Re-show quick actions for the new conversation
+    if (quickActionsContainer) {
+      quickActionsContainer.style.display = '';
+    }
+  }
+
   bubble.addEventListener('click', toggleChat);
   closeBtn.addEventListener('click', toggleChat);
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resetConversation();
+    });
+  }
 
   // Add message to UI with optional typewriter
   function addMessage(text, isUser, useTypewriter = false) {
