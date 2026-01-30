@@ -701,8 +701,35 @@ serve(async (req) => {
     const vehicleTypesMatch = message_text.match(/\b(truck|van|car|suv|sedan|pickup|sprinter|transit|f-?150|f-?250|silverado|ram|fleet)\b/gi);
     const bulkVehicleTypes = vehicleTypesMatch ? [...new Set(vehicleTypesMatch.map((v: string) => v.toLowerCase()))].join(', ') : null;
 
-    // Update chat state
+    // ============================================
+    // VEHICLE CONTEXT RESET
+    // If user mentions a NEW vehicle that's different from the one stored in
+    // chatState, clear the old vehicle/sqft fields. This prevents the "Model Y
+    // remembered while asking for Mustang" bug.
+    // ============================================
     if (vehicleInfo) {
+      const newVehicleKey = vehicleInfo.vehicle.toLowerCase().replace(/\s+/g, '');
+      const oldVehicleKey = chatState.vehicle?.toLowerCase().replace(/\s+/g, '') || '';
+
+      if (newVehicleKey !== oldVehicleKey) {
+        console.log('[JordanLee] Vehicle change detected, clearing old context:', oldVehicleKey, '=>', newVehicleKey);
+        // Clear previous vehicle-specific data (but keep profile: name, email, phone, shop)
+        delete chatState.sqft;
+        delete chatState.sqftWithRoof;
+        delete chatState.roofSqft;
+        delete chatState.is_estimate;
+        delete chatState.similar_to;
+        delete chatState.vehicle_year;
+        delete chatState.quote_created;
+        delete chatState.quote_id;
+        delete chatState.price_given;
+        delete chatState.awaiting_trailer_dimensions;
+        delete chatState.trailer_dimensions;
+        delete chatState.window_type_clarified;
+        delete chatState.dimensions;
+        delete chatState.from_dimensions;
+      }
+
       chatState.vehicle = vehicleInfo.vehicle;
       chatState.sqft = vehicleInfo.sqft;
       chatState.sqftWithRoof = vehicleInfo.sqftWithRoof;
