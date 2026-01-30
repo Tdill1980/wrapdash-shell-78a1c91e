@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Package,
@@ -25,6 +26,32 @@ import { PhoneCallsDashboardCard } from "@/components/dashboard/PhoneCallsDashbo
 export default function Dashboard() {
   const navigate = useNavigate();
   const { orders: shopflowOrders, loading: shopflowLoading } = useShopFlow();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Dashboard is an authenticated admin surface. Without a valid session, RLS will correctly
+  // return zero rows for protected tables like conversations.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      if (error) {
+        console.warn("[Dashboard] getSession error", error);
+      }
+
+      if (!data.session) {
+        navigate("/auth", { replace: true });
+        return;
+      }
+
+      setAuthChecked(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   // Fetch pending approvals count from approveflow_projects
   const { data: pendingApprovals } = useQuery({
@@ -34,6 +61,26 @@ export default function Dashboard() {
         .from("approveflow_projects")
         .select("*", { count: "exact", head: true })
         .in("status", ["pending_approval", "awaiting_approval", "pending"]);
+      return count || 0;
+    },
+  });
+
+  // Quote requests should reflect pending AI actions (not ShopFlow order statuses)
+  const { data: pendingQuoteActionsCount } = useQuery({
+    queryKey: ["dashboard-pending-quote-actions"],
+    enabled: authChecked,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("ai_actions")
+        .select("id", { count: "exact", head: true })
+        .eq("resolved", false)
+        .in("action_type", ["create_quote", "auto_quote_generated"]);
+
+      if (error) {
+        console.error("[Dashboard] pending quote actions count error", error);
+        return 0;
+      }
+
       return count || 0;
     },
   });
@@ -83,9 +130,7 @@ export default function Dashboard() {
     (o) => o.status === "order_received" || o.status === "design_requested"
   ).length || 0;
   
-  const quoteRequestsCount = shopflowOrders?.filter(
-    (o) => o.status === "quote_requested"
-  ).length || 0;
+  const quoteRequestsCount = pendingQuoteActionsCount ?? 0;
 
   // Format activity item
   const getActivityIcon = (status: string) => {
@@ -215,7 +260,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-2xl font-semibold text-foreground">
-                      {shopflowLoading ? "..." : quoteRequestsCount}
+                      {!authChecked ? "..." : quoteRequestsCount}
                     </p>
                     <p className="text-xs text-muted-foreground">Quote Requests</p>
                   </div>
