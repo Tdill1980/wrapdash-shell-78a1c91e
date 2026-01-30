@@ -1,7 +1,12 @@
-// Website Chat Edge Function - Jordan Lee Agent (STANDALONE VERSION)
-// All dependencies inlined - no _shared imports needed
-// LAST UPDATED: January 30, 2026
-// VERSION: 2.0 - COMPLETE WITH ALL FIXES
+// ===========================================
+// ⚠️ LOCKED - WEBSITE CHAT - DO NOT MODIFY ⚠️
+// Last Updated: January 30, 2026
+// VERSION: 3.0 - COMPLETE WITH ALL FIXES
+// - Lovable AI Gateway (no Anthropic key needed)
+// - Correct WPW Org ID
+// - Price FIRST, then collect email
+// - RestyleProAI + Wrap By Yard knowledge
+// ===========================================
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -202,7 +207,7 @@ SPECIALTY PRODUCTS:
 - Custom Design: https://weprintwraps.com/our-products/custom-wrap-design/
 - Pantone Color Chart: https://weprintwraps.com/our-products/pantone-color-chart-30-x-52/
 
-WRAP BY THE YARD:
+WRAP BY THE YARD ($95.50/yard, 60" wide):
 - Wicked Wild: https://weprintwraps.com/our-products/wrap-by-the-yard-wicked-wild-wrap-prints/
 - Bape Camo: https://weprintwraps.com/our-products/wrap-by-the-yard-bape-camo/
 - Modern Trippy: https://weprintwraps.com/our-products/wrap-by-the-yard-modern-trippy/
@@ -213,6 +218,25 @@ OTHER:
 - Upload Artwork: https://weprintwraps.com/pages/upload-artwork
 - Homepage Quote: https://weprintwraps.com/#quote
 - My Account: https://weprintwraps.com/my-account
+
+RESTYLEPRO AI VISUALIZER SUITE (https://restyleproai.com):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RestylePro™ is our AI-powered hyper-realistic vehicle wrap visualization platform.
+
+THE SUITE INCLUDES:
+• ColorPro™ - See ANY Avery or 3M color on ANY vehicle instantly
+• DesignPanelPro™ - AI-generated custom wrap patterns and designs
+• PatternPro™ - Specialty finishes: Chrome, Brushed Metal, Carbon Fiber
+• ApprovePro™ - Turn any 2D design into hyper-realistic 3D vehicle renders, generates PDF proofs
+• FadeWraps™ - Design custom fade/ombre gradient wraps
+
+Built for: PPF shops, color change wrap specialists, print shops, wrap installers
+
+WHEN TO MENTION RESTYLEPRO:
+• Customer asks about color-change wraps → "Check out RestyleProAI.com to visualize any color!"
+• Customer is unsure about design → "DesignPanelPro can generate custom patterns"
+• Customer wants to see proof before buying → "ApprovePro creates 3D renders for faster approval"
+• Customer asks about specialty films → "RestyleProAI.com lets you visualize specialty finishes"
 `,
 
   shipping: `
@@ -598,7 +622,7 @@ serve(async (req) => {
         .insert({
           channel: 'website',
           status: 'active',
-          organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+          organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf', // FIXED: Correct WPW org ID
           metadata: { session_id, page_url, referrer, geo },
           chat_state: chatState
         })
@@ -730,6 +754,21 @@ serve(async (req) => {
     const isFadeWrapQuestion = /\b(fade|gradient|ombre|faded|color fade)\b/i.test(msg);
 
     // ============================================
+    // RESTYLEPRO AI DETECTION
+    // ============================================
+    const isRestyleProQuestion = /\b(restyle|restylepro|colorpro|designpanel|patternpro|approvepro|visualize|visualizer|see.*color|preview.*wrap|3d.*proof|color.*change.*visualize)\b/i.test(msg);
+
+    // ============================================
+    // WRAP BY THE YARD DETECTION
+    // ============================================
+    const isWrapByYardQuestion = /\b(wrap.*yard|by.*yard|yard.*wrap|camo|carbon fiber|pattern|bape|trippy|metal.*marble|wicked.*wild)\b/i.test(msg);
+
+    // ============================================
+    // PANEL / CUT CONTOUR DETECTION - Ask for dimensions
+    // ============================================
+    const isPanelOrCutQuestion = /\b(panel|cut|contour|decal|lettering|logo|graphics|sticker|sign|banner|door|bumper)\b/i.test(msg);
+
+    // ============================================
     // INSTALLATION QUESTION DETECTION - CRITICAL
     // ============================================
     const installationPatterns = /\b(install|installation|installer|put on|apply|wrap my|come to|visit|service area|mobile|in person)\b/i;
@@ -838,6 +877,71 @@ What vehicle are you looking to fade wrap? I'll recommend the right size!"
 THEN collect: name, email, phone, shop name before finalizing.`; 
     }
     // ============================================
+    // HANDLE RESTYLEPRO AI QUESTION
+    // ============================================
+    else if (isRestyleProQuestion) {
+      contextNotes = `🎨 RESTYLEPRO AI QUESTION!
+
+SAY: "RestylePro™ is our hyper-realistic vehicle wrap visualizer suite! 🚗✨
+
+**The Suite Includes:**
+• **ColorPro™** - See any Avery or 3M color on your vehicle instantly
+• **DesignPanelPro™** - AI-generated custom wrap patterns
+• **PatternPro™** - Specialty finishes (chrome, brushed metal, carbon fiber)
+• **ApprovePro™** - Turn 2D designs into 3D proofs for faster customer approval
+• **FadeWraps™** - Design gradient/ombre wraps
+
+👉 **Try it free:** https://restyleproai.com
+
+It's built for wrap shops, PPF installers, and color-change specialists.
+
+Want me to explain how any of these tools work? Or I can help you with a quote for printed wrap material!"`;
+    }
+    // ============================================
+    // HANDLE WRAP BY THE YARD QUESTION
+    // ============================================
+    else if (isWrapByYardQuestion) {
+      contextNotes = `📏 WRAP BY THE YARD QUESTION!
+
+ALWAYS provide pricing and URLs!
+
+SAY: "We have Wrap By The Yard - perfect for custom projects! 🎨
+
+**Pricing: $95.50 per yard** (60" wide)
+
+**Collections:**
+• Camo & Carbon: https://weprintwraps.com/our-products/camo-carbon-wrap-by-the-yard/
+• Metal & Marble: https://weprintwraps.com/our-products/wrap-by-the-yard-metal-marble/
+• Wicked & Wild: https://weprintwraps.com/our-products/wrap-by-the-yard-wicked-wild-wrap-prints/
+• Bape Camo: https://weprintwraps.com/our-products/wrap-by-the-yard-bape-camo/
+• Modern & Trippy: https://weprintwraps.com/our-products/wrap-by-the-yard-modern-trippy/
+
+**Yard options:** 1, 5, 10, 25, or 50 yards
+
+How many yards do you need? I can get you a quick quote!"`;
+    }
+    // ============================================
+    // HANDLE PANEL / CUT CONTOUR - Need dimensions
+    // ============================================
+    else if (isPanelOrCutQuestion && !chatState.dimensions && !chatState.sqft) {
+      contextNotes = `📐 PANEL/CUT VINYL QUESTION - NEED DIMENSIONS!
+
+Customer asked about panels, cut vinyl, decals, logos, or graphics.
+We need DIMENSIONS to quote!
+
+SAY: "For panels and cut vinyl, I price by square foot! 
+
+**Cut Contour Pricing:**
+- Avery Cut Contour: **$6.32/sqft** (weeded & masked)
+- 3M Cut Contour: **$6.92/sqft** (weeded & masked)
+
+👉 Order: https://weprintwraps.com/our-products/avery-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/
+
+What are the dimensions? (width x height in inches or feet)
+
+For example: '24 x 36 inches' or '4ft x 8ft'"`;
+    }
+    // ============================================
     // HANDLE DESIGN SERVICE QUESTION
     // ============================================
     else if (isDesignQuestion) {
@@ -915,7 +1019,7 @@ DO NOT say "Grant will reach out" - give the link directly!`;
       try {
         await supabase.from('conversation_events').insert({
           conversation_id: conversationId,
-          organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+          organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf', // FIXED: Correct WPW org ID
           event_type: 'escalation',
           event_subtype: escalationType,
           actor: 'jordan_agent',
@@ -1056,7 +1160,7 @@ SAY: "I'm connecting you with ${teamMember.name} now - they'll reach out to you 
         try {
           await supabase.from('conversation_events').insert({
             conversation_id: conversationId,
-            organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+            organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf', // FIXED: Correct WPW org ID
             event_type: 'escalation',
             event_subtype: 'unhappy_customer',
             actor: 'jordan_agent',
@@ -1158,7 +1262,7 @@ IMPORTANT: This is an ESTIMATE - escalate to team for exact sqft!`;
             try {
               await supabase.from('conversation_events').insert({
                 conversation_id: conversationId,
-                organization_id: '031ac427-f078-4086-a9bc-7bdb78cc1c73',
+                organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf', // FIXED: Correct WPW org ID
                 event_type: 'escalation',
                 event_subtype: 'exact_quote_needed',
                 actor: 'jordan_agent',
@@ -1394,11 +1498,11 @@ ${WPW_KNOWLEDGE.guarantee}
 ${WPW_KNOWLEDGE.specs}
 ${WPW_KNOWLEDGE.contact}`;
 
-    // Call AI
+    // Call AI using Lovable AI Gateway (no Anthropic key needed)
     let aiReply = "Hey! What vehicle are you looking to wrap? I'll get you a price!";
     
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (anthropicKey) {
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (lovableApiKey) {
       try {
         const { data: history } = await supabase
           .from('messages')
@@ -1430,33 +1534,43 @@ CUSTOMER STATE:
 - Vehicle: ${chatState.vehicle || 'Unknown'}
 - SQFT: ${chatState.sqft || 'Unknown'}
 
-${!chatState.customer_name || !chatState.customer_email || !chatState.customer_phone || !chatState.shop_name ? 
-`⚠️ MISSING INFO - Collect ALL 4 before pricing: name, email, phone, shop name!` : '✅ All contact info captured - OK to give price!'}`;
+PRICING RULE:
+- If customer has provided vehicle or dimensions, GIVE THE PRICE IMMEDIATELY!
+- THEN ask for email/phone: "I can also email you a quote - just need your name and email!"
+- If they provide email after price, SEND THE QUOTE automatically.
 
-        const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+${!chatState.customer_email ? '📧 No email yet - try to get it for quote!' : '✅ Have email - can send quote!'}`;
+
+        // Use Lovable AI Gateway instead of Anthropic
+        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'x-api-key': anthropicKey,
-            'anthropic-version': '2023-06-01',
+            'Authorization': `Bearer ${lovableApiKey}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 500,
-            system: systemPrompt,
-            messages
+            model: 'google/gemini-3-flash-preview',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              ...messages
+            ],
+            max_tokens: 600
           })
         });
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
-          if (aiData.content?.[0]?.text) {
-            aiReply = aiData.content[0].text;
+          if (aiData.choices?.[0]?.message?.content) {
+            aiReply = aiData.choices[0].message.content;
           }
+        } else {
+          console.error('[JordanLee] AI Gateway error:', aiResponse.status);
         }
       } catch (e) {
         console.error('[JordanLee] AI error:', e);
       }
+    } else {
+      console.warn('[JordanLee] LOVABLE_API_KEY not configured');
     }
 
     // Save state and response
