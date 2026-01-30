@@ -1,137 +1,172 @@
 
-Goal (what you asked)
-- Confirm whether the chat overcharged and what $/sqft it should be.
-- Fix the backend “locked” chat agent so it always uses the correct $/sqft for standard printed wraps and does not invent/overcharge prices (especially the 3M $6.32 issue shown in your screenshot).
-- Align behavior with your approved protocol:
-  - Pricing flow: Deterministic pricing
-  - Contact gate: Name+email gate
-  - Material options: Ask “Avery or 3M?” (same price)
+# Fix Plan: Restore Email Modal & Quote Attachment Visibility
 
-What happened in your screenshot (the exact overcharge math)
-- The chat estimated ~450 sqft for a 14ft food trailer.
-- It quoted:
-  - Avery: $2,371.50  → 450 × 5.27 = 2,371.50 (correct for wrap film)
-  - 3M: $2,844.00     → 450 × 6.32 = 2,844.00 (overcharged)
-- Overcharge amount: $2,844.00 − $2,371.50 = $472.50
-- Conclusion: Yes, it overcharged. The $6.32/sqft rate is “cut contour / decals” pricing, not standard printed wrap film.
+## Problem Summary
 
-Root causes (confirmed in code)
-1) Wrong 3M wrap-film price embedded in the locked website chat knowledge
-- In supabase/functions/website-chat/index.ts, WPW_KNOWLEDGE.pricing currently says:
-  - “3M IJ180Cv3 … $6.32/sqft”
-- That directly causes the AI to compute a higher 3M total, even though the deterministic code path uses pricePerSqft = 5.27 for the computed “PRICE” in context notes.
+You're experiencing **two UI issues** in the admin chat view:
 
-2) The system prompt contradicts the intended “gate” and trailer rules
-- The system prompt currently contains:
-  - “PRICING RULE: If customer has provided vehicle or dimensions, GIVE THE PRICE IMMEDIATELY! THEN ask for email/phone…”
-- That instruction conflicts with:
-  - Trailer handling (which is supposed to ask for dimensions)
-  - Your approved “Name+email gate”
-  - “Deterministic pricing” (AI should not compute alternative totals)
+1. **"Email modal gone"** — The Reply to Customer panel and Quote Upload panel don't appear
+2. **"No way to upload a quote"** — The upload button is invisible because email wasn't captured
 
-3) The conversation state save is currently broken (this explains “No email captured” even when the transcript shows it)
-- website-chat/index.ts attempts to update non-existent columns on conversations:
-  - updateData.customer_email / customer_name / customer_phone / shop_name
-- Your conversations table does not have these columns (only chat_state JSONB does).
-- Result: the .update() can fail or partially fail, causing chat_state not to persist properly, leading to:
-  - “Anonymous Visitor”
-  - “No email captured”
-  - “0 quotes” even when the user typed them
+---
 
-4) Trailer behavior can still drift if the AI invents sqft from a “14ft” mention
-- The code has a trailer branch that correctly asks for dimensions, but the global prompt encourages “give price immediately,” which can cause the model to ignore the dimension-collection script and invent an sqft estimate.
+## Root Cause (Already Partially Fixed)
 
-Implementation plan (what I will change after you approve)
-A) Fix the pricing source of truth inside the locked website chat function
-Files:
-- supabase/functions/website-chat/index.ts (LOCKED — will edit carefully and minimally)
+The **real issue** is that the email/reply functionality **still exists** in the code, but it's **hidden because customer email wasn't being saved**.
 
-Changes:
-1) Correct WPW_KNOWLEDGE.pricing
-- Update “3M IJ180Cv3 … $6.32/sqft” → “$5.27/sqft” under PRINTED WRAP FILMS.
-- Leave CUT CONTOUR pricing at $6.32/$6.92 (that’s correct for decals/cut contour).
+In `ChatDetailModal.tsx` (lines 199-228):
+```typescript
+{contact?.email && !contact.email.includes('@capture.local') ? (
+  // ✅ Show Reply + Upload buttons
+) : (
+  // ❌ Show "No email captured — cannot reply" message
+)}
+```
 
-2) Enforce “Avery or 3M?” selection without showing two totals
-- Update the “ALL INFO COLLECTED” prompt block to:
-  - State one deterministic total based on $5.27/sqft
-  - Ask: “Do you prefer Avery MPI 1105 or 3M IJ180Cv3? Same price.”
-  - Avoid printing separate Avery vs 3M totals entirely (to prevent another overcharge)
+Since the `chat_state` wasn't persisting `customer_email` (fixed in the last deployment), the contact record was never created/updated with the email → the buttons were hidden.
 
-3) Align the system prompt with your approved protocol (name+email gate + deterministic)
-- Replace the current global PRICING RULE text with rules that match your approvals:
-  - Do not give any price until Name + Email are captured (minimum gate)
-  - After giving the price, ask for phone and shop (optional but requested for follow-up)
-  - If it’s a trailer/RV/camper: do not estimate sqft; ask dimensions (length × height for each side + which sides), then compute deterministically
+**However**, the database triggers that sync `conversations.chat_state` to `contacts` may not be firing properly. We confirmed earlier there are **zero triggers** on the conversations table.
 
-B) Fix chat_state persistence so the admin UI can actually see captured email/name
-Files:
-- supabase/functions/website-chat/index.ts (LOCKED)
+---
 
-Changes:
-4) Remove invalid conversation column updates
-- Change the “Save state and response” block to only update valid columns:
-  - conversations.chat_state
-  - conversations.last_message_at
-- Do not attempt to update conversations.customer_email/customer_name/etc. (they don’t exist)
+## Current State of the UI Components
 
-Outcome:
-- When the user types email/name, it will actually persist into chat_state.
-- The /website-admin panel should stop showing “No email captured” for sessions where it was provided.
+| Component | Location | Status |
+|-----------|----------|--------|
+| **InternalReplyPanel** | Right sidebar in ChatDetailModal | ✅ Exists, but only shows when you click "Reply" button |
+| **QuoteUploadPanel** | Right sidebar in ChatDetailModal | ✅ Exists, but only shows when you click Upload icon |
+| **QuoteSelector** | Inside InternalReplyPanel | ✅ Exists — "Attach Quote" button shows this |
+| **Reply button** | Transcript tab footer | ⚠️ Hidden when `contact?.email` is null/capture.local |
+| **Upload icon** | Transcript tab footer | ⚠️ Hidden when `contact?.email` is null/capture.local |
 
-C) Prevent trailer “14ft” overconfident quoting (stop AI from inventing sqft)
-Files:
-- supabase/functions/website-chat/index.ts (LOCKED)
+---
 
-Changes:
-5) Tighten trailer flow
-- Ensure trailer detection path always wins when “trailer/food trailer/cargo trailer” is present:
-  - Ask for dimensions first (length x height per side + which sides)
-  - Only compute sqft/price after dimensions are provided
-- Add explicit instruction in contextNotes: “Do not estimate sqft for trailers from length alone.”
+## Technical Fix Plan
 
-D) Normalize the rest of the ecosystem (optional but recommended to prevent future regressions)
-Reason:
-- I found other backend functions still mentioning 6.32 for 3M wrap in prompts/configs even if some shared libraries were already corrected.
+### Fix 1: Create Missing Database Triggers
 
-Files to audit/adjust:
-- supabase/functions/agent-chat/index.ts (still lists 3M at $6.32)
-- supabase/functions/vapi-webhook/index.ts (pricing constant still declares threeM: 6.32)
-- supabase/functions/_shared/agent-config.ts (lists 3M at $6.32)
-- supabase/functions/_shared/wpw-pricing.ts and _shared/wpw-knowledge-base.ts already correctly say 3M wrap is $5.27, so we’ll align the others to match.
+The functions exist (`sync_conversation_to_contact`, `sync_quote_to_contact`) but **triggers are not attached**.
 
-Scope decision:
-- If you want the fix only for website chat right now: we do A+B+C only.
-- If you want “one pricing truth everywhere”: do A+B+C+D.
+**SQL Migration:**
+```sql
+-- Trigger: conversations -> contacts sync
+CREATE TRIGGER trg_conversation_sync_contact
+AFTER INSERT OR UPDATE OF chat_state ON public.conversations
+FOR EACH ROW
+EXECUTE FUNCTION sync_conversation_to_contact();
 
-Verification checklist (how we’ll confirm it’s fixed)
-1) Pricing correctness
-- Start a new chat and ask about a “14ft food trailer wrap”.
-- Expected:
-  - The agent asks for dimensions (does NOT invent 450 sqft)
-- Provide dimensions (e.g., 14ft × 6ft each side, 2 sides):
-  - sqft = (14×6)=84 sqft per side → 168 sqft total
-  - price = 168 × 5.27 = $885.36 (rounded per current behavior)
-  - The message shows ONE total only and asks “Avery or 3M?” (no separate totals)
+-- Trigger: quotes -> contacts sync  
+CREATE TRIGGER trg_quote_sync_contact
+BEFORE INSERT ON public.quotes
+FOR EACH ROW
+EXECUTE FUNCTION sync_quote_to_contact();
+```
 
-2) Contact capture persistence
-- Provide name + email.
-- Refresh /website-admin detail panel:
-  - Should no longer show “No email captured”
-  - Should show the email/name from chat_state
+**Result:** When `chat_state` is updated with `customer_email`, a contact record is automatically created/updated.
 
-3) Regression checks
-- Vehicle wrap quote (non-trailer) still returns correct sqft and uses 5.27.
-- Cut contour requests still show 6.32/6.92 (decals) and proper URLs.
+### Fix 2: Make Reply/Upload Buttons Always Visible
 
-Notes / constraints
-- website-chat/index.ts is explicitly LOCKED. I will keep edits minimal and localized to the lines that are provably wrong:
-  - One incorrect price line in WPW_KNOWLEDGE
-  - The global pricing rule block
-  - The invalid DB update fields
-  - Trailer flow guardrails
-- This plan does not yet add quote-row creation in the database; it focuses on stopping overcharges and fixing “email not captured” first (the two issues causing the “lost sale” and broken admin display). If you want, next step is to ensure every priced chat creates a quote record for MightyMail.
+Currently the buttons are **hidden** if there's no email. Instead, we should:
+- **Always show the Upload Quote button** (you can upload a quote even without email)
+- Keep the Reply button email-gated (can't send email without address)
 
-What I need from you (only if you want the broader “everywhere” fix)
-- Confirm scope:
-  1) Fix website chat only, or
-  2) Also align agent-chat + vapi-webhook + agent-config so no channel can ever quote 3M at $6.32 again.
+**File:** `src/components/admin/ChatDetailModal.tsx`
+**Lines:** 197-228
+
+```typescript
+// Before: Both buttons gated behind email
+{contact?.email && !contact.email.includes('@capture.local') ? (
+  <div className="flex items-center gap-2">
+    <Button ... onClick={() => setShowReplyPanel(true)}>Reply</Button>
+    <Button ... onClick={() => setShowQuoteUpload(true)}><Upload /></Button>
+  </div>
+) : (
+  <div>No email captured — cannot reply</div>
+)}
+
+// After: Upload always visible, Reply gated
+<div className="flex items-center gap-2">
+  {contact?.email && !contact.email.includes('@capture.local') ? (
+    <Button className="flex-1 gap-2" size="sm" onClick={() => setShowReplyPanel(true)}>
+      <Reply className="h-4 w-4" />
+      Reply to {contact.name || contact.email}
+    </Button>
+  ) : (
+    <div className="flex-1 flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded p-2">
+      <Mail className="h-4 w-4 flex-shrink-0" />
+      <span>No email — collect email to reply</span>
+    </div>
+  )}
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => setShowQuoteUpload(true)}
+    title="Upload Quote"
+  >
+    <Upload className="h-4 w-4" />
+  </Button>
+</div>
+```
+
+### Fix 3: Add "Create Quote" Button in Sidebar
+
+Add a prominent "Create Quote" action in the right sidebar that navigates to MightyCustomer with pre-filled data.
+
+**File:** `src/components/admin/ChatDetailModal.tsx`
+**Lines:** After line 456 (after Vehicle Interest card)
+
+```typescript
+{/* Quick Actions Card */}
+<Card>
+  <CardHeader className="pb-2">
+    <CardTitle className="text-sm flex items-center gap-2">
+      <FileText className="h-4 w-4" />
+      Quick Actions
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-2">
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="w-full justify-start"
+      onClick={() => {
+        const params = new URLSearchParams();
+        params.set('mode', 'wpw_internal');
+        if (conversation.id) params.set('conversation_id', conversation.id);
+        if (contact?.name) params.set('customer', contact.name);
+        if (contact?.email) params.set('email', contact.email);
+        if (contact?.phone) params.set('phone', contact.phone);
+        if (vehicle?.year) params.set('year', vehicle.year);
+        if (vehicle?.make) params.set('make', vehicle.make);
+        if (vehicle?.model) params.set('model', vehicle.model);
+        window.location.href = `/mighty-customer?${params.toString()}`;
+      }}
+    >
+      <Receipt className="w-4 h-4 mr-2" />
+      Create Quote
+    </Button>
+  </CardContent>
+</Card>
+```
+
+---
+
+## Implementation Sequence
+
+1. **Database Migration** — Create the two missing triggers to enable contact sync
+2. **UI Fix** — Always show Upload Quote button; add Create Quote action
+3. **Verify** — Test a new chat session to confirm:
+   - Email persists in `chat_state`
+   - Contact record is created
+   - Reply/Upload buttons appear
+   - Create Quote navigates with pre-filled data
+
+---
+
+## Summary
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Reply button missing | Email not persisted → contact null → buttons hidden | Database triggers + always-visible upload |
+| Can't upload quote | Same as above | Separate upload button visibility from email gate |
+| AI didn't create quote | No quote record insertion in website-chat | (Future: add quote_insert after pricing) |
