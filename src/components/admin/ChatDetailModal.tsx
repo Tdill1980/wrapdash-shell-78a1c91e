@@ -46,7 +46,6 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
   
   if (!conversation) return null;
 
-  // Event logging functions
   const logEvent = async (eventType: string, payload: Record<string, unknown> = {}) => {
     setIsProcessing(true);
     try {
@@ -61,7 +60,6 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
 
       if (error) throw error;
       
-      // Refresh events
       queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
       queryClient.invalidateQueries({ queryKey: ['needs-action-queue'] });
       toast.success(`Event logged: ${eventType.replace(/_/g, ' ')}`);
@@ -84,14 +82,18 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
   const handleMarkFileReviewed = () => logEvent('asset_reviewed', { 
     reviewed_by: 'admin' 
   });
+  
+  const handleRefreshEvents = () => {
+    queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
+  };
 
   const geo = conversation.metadata?.geo;
   const chatState = conversation.chat_state;
   const contact = conversation.contact;
   const messages = conversation.messages || [];
   const escalations = chatState?.escalations_sent || [];
+  const vehicle = chatState?.vehicle;
 
-  // Separate events by type
   const escalationEvents = events?.filter(e => e.event_type === 'escalation_sent') || [];
   const emailEvents = events?.filter(e => e.event_type === 'email_sent') || [];
   const assetEvents = events?.filter(e => e.event_type === 'asset_uploaded') || [];
@@ -102,22 +104,22 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 bg-[#1a1a2e] border-purple-500/30">
-        <DialogHeader className="p-6 pb-2 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600">
-          <DialogTitle className="flex items-center justify-between text-white">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-2 border-b">
+          <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <User className="h-5 w-5" />
               Chat: {displayName}
             </div>
             <div className="flex items-center gap-2">
               {escalations.length > 0 && (
-                <Badge variant="outline" className="bg-orange-500/20 text-orange-300 border-orange-500/40">
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
                   <AlertCircle className="h-3 w-3 mr-1" />
                   {escalations.length} Escalation{escalations.length > 1 ? 's' : ''}
                 </Badge>
               )}
               {emailEvents.length > 0 && (
-                <Badge variant="outline" className="bg-blue-500/20 text-blue-300 border-blue-500/40">
+                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
                   <Mail className="h-3 w-3 mr-1" />
                   {emailEvents.length} Email{emailEvents.length > 1 ? 's' : ''} Sent
                 </Badge>
@@ -126,36 +128,36 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex gap-4 p-6 pt-2 bg-[#16162a]">
+        <div className="flex-1 overflow-hidden flex gap-4 p-6 pt-2">
           {/* Left: Tabbed content area */}
           <div className="flex-1 flex flex-col min-w-0">
             <Tabs defaultValue="transcript" className="flex-1 flex flex-col">
-              <TabsList className="mb-3 bg-[#2a2a4a] border border-purple-500/30">
-                <TabsTrigger value="transcript" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+              <TabsList className="mb-3">
+                <TabsTrigger value="transcript" className="gap-2">
                   <MessageSquare className="h-4 w-4" />
                   Transcript ({messages.length})
                 </TabsTrigger>
-                <TabsTrigger value="timeline" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+                <TabsTrigger value="timeline" className="gap-2">
                   <AlertCircle className="h-4 w-4" />
                   Timeline ({events?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="emails" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+                <TabsTrigger value="emails" className="gap-2">
                   <Mail className="h-4 w-4" />
                   Emails ({emailEvents.length})
                 </TabsTrigger>
-                <TabsTrigger value="quotes" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+                <TabsTrigger value="quotes" className="gap-2">
                   <Receipt className="h-4 w-4" />
                   Quotes ({quotes?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="assets" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+                <TabsTrigger value="assets" className="gap-2">
                   <FileText className="h-4 w-4" />
                   Assets ({assetEvents.length})
                 </TabsTrigger>
               </TabsList>
 
-              {/* Transcript Tab */}
+              {/* Transcript Tab - ONLY chat bubbles get gradient styling */}
               <TabsContent value="transcript" className="mt-0 flex flex-col">
-                <ScrollArea className="h-[calc(90vh-300px)] border border-purple-500/20 rounded-t-lg bg-[#1a1a2e] p-4">
+                <ScrollArea className="h-[calc(90vh-300px)] border rounded-t-lg bg-muted/30 p-4">
                   <div className="space-y-3">
                     {messages.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">
@@ -170,8 +172,8 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                           <div
                             className={`max-w-[90%] rounded-lg p-3 ${
                               msg.direction === 'inbound'
-                                ? 'bg-[#2a2a4a] text-white border border-white/10'
-                                : 'bg-gradient-to-r from-fuchsia-500 via-purple-500 to-pink-500 text-white shadow-[0_4px_15px_rgba(168,85,247,0.4)]'
+                                ? 'bg-muted text-foreground'
+                                : 'bg-gradient-to-r from-fuchsia-500 via-purple-500 to-blue-500 text-white shadow-md'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
@@ -192,12 +194,12 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                   </div>
                 </ScrollArea>
                 
-                {/* Persistent Reply Box */}
-                <div className="border border-t-0 border-purple-500/20 rounded-b-lg bg-[#1a1a2e] p-3">
+                {/* Reply Box */}
+                <div className="border border-t-0 rounded-b-lg p-3">
                   {contact?.email && !contact.email.includes('@capture.local') ? (
                     <div className="flex items-center gap-2">
                       <Button
-                        className="flex-1 gap-2 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 hover:opacity-90"
+                        className="flex-1 gap-2"
                         size="sm"
                         onClick={() => {
                           setShowReplyPanel(true);
@@ -210,7 +212,6 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-purple-500/30 hover:bg-purple-500/10"
                         onClick={() => {
                           setShowQuoteUpload(true);
                           setShowReplyPanel(false);
@@ -220,7 +221,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-400 text-sm bg-[#2a2a4a] rounded p-2 border border-white/10">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded p-2">
                       <Mail className="h-4 w-4 flex-shrink-0" />
                       <span>No email captured — cannot reply until visitor provides email</span>
                     </div>
@@ -254,7 +255,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                   <ScrollArea className="h-[calc(90vh-200px)]">
                     <div className="space-y-3">
                       {quotes.map((quote) => (
-                        <Card key={quote.id} className="bg-card/50">
+                        <Card key={quote.id}>
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1 min-w-0">
@@ -266,16 +267,16 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                                     variant="outline" 
                                     className={
                                       quote.status === 'sent' 
-                                        ? 'bg-green-500/10 text-green-500' 
+                                        ? 'bg-green-500/10 text-green-600' 
                                         : quote.status === 'created'
-                                        ? 'bg-yellow-500/10 text-yellow-500'
+                                        ? 'bg-yellow-500/10 text-yellow-600'
                                         : 'bg-muted text-muted-foreground'
                                     }
                                   >
                                     {quote.status || 'draft'}
                                   </Badge>
                                   {quote.email_sent ? (
-                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 gap-1">
+                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-600 gap-1">
                                       <CheckCircle className="h-3 w-3" />
                                       Email Sent
                                     </Badge>
@@ -318,7 +319,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                               </div>
                               
                               <div className="text-right">
-                                <div className="text-xl font-bold text-foreground">
+                                <div className="text-xl font-bold">
                                   ${(quote.total_price || quote.material_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
@@ -346,29 +347,24 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                   <ScrollArea className="h-[300px]">
                     <div className="grid grid-cols-2 gap-3">
                       {assetEvents.map((event) => (
-                        <Card key={event.id} className="bg-card/50">
+                        <Card key={event.id}>
                           <CardContent className="p-3">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-lg bg-purple-500/10">
-                                <FileText className="h-5 w-5 text-purple-500" />
-                              </div>
+                              <FileText className="h-8 w-8 text-muted-foreground" />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">
-                                  {event.payload.filename || 'File'}
+                                  {event.payload?.filename || 'File'}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {format(new Date(event.created_at), 'MMM d, h:mm a')}
+                                  {event.created_at && format(new Date(event.created_at), 'MMM d, h:mm a')}
                                 </p>
                               </div>
-                              {event.payload.file_url && (
-                                <a
-                                  href={event.payload.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
-                                >
-                                  <Download className="h-4 w-4 text-primary" />
-                                </a>
+                              {event.payload?.file_url && (
+                                <Button size="sm" variant="outline" asChild>
+                                  <a href={event.payload.file_url as string} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                </Button>
                               )}
                             </div>
                           </CardContent>
@@ -381,14 +377,34 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
             </Tabs>
           </div>
 
-          {/* Right: Info sidebar */}
-          <div className="w-72 flex-shrink-0 space-y-4 overflow-auto">
-            {/* Customer Info */}
-            <Card className="bg-card/50">
+          {/* Right Sidebar */}
+          <div className="w-80 flex-shrink-0 space-y-4">
+            {/* Escalation Status */}
+            {escalations.length > 0 && (
+              <EscalationStatusCard 
+                statusResult={escalationStatus} 
+                onMarkComplete={handleMarkComplete}
+                onDismissQuote={handleDismissQuote}
+                onMarkFileReviewed={handleMarkFileReviewed}
+                isLoading={isProcessing}
+              />
+            )}
+
+            {/* Customer Info Card */}
+            <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Customer Info</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Customer Info
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-3 text-sm">
+                {contact?.name && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{contact.name}</span>
+                  </div>
+                )}
                 {contact?.email && !contact.email.includes('@capture.local') && (
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground" />
@@ -401,175 +417,82 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                     <span>{contact.phone}</span>
                   </div>
                 )}
-                {chatState?.vehicle && (
-                  <div className="flex items-center gap-2">
-                    <Car className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {chatState.vehicle.year} {chatState.vehicle.make} {chatState.vehicle.model}
-                    </span>
+                {geo && (
+                  <div className="flex items-start gap-2 pt-2 border-t">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="font-medium">
+                        {getCountryFlag(geo.country)} {geo.city}, {geo.region}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {geo.country_name || geo.country}
+                        {geo.timezone && ` • ${geo.timezone}`}
+                      </p>
+                    </div>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>
-                    {conversation.created_at && format(new Date(conversation.created_at), 'PPp')}
-                  </span>
+              </CardContent>
+            </Card>
+
+            {/* Vehicle Interest */}
+            {vehicle && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Car className="h-4 w-4" />
+                    Vehicle Interest
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <p className="font-medium">
+                    {[
+                      vehicle.year,
+                      vehicle.make,
+                      vehicle.model
+                    ].filter(Boolean).join(' ')}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Session Info */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Session
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Started</span>
+                  <span>{conversation.created_at && format(new Date(conversation.created_at), 'h:mm a')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Messages</span>
+                  <span>{messages.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge variant="outline" className={
+                    conversation.status === 'open' 
+                      ? 'bg-green-500/10 text-green-600' 
+                      : 'bg-muted'
+                  }>
+                    {conversation.status || 'active'}
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Geo Location */}
-            {geo && (geo.city || geo.country) && (
-              <Card className="bg-card/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Location
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{getCountryFlag(geo.country)}</span>
-                    <div>
-                      <div className="font-medium">
-                        {geo.city && `${geo.city}, `}
-                        {geo.region && `${geo.region}, `}
-                        {geo.country_name || geo.country}
-                      </div>
-                      {geo.timezone && (
-                        <div className="text-xs text-muted-foreground">{geo.timezone}</div>
-                      )}
-                    </div>
-                  </div>
-                  {geo.ip && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Globe className="h-3 w-3" />
-                      <span>IP: {geo.ip}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Escalations Summary */}
-            {escalations.length > 0 && (
-              <Card className="bg-card/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Escalations Sent
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {escalations.map((esc) => (
-                    <Badge
-                      key={esc}
-                      variant="outline"
-                      className={`text-xs ${
-                        esc === 'jackson'
-                          ? 'bg-red-500/10 text-red-500'
-                          : esc === 'lance'
-                          ? 'bg-blue-500/10 text-blue-500'
-                          : 'bg-purple-500/10 text-purple-500'
-                      }`}
-                    >
-                      {esc === 'jackson' && 'Jackson (Operations)'}
-                      {esc === 'lance' && 'Lance (Graphics)'}
-                      {esc === 'design' && 'Design Team'}
-                      {!['jackson', 'lance', 'design'].includes(esc) && esc}
-                    </Badge>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Quick Actions Card */}
-            <Card className="bg-primary/5 border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {/* Create Quote in MightyCustomer */}
-                <Button
-                  variant="default"
-                  className="w-full gap-2 justify-start bg-green-600 hover:bg-green-700"
-                  size="sm"
-                  onClick={() => {
-                    const vehicle = chatState?.vehicle || {};
-                    const params = new URLSearchParams();
-                    params.set('mode', 'wpw_internal');
-                    params.set('conversation_id', conversation.id);
-                    if (contact?.name) params.set('customer', contact.name);
-                    if (contact?.email && !contact.email.includes('@capture.local')) {
-                      params.set('email', contact.email);
-                    }
-                    if (contact?.phone) params.set('phone', contact.phone);
-                    if (vehicle.year) params.set('year', vehicle.year);
-                    if (vehicle.make) params.set('make', vehicle.make);
-                    if (vehicle.model) params.set('model', vehicle.model);
-                    window.open(`/mighty-customer?${params.toString()}`, '_blank');
-                  }}
-                >
-                  <Receipt className="h-4 w-4" />
-                  Create Quote in MightyCustomer
-                </Button>
-
-                {/* Reply to Customer */}
-                {contact?.email && !contact.email.includes('@capture.local') ? (
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 justify-start"
-                    size="sm"
-                    onClick={() => {
-                      setShowReplyPanel(true);
-                      setShowQuoteUpload(false);
-                    }}
-                  >
-                    <Reply className="h-4 w-4" />
-                    Reply to Customer
-                  </Button>
-                ) : (
-                  <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded border border-dashed">
-                    <Mail className="h-3 w-3 inline mr-1" />
-                    Reply unavailable - no email captured yet
-                  </div>
-                )}
-
-                {/* Upload Quote */}
-                <Button
-                  variant="outline"
-                  className="w-full gap-2 justify-start"
-                  size="sm"
-                  onClick={() => {
-                    setShowQuoteUpload(true);
-                    setShowReplyPanel(false);
-                  }}
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Quote
-                </Button>
-
-                {/* Download Assets (if any) */}
-                {assetEvents.length > 0 && (
-                  <div className="text-xs text-muted-foreground pt-1 border-t">
-                    <span className="font-medium">{assetEvents.length} file(s) attached</span>
-                    <span className="ml-1">- see Assets tab</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Internal Reply Panel */}
-            {showReplyPanel && contact?.email && !contact.email.includes('@capture.local') && (
+            {/* Reply Panel */}
+            {showReplyPanel && contact?.email && (
               <InternalReplyPanel
                 conversation={conversation}
                 customerEmail={contact.email}
                 customerName={contact.name || null}
                 onClose={() => setShowReplyPanel(false)}
-                onEmailSent={() => {
-                  setShowReplyPanel(false);
-                  queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
-                }}
+                onEmailSent={handleRefreshEvents}
               />
             )}
 
@@ -577,55 +500,11 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
             {showQuoteUpload && (
               <QuoteUploadPanel
                 conversation={conversation}
-                customerEmail={contact?.email && !contact.email.includes('@capture.local') ? contact.email : null}
+                customerEmail={contact?.email || null}
                 customerName={contact?.name || null}
                 onClose={() => setShowQuoteUpload(false)}
-                onQuoteUploaded={() => {
-                  setShowQuoteUpload(false);
-                  queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
-                  queryClient.invalidateQueries({ queryKey: ['conversation-quotes', conversation.id] });
-                }}
+                onQuoteUploaded={handleRefreshEvents}
               />
-            )}
-
-            {/* Escalation Status Card - THE KEY UI */}
-            <EscalationStatusCard
-              statusResult={escalationStatus}
-              onMarkComplete={handleMarkComplete}
-              onDismissQuote={handleDismissQuote}
-              onMarkFileReviewed={handleMarkFileReviewed}
-              isLoading={isProcessing}
-            />
-
-            {/* Chat State */}
-            <Card className="bg-card/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Chat State</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Badge variant="outline" className="text-xs">
-                  Stage: {chatState?.stage || 'initial'}
-                </Badge>
-              </CardContent>
-            </Card>
-
-            {/* Page URL */}
-            {conversation.metadata?.page_url && (
-              <Card className="bg-card/50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Source Page</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <a
-                    href={conversation.metadata.page_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline truncate block"
-                  >
-                    {conversation.metadata.page_url}
-                  </a>
-                </CardContent>
-              </Card>
             )}
           </div>
         </div>

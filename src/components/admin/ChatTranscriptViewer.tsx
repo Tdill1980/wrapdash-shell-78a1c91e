@@ -8,7 +8,6 @@ import { useWebsiteChats, useWebsiteChatStats, useConversationTotalCount } from 
 import { useEscalationStats } from "@/hooks/useConversationEvents";
 import { ChatTranscriptRow } from "./ChatTranscriptRow";
 import { ChatDetailModal } from "./ChatDetailModal";
-// EscalationsDashboard removed - now a separate tab, not embedded here
 import { Search, MessageSquare, Mail, AlertCircle, Users, RefreshCw, Calendar, Clock, MapPin, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
@@ -50,11 +49,11 @@ export function ChatTranscriptViewer({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [escalationFilter, setEscalationFilter] = useState<string>("all");
-  const [todayOnly, setTodayOnly] = useState(false); // Show all by default, toggle for today
+  const [todayOnly, setTodayOnly] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Handle initial conversation selection from props (e.g., from Escalations)
+  // Handle initial conversation selection from props
   useEffect(() => {
     if (initialConversationId && conversations.length > 0) {
       const convo = conversations.find(c => c.id === initialConversationId);
@@ -66,19 +65,16 @@ export function ChatTranscriptViewer({
     }
   }, [initialConversationId, conversations, onConversationOpened]);
 
-  // Filter conversations - ALL filters are optional UI controls, not defaults
+  // Filter conversations
   const filteredConversations = conversations.filter((convo) => {
-    // Channel filter (optional - defaults to "all")
     if (channelFilter !== "all" && convo.channel !== channelFilter) {
       return false;
     }
 
-    // Today filter (optional - defaults to false)
     if (todayOnly && convo.created_at && !isToday(new Date(convo.created_at))) {
       return false;
     }
 
-    // Search filter
     if (search) {
       const searchLower = search.toLowerCase();
       const matchesEmail = convo.contact?.email?.toLowerCase().includes(searchLower);
@@ -91,10 +87,8 @@ export function ChatTranscriptViewer({
       if (!matchesEmail && !matchesName && !matchesMessage && !matchesLocation) return false;
     }
 
-    // Status filter
     if (statusFilter !== "all" && convo.status !== statusFilter) return false;
 
-    // Escalation filter
     if (escalationFilter !== "all") {
       const escalations = convo.chat_state?.escalations_sent || [];
       if (escalationFilter === "none" && escalations.length > 0) return false;
@@ -125,15 +119,6 @@ export function ChatTranscriptViewer({
     setModalOpen(true);
   };
 
-  // Handle queue item selection
-  const handleQueueSelect = (conversationId: string) => {
-    const convo = conversations.find(c => c.id === conversationId);
-    if (convo) {
-      setSelectedConversation(convo);
-      setModalOpen(true);
-    }
-  };
-
   // Count escalations
   const escalationCount = conversations.filter(c => 
     (c.chat_state?.escalations_sent?.length || 0) > 0
@@ -141,52 +126,51 @@ export function ChatTranscriptViewer({
 
   // Escalation stats from events table
   const { data: escalationStats } = useEscalationStats();
-
-  // Get selected conversation details for right panel
-  const selectedGeo = selectedConversation?.metadata?.geo;
-  const selectedMessages = selectedConversation?.messages || [];
+  
+  // Get vehicle from chat_state
+  const selectedVehicle = selectedConversation?.chat_state?.vehicle;
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards - Dark themed with gradient accents */}
+      {/* Stats Cards - Standard themed */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#2a1a3e] border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/30 to-fuchsia-500/30 shadow-inner">
-                <MessageSquare className="h-5 w-5 text-fuchsia-400" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <MessageSquare className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">{stats?.totalToday || 0}</p>
-                <p className="text-xs text-gray-400">Website Chats Today</p>
+                <p className="text-2xl font-bold">{stats?.totalToday || 0}</p>
+                <p className="text-xs text-muted-foreground">Website Chats Today</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#1a2e1a] border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.15)]">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 shadow-inner">
-                <Mail className="h-5 w-5 text-green-400" />
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <Mail className="h-5 w-5 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-400">{stats?.emailsCaptured || 0}</p>
-                <p className="text-xs text-gray-400">Emails Captured</p>
+                <p className="text-2xl font-bold text-green-600">{stats?.emailsCaptured || 0}</p>
+                <p className="text-xs text-muted-foreground">Emails Captured</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#2e2a1a] border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20 shadow-inner">
-                <AlertCircle className="h-5 w-5 text-orange-400" />
+              <div className="p-2 rounded-lg bg-orange-500/10">
+                <AlertCircle className="h-5 w-5 text-orange-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-orange-400">{escalationStats?.total || escalationCount}</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-2xl font-bold text-orange-600">{escalationStats?.total || escalationCount}</p>
+                <p className="text-xs text-muted-foreground">
                   Escalations ({escalationStats?.today || 0} today)
                 </p>
               </div>
@@ -194,22 +178,20 @@ export function ChatTranscriptViewer({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#1a2a3e] border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 shadow-inner">
-                <Users className="h-5 w-5 text-blue-400" />
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Users className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-400">{stats?.activeConversations || 0}</p>
-                <p className="text-xs text-gray-400">Website Chats Active</p>
+                <p className="text-2xl font-bold text-blue-600">{stats?.activeConversations || 0}</p>
+                <p className="text-xs text-muted-foreground">Website Chats Active</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Escalations Dashboard removed - now filter-only in its own tab */}
 
       {/* Escalation Quick Filters */}
       <div className="flex flex-wrap items-center gap-2">
@@ -245,32 +227,31 @@ export function ChatTranscriptViewer({
               <Button 
                 variant={todayOnly ? "default" : "outline"} 
                 size="sm"
-                className={todayOnly ? "bg-gradient-to-r from-purple-500 to-fuchsia-500" : "border-purple-500/30"}
                 onClick={() => setTodayOnly(!todayOnly)}
               >
                 <Calendar className="h-4 w-4 mr-1" />
                 Today Only
               </Button>
-              <Button size="sm" className="bg-gradient-to-r from-purple-500 to-fuchsia-500 hover:opacity-90" onClick={() => refetch()}>
+              <Button size="sm" onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4 mr-1" />
                 Refresh
               </Button>
             </div>
           </div>
           
-          {/* OS Transparency: Total DB count badge */}
-          <div className="flex items-center gap-3 mb-4 p-3 bg-gradient-to-r from-[#1a1a2e] to-[#2a1a3e] rounded-lg border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.1)]">
-            <Badge variant="outline" className="text-sm font-mono bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 text-purple-300 border-purple-500/40">
+          {/* DB count badge */}
+          <div className="flex items-center gap-3 mb-4 p-3 bg-muted/50 rounded-lg border">
+            <Badge variant="outline" className="text-sm font-mono">
               DB Total: {totalDbCount ?? '...'}
             </Badge>
-            <Badge className="text-sm bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border-blue-500/40">
+            <Badge variant="secondary" className="text-sm">
               Loaded: {conversations.length}
             </Badge>
-            <Badge className={`text-sm ${filteredConversations.length === conversations.length ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300' : 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-300'}`}>
+            <Badge variant={filteredConversations.length === conversations.length ? "secondary" : "outline"} className="text-sm">
               Showing: {filteredConversations.length}
             </Badge>
             {filteredConversations.length < conversations.length && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-foreground">
                 (filters active)
               </span>
             )}
@@ -278,7 +259,7 @@ export function ChatTranscriptViewer({
 
           <h3 className="text-lg font-semibold mb-3">Conversations</h3>
 
-          {/* Filters - ALL optional, no defaults hide data */}
+          {/* Filters */}
           <div className="flex flex-wrap gap-3 mb-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -313,7 +294,6 @@ export function ChatTranscriptViewer({
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
-
           </div>
 
           {/* Session List */}
@@ -359,94 +339,88 @@ export function ChatTranscriptViewer({
         </div>
 
         {/* Right: Session Details Panel */}
-        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#2a1a3e] border-purple-500/30 h-fit shadow-[0_0_20px_rgba(168,85,247,0.1)]">
+        <Card className="h-fit">
           <CardContent className="pt-6">
             {selectedConversation ? (
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg text-white flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-400 to-fuchsia-400" />
+                <h3 className="font-semibold text-lg flex items-center gap-2">
                   Session Details
                 </h3>
                 
                 {/* Customer Info */}
-                <div className="p-3 bg-[#2a2a4a] rounded-lg space-y-2 border border-white/10">
-                  <p className="text-sm text-gray-300">
-                    <span className="text-gray-500">Customer:</span>{" "}
-                    <span className="font-medium text-white">
+                <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Customer:</span>{" "}
+                    <span className="font-medium">
                       {selectedConversation.contact?.email || selectedConversation.contact?.name || "Anonymous"}
                     </span>
                   </p>
-                  <p className="text-sm text-gray-300">
-                    <span className="text-gray-500">Started:</span>{" "}
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Started:</span>{" "}
                     {selectedConversation.created_at && format(new Date(selectedConversation.created_at), 'PPpp')}
                   </p>
-                  {selectedGeo && (
-                    <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-pink-500/10 to-fuchsia-500/10 rounded border border-pink-500/20">
-                      <MapPin className="h-4 w-4 text-pink-400" />
+                  {selectedConversation.metadata?.geo && (
+                    <div className="flex items-center gap-2 p-2 bg-primary/5 rounded border">
+                      <MapPin className="h-4 w-4 text-primary" />
                       <div className="text-sm">
-                        <span className="text-fuchsia-300 font-medium">
-                          {selectedGeo.city}, {selectedGeo.region}
+                        <span className="font-medium">
+                          {selectedConversation.metadata.geo.city}, {selectedConversation.metadata.geo.region}
                         </span>
-                        <span className="text-gray-400 ml-1">({selectedGeo.country})</span>
+                        <span className="text-muted-foreground ml-2">
+                          {selectedConversation.metadata.geo.country}
+                        </span>
                       </div>
                     </div>
                   )}
-                  {selectedGeo?.ip && (
-                    <p className="text-xs text-gray-500">IP: {selectedGeo.ip}</p>
-                  )}
                 </div>
 
-                {/* Vehicle Info */}
-                {selectedConversation.chat_state?.vehicle && (
-                  <div className="p-3 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-lg border border-blue-500/20">
-                    <p className="text-sm font-medium text-blue-400 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                      Vehicle Interest
-                    </p>
-                    <p className="text-sm text-white mt-1">
-                      {selectedConversation.chat_state.vehicle.year} {selectedConversation.chat_state.vehicle.make} {selectedConversation.chat_state.vehicle.model}
+                {/* Vehicle Interest */}
+                {selectedVehicle && (
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm font-medium mb-1">Vehicle Interest</p>
+                    <p className="text-sm text-muted-foreground">
+                      {[
+                        selectedVehicle.year,
+                        selectedVehicle.make,
+                        selectedVehicle.model
+                      ].filter(Boolean).join(' ') || 'Not specified'}
                     </p>
                   </div>
                 )}
 
-                {/* Transcript */}
-                <div>
-                  <h4 className="font-medium mb-2 text-white flex items-center gap-2">
-                    Transcript 
-                    <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-500/30">
-                      {selectedMessages.length} messages
-                    </Badge>
-                  </h4>
-                  <ScrollArea className="h-[300px] border border-purple-500/20 rounded-lg p-3 bg-[#16162a]">
-                    {selectedMessages.map((msg, idx) => (
-                      <div key={msg.id || idx} className={`mb-3 ${msg.direction === 'outbound' ? 'text-right' : ''}`}>
-                        <div className={`inline-block max-w-[80%] p-3 rounded-lg text-sm ${
-                          msg.direction === 'outbound' 
-                            ? 'bg-gradient-to-r from-fuchsia-500 via-purple-500 to-pink-500 text-white shadow-[0_2px_10px_rgba(168,85,247,0.4)]' 
-                            : 'bg-[#2a2a4a] text-gray-200 border border-white/10'
-                        }`}>
-                          {msg.content}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {msg.sender_name || (msg.direction === 'outbound' ? 'Jordan Lee' : 'Customer')}
-                          {msg.created_at && ` • ${format(new Date(msg.created_at), 'h:mm a')}`}
-                        </p>
+                {/* Quick Preview */}
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Recent Messages</p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {selectedConversation.messages?.slice(-3).map((msg) => (
+                      <div key={msg.id} className="text-sm">
+                        <span className={msg.direction === 'inbound' ? 'text-blue-600' : 'text-green-600'}>
+                          {msg.direction === 'inbound' ? 'Visitor' : 'Jordan'}:
+                        </span>{' '}
+                        <span className="text-muted-foreground">{msg.content?.substring(0, 100)}...</span>
                       </div>
                     ))}
-                  </ScrollArea>
+                  </div>
                 </div>
+
+                <Button 
+                  className="w-full" 
+                  onClick={() => setModalOpen(true)}
+                >
+                  View Full Transcript
+                </Button>
               </div>
             ) : (
-              <div className="text-center text-gray-500 py-12">
-                <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30 text-purple-400" />
-                <p className="text-gray-400">Select a session to view details</p>
+              <div className="text-center text-muted-foreground py-12">
+                <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>Select a conversation to view details</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Detail Modal (for full screen view) */}
+      {/* Full Detail Modal */}
       <ChatDetailModal
         conversation={selectedConversation}
         open={modalOpen}
