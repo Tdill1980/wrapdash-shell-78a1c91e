@@ -196,8 +196,8 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                 
                 {/* Reply Box */}
                 <div className="border border-t-0 rounded-b-lg p-3">
-                  {contact?.email && !contact.email.includes('@capture.local') ? (
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {contact?.email && !contact.email.includes('@capture.local') ? (
                       <Button
                         className="flex-1 gap-2"
                         size="sm"
@@ -209,23 +209,24 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                         <Reply className="h-4 w-4" />
                         Reply to {contact.name || contact.email}
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setShowQuoteUpload(true);
-                          setShowReplyPanel(false);
-                        }}
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded p-2">
-                      <Mail className="h-4 w-4 flex-shrink-0" />
-                      <span>No email captured — cannot reply until visitor provides email</span>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex-1 flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded p-2">
+                        <Mail className="h-4 w-4 flex-shrink-0" />
+                        <span>No email — collect email to reply</span>
+                      </div>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowQuoteUpload(true);
+                        setShowReplyPanel(false);
+                      }}
+                      title="Upload Quote"
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </TabsContent>
 
@@ -454,6 +455,38 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                 </CardContent>
               </Card>
             )}
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    params.set('mode', 'wpw_internal');
+                    if (conversation.id) params.set('conversation_id', conversation.id);
+                    if (contact?.name) params.set('customer', contact.name);
+                    if (contact?.email && !contact.email.includes('@capture.local')) params.set('email', contact.email);
+                    if (contact?.phone) params.set('phone', contact.phone);
+                    if (vehicle?.year) params.set('year', String(vehicle.year));
+                    if (vehicle?.make) params.set('make', vehicle.make);
+                    if (vehicle?.model) params.set('model', vehicle.model);
+                    window.location.href = `/mighty-customer?${params.toString()}`;
+                  }}
+                >
+                  <Receipt className="w-4 h-4 mr-2" />
+                  Create Quote
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Session Info */}
             <Card>
