@@ -47,7 +47,7 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
     ? contact.email
     : contact?.name || 'Anonymous Visitor';
 
-  // Get full location string like "Fort Worth, Texas (US)"
+  // Get full location string
   const locationStr = geo?.city && geo?.region && geo?.country
     ? `${geo.city}, ${geo.region} (${geo.country})`
     : geo?.city && geo?.country
@@ -59,7 +59,6 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Export transcript as JSON
     const data = {
       session_id: sessionId,
       customer: displayName,
@@ -80,8 +79,8 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
       onClick={onClick}
       className={`p-4 border rounded-lg mb-3 cursor-pointer transition-all duration-200 ${
         isSelected 
-          ? 'bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
-          : 'bg-[#1a1a2e] border-purple-500/20 hover:bg-[#2a2a4a] hover:border-purple-500/40'
+          ? 'bg-primary/10 border-primary ring-1 ring-primary/30' 
+          : 'bg-card hover:bg-muted/50 border-border'
       }`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -91,32 +90,32 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           <div className="flex items-center gap-2 flex-wrap">
             {/* Channel badge */}
             {conversation.channel === 'instagram' ? (
-              <Badge variant="outline" className="text-xs bg-pink-500/10 text-pink-500 border-pink-500/30">
+              <Badge variant="outline" className="text-xs bg-pink-500/10 text-pink-600 border-pink-500/30">
                 <Instagram className="h-3 w-3 mr-1" />
                 Instagram
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/30">
+              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
                 <Globe className="h-3 w-3 mr-1" />
                 Website
               </Badge>
             )}
             <span className="font-semibold">Session {sessionId}</span>
             {chatState?.customer_email && (
-              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
+              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
                 <Mail className="h-3 w-3 mr-1" />
                 Email Captured
               </Badge>
             )}
             {conversation.status === 'open' && (
-              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+              <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
                 Active
               </Badge>
             )}
           </div>
 
           {/* DateTime */}
-          <div className="flex items-center gap-1 text-sm text-gray-400">
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             {conversation.created_at && (
               <span>{format(new Date(conversation.created_at), 'M/d/yyyy, h:mm:ss a')}</span>
@@ -124,19 +123,19 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           </div>
 
           {/* Message count */}
-          <div className="flex items-center gap-1 text-sm text-gray-400">
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <MessageSquare className="h-4 w-4" />
             <span>{messageCount} messages</span>
           </div>
 
           {/* Geolocation */}
           <div className="flex items-center gap-1 text-sm">
-            <MapPin className="h-4 w-4 text-pink-500" />
-            <span className="text-fuchsia-400 font-medium">{locationStr}</span>
+            <MapPin className="h-4 w-4 text-primary" />
+            <span className="text-primary font-medium">{locationStr}</span>
           </div>
 
           {/* Duration */}
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-muted-foreground">
             Duration: {duration}
           </div>
 
@@ -144,18 +143,18 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           {escalations.length > 0 && (
             <div className="flex gap-1 flex-wrap pt-1">
               {escalations.includes('jackson') && (
-                <Badge variant="secondary" className="text-xs bg-red-500/10 text-red-500">
+                <Badge variant="secondary" className="text-xs bg-red-500/10 text-red-600">
                   <AlertCircle className="h-3 w-3 mr-1" />
                   Jackson
                 </Badge>
               )}
               {escalations.includes('lance') && (
-                <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-500">
+                <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-600">
                   Lance
                 </Badge>
               )}
               {escalations.includes('design') && (
-                <Badge variant="secondary" className="text-xs bg-purple-500/10 text-purple-500">
+                <Badge variant="secondary" className="text-xs bg-purple-500/10 text-purple-600">
                   Design
                 </Badge>
               )}
@@ -168,7 +167,6 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           <Button 
             variant="outline" 
             size="sm" 
-            className="bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20 text-purple-400"
             onClick={handleDownload}
           >
             <Download className="h-4 w-4" />
