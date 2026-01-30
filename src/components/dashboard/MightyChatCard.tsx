@@ -10,12 +10,14 @@ import {
   Bell,
   Flame,
   Phone,
-  Globe
+  Globe,
+  FileCheck
 } from "lucide-react";
 
 interface WorkStreamStats {
   website: number;
   phone: number;
+  fileReviews: number;
   hotLeads: number;
   pendingQuotes: number;
 }
@@ -37,6 +39,14 @@ const CHANNEL_CARDS = [
     bgColor: 'bg-amber-500/10', 
     route: '/website-admin?tab=phone' 
   },
+  { 
+    key: 'fileReviews', 
+    label: 'File Reviews', 
+    icon: FileCheck, 
+    color: 'text-pink-500', 
+    bgColor: 'bg-pink-500/10', 
+    route: '/website-admin?tab=artwork' 
+  },
 ] as const;
 
 export function MightyChatCard() {
@@ -44,6 +54,7 @@ export function MightyChatCard() {
   const [stats, setStats] = useState<WorkStreamStats>({
     website: 0,
     phone: 0,
+    fileReviews: 0,
     hotLeads: 0,
     pendingQuotes: 0
   });
@@ -67,7 +78,7 @@ export function MightyChatCard() {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Parallel queries for real data
-      const [websiteResult, phoneResult, hotLeadsResult, pendingQuotesResult] = await Promise.all([
+      const [websiteResult, phoneResult, fileReviewsResult, hotLeadsResult, pendingQuotesResult] = await Promise.all([
         // Website chat conversations
         supabase
           .from("conversations")
@@ -80,6 +91,13 @@ export function MightyChatCard() {
           .from("phone_calls")
           .select("id", { count: "exact", head: true })
           .gte("created_at", thirtyDaysAgo),
+        
+        // Pending file reviews
+        supabase
+          .from("ai_actions")
+          .select("id", { count: "exact", head: true })
+          .eq("resolved", false)
+          .eq("action_type", "file_review"),
         
         // Hot leads (urgent phone calls + escalated conversations)
         supabase
@@ -108,11 +126,12 @@ export function MightyChatCard() {
       setStats({
         website: websiteResult.count || 0,
         phone: phoneResult.count || 0,
+        fileReviews: fileReviewsResult.count || 0,
         hotLeads: hotLeadsTotal,
         pendingQuotes: pendingQuotesResult.count || 0
       });
 
-      console.log(`[MightyChatCard] Website: ${websiteResult.count}, Phone: ${phoneResult.count}, Hot Leads: ${hotLeadsTotal}`);
+      console.log(`[MightyChatCard] Website: ${websiteResult.count}, Phone: ${phoneResult.count}, File Reviews: ${fileReviewsResult.count}, Hot Leads: ${hotLeadsTotal}`);
     } catch (err) {
       console.error("Error loading work streams:", err);
     } finally {
@@ -167,8 +186,8 @@ export function MightyChatCard() {
           )}
         </div>
 
-        {/* Channel Breakdown Grid - 2 columns now */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Channel Breakdown Grid - 3 columns */}
+        <div className="grid grid-cols-3 gap-3">
           {CHANNEL_CARDS.map((channel) => {
             const Icon = channel.icon;
             const count = stats[channel.key as keyof WorkStreamStats] as number;
