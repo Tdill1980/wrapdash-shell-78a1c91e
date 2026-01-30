@@ -13,7 +13,7 @@ import { ArtworkReviewsPanel } from "@/components/admin/ArtworkReviewsPanel";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Session } from "@supabase/supabase-js";
 
-// MVP CORE TABS ONLY — No emails (V2), no systems
+// MVP CORE TABS ONLY — No emails (V2), no systems, escalations moved to /escalations
 const TABS = [
   { id: "chats", label: "Website Chat", icon: MessageSquare, color: "bg-blue-500" },
   { id: "artwork", label: "Artwork Reviews", icon: FileImage, color: "bg-purple-500" },
