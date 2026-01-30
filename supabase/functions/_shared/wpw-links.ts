@@ -8,10 +8,22 @@ export const APPROVED_LINKS = {
     commercialpro: "https://weprintwraps.com/pages/commercialpro",
     restylepro: "https://weprintwraps.com/pages/restylepro",
     laminates: "https://weprintwraps.com/collections/laminates",
-    // Core product pages
+    // Core product pages from PDF
     wall_wrap: "https://weprintwraps.com/our-products/wall-wrap-printed-vinyl/",
+    custom_wrap_design: "https://weprintwraps.com/our-products/custom-wrap-design/",
+    design_setup_file_output: "https://weprintwraps.com/our-products/design-setup-file-output/",
+    pre_designed_fade_wraps: "https://weprintwraps.com/our-products/pre-designed-fade-wraps/",
     avery_1105: "https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/",
     "3m_ij180": "https://weprintwraps.com/our-products/3m-ij180-printed-wrap-film/",
+    avery_cut_contour: "https://weprintwraps.com/our-products/avery-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/",
+    "3m_cut_contour": "https://weprintwraps.com/our-products/3m-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/",
+    perforated_window: "https://weprintwraps.com/our-products/perforated-window-vinyl-50-50-unlaminated/",
+    // Wrap By The Yard collections
+    wbty_wicked_wild: "https://weprintwraps.com/our-products/wrap-by-the-yard-wicked-wild-wrap-prints/",
+    wbty_bape_camo: "https://weprintwraps.com/our-products/wrap-by-the-yard-bape-camo/",
+    wbty_modern_trippy: "https://weprintwraps.com/our-products/wrap-by-the-yard-modern-trippy/",
+    wbty_metal_marble: "https://weprintwraps.com/our-products/wrap-by-the-yard-metal-marble/",
+    wbty_camo_carbon: "https://weprintwraps.com/our-products/camo-carbon-wrap-by-the-yard/",
   },
   ordering: {
     homepage_quote: "https://weprintwraps.com/#quote",
@@ -34,7 +46,14 @@ APPROVED LINKS (use ONLY these - never invent URLs):
 - Custom Printed Wraps: ${APPROVED_LINKS.products.custom_printed_wraps}
 - CommercialPro (fleets/business): ${APPROVED_LINKS.products.commercialpro}
 - RestylePro (restyle/enthusiast): ${APPROVED_LINKS.products.restylepro}
-- Laminates: ${APPROVED_LINKS.products.laminates}
+- Avery 1105 Printed Wrap: ${APPROVED_LINKS.products.avery_1105}
+- 3M IJ180 Printed Wrap: ${APPROVED_LINKS.products["3m_ij180"]}
+- Avery Cut Contour Vinyl: ${APPROVED_LINKS.products.avery_cut_contour}
+- 3M Cut Contour Vinyl: ${APPROVED_LINKS.products["3m_cut_contour"]}
+- Perforated Window Vinyl: ${APPROVED_LINKS.products.perforated_window}
+- Pre-Designed Fade Wraps: ${APPROVED_LINKS.products.pre_designed_fade_wraps}
+- Wrap By The Yard - Wicked Wild: ${APPROVED_LINKS.products.wbty_wicked_wild}
+- Wrap By The Yard - Bape Camo: ${APPROVED_LINKS.products.wbty_bape_camo}
 - Homepage Quote Tool: ${APPROVED_LINKS.ordering.homepage_quote}
 - Upload Artwork: ${APPROVED_LINKS.ordering.upload_artwork}
 - Account Login: ${APPROVED_LINKS.ordering.login}
