@@ -67,40 +67,6 @@ export default function AgentControlPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Jackson Quick Guide */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            👋 Hey Jackson! Here's how Jordan works:
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-lg bg-background/60 p-3 border">
-              <p className="font-semibold text-green-500 mb-1">🟢 AUTO MODE (Recommended)</p>
-              <p className="text-muted-foreground">
-                Leave "Agent Enabled" <span className="font-bold text-foreground">ON</span>. Jordan auto-runs from <span className="font-bold">5 PM</span> to <span className="font-bold">8:30 AM</span>.
-              </p>
-            </div>
-            <div className="rounded-lg bg-background/60 p-3 border">
-              <p className="font-semibold text-blue-500 mb-1">🚀 FORCE START</p>
-              <p className="text-muted-foreground">
-                Need Jordan during the day? Hit <span className="font-bold">"Force Start"</span> to turn him ON outside auto-schedule.
-              </p>
-            </div>
-            <div className="rounded-lg bg-background/60 p-3 border">
-              <p className="font-semibold text-red-500 mb-1">🔴 EMERGENCY STOP</p>
-              <p className="text-muted-foreground">
-                Need to stop Jordan? Hit the red button to turn him OFF instantly.
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground border-t pt-2">
-            💡 <strong>TL;DR:</strong> Auto runs evenings/nights. Force Start for daytime. Emergency Stop if something's wrong.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* Current Status Card */}
       <Card className={currentStatus.active ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}>
         <CardHeader className="pb-3">
