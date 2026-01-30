@@ -90,20 +90,23 @@ export function MightyChatCard() {
 
   async function loadWorkStreams() {
     try {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Fetch ONLY active/pending conversations from the last 7 days
+      // Fetch ALL conversations from the last 30 days (removed restrictive review_status filter)
       const { data: conversations, error } = await supabase
         .from("conversations")
         .select("id, channel, subject, unread_count, priority, review_status, last_message_at, metadata, recipient_inbox")
-        .or("review_status.eq.pending_review,review_status.eq.needs_response")
-        .gte("last_message_at", sevenDaysAgo)
+        .gte("last_message_at", thirtyDaysAgo)
         .order("last_message_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
-      if (error) throw error;
+      if (error) {
+        console.error("MightyChatCard query error:", error);
+        throw error;
+      }
 
       const convs = conversations || [];
+      console.log(`[MightyChatCard] Loaded ${convs.length} conversations from last 30 days`);
 
       // Fetch pending AI actions (for hot leads and quote count)
       const { data: pendingActions } = await supabase
