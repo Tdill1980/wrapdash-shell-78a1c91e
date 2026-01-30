@@ -150,42 +150,42 @@ export function ChatTranscriptViewer({
     <div className="space-y-6">
       {/* Stats Cards - Dark themed with gradient accents */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-[#1a1a2e] border-purple-500/20">
+        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#2a1a3e] border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500/30 to-fuchsia-500/30 shadow-inner">
                 <MessageSquare className="h-5 w-5 text-fuchsia-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats?.totalToday || 0}</p>
+                <p className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">{stats?.totalToday || 0}</p>
                 <p className="text-xs text-gray-400">Website Chats Today</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1a1a2e] border-green-500/20">
+        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#1a2e1a] border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.15)]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 shadow-inner">
                 <Mail className="h-5 w-5 text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats?.emailsCaptured || 0}</p>
+                <p className="text-2xl font-bold text-green-400">{stats?.emailsCaptured || 0}</p>
                 <p className="text-xs text-gray-400">Emails Captured</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1a1a2e] border-orange-500/20">
+        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#2e2a1a] border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.15)]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-orange-500/10">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20 shadow-inner">
                 <AlertCircle className="h-5 w-5 text-orange-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{escalationStats?.total || escalationCount}</p>
+                <p className="text-2xl font-bold text-orange-400">{escalationStats?.total || escalationCount}</p>
                 <p className="text-xs text-gray-400">
                   Escalations ({escalationStats?.today || 0} today)
                 </p>
@@ -194,14 +194,14 @@ export function ChatTranscriptViewer({
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1a1a2e] border-blue-500/20">
+        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#1a2a3e] border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 shadow-inner">
                 <Users className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats?.activeConversations || 0}</p>
+                <p className="text-2xl font-bold text-blue-400">{stats?.activeConversations || 0}</p>
                 <p className="text-xs text-gray-400">Website Chats Active</p>
               </div>
             </div>
@@ -259,14 +259,14 @@ export function ChatTranscriptViewer({
           </div>
           
           {/* OS Transparency: Total DB count badge */}
-          <div className="flex items-center gap-3 mb-4 p-3 bg-[#1a1a2e] rounded-lg border border-purple-500/20">
-            <Badge variant="outline" className="text-sm font-mono bg-purple-500/10 text-purple-400 border-purple-500/30">
+          <div className="flex items-center gap-3 mb-4 p-3 bg-gradient-to-r from-[#1a1a2e] to-[#2a1a3e] rounded-lg border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.1)]">
+            <Badge variant="outline" className="text-sm font-mono bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 text-purple-300 border-purple-500/40">
               DB Total: {totalDbCount ?? '...'}
             </Badge>
-            <Badge className="text-sm bg-blue-500/20 text-blue-400 border-blue-500/30">
+            <Badge className="text-sm bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border-blue-500/40">
               Loaded: {conversations.length}
             </Badge>
-            <Badge className={`text-sm ${filteredConversations.length === conversations.length ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+            <Badge className={`text-sm ${filteredConversations.length === conversations.length ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300' : 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-300'}`}>
               Showing: {filteredConversations.length}
             </Badge>
             {filteredConversations.length < conversations.length && (
@@ -359,40 +359,51 @@ export function ChatTranscriptViewer({
         </div>
 
         {/* Right: Session Details Panel */}
-        <Card className="bg-[#1a1a2e] border-purple-500/20 h-fit">
+        <Card className="bg-gradient-to-br from-[#1a1a2e] to-[#2a1a3e] border-purple-500/30 h-fit shadow-[0_0_20px_rgba(168,85,247,0.1)]">
           <CardContent className="pt-6">
             {selectedConversation ? (
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Session Details</h3>
+                <h3 className="font-semibold text-lg text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-400 to-fuchsia-400" />
+                  Session Details
+                </h3>
                 
                 {/* Customer Info */}
-                <div className="p-3 bg-muted/30 rounded-lg space-y-2">
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Customer:</span>{" "}
-                    <span className="font-medium">
+                <div className="p-3 bg-[#2a2a4a] rounded-lg space-y-2 border border-white/10">
+                  <p className="text-sm text-gray-300">
+                    <span className="text-gray-500">Customer:</span>{" "}
+                    <span className="font-medium text-white">
                       {selectedConversation.contact?.email || selectedConversation.contact?.name || "Anonymous"}
                     </span>
                   </p>
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Started:</span>{" "}
+                  <p className="text-sm text-gray-300">
+                    <span className="text-gray-500">Started:</span>{" "}
                     {selectedConversation.created_at && format(new Date(selectedConversation.created_at), 'PPpp')}
                   </p>
                   {selectedGeo && (
-                    <p className="text-sm flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-red-500" />
-                      <span className="text-muted-foreground">Location:</span>{" "}
-                      <span className="text-primary">
-                        {selectedGeo.city}, {selectedGeo.region} ({selectedGeo.country})
-                      </span>
-                    </p>
+                    <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-pink-500/10 to-fuchsia-500/10 rounded border border-pink-500/20">
+                      <MapPin className="h-4 w-4 text-pink-400" />
+                      <div className="text-sm">
+                        <span className="text-fuchsia-300 font-medium">
+                          {selectedGeo.city}, {selectedGeo.region}
+                        </span>
+                        <span className="text-gray-400 ml-1">({selectedGeo.country})</span>
+                      </div>
+                    </div>
+                  )}
+                  {selectedGeo?.ip && (
+                    <p className="text-xs text-gray-500">IP: {selectedGeo.ip}</p>
                   )}
                 </div>
 
                 {/* Vehicle Info */}
                 {selectedConversation.chat_state?.vehicle && (
-                  <div className="p-3 bg-blue-500/10 rounded-lg">
-                    <p className="text-sm font-medium text-blue-500">Vehicle Interest</p>
-                    <p className="text-sm">
+                  <div className="p-3 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-lg border border-blue-500/20">
+                    <p className="text-sm font-medium text-blue-400 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                      Vehicle Interest
+                    </p>
+                    <p className="text-sm text-white mt-1">
                       {selectedConversation.chat_state.vehicle.year} {selectedConversation.chat_state.vehicle.make} {selectedConversation.chat_state.vehicle.model}
                     </p>
                   </div>
@@ -400,18 +411,23 @@ export function ChatTranscriptViewer({
 
                 {/* Transcript */}
                 <div>
-                  <h4 className="font-medium mb-2">Transcript ({selectedMessages.length} messages)</h4>
-                  <ScrollArea className="h-[300px] border rounded-lg p-3">
+                  <h4 className="font-medium mb-2 text-white flex items-center gap-2">
+                    Transcript 
+                    <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-500/30">
+                      {selectedMessages.length} messages
+                    </Badge>
+                  </h4>
+                  <ScrollArea className="h-[300px] border border-purple-500/20 rounded-lg p-3 bg-[#16162a]">
                     {selectedMessages.map((msg, idx) => (
                       <div key={msg.id || idx} className={`mb-3 ${msg.direction === 'outbound' ? 'text-right' : ''}`}>
-                        <div className={`inline-block max-w-[80%] p-2 rounded-lg text-sm ${
+                        <div className={`inline-block max-w-[80%] p-3 rounded-lg text-sm ${
                           msg.direction === 'outbound' 
-                            ? 'bg-primary text-primary-foreground' 
-                            : 'bg-muted'
+                            ? 'bg-gradient-to-r from-fuchsia-500 via-purple-500 to-pink-500 text-white shadow-[0_2px_10px_rgba(168,85,247,0.4)]' 
+                            : 'bg-[#2a2a4a] text-gray-200 border border-white/10'
                         }`}>
                           {msg.content}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-gray-500 mt-1">
                           {msg.sender_name || (msg.direction === 'outbound' ? 'Jordan Lee' : 'Customer')}
                           {msg.created_at && ` • ${format(new Date(msg.created_at), 'h:mm a')}`}
                         </p>
@@ -421,8 +437,9 @@ export function ChatTranscriptViewer({
                 </div>
               </div>
             ) : (
-              <div className="text-center text-muted-foreground py-12">
-                Select a session to view details
+              <div className="text-center text-gray-500 py-12">
+                <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30 text-purple-400" />
+                <p className="text-gray-400">Select a session to view details</p>
               </div>
             )}
           </CardContent>

@@ -66,6 +66,9 @@ const PHONE_PATTERN = /(\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}
 // Name extraction patterns (when explicitly given)
 const NAME_PATTERNS = /(?:my name is|i'm|i am|this is|call me|name'?s?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i;
 
+// Company name extraction patterns
+const COMPANY_PATTERNS = /(?:(?:from|with|at|for|representing|work for|own|my company is|company name is)\s+)?([A-Z][a-zA-Z\s&]+(?:Inc\.?|LLC|Corp\.?|Co\.?|Company|Services|Solutions|Fleet|Wraps|Graphics|Signs|Vinyl|Media|Auto|Motors|Customs?|Motorsports?|Racing|Shop|Studio|Designs?|Creative|Print(?:ing)?|Tinting|Detail(?:ing)?|Body\s*Shop|Collision|Automotive))/i;
+
 // Order number extraction pattern (4-6 digits typically)
 const ORDER_NUMBER_PATTERN = /\b(\d{4,6})\b/;
 
@@ -436,6 +439,7 @@ serve(async (req) => {
     const extractedEmail = message_text.match(EMAIL_PATTERN)?.[0] || null;
     const extractedPhone = message_text.match(PHONE_PATTERN)?.[1] || null;
     const extractedName = message_text.match(NAME_PATTERNS)?.[1] || null;
+    const extractedCompany = message_text.match(COMPANY_PATTERNS)?.[1]?.trim() || null;
     const hasCompleteVehicle = extractedVehicle.year && extractedVehicle.make && extractedVehicle.model;
     // Partial vehicle info (like just "sprinter" or "ford f150") - need to ask for more details
     const hasPartialVehicle = (extractedVehicle.make || extractedVehicle.model) && !hasCompleteVehicle;
@@ -445,6 +449,7 @@ serve(async (req) => {
       email: extractedEmail, 
       phone: extractedPhone,
       name: extractedName,
+      company: extractedCompany,
       complete: hasCompleteVehicle, 
       partial: hasPartialVehicle 
     });
@@ -693,6 +698,23 @@ serve(async (req) => {
       // Check if now complete after merge
       const merged = chatState.vehicle as Record<string, string | null>;
       chatState.vehicle_complete = !!(merged.year && merged.make && merged.model);
+    }
+
+    // Capture company name
+    if (extractedCompany && !chatState.customer_company) {
+      chatState.customer_company = extractedCompany;
+      console.log('[JordanLee] Captured company:', extractedCompany);
+      
+      // Update contact with company info
+      if (contactId) {
+        await supabase
+          .from('contacts')
+          .update({ 
+            company: extractedCompany,
+            tags: ['website', 'chat', 'company_captured'],
+          })
+          .eq('id', contactId);
+      }
     }
 
     // Persist order number if found
