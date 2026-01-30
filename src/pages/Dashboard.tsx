@@ -22,7 +22,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { MightyCustomerCard } from "@/components/dashboard/MightyCustomerCard";
-import { PhoneCallsDashboardCard } from "@/components/dashboard/PhoneCallsDashboardCard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -272,10 +271,9 @@ export default function Dashboard() {
         </div>
 
         {/* Section 2: MightyChat & MightyCustomer Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <MightyChatCard />
           <MightyCustomerCard />
-          <PhoneCallsDashboardCard />
         </div>
 
         {/* Section 3: MightyAffiliate Status */}
