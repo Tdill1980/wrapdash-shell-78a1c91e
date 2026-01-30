@@ -70,11 +70,11 @@
   // WPW Logo (base64 encoded small version for embed)
   const WPW_LOGO = 'https://weprintwraps.com/cdn/shop/files/WePrintWraps-Logo-White.png?v=1690318107';
 
-  // QUICK ACTIONS - 3 buttons only
+  // QUICK ACTIONS - 3 buttons only (icon separate from text to avoid duplication)
   const quickActions = [
-    { id: 'quote', text: '🚗 How much is my wrap project?', icon: '🚗', primary: true, message: 'How much is my wrap project?' },
-    { id: 'order', text: '📦 How do I order?', icon: '📦', message: 'How do I place an order?' },
-    { id: 'restyle', text: '🎨 Ask me about RestyleProAI', icon: '🎨', message: 'Tell me about RestyleProAI and how it can help visualize my wrap' }
+    { id: 'quote', text: 'How much is my wrap project?', icon: '🚗', primary: true, message: 'How much is my wrap project?' },
+    { id: 'order', text: 'How do I order?', icon: '📦', message: 'How do I place an order?' },
+    { id: 'restyle', text: 'Ask me about RestyleProAI', icon: '🎨', message: 'Tell me about RestyleProAI and how it can help visualize my wrap' }
   ];
 
   // Geo data (fetched on load)
@@ -363,13 +363,13 @@
       background: rgba(230,0,126,0.1);
     }
     .wcai-quick-btn.primary {
-      background: linear-gradient(135deg, #f97316, #fb923c);
+      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
       border: none;
       color: white;
       font-weight: 600;
     }
     .wcai-quick-btn.primary:hover {
-      background: linear-gradient(135deg, #ea580c, #f97316);
+      background: linear-gradient(135deg, #c5006b, ${colors.primary});
     }
     .wcai-quick-btn-icon {
       width: 24px;
@@ -633,7 +633,7 @@
         ${quickActionsHTML}
       </div>
       <div class="wcai-chat-input-area">
-        <button class="wcai-chat-attach" id="wcai-attach" title="Attach file">
+        <button class="wcai-chat-attach" id="wcai-attach" title="Attach file – AI will analyze your artwork">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
           </svg>
