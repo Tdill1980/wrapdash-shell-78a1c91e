@@ -1,103 +1,116 @@
 
+# Fix Ugly White Card Outlines + Breadcrumb Error
 
-# Create New Ops Page
+## Issue 1: Ugly White Outline on Cards
 
-## What You Want
-Create a dedicated **Ops** page that combines:
-1. **Ops Desk Command Panel** — The directive input for assigning tasks to agents
-2. **Agent Control Panel** — Force Start, Emergency Stop, Master Toggle, and Schedule settings
+**Root Cause**: The Card component uses `border border-border` class which renders as a visible white outline.
 
-The Website Chat Admin page at `/website-admin` stays exactly as it is — no changes.
+In `src/index.css`:
+```css
+--border: 0 0% 100%;        /* Pure white */
+--border-opacity: 0.06;     /* 6% opacity */
+```
+
+This creates a faint but noticeable white border on every Card in the app.
+
+**Solution**: Reduce the border opacity or make it more subtle for cards.
+
+| Option | Change | Effect |
+|--------|--------|--------|
+| A | Reduce `--border-opacity` from 0.06 to 0.03 | Subtler borders everywhere |
+| B | Update Card component to use softer border | Cards only, other borders unchanged |
+| C | Remove border from Card, rely on shadow | Clean borderless cards |
+
+**Recommended**: Option B - Update Card component only
+
+### File Changes
+
+**File**: `src/components/ui/card.tsx`
+
+Change line 6 from:
+```typescript
+"rounded-lg border border-border bg-card text-card-foreground shadow-sm"
+```
+To:
+```typescript
+"rounded-lg border border-white/[0.03] bg-card text-card-foreground shadow-sm"
+```
+
+This reduces the white border opacity from 6% to 3% on cards only, making them blend better with the dark background.
 
 ---
 
-## Changes Required
+## Issue 2: Breadcrumb `<li>` Nesting Error
 
-### 1. Create New Page: `/ops`
-**New file:** `src/pages/Ops.tsx`
+**Console Error**: 
+```
+Warning: validateDOMNesting(...): <li> cannot appear as a descendant of <li>
+```
 
-| Section | Component | Purpose |
-|---------|-----------|---------|
-| Header | Page title "Ops" | Clear identification |
-| Panel 1 | `OpsDeskCommandPanel` | Natural language directives for agents |
-| Panel 2 | `AgentControlPanel` | Force Start, Emergency Stop, Schedule |
+**Root Cause**: In `AppBreadcrumb.tsx`, the `BreadcrumbSeparator` (which renders `<li>`) is placed *inside* `BreadcrumbItem` (also `<li>`), causing invalid HTML nesting.
 
-Structure:
-```text
-Ops.tsx
-├── Auth check (redirect to /auth if not logged in)
-├── Page Header: "Ops" with icon
-├── OpsDeskCommandPanel (directive input section)
-└── AgentControlPanel (Jordan controls section)
+Current structure (invalid):
+```html
+<li> <!-- BreadcrumbItem -->
+  <li> <!-- BreadcrumbSeparator - WRONG! -->
+    <ChevronRight />
+  </li>
+  <span>Page Name</span>
+</li>
+```
+
+Valid structure:
+```html
+<li> <!-- BreadcrumbSeparator -->
+  <ChevronRight />
+</li>
+<li> <!-- BreadcrumbItem -->
+  <span>Page Name</span>
+</li>
+```
+
+### File Changes
+
+**File**: `src/components/AppBreadcrumb.tsx`
+
+Move `BreadcrumbSeparator` outside of `BreadcrumbItem`:
+
+```tsx
+{breadcrumbItems.map((item, index) => (
+  <React.Fragment key={item.path}>
+    <BreadcrumbSeparator>
+      <ChevronRight className="h-3.5 w-3.5 text-white/30" />
+    </BreadcrumbSeparator>
+    <BreadcrumbItem>
+      {item.isLast ? (
+        <BreadcrumbPage className="text-foreground font-medium">
+          {item.label}
+        </BreadcrumbPage>
+      ) : (
+        <BreadcrumbLink asChild>
+          <Link to={item.path} className="...">
+            {item.label}
+          </Link>
+        </BreadcrumbLink>
+      )}
+    </BreadcrumbItem>
+  </React.Fragment>
+))}
 ```
 
 ---
 
-### 2. Add Route
-**File:** `src/App.tsx`
+## Summary of Changes
 
-Add new route:
-```text
-<Route path="/ops" element={<Ops />} />
-```
-
----
-
-### 3. Add Sidebar Navigation
-**File:** `src/components/Sidebar.tsx`
-
-Add to the **Admin** section (since these are high-level controls):
-```text
-{ 
-  name: "Ops", 
-  path: "/ops", 
-  icon: Zap,
-  roles: ["admin"],
-  customRender: (styled text)
-}
-```
-
----
-
-### 4. Simplify Systems Page (Optional)
-The existing `/systems` page can be simplified since Agent Control is moving to `/ops`:
-- Keep Integrations tab (placeholder)
-- Keep Security tab (placeholder)
-- Remove Agent Control tab (now in Ops)
-
----
-
-## What Stays the Same
-
-| Page | URL | Status |
-|------|-----|--------|
-| Website Chat | `/website-admin` | ✅ **NO CHANGES** |
-| Dashboard | `/dashboard` | ✅ **NO CHANGES** |
-| MightyCustomer | `/mighty-customer` | ✅ **NO CHANGES** |
-
----
-
-## Result After Implementation
-
-| Sidebar Item | Route | What It Contains |
-|--------------|-------|------------------|
-| Website Chat | `/website-admin` | Chat sessions, escalations, quotes, analytics |
-| **Ops** | `/ops` | Ops Desk commands + Agent Control Panel |
-| Systems | `/systems` | Integrations & Security settings |
-
----
-
-## Technical Summary
-
-### Files to Create
-| File | Purpose |
-|------|---------|
-| `src/pages/Ops.tsx` | New Ops page combining both panels |
-
-### Files to Modify
 | File | Change |
 |------|--------|
-| `src/App.tsx` | Add `/ops` route |
-| `src/components/Sidebar.tsx` | Add "Ops" nav item |
-| `src/pages/Systems.tsx` | Remove Agent Control tab (optional) |
+| `src/components/ui/card.tsx` | Reduce border opacity from 6% to 3% |
+| `src/components/AppBreadcrumb.tsx` | Fix `<li>` nesting by moving separator outside item |
 
+---
+
+## Result After Fix
+
+1. Card borders will be nearly invisible (3% white vs 6%)
+2. No more console error about invalid HTML nesting
+3. Cleaner, more professional dark theme appearance
