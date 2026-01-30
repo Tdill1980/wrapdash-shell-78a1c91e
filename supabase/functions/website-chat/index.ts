@@ -123,7 +123,7 @@ PRICING (Print-Only - Customer arranges local installation):
 
 PRINTED WRAP FILMS (per square foot):
 - Avery MPI 1105 with DOL 1460Z Lamination: $5.27/sqft
-- 3M IJ180Cv3 with 8518 Lamination: $6.32/sqft
+- 3M IJ180Cv3 with 8518 Lamination: $5.27/sqft ← SAME PRICE AS AVERY!
 - Window Perf 50/50: $5.32/sqft
 
 CUT CONTOUR VINYL (per square foot, weeded & masked):
@@ -1337,11 +1337,13 @@ Phone: ${chatState.customer_phone}
 Shop: ${chatState.shop_name}
 Vehicle: ${vehicleDisplay}
 SQFT: ${chatState.sqft} (no roof)
-PRICE: $${price}
+PRICE: $${price} (at $5.27/sqft - SAME for Avery AND 3M!)
 
 SAY: "Thanks ${chatState.customer_name} from ${chatState.shop_name}! 🙌
 
-A **${vehicleDisplay}** is about **${chatState.sqft} sqft**. At $5.27/sqft, that's **$${price}** for Avery MPI 1105 with lamination. ${freeShip}
+A **${vehicleDisplay}** is about **${chatState.sqft} sqft**. At $5.27/sqft, that's **$${price}** for printed wrap film with lamination. ${freeShip}
+
+Would you prefer **Avery MPI 1105** or **3M IJ180Cv3**? Both are the same price! 
 
 I'm sending your quote to ${chatState.customer_email} now! 📧
 
@@ -1349,6 +1351,7 @@ I'm sending your quote to ${chatState.customer_email} now! 📧
 
 Anything else I can help with?"
 
+IMPORTANT: NEVER show two different prices for Avery vs 3M. They are BOTH $5.27/sqft!
 REMEMBER: We PRINT and SHIP - customer arranges local installation.`;
           }
           
@@ -1579,12 +1582,14 @@ CUSTOMER STATE:
 - Vehicle: ${chatState.vehicle || 'Unknown'}
 - SQFT: ${chatState.sqft || 'Unknown'}
 
-PRICING RULE:
-- If customer has provided vehicle or dimensions, GIVE THE PRICE IMMEDIATELY!
-- THEN ask for email/phone: "I can also email you a quote - just need your name and email!"
-- If they provide email after price, SEND THE QUOTE automatically.
+PRICING RULE (CONTACT-GATED):
+- DO NOT give ANY specific pricing until you have at minimum: Name + Email
+- If customer asks for price without providing name+email, say: "I'd love to get you a quote! What's your name and email so I can send it over?"
+- AFTER you have name+email: Give ONE price at $5.27/sqft and ask "Would you prefer Avery MPI 1105 or 3M IJ180Cv3? Both are the same price!"
+- NEVER show two different prices for Avery vs 3M. They are BOTH $5.27/sqft!
+- For trailers/RVs/campers: ALWAYS ask for dimensions (length × height per side + which sides). Do NOT estimate sqft from length alone!
 
-${!chatState.customer_email ? '📧 No email yet - try to get it for quote!' : '✅ Have email - can send quote!'}`;
+${!chatState.customer_email ? '📧 GATE ACTIVE: Get name + email BEFORE giving price!' : '✅ Have email - give ONE price at $5.27/sqft and ask Avery or 3M!'}`;
 
         // Use Lovable AI Gateway instead of Anthropic
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -1618,19 +1623,13 @@ ${!chatState.customer_email ? '📧 No email yet - try to get it for quote!' : '
       console.warn('[JordanLee] LOVABLE_API_KEY not configured');
     }
 
-    // Save state and response
-    const updateData: Record<string, any> = { 
-      chat_state: chatState, 
-      last_message_at: new Date().toISOString() 
-    };
-    if (chatState.customer_email) updateData.customer_email = chatState.customer_email;
-    if (chatState.customer_name) updateData.customer_name = chatState.customer_name;
-    if (chatState.customer_phone) updateData.customer_phone = chatState.customer_phone;
-    if (chatState.shop_name) updateData.shop_name = chatState.shop_name;
-    
+    // Save state and response - FIXED: Only update valid columns (chat_state JSONB holds all contact info)
     await supabase
       .from('conversations')
-      .update(updateData)
+      .update({ 
+        chat_state: chatState, 
+        last_message_at: new Date().toISOString() 
+      })
       .eq('id', conversationId);
 
     await supabase.from('messages').insert({

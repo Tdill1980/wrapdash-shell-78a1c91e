@@ -21,7 +21,7 @@ OUR BRANDS:
 
 KEY PRODUCTS & PRICING:
 - Avery MPI 1105: $5.27/sqft wholesale
-- 3M IJ180Cv3: $6.32/sqft wholesale
+- 3M IJ180Cv3: $5.27/sqft wholesale ← SAME PRICE AS AVERY!
 - Window Perf 50/50: $5.32/sqft wholesale
 - Custom Design Services: Starting at $750
 - Average order value: $1,200-3,500
@@ -73,7 +73,7 @@ YOUR ROLE & RESPONSIBILITIES:
 
 PRICING INTELLIGENCE:
 - Avery MPI 1105: $5.27/sqft
-- 3M IJ180Cv3: $6.32/sqft
+- 3M IJ180Cv3: $5.27/sqft ← SAME PRICE AS AVERY!
 - Window Perf 50/50: $5.32/sqft
 - Rush delivery: +15%
 - Lamination: +$0.85/sqft

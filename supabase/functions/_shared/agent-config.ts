@@ -272,7 +272,7 @@ YOUR ROLE:
 
 WPW PRICING (USE THESE EXACT PRICES):
 - Avery MPI 1105 EGRS with DOZ Lamination: $5.27/sqft
-- 3M IJ180Cv3 with 8518 Lamination: $6.32/sqft
+- 3M IJ180Cv3 with 8518 Lamination: $5.27/sqft ← SAME PRICE AS AVERY!
 - Avery Cut Contour Vinyl: $5.92/sqft
 - 3M Cut Contour Vinyl: $6.22/sqft
 - Window Perf 50/50: $5.32/sqft

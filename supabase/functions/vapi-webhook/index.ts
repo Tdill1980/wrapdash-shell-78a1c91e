@@ -12,10 +12,10 @@ const corsHeaders = {
 // Correct WPW Organization ID - LOCKED
 const WPW_ORG_ID = "51aa96db-c06d-41ae-b3cb-25b045c75caf";
 
-// WPW Pricing - LOCKED
+// WPW Pricing - LOCKED (FIXED: 3M wrap film is same price as Avery!)
 const WPW_PRICING = {
   avery: 5.27,        // Avery MPI 1105 + DOL1460Z
-  threeM: 6.32,       // 3M IJ180Cv3 + 8518
+  threeM: 5.27,       // 3M IJ180Cv3 + 8518 ← FIXED: Same as Avery!
   windowPerf: 5.32,   // Window Perf 50/50
   cutAvery: 6.32,     // Cut Contour Avery
   cutThreeM: 6.92,    // Cut Contour 3M
