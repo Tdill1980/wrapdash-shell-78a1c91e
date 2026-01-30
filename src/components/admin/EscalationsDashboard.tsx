@@ -63,6 +63,7 @@ interface EscalationItem {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
+  shopName: string;
   escalationType: string;
   escalatedAt: string;
   status: EscalationStatus;
@@ -70,6 +71,8 @@ interface EscalationItem {
   age: string;
   priority: number;
   vehicle?: VehicleInfo;
+  triggerMessage: string;
+  reason: string;
 }
 
 interface EscalationsDashboardProps {
@@ -110,21 +113,39 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
 
       const queueItems: EscalationItem[] = [];
 
+      // Fetch escalation events with metadata for trigger info
+      const { data: escalationEventsWithMeta } = await supabase
+        .from('conversation_events')
+        .select('*')
+        .eq('event_type', 'escalation')
+        .in('conversation_id', conversationIds);
+
       for (const convId of conversationIds) {
         const convEvents = (allEvents || []).filter(e => e.conversation_id === convId) as ConversationEvent[];
         const statusResult = evaluateEscalationStatus(convEvents);
         
         const conv = conversations?.find(c => c.id === convId);
         const escalation = escalationEvents?.find(e => e.conversation_id === convId);
+        const escalationMeta = escalationEventsWithMeta?.find(e => e.conversation_id === convId);
         const contact = conv?.contact as { name?: string; email?: string; phone?: string } | null;
         const escalationType = escalation?.subtype || 'general';
-        const chatState = conv?.chat_state as { vehicle?: VehicleInfo } | null;
+        const chatState = conv?.chat_state as { 
+          vehicle?: VehicleInfo; 
+          shop_name?: string;
+          customer_name?: string;
+          customer_email?: string;
+          customer_phone?: string;
+        } | null;
+        
+        // Get trigger message and reason from escalation metadata
+        const payload = escalationMeta?.payload as { trigger_message?: string; reason?: string } | null;
 
         queueItems.push({
           conversationId: convId,
-          contactName: contact?.name || 'Website Visitor',
-          contactEmail: contact?.email || '',
-          contactPhone: contact?.phone || '',
+          contactName: chatState?.customer_name || contact?.name || 'Website Visitor',
+          contactEmail: chatState?.customer_email || contact?.email || '',
+          contactPhone: chatState?.customer_phone || contact?.phone || '',
+          shopName: chatState?.shop_name || '',
           escalationType,
           escalatedAt: escalation?.created_at || '',
           status: statusResult.status,
@@ -134,6 +155,8 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
             : '',
           priority: TYPE_PRIORITY[escalationType] || 10,
           vehicle: chatState?.vehicle,
+          triggerMessage: payload?.trigger_message || '',
+          reason: payload?.reason || escalationType,
         });
       }
 
@@ -258,140 +281,164 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                   return (
                     <div
                       key={item.conversationId}
-                      className={`flex items-center gap-3 p-3 hover:bg-purple-500/10 transition-colors cursor-pointer ${
+                      className={`flex flex-col gap-2 p-3 hover:bg-purple-500/10 transition-colors cursor-pointer ${
                         isSelected ? 'bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 border-l-2 border-purple-500' : ''
                       } ${isComplete ? 'opacity-50' : ''}`}
                     >
-                      {/* Main clickable area - opens canonical chat */}
-                      <button
-                        onClick={() => handleRowClick(item.conversationId)}
-                        className="flex-1 text-left min-w-0"
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <User className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                          <span className="text-sm font-medium truncate text-white">
-                            {item.contactName !== 'Website Visitor' 
-                              ? item.contactName 
-                              : item.contactEmail?.split('@')[0] || 'Unknown'}
-                          </span>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-[10px] ${typeConfig.color} flex items-center gap-1 flex-shrink-0`}
-                          >
-                            <TypeIcon className="h-3 w-3" />
-                            {typeConfig.label}
-                          </Badge>
-                        </div>
-                        
-                        {/* Contact info preview */}
-                        <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-1.5 ml-5">
-                          {item.contactEmail && (
-                            <span className="flex items-center gap-1 truncate">
-                              <Mail className="h-3 w-3" />
-                              {item.contactEmail.split('@')[0]}...
+                      {/* Header row */}
+                      <div className="flex items-center gap-3">
+                        {/* Main clickable area - opens canonical chat */}
+                        <button
+                          onClick={() => handleRowClick(item.conversationId)}
+                          className="flex-1 text-left min-w-0"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <User className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm font-medium truncate text-white">
+                              {item.contactName !== 'Website Visitor' 
+                                ? item.contactName 
+                                : item.contactEmail?.split('@')[0] || 'Unknown'}
                             </span>
-                          )}
-                          {item.contactPhone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3 text-green-500" />
-                              ✓
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 text-xs text-gray-400 ml-5">
-                          <Clock className="h-3 w-3" />
-                          {item.age}
-                          {item.status === 'blocked' && (
-                            <Badge variant="outline" className="text-[9px] bg-orange-500/20 text-orange-400 border-orange-500/40 ml-auto">
-                              blocked
+                            {item.shopName && (
+                              <span className="text-[10px] text-purple-400 truncate max-w-[100px]">
+                                @ {item.shopName}
+                              </span>
+                            )}
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[10px] ${typeConfig.color} flex items-center gap-1 flex-shrink-0`}
+                            >
+                              <TypeIcon className="h-3 w-3" />
+                              {typeConfig.label}
                             </Badge>
-                          )}
-                          {isComplete && (
-                            <Badge variant="outline" className="text-[9px] bg-green-500/20 text-green-400 border-green-500/40 ml-auto">
-                              complete
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        {item.missing.length > 0 && !isComplete && (
-                          <div className="flex flex-wrap gap-1 mt-1.5 ml-5">
-                            {item.missing.map((m, i) => (
-                              <Badge key={i} variant="outline" className="text-[9px] bg-[#2a2a4a] text-gray-400 border-white/10">
-                                {m}
-                              </Badge>
-                            ))}
                           </div>
-                        )}
-                      </button>
-                      
-                      {/* Quick actions - always visible */}
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const vehicle = item.vehicle || {};
-                            const params = new URLSearchParams();
-                            params.set('mode', 'wpw_internal');
-                            params.set('conversation_id', item.conversationId);
-                            if (item.contactName) params.set('customer', item.contactName);
-                            if (item.contactEmail) params.set('email', item.contactEmail);
-                            if (item.contactPhone) params.set('phone', item.contactPhone);
-                            if (vehicle.year) params.set('year', vehicle.year);
-                            if (vehicle.make) params.set('make', vehicle.make);
-                            if (vehicle.model) params.set('model', vehicle.model);
-                            navigate(`/mighty-customer?${params.toString()}`);
-                          }}
-                          title="Create Quote"
-                        >
-                          <Receipt className="h-4 w-4" />
-                        </Button>
-                        {/* Call Back button - only if contact has phone */}
-                        {item.contactPhone && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(`tel:${item.contactPhone}`, '_self');
-                            }}
-                            title="Call Back"
-                          >
-                            <Phone className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRowClick(item.conversationId);
-                          }}
-                          title="Open in Chat"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                        {!isComplete && (
+                          
+                          {/* Contact info - CALLBACK INFO */}
+                          <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-1.5 ml-5">
+                            {item.contactEmail && (
+                              <span className="flex items-center gap-1 truncate max-w-[150px]">
+                                <Mail className="h-3 w-3" />
+                                {item.contactEmail}
+                              </span>
+                            )}
+                            {item.contactPhone && (
+                              <span className="flex items-center gap-1 text-green-400 font-medium">
+                                <Phone className="h-3 w-3" />
+                                {item.contactPhone}
+                              </span>
+                            )}
+                            {!item.contactPhone && (
+                              <span className="flex items-center gap-1 text-orange-400">
+                                <Phone className="h-3 w-3" />
+                                No phone
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-xs text-gray-400 ml-5">
+                            <Clock className="h-3 w-3" />
+                            {item.age}
+                            {item.status === 'blocked' && (
+                              <Badge variant="outline" className="text-[9px] bg-orange-500/20 text-orange-400 border-orange-500/40 ml-auto">
+                                blocked
+                              </Badge>
+                            )}
+                            {isComplete && (
+                              <Badge variant="outline" className="text-[9px] bg-green-500/20 text-green-400 border-green-500/40 ml-auto">
+                                complete
+                              </Badge>
+                            )}
+                          </div>
+                        </button>
+                        
+                        {/* Quick actions - MOVED TO HEADER */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleQuickResolve(item.conversationId);
+                              const vehicle = item.vehicle || {};
+                              const params = new URLSearchParams();
+                              params.set('mode', 'wpw_internal');
+                              params.set('conversation_id', item.conversationId);
+                              if (item.contactName) params.set('customer', item.contactName);
+                              if (item.contactEmail) params.set('email', item.contactEmail);
+                              if (item.contactPhone) params.set('phone', item.contactPhone);
+                              if (vehicle.year) params.set('year', vehicle.year);
+                              if (vehicle.make) params.set('make', vehicle.make);
+                              if (vehicle.model) params.set('model', vehicle.model);
+                              navigate(`/mighty-customer?${params.toString()}`);
                             }}
-                            disabled={isProcessing}
-                            title="Quick Resolve"
+                            title="Create Quote"
                           >
-                            <CheckCircle className="h-4 w-4" />
+                            <Receipt className="h-4 w-4" />
                           </Button>
-                        )}
+                          {/* Call Back button - only if contact has phone */}
+                          {item.contactPhone && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`tel:${item.contactPhone}`, '_self');
+                              }}
+                              title="Call Back"
+                            >
+                              <Phone className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRowClick(item.conversationId);
+                            }}
+                            title="Open in Chat"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                          {!isComplete && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickResolve(item.conversationId);
+                              }}
+                              disabled={isProcessing}
+                              title="Quick Resolve"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
+                      
+                      {/* ISSUE/REQUEST - Trigger message preview */}
+                      {item.triggerMessage && (
+                        <div className="ml-5 px-2 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded text-[11px] text-orange-300 truncate">
+                          <span className="font-medium text-orange-400">Issue: </span>
+                          {item.triggerMessage.substring(0, 120)}{item.triggerMessage.length > 120 ? '...' : ''}
+                        </div>
+                      )}
+                      
+                      {/* Missing info tags */}
+                      {item.missing.length > 0 && !isComplete && (
+                        <div className="flex flex-wrap gap-1 ml-5">
+                          {item.missing.map((m, i) => (
+                            <Badge key={i} variant="outline" className="text-[9px] bg-[#2a2a4a] text-gray-400 border-white/10">
+                              {m}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      
                     </div>
                   );
                 })}
