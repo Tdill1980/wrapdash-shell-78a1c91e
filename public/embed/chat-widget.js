@@ -425,6 +425,24 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+    .wcai-chat-attach {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(139,92,246,0.3);
+      background: #0f3460;
+      color: #94a3b8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .wcai-chat-attach:hover {
+      border-color: ${colors.primary};
+      color: ${colors.primary};
+      background: #16213e;
+    }
     .wcai-powered {
       padding: 8px 16px;
       text-align: center;
@@ -615,6 +633,11 @@
         ${quickActionsHTML}
       </div>
       <div class="wcai-chat-input-area">
+        <button class="wcai-chat-attach" id="wcai-attach" title="Attach file">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          </svg>
+        </button>
         <input type="text" class="wcai-chat-input" id="wcai-input" placeholder="Type a message..." />
         <button class="wcai-chat-send" id="wcai-send">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -655,10 +678,25 @@
   const quickActionsContainer = document.getElementById('wcai-quick-actions');
   const input = document.getElementById('wcai-input');
   const sendBtn = document.getElementById('wcai-send');
+  const attachBtn = document.getElementById('wcai-attach');
   const fileInput = document.getElementById('wcai-file-input');
 
   let isOpen = false;
   let hasInteracted = false;
+  let isCheckMyFileFlow = false; // Tracks if file upload is from "Check My File" button
+
+  // Attach button opens file picker directly (no confirmation modal for general uploads)
+  if (attachBtn) {
+    attachBtn.addEventListener('click', () => {
+      // Check rate limit
+      if (fileUploadCount >= MAX_UPLOADS_PER_SESSION) {
+        addMessage("You've reached the upload limit for this session. Please email your files to Design@WePrintWraps.com for review.", false);
+        return;
+      }
+      isCheckMyFileFlow = false; // Direct attach, not Check My File
+      fileInput.click();
+    });
+  }
 
   // Hide ask trigger after first interaction
   function hideAskTrigger() {
@@ -799,6 +837,7 @@
 
     document.getElementById('wcai-modal-yes').addEventListener('click', () => {
       overlay.remove();
+      isCheckMyFileFlow = true; // Set flag for Check My File flow
       fileInput.click();
     });
 
@@ -892,36 +931,76 @@
       // Increment upload count
       fileUploadCount++;
 
-      // Call check-artwork-file edge function
-      showTyping();
-      
-      const checkResponse = await fetch(config.artworkCheckUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          file_url: fileUrl,
-          file_name: file.name,
-          file_type: file.type,
-          file_size: file.size,
-          customer_confirmed_full_wrap: true,
-          geo_data: geoData
-        })
-      });
-
-      const checkData = await checkResponse.json();
-      hideTyping();
-
-      if (checkData.success && checkData.message) {
-        await addMessage(checkData.message, false, true);
+      // Different handling based on flow type
+      if (isCheckMyFileFlow) {
+        // CHECK MY FILE FLOW: Call check-artwork-file edge function
+        showTyping();
         
-        // Follow up asking for email
-        setTimeout(async () => {
-          await addMessage("What email should our design team reach you at?", false, true);
-        }, 1500);
+        const checkResponse = await fetch(config.artworkCheckUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            file_url: fileUrl,
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            customer_confirmed_full_wrap: true,
+            geo_data: geoData
+          })
+        });
+
+        const checkData = await checkResponse.json();
+        hideTyping();
+
+        if (checkData.success && checkData.message) {
+          await addMessage(checkData.message, false, true);
+          
+          // Follow up asking for email
+          setTimeout(async () => {
+            await addMessage("What email should our design team reach you at?", false, true);
+          }, 1500);
+        } else {
+          addMessage("Got your file! ✓ Our design team will review it and email you with a detailed analysis and quote. What email should they reach you at?", false);
+        }
       } else {
-        addMessage("Got your file! ✓ Our design team will review it and email you with a detailed analysis and quote. What email should they reach you at?", false);
+        // DIRECT ATTACH FLOW: Send to Jordan AI (website-chat) with attachment for vision analysis
+        showTyping();
+        
+        const isImage = ['png', 'jpg', 'jpeg', 'tif', 'tiff'].includes(ext);
+        
+        const chatResponse = await fetch(config.apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            org: config.org,
+            agent: config.agent,
+            mode: config.mode,
+            session_id: sessionId,
+            message_text: `[Customer attached a file: ${file.name}]`,
+            page_url: window.location.href,
+            referrer: document.referrer,
+            geo: geoData,
+            attachments: [{
+              url: fileUrl,
+              type: file.type,
+              name: file.name
+            }]
+          })
+        });
+
+        const data = await chatResponse.json();
+        hideTyping();
+
+        if (data.response) {
+          await addMessage(data.response, false, true);
+        } else {
+          addMessage(`Got your file! 📎 I can see you've attached **${file.name}**. What would you like me to help you with regarding this file?`, false);
+        }
       }
+      
+      // Reset the flow flag
+      isCheckMyFileFlow = false;
 
     } catch (err) {
       console.error('[WCAI] Upload error:', err);
