@@ -9,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
-import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package } from "lucide-react";
+import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package, Ruler } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
@@ -82,6 +82,11 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
+  
+  // Dimension calculator state for trailers/custom
+  const [dimLength, setDimLength] = useState(0);
+  const [dimHeight, setDimHeight] = useState(0);
+  const [dimSides, setDimSides] = useState(2);
   
   // Supabase-powered SQFT options from VehicleSelectorV2
   const [dbSqftOptions, setDbSqftOptions] = useState<VehicleSQFTOptions | null>(null);
@@ -300,19 +305,10 @@ export default function MightyCustomer() {
   };
 
   const handleSaveQuote = async () => {
-    if (!customerData.name || !customerData.email) {
-      toast({
-        title: "Missing Information",
-        description: "Please enter customer name and email",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!selectedProduct || !total) {
       toast({
         title: "Incomplete Quote",
-        description: "Please complete the quote before saving",
+        description: "Please select a product and ensure total is calculated",
         variant: "destructive",
       });
       return;
@@ -938,6 +934,62 @@ export default function MightyCustomer() {
                 </div>
               </div>
             </div>
+
+            {/* Dimension Calculator for Trailers/Custom */}
+            <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/30">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Ruler className="h-4 w-4" />
+                Dimension Calculator (Trailers, RVs, Custom)
+              </Label>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Length (ft)</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="14" 
+                    value={dimLength || ""} 
+                    onChange={(e) => setDimLength(Number(e.target.value))}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Height (ft)</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="6" 
+                    value={dimHeight || ""} 
+                    onChange={(e) => setDimHeight(Number(e.target.value))}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground"># of Sides</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="2" 
+                    min="1" 
+                    max="4" 
+                    value={dimSides || ""} 
+                    onChange={(e) => setDimSides(Number(e.target.value))}
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const calculatedSqft = dimLength * dimHeight * dimSides;
+                  if (calculatedSqft > 0) {
+                    handleSqftChange(calculatedSqft);
+                  }
+                }}
+                disabled={dimLength <= 0 || dimHeight <= 0 || dimSides <= 0}
+                className="w-full"
+              >
+                Calculate: {dimLength * dimHeight * dimSides} sq ft → Apply
+              </Button>
+            </div>
           </div>
 
           {/* Quote Summary */}
@@ -1084,7 +1136,7 @@ export default function MightyCustomer() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Email</Label>
+                <Label>Email <span className="text-muted-foreground text-xs">(required to send quote)</span></Label>
                 <Input
                   type="email"
                   placeholder="john@example.com"
@@ -1131,7 +1183,7 @@ export default function MightyCustomer() {
             <Button
               onClick={handleSaveQuote}
               variant="outline"
-              disabled={isSavingQuote || !selectedProduct || !total || !customerData.name || !customerData.email}
+              disabled={isSavingQuote || !selectedProduct || !total}
               className="flex-1 border-primary/40 hover:bg-primary/10"
             >
               <Plus className="mr-2 h-4 w-4" />
