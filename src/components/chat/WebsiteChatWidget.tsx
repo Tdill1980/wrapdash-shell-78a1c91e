@@ -17,7 +17,7 @@ const QUICK_ACTIONS = [
   { icon: Mail, label: "Email my quote", message: "I need my quote emailed to me" },
   { icon: Search, label: "Order status", message: "I want to check my order or quote status" },
   { icon: Palette, label: "Bulk / Fleet pricing", message: "I need bulk or fleet pricing" },
-  { icon: Clock, label: "Production & Shipping", message: "Tell me about production time and shipping" },
+  { icon: Clock, label: "Production time", message: "Tell me about production time and shipping" },
 ];
 
 export function WebsiteChatWidget() {

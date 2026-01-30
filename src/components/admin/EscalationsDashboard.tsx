@@ -200,21 +200,21 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold flex items-center gap-2">
-        <AlertTriangle className="h-5 w-5 text-orange-500" />
+      <h2 className="text-xl font-bold flex items-center gap-2 text-white">
+        <AlertTriangle className="h-5 w-5 text-orange-400" />
         Escalations Dashboard
-        <span className="text-sm font-normal text-muted-foreground ml-2">
+        <span className="text-sm font-normal text-gray-400 ml-2">
           (Click to open in Chat)
         </span>
       </h2>
 
-      <Card>
+      <Card className="bg-[#1a1a2e] border-purple-500/20">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center justify-between text-gray-300">
             <span>Queue</span>
             <div className="flex items-center gap-2">
               {blockedItems.length > 0 && (
-                <Badge variant="outline" className="bg-orange-500/10 text-orange-500">
+                <Badge variant="outline" className="bg-orange-500/20 text-orange-400 border-orange-500/40">
                   {blockedItems.length} blocked
                 </Badge>
               )}
@@ -222,7 +222,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 gap-1.5 border-green-500/30 text-green-600 hover:bg-green-500/10"
+                  className="h-7 gap-1.5 border-green-500/30 text-green-400 hover:bg-green-500/10"
                   onClick={handleResolve}
                   disabled={isProcessing}
                 >
@@ -239,16 +239,16 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
         </CardHeader>
         <CardContent className="p-0">
           {queueLoading ? (
-            <div className="p-4 text-center text-muted-foreground text-sm">Loading...</div>
+            <div className="p-4 text-center text-gray-400 text-sm">Loading...</div>
           ) : !items || items.length === 0 ? (
             <div className="p-8 text-center">
-              <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-3" />
-              <p className="text-sm font-medium">All clear!</p>
-              <p className="text-xs text-muted-foreground">No escalations pending</p>
+              <CheckCircle className="h-10 w-10 text-green-400 mx-auto mb-3" />
+              <p className="text-sm font-medium text-white">All clear!</p>
+              <p className="text-xs text-gray-400">No escalations pending</p>
             </div>
           ) : (
             <ScrollArea className="h-[400px]">
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-purple-500/10">
                 {items.map((item) => {
                   const typeConfig = getTypeConfig(item.escalationType);
                   const TypeIcon = typeConfig.icon;
@@ -258,8 +258,8 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                   return (
                     <div
                       key={item.conversationId}
-                      className={`flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors cursor-pointer ${
-                        isSelected ? 'bg-primary/10 border-l-2 border-primary' : ''
+                      className={`flex items-center gap-3 p-3 hover:bg-purple-500/10 transition-colors cursor-pointer ${
+                        isSelected ? 'bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 border-l-2 border-purple-500' : ''
                       } ${isComplete ? 'opacity-50' : ''}`}
                     >
                       {/* Main clickable area - opens canonical chat */}
@@ -268,8 +268,8 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                         className="flex-1 text-left min-w-0"
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm font-medium truncate">
+                          <User className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                          <span className="text-sm font-medium truncate text-white">
                             {item.contactName !== 'Website Visitor' 
                               ? item.contactName 
                               : item.contactEmail?.split('@')[0] || 'Unknown'}
@@ -284,7 +284,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                         </div>
                         
                         {/* Contact info preview */}
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-1.5 ml-5">
+                        <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-1.5 ml-5">
                           {item.contactEmail && (
                             <span className="flex items-center gap-1 truncate">
                               <Mail className="h-3 w-3" />
@@ -299,16 +299,16 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground ml-5">
+                        <div className="flex items-center gap-2 text-xs text-gray-400 ml-5">
                           <Clock className="h-3 w-3" />
                           {item.age}
                           {item.status === 'blocked' && (
-                            <Badge variant="outline" className="text-[9px] bg-orange-500/10 text-orange-400 ml-auto">
+                            <Badge variant="outline" className="text-[9px] bg-orange-500/20 text-orange-400 border-orange-500/40 ml-auto">
                               blocked
                             </Badge>
                           )}
                           {isComplete && (
-                            <Badge variant="outline" className="text-[9px] bg-green-500/10 text-green-400 ml-auto">
+                            <Badge variant="outline" className="text-[9px] bg-green-500/20 text-green-400 border-green-500/40 ml-auto">
                               complete
                             </Badge>
                           )}
@@ -317,7 +317,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                         {item.missing.length > 0 && !isComplete && (
                           <div className="flex flex-wrap gap-1 mt-1.5 ml-5">
                             {item.missing.map((m, i) => (
-                              <Badge key={i} variant="outline" className="text-[9px] bg-muted text-muted-foreground">
+                              <Badge key={i} variant="outline" className="text-[9px] bg-[#2a2a4a] text-gray-400 border-white/10">
                                 {m}
                               </Badge>
                             ))}
@@ -330,7 +330,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-green-600"
+                          className="h-7 w-7 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
                           onClick={(e) => {
                             e.stopPropagation();
                             const vehicle = item.vehicle || {};
@@ -354,7 +354,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-amber-500"
+                            className="h-7 w-7 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.open(`tel:${item.contactPhone}`, '_self');
@@ -367,7 +367,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-primary"
+                          className="h-7 w-7 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleRowClick(item.conversationId);
@@ -380,7 +380,7 @@ export function EscalationsDashboard({ onSelectConversation }: EscalationsDashbo
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-green-500"
+                            className="h-7 w-7 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleQuickResolve(item.conversationId);

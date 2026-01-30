@@ -102,22 +102,22 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="flex items-center justify-between">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 bg-[#1a1a2e] border-purple-500/30">
+        <DialogHeader className="p-6 pb-2 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600">
+          <DialogTitle className="flex items-center justify-between text-white">
             <div className="flex items-center gap-3">
               <User className="h-5 w-5" />
               Chat: {displayName}
             </div>
             <div className="flex items-center gap-2">
               {escalations.length > 0 && (
-                <Badge variant="outline" className="bg-orange-500/10 text-orange-500">
+                <Badge variant="outline" className="bg-orange-500/20 text-orange-300 border-orange-500/40">
                   <AlertCircle className="h-3 w-3 mr-1" />
                   {escalations.length} Escalation{escalations.length > 1 ? 's' : ''}
                 </Badge>
               )}
               {emailEvents.length > 0 && (
-                <Badge variant="outline" className="bg-blue-500/10 text-blue-500">
+                <Badge variant="outline" className="bg-blue-500/20 text-blue-300 border-blue-500/40">
                   <Mail className="h-3 w-3 mr-1" />
                   {emailEvents.length} Email{emailEvents.length > 1 ? 's' : ''} Sent
                 </Badge>
@@ -126,28 +126,28 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex gap-4 p-6 pt-2">
+        <div className="flex-1 overflow-hidden flex gap-4 p-6 pt-2 bg-[#16162a]">
           {/* Left: Tabbed content area */}
           <div className="flex-1 flex flex-col min-w-0">
             <Tabs defaultValue="transcript" className="flex-1 flex flex-col">
-              <TabsList className="mb-3">
-                <TabsTrigger value="transcript" className="gap-2">
+              <TabsList className="mb-3 bg-[#2a2a4a] border border-purple-500/30">
+                <TabsTrigger value="transcript" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
                   <MessageSquare className="h-4 w-4" />
                   Transcript ({messages.length})
                 </TabsTrigger>
-                <TabsTrigger value="timeline" className="gap-2">
+                <TabsTrigger value="timeline" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
                   <AlertCircle className="h-4 w-4" />
                   Timeline ({events?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="emails" className="gap-2">
+                <TabsTrigger value="emails" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
                   <Mail className="h-4 w-4" />
                   Emails ({emailEvents.length})
                 </TabsTrigger>
-                <TabsTrigger value="quotes" className="gap-2">
+                <TabsTrigger value="quotes" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
                   <Receipt className="h-4 w-4" />
                   Quotes ({quotes?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="assets" className="gap-2">
+                <TabsTrigger value="assets" className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
                   <FileText className="h-4 w-4" />
                   Assets ({assetEvents.length})
                 </TabsTrigger>
@@ -155,7 +155,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
 
               {/* Transcript Tab */}
               <TabsContent value="transcript" className="mt-0 flex flex-col">
-                <ScrollArea className="h-[calc(90vh-300px)] border border-border rounded-t-lg bg-muted/20 p-4">
+                <ScrollArea className="h-[calc(90vh-300px)] border border-purple-500/20 rounded-t-lg bg-[#1a1a2e] p-4">
                   <div className="space-y-3">
                     {messages.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">
@@ -170,8 +170,8 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                           <div
                             className={`max-w-[90%] rounded-lg p-3 ${
                               msg.direction === 'inbound'
-                                ? 'bg-muted'
-                                : 'bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] text-white'
+                                ? 'bg-[#2a2a4a] text-white border border-white/10'
+                                : 'bg-gradient-to-r from-fuchsia-500 via-purple-500 to-pink-500 text-white shadow-[0_4px_15px_rgba(168,85,247,0.4)]'
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
@@ -193,12 +193,11 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                 </ScrollArea>
                 
                 {/* Persistent Reply Box */}
-                <div className="border border-t-0 border-border rounded-b-lg bg-card p-3">
+                <div className="border border-t-0 border-purple-500/20 rounded-b-lg bg-[#1a1a2e] p-3">
                   {contact?.email && !contact.email.includes('@capture.local') ? (
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="default"
-                        className="flex-1 gap-2"
+                        className="flex-1 gap-2 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-pink-500 hover:opacity-90"
                         size="sm"
                         onClick={() => {
                           setShowReplyPanel(true);
@@ -211,6 +210,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                       <Button
                         variant="outline"
                         size="sm"
+                        className="border-purple-500/30 hover:bg-purple-500/10"
                         onClick={() => {
                           setShowQuoteUpload(true);
                           setShowReplyPanel(false);
@@ -220,7 +220,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-muted-foreground text-sm bg-muted/30 rounded p-2">
+                    <div className="flex items-center gap-2 text-gray-400 text-sm bg-[#2a2a4a] rounded p-2 border border-white/10">
                       <Mail className="h-4 w-4 flex-shrink-0" />
                       <span>No email captured — cannot reply until visitor provides email</span>
                     </div>
