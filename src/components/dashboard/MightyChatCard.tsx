@@ -90,12 +90,14 @@ export function MightyChatCard() {
 
   async function loadWorkStreams() {
     try {
-      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Fetch conversations with metadata
+      // Fetch ONLY active/pending conversations from the last 7 days
       const { data: conversations, error } = await supabase
         .from("conversations")
         .select("id, channel, subject, unread_count, priority, review_status, last_message_at, metadata, recipient_inbox")
+        .or("review_status.eq.pending_review,review_status.eq.needs_response")
+        .gte("last_message_at", sevenDaysAgo)
         .order("last_message_at", { ascending: false })
         .limit(100);
 
@@ -110,20 +112,17 @@ export function MightyChatCard() {
         .eq("resolved", false)
         .in("action_type", ["create_quote", "escalation", "auto_quote_generated", "file_review"]);
 
-      // Calculate hot leads (urgent/high priority + pending critical actions)
-      const hotLeadConversations = convs.filter(c => c.priority === 'urgent' || c.priority === 'high').length;
+      // Calculate hot leads (urgent/high priority conversations that need attention)
+      const hotLeadConversations = convs.filter(c => 
+        (c.priority === 'urgent' || c.priority === 'high') && 
+        (c.review_status === 'pending_review' || c.review_status === 'needs_response')
+      ).length;
       const hotLeadActions = pendingActions?.filter(a => 
         a.action_type === 'escalation' || a.priority === 'urgent'
       ).length || 0;
       const hotLeads = hotLeadConversations + hotLeadActions;
 
-      // Channel breakdown (for pending items)
-      const pendingConvs = convs.filter(c => 
-        c.review_status === 'pending_review' || 
-        c.review_status === 'needs_response' ||
-        (c.unread_count && c.unread_count > 0)
-      );
-
+      // Channel breakdown (only pending items)
       const channelCounts = {
         instagram: 0,
         email: 0,
@@ -131,7 +130,7 @@ export function MightyChatCard() {
         phone: 0,
       };
 
-      pendingConvs.forEach((conv) => {
+      convs.forEach((conv) => {
         const channel = conv.channel?.toLowerCase() || "website";
         const inbox = conv.recipient_inbox?.toLowerCase() || "";
         
@@ -146,11 +145,8 @@ export function MightyChatCard() {
         }
       });
 
-      // Categorize into work streams
-      const websiteLeads = convs.filter(c => c.channel === 'website').length;
-      const quotesWaiting = convs.filter(c => c.recipient_inbox === 'hello' || c.priority === 'high').length;
-      const designReviews = convs.filter(c => c.recipient_inbox === 'design').length;
-      const socialDMs = convs.filter(c => c.channel === 'instagram').length;
+      // Get pending review count (actual items needing human action)
+      const pendingReviews = convs.filter(c => c.review_status === 'pending_review').length;
       
       // Get Ops Desk count
       const { count: opsCount } = await supabase
@@ -158,31 +154,20 @@ export function MightyChatCard() {
         .select("*", { count: "exact", head: true })
         .eq("resolved", false);
 
-      // Calculate signals
-      const totalUnread = convs.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-      const highValue = convs.filter(c => 
-        c.priority === 'high' || 
-        (c.metadata as any)?.intent === 'commercial'
-      ).length;
-      const cxRisk = convs.filter(c => 
-        c.priority === 'urgent' || 
-        c.review_status === 'pending_review'
-      ).length;
-
       // Pending quotes count
       const pendingQuotes = pendingActions?.filter(a => 
         a.action_type === 'create_quote' || a.action_type === 'auto_quote_generated'
       ).length || 0;
 
       setStats({
-        websiteLeads,
-        quotesWaiting,
-        designReviews,
-        socialDMs,
+        websiteLeads: channelCounts.website,
+        quotesWaiting: pendingQuotes,
+        designReviews: 0,
+        socialDMs: channelCounts.instagram,
         opsDesk: opsCount || 0,
-        totalUnread,
-        highValue,
-        cxRisk,
+        totalUnread: pendingReviews, // Now shows actual pending reviews, not stale unread counts
+        highValue: hotLeads,
+        cxRisk: 0,
         hotLeads,
         instagram: channelCounts.instagram,
         email: channelCounts.email,
@@ -193,7 +178,7 @@ export function MightyChatCard() {
 
       // Get top priority items for quick view
       const priorityItems = convs
-        .filter(c => c.priority === 'urgent' || c.priority === 'high' || c.unread_count > 0)
+        .filter(c => c.priority === 'urgent' || c.priority === 'high')
         .slice(0, 3)
         .map(c => ({
           ...c,
