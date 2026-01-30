@@ -23,6 +23,7 @@ import {
   Film,
   AlertTriangle,
   Clock,
+  Zap,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -301,6 +302,16 @@ const accountItems: NavigationItem[] = [
 const adminItems: NavigationItem[] = [
   { name: "Vehicle Admin", path: "/admin/vehicles", icon: Car },
   { name: "Organizations", path: "/admin/organizations", icon: Users },
+  { 
+    name: "Ops", 
+    path: "/ops", 
+    icon: Zap,
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="bg-gradient-to-r from-[#F59E0B] to-[#EF4444] bg-clip-text text-transparent">Ops</span>
+      </span>
+    )
+  },
   { 
     name: "Jordan Control", 
     path: "/admin/website-agent", 
