@@ -28,8 +28,9 @@ export function MightyCustomerCard() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-primary" />
-            <span>Mighty</span>
-            <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">Customer</span>
+            <span className="bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent font-semibold">
+              MightyCustomer
+            </span>
           </CardTitle>
           <Button
             variant="ghost"
@@ -45,15 +46,15 @@ export function MightyCustomerCard() {
 
       <CardContent className="pt-0 space-y-4">
         {/* VoiceCommand CTA Banner */}
-        <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-4">
+        <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-lg p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
               <Mic className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-foreground text-sm">VoiceCommand AI™</h3>
-                <Sparkles className="h-3 w-3 text-primary animate-pulse" />
+                <Sparkles className="h-3 w-3 text-blue-500 animate-pulse" />
               </div>
               <p className="text-xs text-muted-foreground">
                 Click badge above → Hold & speak quote details
@@ -69,11 +70,11 @@ export function MightyCustomerCard() {
 
         {/* Quick Action Banner */}
         <div 
-          className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-emerald-500/10 to-teal-500/10 cursor-pointer hover:from-emerald-500/20 hover:to-teal-500/20 transition-colors"
+          className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-500/10 to-cyan-500/10 cursor-pointer hover:from-blue-500/20 hover:to-cyan-500/20 transition-colors"
           onClick={() => navigate("/mighty-customer")}
         >
           <div className="flex items-center gap-2">
-            <Badge className="bg-emerald-500 text-white flex items-center gap-1 px-2 py-1">
+            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white flex items-center gap-1 px-2 py-1">
               <Calculator className="w-3 h-3" />
               Create Quote
             </Badge>
@@ -87,8 +88,8 @@ export function MightyCustomerCard() {
             onClick={() => navigate("/mighty-customer")}
             className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
           >
-            <div className="p-1.5 rounded-md bg-emerald-500/10">
-              <FileText className="w-3.5 h-3.5 text-emerald-500" />
+            <div className="p-1.5 rounded-md bg-blue-500/10">
+              <FileText className="w-3.5 h-3.5 text-blue-500" />
             </div>
             <span className="text-[10px] text-muted-foreground leading-tight">
               New Quote
@@ -98,8 +99,8 @@ export function MightyCustomerCard() {
             onClick={() => navigate("/quote-drafts")}
             className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
           >
-            <div className="p-1.5 rounded-md bg-teal-500/10">
-              <FileText className="w-3.5 h-3.5 text-teal-500" />
+            <div className="p-1.5 rounded-md bg-cyan-500/10">
+              <FileText className="w-3.5 h-3.5 text-cyan-500" />
             </div>
             <span className="text-[10px] text-muted-foreground leading-tight">
               Quote Drafts
@@ -108,7 +109,7 @@ export function MightyCustomerCard() {
         </div>
 
         {/* Quick Stats */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/30">
           <span className="flex items-center gap-1">
             <Calculator className="w-3 h-3" />
             Instant pricing tool

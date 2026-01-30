@@ -1,60 +1,79 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, ArrowRight, Clock, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, Users, Package, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { evaluateEscalationStatus } from "@/hooks/useEscalationStatus";
 import type { ConversationEvent } from "@/hooks/useConversationEvents";
+
+interface EscalationTypeCount {
+  label: string;
+  count: number;
+  icon: React.ElementType;
+  color: string;
+}
 
 export function EscalationsDashboardCard() {
   const navigate = useNavigate();
 
-  // Fetch escalation events and compute status counts
+  // Fetch escalation events and group by subtype
   const { data: escalationData, isLoading } = useQuery({
-    queryKey: ["dashboard-escalations"],
+    queryKey: ["dashboard-escalations-by-type"],
     queryFn: async () => {
-      // Get all escalation events
+      // Get escalation events with subtype
       const { data: events, error } = await supabase
         .from("conversation_events")
-        .select("*")
-        .order("created_at", { ascending: true });
+        .select("conversation_id, subtype, payload")
+        .eq("event_type", "escalation_sent")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Group events by conversation_id
-      const eventsByConversation: Record<string, ConversationEvent[]> = {};
+      // Count unique conversations by subtype
+      const typeMap: Record<string, Set<string>> = {};
+      
       (events || []).forEach((event) => {
-        const convId = event.conversation_id;
-        if (!eventsByConversation[convId]) {
-          eventsByConversation[convId] = [];
+        const subtype = event.subtype || 'general';
+        if (!typeMap[subtype]) {
+          typeMap[subtype] = new Set();
         }
-        eventsByConversation[convId].push(event as ConversationEvent);
+        typeMap[subtype].add(event.conversation_id);
       });
 
-      // Evaluate each conversation's escalation status
-      let activeCount = 0;
-      let blockedCount = 0;
-      let pendingCount = 0;
+      // Convert to counts with labels
+      const typeCounts: EscalationTypeCount[] = [];
+      
+      const subtypeLabels: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+        'bulk': { label: 'Bulk Orders', icon: Package, color: 'text-purple-500' },
+        'order_question': { label: 'Order Questions', icon: FileText, color: 'text-blue-500' },
+        'quote_request': { label: 'Quote Requests', icon: FileText, color: 'text-green-500' },
+        'pricing': { label: 'Pricing Help', icon: FileText, color: 'text-amber-500' },
+        'design': { label: 'Design Review', icon: FileText, color: 'text-pink-500' },
+        'general': { label: 'General', icon: Users, color: 'text-cyan-500' },
+      };
 
-      Object.values(eventsByConversation).forEach((convEvents) => {
-        const status = evaluateEscalationStatus(convEvents);
-        if (status.hasEscalation) {
-          if (status.status === "blocked") {
-            blockedCount++;
-          } else if (status.status === "open") {
-            pendingCount++;
-          }
-          if (status.status !== "complete") {
-            activeCount++;
-          }
-        }
+      Object.entries(typeMap).forEach(([subtype, conversationIds]) => {
+        const config = subtypeLabels[subtype] || subtypeLabels['general'];
+        typeCounts.push({
+          label: config.label,
+          count: conversationIds.size,
+          icon: config.icon,
+          color: config.color,
+        });
       });
 
-      return { activeCount, blockedCount, pendingCount };
+      // Sort by count descending
+      typeCounts.sort((a, b) => b.count - a.count);
+
+      const totalActive = Object.values(typeMap).reduce((sum, set) => sum + set.size, 0);
+
+      return { typeCounts, totalActive };
     },
     refetchInterval: 30000,
   });
+
+  const displayTypes = escalationData?.typeCounts.slice(0, 3) || [];
+  const totalActive = escalationData?.totalActive || 0;
 
   return (
     <Card className="bg-card">
@@ -63,6 +82,11 @@ export function EscalationsDashboardCard() {
           <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-500" />
             <span>Escalations</span>
+            {totalActive > 0 && (
+              <span className="text-xs bg-orange-500/20 text-orange-500 px-1.5 py-0.5 rounded-full font-semibold">
+                {totalActive}
+              </span>
+            )}
           </CardTitle>
           <Button
             variant="ghost"
@@ -77,30 +101,39 @@ export function EscalationsDashboardCard() {
       </CardHeader>
 
       <CardContent className="pt-0 space-y-4">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Active */}
-          <div className="bg-orange-500/10 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Clock className="w-4 h-4 text-orange-500" />
-            </div>
-            <p className="text-2xl font-bold text-orange-500">
-              {isLoading ? "..." : escalationData?.activeCount ?? 0}
-            </p>
-            <p className="text-xs text-muted-foreground">Active</p>
+        {/* Type Breakdown */}
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 bg-background/50 rounded animate-pulse" />
+            ))}
           </div>
-
-          {/* Blocked */}
-          <div className="bg-red-500/10 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <XCircle className="w-4 h-4 text-red-500" />
-            </div>
-            <p className="text-2xl font-bold text-red-500">
-              {isLoading ? "..." : escalationData?.blockedCount ?? 0}
-            </p>
-            <p className="text-xs text-muted-foreground">Blocked</p>
+        ) : displayTypes.length > 0 ? (
+          <div className="space-y-2">
+            {displayTypes.map((type, index) => {
+              const Icon = type.icon;
+              return (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-2 rounded-lg bg-background/50 hover:bg-background/80 transition-colors cursor-pointer"
+                  onClick={() => navigate("/escalations")}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${type.color}`} />
+                    <span className="text-sm text-foreground">{type.label}</span>
+                  </div>
+                  <span className={`text-sm font-semibold ${type.color}`}>
+                    {type.count}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground">No active escalations</p>
+          </div>
+        )}
 
         {/* CTA Banner */}
         <div
@@ -109,15 +142,10 @@ export function EscalationsDashboardCard() {
         >
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-500" />
-            <span className="text-sm font-medium text-foreground">Review Escalations</span>
+            <span className="text-sm font-medium text-foreground">Review Queue</span>
           </div>
           <ArrowRight className="w-4 h-4 text-muted-foreground" />
         </div>
-
-        {/* Info Text */}
-        <p className="text-xs text-muted-foreground text-center">
-          Escalated conversations requiring human review
-        </p>
       </CardContent>
     </Card>
   );

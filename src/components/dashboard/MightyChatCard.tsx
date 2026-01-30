@@ -5,27 +5,38 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  Globe, 
   MessageSquare, 
   ArrowRight, 
   Bell,
   Flame,
   Phone,
-  FileImage
+  Globe
 } from "lucide-react";
 
 interface WorkStreamStats {
   website: number;
   phone: number;
-  fileReviews: number;
   hotLeads: number;
   pendingQuotes: number;
 }
 
 const CHANNEL_CARDS = [
-  { key: 'website', label: 'Website', icon: Globe, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', filter: 'website' },
-  { key: 'phone', label: 'Phone', icon: Phone, color: 'text-amber-500', bgColor: 'bg-amber-500/10', filter: 'phone' },
-  { key: 'fileReviews', label: 'File Reviews', icon: FileImage, color: 'text-purple-500', bgColor: 'bg-purple-500/10', filter: 'file-reviews' },
+  { 
+    key: 'website', 
+    label: 'Website Chat', 
+    icon: Globe, 
+    color: 'text-cyan-500', 
+    bgColor: 'bg-cyan-500/10', 
+    route: '/website-admin' 
+  },
+  { 
+    key: 'phone', 
+    label: 'Phone Agent', 
+    icon: Phone, 
+    color: 'text-amber-500', 
+    bgColor: 'bg-amber-500/10', 
+    route: '/website-admin?tab=phone' 
+  },
 ] as const;
 
 export function MightyChatCard() {
@@ -33,7 +44,6 @@ export function MightyChatCard() {
   const [stats, setStats] = useState<WorkStreamStats>({
     website: 0,
     phone: 0,
-    fileReviews: 0,
     hotLeads: 0,
     pendingQuotes: 0
   });
@@ -57,7 +67,7 @@ export function MightyChatCard() {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Parallel queries for real data
-      const [websiteResult, phoneResult, fileReviewsResult, hotLeadsResult, pendingQuotesResult] = await Promise.all([
+      const [websiteResult, phoneResult, hotLeadsResult, pendingQuotesResult] = await Promise.all([
         // Website chat conversations
         supabase
           .from("conversations")
@@ -70,13 +80,6 @@ export function MightyChatCard() {
           .from("phone_calls")
           .select("id", { count: "exact", head: true })
           .gte("created_at", thirtyDaysAgo),
-        
-        // Pending file reviews from ai_actions
-        supabase
-          .from("ai_actions")
-          .select("id", { count: "exact", head: true })
-          .eq("action_type", "file_review")
-          .eq("resolved", false),
         
         // Hot leads (urgent phone calls + escalated conversations)
         supabase
@@ -105,12 +108,11 @@ export function MightyChatCard() {
       setStats({
         website: websiteResult.count || 0,
         phone: phoneResult.count || 0,
-        fileReviews: fileReviewsResult.count || 0,
         hotLeads: hotLeadsTotal,
         pendingQuotes: pendingQuotesResult.count || 0
       });
 
-      console.log(`[MightyChatCard] Website: ${websiteResult.count}, Phone: ${phoneResult.count}, File Reviews: ${fileReviewsResult.count}, Hot Leads: ${hotLeadsTotal}`);
+      console.log(`[MightyChatCard] Website: ${websiteResult.count}, Phone: ${phoneResult.count}, Hot Leads: ${hotLeadsTotal}`);
     } catch (err) {
       console.error("Error loading work streams:", err);
     } finally {
@@ -124,13 +126,14 @@ export function MightyChatCard() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-primary" />
-            <span>Mighty</span>
-            <span className="bg-gradient-to-r from-[#405DE6] via-[#833AB4] to-[#E1306C] bg-clip-text text-transparent">Chat</span>
+            <span className="bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent font-semibold">
+              MightyChat
+            </span>
           </CardTitle>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/mightychat-v2")}
+            onClick={() => navigate("/website-admin")}
             className="text-xs h-7 px-2"
           >
             Open Inbox
@@ -143,7 +146,7 @@ export function MightyChatCard() {
         {/* Hot Leads Banner */}
         <div 
           className="flex items-center justify-between p-3 rounded-lg bg-background/50 cursor-pointer hover:bg-background/80 transition-colors"
-          onClick={() => navigate("/mightychat-v2?filter=hot")}
+          onClick={() => navigate("/website-admin?filter=hot")}
         >
           <div className="flex items-center gap-2">
             {stats.hotLeads > 0 ? (
@@ -163,24 +166,24 @@ export function MightyChatCard() {
           )}
         </div>
 
-        {/* Channel Breakdown Grid */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* Channel Breakdown Grid - 2 columns now */}
+        <div className="grid grid-cols-2 gap-3">
           {CHANNEL_CARDS.map((channel) => {
             const Icon = channel.icon;
             const count = stats[channel.key as keyof WorkStreamStats] as number;
             return (
               <button
                 key={channel.key}
-                onClick={() => navigate(`/mightychat-v2?filter=${channel.filter}`)}
-                className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
+                onClick={() => navigate(channel.route)}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-background/50 hover:bg-background/80 transition-colors"
               >
-                <div className={`p-1.5 rounded-md ${channel.bgColor}`}>
-                  <Icon className={`w-3.5 h-3.5 ${channel.color}`} />
+                <div className={`p-2 rounded-md ${channel.bgColor}`}>
+                  <Icon className={`w-4 h-4 ${channel.color}`} />
                 </div>
-                <span className="text-lg font-semibold text-foreground">
+                <span className="text-xl font-semibold text-foreground">
                   {loading ? "..." : count}
                 </span>
-                <span className="text-[10px] text-muted-foreground leading-tight">
+                <span className="text-xs text-muted-foreground leading-tight">
                   {channel.label}
                 </span>
               </button>
@@ -192,10 +195,10 @@ export function MightyChatCard() {
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/30">
           <span className="flex items-center gap-1">
             <Bell className="w-3 h-3" />
-            {stats.fileReviews} pending file reviews
+            {stats.pendingQuotes} quote requests
           </span>
           <span className="flex items-center gap-1">
-            📋 {stats.pendingQuotes} quote requests
+            💬 Real-time conversations
           </span>
         </div>
       </CardContent>
