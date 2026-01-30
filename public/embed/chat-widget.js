@@ -70,11 +70,11 @@
   // WPW Logo (base64 encoded small version for embed)
   const WPW_LOGO = 'https://weprintwraps.com/cdn/shop/files/WePrintWraps-Logo-White.png?v=1690318107';
 
-  // WIRED BUTTONS ONLY - 3 specific quick actions
+  // QUICK ACTIONS - 3 buttons only
   const quickActions = [
-    { id: 'bulk', text: '🚛 Bulk Order / Fleet Quote', icon: '🚛', primary: true, message: 'I need bulk or fleet pricing for multiple vehicles' },
-    { id: 'status', text: '📦 Order Status', icon: '📦', message: 'I want to check my order status' },
-    { id: 'check-file', text: '📎 Check My File', icon: '📎', message: null } // Special handler
+    { id: 'quote', text: '🚗 How much is my wrap project?', icon: '🚗', primary: true, message: 'How much is my wrap project?' },
+    { id: 'order', text: '📦 How do I order?', icon: '📦', message: 'How do I place an order?' },
+    { id: 'restyle', text: '🎨 Ask me about RestyleProAI', icon: '🎨', message: 'Tell me about RestyleProAI and how it can help visualize my wrap' }
   ];
 
   // Geo data (fetched on load)
