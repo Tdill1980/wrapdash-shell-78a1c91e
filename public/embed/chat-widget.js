@@ -199,13 +199,13 @@
       right: 0;
       width: 380px;
       max-height: 600px;
-      background: #ffffff;
+      background: #1a1a2e;
       border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       display: none;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid #e2e8f0;
+      border: 1px solid rgba(230,0,126,0.3);
     }
     .wcai-chat-window.open {
       display: flex;
@@ -216,7 +216,7 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .wcai-chat-header {
-      background: ${colors.primary};
+      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
       padding: 16px 20px;
       color: ${colors.text};
       display: flex;
@@ -287,7 +287,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      background: #f8fafc;
+      background: #16213e;
       min-height: 100px;
       max-height: 280px;
     }
@@ -301,20 +301,20 @@
     }
     .wcai-message.user {
       align-self: flex-end;
-      background: ${colors.secondary};
+      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
       color: ${colors.text};
       border-bottom-right-radius: 4px;
     }
     .wcai-message.agent {
       align-self: flex-start;
-      background: #ffffff;
-      color: #1e293b;
-      border: 1px solid #e2e8f0;
+      background: #0f3460;
+      color: #e2e8f0;
+      border: 1px solid rgba(139,92,246,0.3);
       border-bottom-left-radius: 4px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
     .wcai-message.typing {
-      background: #ffffff;
+      background: #0f3460;
     }
     .wcai-typing-dots {
       display: flex;
@@ -337,8 +337,8 @@
     }
     .wcai-quick-actions {
       padding: 12px 16px;
-      background: #ffffff;
-      border-top: 1px solid #f1f5f9;
+      background: #1a1a2e;
+      border-top: 1px solid rgba(139,92,246,0.2);
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -349,18 +349,18 @@
       gap: 10px;
       padding: 12px 16px;
       border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      background: #ffffff;
+      border: 1px solid rgba(139,92,246,0.3);
+      background: #0f3460;
       cursor: pointer;
       font-size: 14px;
-      color: #374151;
+      color: #e2e8f0;
       transition: all 0.2s;
       text-align: left;
       width: 100%;
     }
     .wcai-quick-btn:hover {
       border-color: ${colors.primary};
-      background: #fdf2f8;
+      background: rgba(230,0,126,0.1);
     }
     .wcai-quick-btn.primary {
       background: linear-gradient(135deg, #f97316, #fb923c);
@@ -381,35 +381,35 @@
     }
     .wcai-chat-input-area {
       padding: 12px 16px;
-      border-top: 1px solid #e2e8f0;
-      background: #ffffff;
+      border-top: 1px solid rgba(139,92,246,0.2);
+      background: #1a1a2e;
       display: flex;
       gap: 10px;
     }
     .wcai-chat-input {
       flex: 1;
       padding: 12px 16px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid rgba(139,92,246,0.3);
       border-radius: 24px;
-      background: #f8fafc;
-      color: #1e293b;
+      background: #0f3460;
+      color: #e2e8f0;
       font-size: 14px;
       outline: none;
       transition: border-color 0.2s;
     }
     .wcai-chat-input::placeholder {
-      color: #94a3b8;
+      color: #64748b;
     }
     .wcai-chat-input:focus {
       border-color: ${colors.primary};
-      background: #ffffff;
+      background: #16213e;
     }
     .wcai-chat-send {
       width: 44px;
       height: 44px;
       border-radius: 50%;
       border: none;
-      background: ${colors.primary};
+      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
       color: ${colors.text};
       cursor: pointer;
       display: flex;
@@ -419,7 +419,7 @@
     }
     .wcai-chat-send:hover {
       transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(230, 0, 126, 0.4);
+      box-shadow: 0 4px 16px rgba(230,0,126,0.5);
     }
     .wcai-chat-send:disabled {
       opacity: 0.5;
@@ -429,9 +429,9 @@
       padding: 8px 16px;
       text-align: center;
       font-size: 11px;
-      color: #94a3b8;
-      background: #ffffff;
-      border-top: 1px solid #f1f5f9;
+      color: #64748b;
+      background: #1a1a2e;
+      border-top: 1px solid rgba(139,92,246,0.1);
     }
     .wcai-powered a {
       color: ${colors.primary};
@@ -461,14 +461,14 @@
       50% { border-color: transparent; }
     }
     
-    /* Modal styles */
+    /* Modal styles - dark theme */
     .wcai-modal-overlay {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.8);
       z-index: 9999999;
       display: flex;
       align-items: center;
@@ -480,12 +480,13 @@
       to { opacity: 1; }
     }
     .wcai-modal {
-      background: white;
+      background: #1a1a2e;
       border-radius: 16px;
       padding: 24px;
       max-width: 360px;
       width: 90%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 1px solid rgba(139,92,246,0.3);
       animation: wcai-modal-in 0.3s ease-out;
     }
     @keyframes wcai-modal-in {
@@ -495,13 +496,20 @@
     .wcai-modal h3 {
       margin: 0 0 12px;
       font-size: 18px;
-      color: #111827;
+      color: #e2e8f0;
     }
     .wcai-modal p {
       margin: 0 0 20px;
-      color: #6b7280;
+      color: #94a3b8;
       font-size: 14px;
       line-height: 1.5;
+    }
+    .wcai-modal ul {
+      margin: 0 0 16px;
+      padding-left: 20px;
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.6;
     }
     .wcai-modal-buttons {
       display: flex;
@@ -518,43 +526,44 @@
       border: none;
     }
     .wcai-modal-btn.confirm {
-      background: ${colors.primary};
+      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
       color: white;
     }
     .wcai-modal-btn.confirm:hover {
-      background: #cc0070;
+      box-shadow: 0 4px 16px rgba(230,0,126,0.4);
     }
     .wcai-modal-btn.cancel {
-      background: #f1f5f9;
-      color: #374151;
+      background: #0f3460;
+      color: #e2e8f0;
+      border: 1px solid rgba(139,92,246,0.3);
     }
     .wcai-modal-btn.cancel:hover {
-      background: #e2e8f0;
+      background: #16213e;
     }
     
-    /* Upload progress */
+    /* Upload progress - dark theme */
     .wcai-upload-progress {
-      background: #f1f5f9;
+      background: #0f3460;
       border-radius: 8px;
       padding: 12px 16px;
       margin: 8px 0;
     }
     .wcai-upload-progress-bar {
       height: 6px;
-      background: #e2e8f0;
+      background: #16213e;
       border-radius: 3px;
       overflow: hidden;
       margin-top: 8px;
     }
     .wcai-upload-progress-fill {
       height: 100%;
-      background: ${colors.primary};
+      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
       border-radius: 3px;
       transition: width 0.3s ease-out;
     }
     .wcai-upload-text {
       font-size: 13px;
-      color: #374151;
+      color: #e2e8f0;
     }
     
     @media (max-width: 480px) {
