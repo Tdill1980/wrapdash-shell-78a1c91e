@@ -1,291 +1,391 @@
 
+# Quote-to-Order Workflow: Payment-Gated Order Creation with Auto Artwork Requests
 
-# Complete Fix Plan: File Reviews, Hot Leads, CMS Contact Sync, and DNS Issue
+## Overview
 
-## Executive Summary
+This implementation adds a complete quote-to-order workflow where:
+1. **Order numbers are ONLY generated when marked as paid** (not on quote creation)
+2. **ShopFlow orders auto-create when payment confirmed**
+3. **ApproveFlow projects auto-create when design products are included**
+4. **Auto-trigger artwork request emails** if no files are attached
 
-You've identified **4 major issues** that need to be addressed:
-
-1. **File Reviews (114) showing "No pending artwork reviews"** - The dashboard counts `file_review` actions, but the Artwork Reviews tab queries `artwork_review`. These are different action types!
-2. **Hot Leads (200+) are not clickable/accessible** - The Hot Leads banner links to `/website-admin?filter=hot`, but that filter parameter is never read or used
-3. **Chat data not saving to CMS/Contacts** - Contacts should be created for ALL chats, not just those with email
-4. **DNS disconnection** - Your custom domain became "Offline" because DNS records changed or expired
-
----
-
-## Issue 1: File Reviews Not Displaying
-
-### Root Cause
-There are **two different action types** in your database:
-- `file_review` (114 records) - These are counted in the dashboard
-- `artwork_review` (0 records) - This is what ArtworkReviewsPanel.tsx queries
-
-The dashboard MightyChatCard counts:
-```typescript
-.eq("action_type", "file_review")  // Shows 114
-```
-
-But ArtworkReviewsPanel queries:
-```typescript
-.eq('action_type', 'artwork_review')  // Shows 0
-```
-
-### Solution
-Modify `ArtworkReviewsPanel.tsx` to query BOTH action types and display full transcript with file preview, enabling chat review and customer reply.
-
-**Changes to ArtworkReviewsPanel.tsx:**
-
-1. Update query to fetch both `file_review` AND `artwork_review`:
-```typescript
-.in('action_type', ['file_review', 'artwork_review'])
-```
-
-2. Add conversation lookup to show full chat context:
-   - Fetch the linked conversation via `action_payload.conversation_id`
-   - Display message transcript alongside file preview
-   - Add "Reply to Customer" button that opens the reply panel
-
-3. Add file preview (for images: inline thumbnail; for PDFs: download link)
-
-4. Keep "Mark Reviewed" and "Send Quote Link" actions
+**Critical Constraint**: All changes must preserve WePrintWraps.com WooCommerce webhook functionality.
 
 ---
 
-## Issue 2: Hot Leads Banner Not Working
+## Current System Analysis
 
-### Root Cause
-The Hot Leads banner in MightyChatCard navigates to:
-```typescript
-onClick={() => navigate("/website-admin?filter=hot")}
-```
+### How It Works Now (WooCommerce Orders)
+- `sync-wc-shopflow` already has a **PAID GATE** (lines 6-32) that blocks unpaid orders
+- `sync-wc-approveflow` creates ApproveFlow projects for design product IDs: `[234, 58160, 290, 289]`
+- Both send welcome/artwork-request emails via `send-approveflow-welcome`
 
-But WebsiteAdmin.tsx **never reads this `filter` parameter**. It only reads `tab`:
-```typescript
-const initialTab = searchParams.get("tab") || "chats";
-```
-
-### Solution
-Modify WebsiteAdmin.tsx and ChatTranscriptViewer.tsx to:
-
-1. Read the `filter=hot` query parameter
-2. Auto-apply a "Hot Leads only" filter when present
-3. Show only conversations that have pending quote-related `ai_actions`
-
-**Changes:**
-
-1. **WebsiteAdmin.tsx** - Pass filter param to ChatSessionsTab:
-```typescript
-const filter = searchParams.get("filter"); // "hot" or null
-<ChatSessionsTab initialFilter={filter} />
-```
-
-2. **ChatTranscriptViewer.tsx** - Add hot lead filter:
-   - Add state: `const [hotLeadsOnly, setHotLeadsOnly] = useState(initialFilter === 'hot')`
-   - Fetch conversation IDs that have pending quote actions from `ai_actions`
-   - Filter conversations to only those IDs when `hotLeadsOnly` is true
-   - Add a toggle button to switch between "Hot Leads Only" and "All Chats"
-
-3. **Each row click** opens ChatDetailModal with:
-   - Full transcript visible
-   - Reply button (if email exists)
-   - Create Quote button that pre-fills MightyCustomer
+### What's Missing (MightyCustomer Internal Orders)
+- MightyCustomer quotes save to `quotes` table but have no "Mark as Paid" button
+- No order number generation on payment
+- No ShopFlow/ApproveFlow creation from internal quotes
+- No artwork request email trigger
 
 ---
 
-## Issue 3: CMS Contact Sync for ALL Chats
+## Technical Implementation
 
-### Root Cause
-The current trigger `trg_conversation_sync_contact` only creates contacts when email is present. You want contacts created for ALL chats, even anonymous ones.
+### Part 1: Database Schema Updates
 
-### Solution
-
-1. **Modify database trigger** to always create a contact:
-```sql
--- Update sync_conversation_to_contact function
--- Create contact even if email is null
--- Use session_id as fallback identifier
--- Set source = 'chat' and status = 'anonymous_lead'
--- Store vehicle info, location, page_url in metadata
-```
-
-2. **Add conversation data fields** to the contact:
-   - `last_chat_at` timestamp
-   - `chat_summary` (first/last message snippets)
-   - `vehicle_interest` (from chat_state.vehicle)
-   - `location` (from geo data)
-
-3. **Merge logic** - When email IS later captured:
-   - Find existing anonymous contact for that session
-   - Update it with email instead of creating duplicate
-
----
-
-## Issue 4: DNS Disconnection for wrapcommandai.com
-
-### Explanation
-
-This is a **DNS configuration issue**, not a code issue. Based on Lovable documentation:
-
-When a custom domain shows "Offline" status, it means:
-- The DNS records are no longer pointing to Lovable's servers
-- This happens when DNS settings change at your domain registrar (intentionally or via expiration)
-
-### How to Fix
-
-1. Go to **Project Settings → Domains** in Lovable
-2. Click on `wrapcommandai.com` - you should see status "Offline"
-3. Click **"Recover"** or **"Check Status"**
-4. Lovable will show the required DNS records
-5. At your domain registrar (GoDaddy, Namecheap, etc.), verify:
-   - **A Record** for `@` → `185.158.133.1`
-   - **A Record** for `www` → `185.158.133.1`
-   - **TXT Record** `_lovable` → the verification value shown
-6. Wait 24-72 hours for DNS propagation
-
-Common causes of "sudden" disconnection:
-- Domain auto-renewal failed
-- DNS provider reset records during maintenance
-- CAA records blocking SSL certificate renewal
-- Conflicting A/CNAME records were added
-
----
-
-## Technical Implementation Details
-
-### File 1: ArtworkReviewsPanel.tsx
-
-| Line Range | Change |
-|------------|--------|
-| 64-69 | Change `.eq('action_type', 'artwork_review')` to `.in('action_type', ['file_review', 'artwork_review'])` |
-| New | Add conversation fetch for each review using `action_payload.conversation_id` |
-| New | Add transcript display section (collapsible or inline) |
-| New | Add "View Full Chat" button to open ChatDetailModal |
-| 267-294 | Enhance action buttons - keep Download, Send Quote Link, add "Reply to Customer" |
-
-### File 2: WebsiteAdmin.tsx
-
-| Line Range | Change |
-|------------|--------|
-| 26 | Add `const filter = searchParams.get("filter");` |
-| 194-198 | Pass `initialFilter={filter}` to ChatSessionsTab |
-
-### File 3: ChatTranscriptViewer.tsx
-
-| Line Range | Change |
-|------------|--------|
-| 50-53 | Add `initialFilter` prop and hot-lead toggle state |
-| New | Add query to fetch conversation IDs with pending `create_quote`, `auto_quote_generated`, or `quote_request` actions |
-| 69-100 | Add hot lead filter to `filteredConversations` |
-| 196-218 | Add "Hot Leads Only" toggle button to the Escalation quick filters area |
-
-### File 4: Database Trigger (SQL Migration)
+**Add payment tracking columns to `quotes` table:**
 
 ```sql
-CREATE OR REPLACE FUNCTION sync_conversation_to_contact()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
-DECLARE
-  v_contact_id UUID;
-  v_email TEXT;
-  v_name TEXT;
-  v_phone TEXT;
-  v_session_id TEXT;
-BEGIN
-  v_email := NEW.chat_state->>'customer_email';
-  v_name := NEW.chat_state->>'customer_name';
-  v_phone := NEW.chat_state->>'customer_phone';
-  v_session_id := NEW.metadata->>'session_id';
-  
-  -- Always create/update contact, even without email
-  IF v_email IS NOT NULL AND v_email != '' THEN
-    -- Has email: find by email or create
-    SELECT id INTO v_contact_id FROM public.contacts
-    WHERE organization_id = NEW.organization_id 
-    AND LOWER(email) = LOWER(v_email)
-    LIMIT 1;
-  ELSIF v_session_id IS NOT NULL THEN
-    -- No email: find by session_id in metadata or create anonymous
-    SELECT id INTO v_contact_id FROM public.contacts
-    WHERE organization_id = NEW.organization_id 
-    AND metadata->>'session_id' = v_session_id
-    LIMIT 1;
-  END IF;
-  
-  IF v_contact_id IS NULL THEN
-    -- Create new contact (anonymous if no email)
-    INSERT INTO public.contacts (
-      organization_id, name, email, phone, source, 
-      metadata, tags
-    ) VALUES (
-      NEW.organization_id,
-      COALESCE(v_name, 'Website Visitor'),
-      CASE WHEN v_email != '' THEN LOWER(v_email) ELSE NULL END,
-      v_phone,
-      'chat',
-      jsonb_build_object(
-        'session_id', v_session_id,
-        'first_conversation_id', NEW.id,
-        'vehicle', NEW.chat_state->'vehicle',
-        'geo', NEW.metadata->'geo'
-      ),
-      CASE WHEN v_email IS NULL OR v_email = '' 
-           THEN ARRAY['anonymous_lead'] 
-           ELSE ARRAY[]::text[] END
-    ) RETURNING id INTO v_contact_id;
-  ELSE
-    -- Update existing contact
-    UPDATE public.contacts SET
-      name = COALESCE(NULLIF(v_name, 'Website Visitor'), name),
-      phone = COALESCE(v_phone, phone),
-      email = COALESCE(NULLIF(v_email, ''), email),
-      metadata = metadata || jsonb_build_object(
-        'last_conversation_id', NEW.id,
-        'vehicle', COALESCE(NEW.chat_state->'vehicle', metadata->'vehicle')
-      ),
-      tags = CASE 
-        WHEN v_email IS NOT NULL AND v_email != '' 
-        THEN array_remove(COALESCE(tags, ARRAY[]::text[]), 'anonymous_lead')
-        ELSE tags
-      END,
-      updated_at = NOW()
-    WHERE id = v_contact_id;
-  END IF;
-  
-  -- Link contact to conversation
-  IF v_contact_id IS NOT NULL AND NEW.contact_id IS NULL THEN
-    NEW.contact_id := v_contact_id;
-  END IF;
-  
-  RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
-  RAISE WARNING 'Contact sync failed: %', SQLERRM;
-  RETURN NEW;
-END;
-$$;
+ALTER TABLE quotes
+ADD COLUMN IF NOT EXISTS is_paid boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS paid_at timestamp with time zone,
+ADD COLUMN IF NOT EXISTS payment_method text,
+ADD COLUMN IF NOT EXISTS payment_notes text,
+ADD COLUMN IF NOT EXISTS shopflow_order_id uuid REFERENCES shopflow_orders(id),
+ADD COLUMN IF NOT EXISTS approveflow_project_id uuid REFERENCES approveflow_projects(id),
+ADD COLUMN IF NOT EXISTS artwork_files jsonb DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS artwork_status text DEFAULT 'none';
+
+-- Add index for payment queries
+CREATE INDEX IF NOT EXISTS idx_quotes_is_paid ON quotes(is_paid) WHERE is_paid = true;
+```
+
+**Add source tracking to `shopflow_orders`:**
+
+```sql
+ALTER TABLE shopflow_orders
+ADD COLUMN IF NOT EXISTS source_quote_id uuid REFERENCES quotes(id);
 ```
 
 ---
 
-## Summary of All Changes
+### Part 2: New Edge Function - `convert-quote-to-order`
 
-| Component | Change | Purpose |
-|-----------|--------|---------|
-| ArtworkReviewsPanel.tsx | Query both `file_review` AND `artwork_review` action types | Show all 114+ file reviews |
-| ArtworkReviewsPanel.tsx | Add transcript display and conversation link | Enable reading chat context |
-| ArtworkReviewsPanel.tsx | Add "Reply to Customer" button | Enable replying from review panel |
-| WebsiteAdmin.tsx | Read `filter` query parameter | Enable hot lead filter from dashboard |
-| ChatTranscriptViewer.tsx | Add hot lead filtering logic | Show only conversations with pending quote actions |
-| ChatTranscriptViewer.tsx | Add "Hot Leads Only" toggle | Easy switching between all chats and hot leads |
-| Database trigger | Always create contact (anonymous if no email) | CMS receives all leads |
-| Database trigger | Store session_id, vehicle, geo in contact metadata | Rich lead data for CMS |
-| DNS configuration | Verify and update DNS records at registrar | Fix domain connectivity |
+Create a new edge function that handles the complete conversion flow:
+
+**Location**: `supabase/functions/convert-quote-to-order/index.ts`
+
+**Responsibilities**:
+1. Validate quote exists and has required data (customer email, product)
+2. Generate order number (format: `WPW-XXXXXX` or internal format)
+3. Mark quote as paid with timestamp
+4. Create ShopFlow order (always)
+5. Create ApproveFlow project (if design product detected)
+6. Check for artwork files
+7. Send appropriate email:
+   - If artwork exists: "Order Received - We're Getting Started!"
+   - If no artwork: "Action Needed - Upload Your Design Files"
+8. Return created order IDs
+
+**Key Logic:**
+
+```typescript
+// Design product detection - same IDs as sync-wc-approveflow
+const DESIGN_PRODUCT_IDS = [234, 58160, 290, 289];
+const DESIGN_PRODUCT_NAMES = [
+  'custom vehicle wrap design',
+  'custom design',
+  'hourly design',
+  'file output'
+];
+
+function isDesignProduct(productName: string, wooProductId?: number): boolean {
+  if (wooProductId && DESIGN_PRODUCT_IDS.includes(wooProductId)) return true;
+  const lower = productName.toLowerCase();
+  return DESIGN_PRODUCT_NAMES.some(name => lower.includes(name));
+}
+```
+
+**Flow Diagram:**
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                  convert-quote-to-order                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Validate quote_id + payment_method                          │
+│                       ↓                                          │
+│  2. Generate order_number (WPW-XXXXXX)                          │
+│                       ↓                                          │
+│  3. Update quote: is_paid=true, paid_at=now()                   │
+│                       ↓                                          │
+│  4. Create shopflow_orders entry                                │
+│     ├── order_number                                             │
+│     ├── customer_name, customer_email                            │
+│     ├── product_type from quote                                  │
+│     ├── vehicle_info from quote                                  │
+│     ├── source_quote_id = quote.id                              │
+│     ├── is_paid = true                                          │
+│     └── organization_id                                          │
+│                       ↓                                          │
+│  5. Is design product?                                          │
+│     ├── YES → Create approveflow_projects entry                 │
+│     │         ├── Link to shopflow order                         │
+│     │         ├── Copy design instructions                       │
+│     │         └── Set status = 'design_requested'               │
+│     └── NO → Skip ApproveFlow                                   │
+│                       ↓                                          │
+│  6. Check artwork_files on quote                                │
+│     ├── Has files → Send "Order Received" email                 │
+│     └── No files → Send "Action Needed - Upload Files" email   │
+│                       ↓                                          │
+│  7. Return: { shopflow_order_id, approveflow_project_id }       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Expected Results After Implementation
+### Part 3: UI Components
 
-1. **File Reviews tab** → Shows 114+ items with full chat transcripts, file previews, and reply capability
-2. **Hot Leads banner** → Clicking shows filtered list of 200+ conversations with pending quotes
-3. **Each conversation** → Clickable to open full transcript with Reply and Create Quote actions
-4. **Contacts table** → Creates record for EVERY chat, even anonymous ones
-5. **wrapcommandai.com** → Back online after DNS recovery
+**New Component**: `src/components/quote/QuoteActionButtons.tsx`
 
+Buttons for quote management:
+- **Mark as Paid** - Opens payment confirmation modal
+- **Convert to Order** - Only enabled after payment confirmed
+- **Upload Artwork** - File upload zone
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ Quote #WPW-123456                    Status: Sent     │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ Customer: John Smith                                   │
+│ Product: Avery MPI 1105 with Lamination               │
+│ Total: $1,501.95                                       │
+│                                                        │
+│ ┌─────────────────────────────────────────────────┐   │
+│ │ 📎 Artwork Files                                │   │
+│ │                                                  │   │
+│ │   [Drag & drop or click to upload]             │   │
+│ │                                                  │   │
+│ │   Uploaded: design_v1.pdf (2.4 MB)             │   │
+│ └─────────────────────────────────────────────────┘   │
+│                                                        │
+│ ┌────────────────────┐ ┌────────────────────────────┐ │
+│ │  💳 Mark as Paid   │ │ 📦 Convert to Order        │ │
+│ │                    │ │    (Requires Payment)      │ │
+│ └────────────────────┘ └────────────────────────────┘ │
+│                                                        │
+│ ⚠️ Order number will be generated when marked as paid │
+└────────────────────────────────────────────────────────┘
+```
+
+**New Component**: `src/components/quote/PaymentConfirmModal.tsx`
+
+Modal for confirming payment:
+- Payment method dropdown (Cash, Check, Credit Card, Bank Transfer, Zelle, Venmo)
+- Payment notes field
+- Confirm button triggers `convert-quote-to-order`
+
+**New Component**: `src/components/quote/ArtworkUploadZone.tsx`
+
+Dropzone for artwork files:
+- Accepts: PDF, AI, EPS, PSD, PNG, JPG
+- Max 50MB per file
+- Stores in `media-library` bucket under `quote-artwork/{quote_id}/`
+- Updates `quotes.artwork_files` JSONB array
+
+---
+
+### Part 4: Integration Points
+
+**Modify**: `src/pages/MightyCustomer.tsx`
+
+After saving a quote, show the new action buttons:
+- Only show "Mark as Paid" if quote is saved
+- Show artwork upload zone
+- "Convert to Order" disabled until `is_paid = true`
+
+**Modify**: `src/components/admin/WebsiteChatQuotes.tsx`
+
+Add payment status column and actions:
+- Show paid/unpaid badge
+- "Mark as Paid" button in quote detail sheet
+- "Convert to Order" button (enabled only if paid)
+
+---
+
+### Part 5: Artwork Request Email Logic
+
+**Reuse existing email function**: The `send-approveflow-welcome` function already handles both cases:
+- `hasArtwork = true` → Green banner "Order Received"
+- `hasArtwork = false` → Orange banner "Action Needed - Upload Files"
+
+**Email includes portal link** where customer can:
+- View their ApproveFlow portal (if design product)
+- View their ShopFlow tracking (always)
+- Upload additional files
+
+---
+
+### Part 6: Safety Checks (Protect WePrintWraps.com)
+
+**No changes to**:
+- `sync-wc-shopflow/index.ts` - WooCommerce webhook handler
+- `sync-wc-approveflow/index.ts` - WooCommerce webhook handler
+- `website-chat/index.ts` - Jordan AI chat
+
+**The new edge function is ADDITIVE**:
+- It creates orders from internal quotes only
+- It uses the SAME data structures as WooCommerce sync
+- It follows the SAME email templates
+- It generates order numbers in a separate range (internal prefix option)
+
+**Order Number Collision Prevention**:
+- WooCommerce orders use WooCommerce's auto-increment (e.g., 45678)
+- Internal orders use prefix format: `INT-{timestamp}` or `MQ-{timestamp}`
+- This ensures no overlap with WooCommerce order numbers
+
+---
+
+## File Changes Summary
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `supabase/functions/convert-quote-to-order/index.ts` | **Create** | New edge function for payment-gated order creation |
+| `src/components/quote/QuoteActionButtons.tsx` | **Create** | Mark as Paid + Convert to Order buttons |
+| `src/components/quote/PaymentConfirmModal.tsx` | **Create** | Payment confirmation modal |
+| `src/components/quote/ArtworkUploadZone.tsx` | **Create** | File upload for quotes |
+| `src/pages/MightyCustomer.tsx` | **Modify** | Add quote action buttons after save |
+| `src/components/admin/WebsiteChatQuotes.tsx` | **Modify** | Add payment status + actions |
+| `supabase/config.toml` | **Modify** | Add new function entry |
+| Database migration | **Create** | Add payment columns to quotes table |
+
+---
+
+## Edge Function: convert-quote-to-order (Detailed)
+
+```typescript
+// Key sections of the edge function:
+
+interface ConvertQuoteRequest {
+  quote_id: string;
+  payment_method: string;
+  payment_notes?: string;
+  organization_id?: string;
+}
+
+// 1. Generate internal order number (non-colliding with WooCommerce)
+function generateInternalOrderNumber(): string {
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.random().toString(36).slice(2, 5).toUpperCase();
+  return `MQ-${timestamp}${random}`;
+}
+
+// 2. Detect design products
+function isDesignProduct(productName: string): boolean {
+  const lower = productName?.toLowerCase() || '';
+  return lower.includes('design') || 
+         lower.includes('custom wrap') ||
+         lower.includes('hourly design') ||
+         lower.includes('file output');
+}
+
+// 3. Create ShopFlow order from quote
+async function createShopFlowOrder(supabase, quote, orderNumber) {
+  const vehicleDetails = quote.vehicle_details 
+    ? JSON.parse(quote.vehicle_details) 
+    : {};
+    
+  return await supabase.from('shopflow_orders').insert({
+    order_number: orderNumber,
+    customer_name: quote.customer_name,
+    customer_email: quote.customer_email,
+    product_type: quote.product_name,
+    status: 'order_received',
+    customer_stage: 'order_received',
+    vehicle_info: {
+      year: quote.vehicle_year,
+      make: quote.vehicle_make,
+      model: quote.vehicle_model,
+      ...vehicleDetails
+    },
+    is_paid: true,
+    source_quote_id: quote.id,
+    organization_id: quote.organization_id,
+    order_total: quote.total_price,
+    timeline: {
+      order_received: new Date().toISOString()
+    },
+    files: quote.artwork_files || []
+  }).select().single();
+}
+
+// 4. Create ApproveFlow project (only for design products)
+async function createApproveFlowProject(supabase, quote, orderNumber) {
+  return await supabase.from('approveflow_projects').insert({
+    order_number: orderNumber,
+    customer_name: quote.customer_name,
+    customer_email: quote.customer_email,
+    product_type: quote.product_name,
+    status: 'design_requested',
+    vehicle_info: {
+      year: quote.vehicle_year,
+      make: quote.vehicle_make,
+      model: quote.vehicle_model
+    },
+    organization_id: quote.organization_id,
+    order_total: quote.total_price
+  }).select().single();
+}
+
+// 5. Send appropriate email
+async function sendOrderEmail(supabase, quote, orderNumber, hasArtwork) {
+  const portalUrl = isDesignProduct(quote.product_name)
+    ? `https://weprintwraps.com/my-approveflow/${orderNumber}`
+    : `https://weprintwraps.com/my-shopflow/${orderNumber}`;
+    
+  // Call existing send-approveflow-welcome function
+  // It already handles hasArtwork logic
+}
+```
+
+---
+
+## Expected Workflow After Implementation
+
+### Internal Quote → Paid Order Flow
+
+1. **Admin creates quote in MightyCustomer**
+   - Enters customer info, vehicle, product
+   - Saves quote (status: "draft", no order number yet)
+
+2. **Admin uploads artwork (optional)**
+   - Uses ArtworkUploadZone
+   - Files stored in `media-library` bucket
+   - Quote updated with `artwork_files`
+
+3. **Customer pays (outside system)**
+   - Cash, check, credit card, etc.
+
+4. **Admin clicks "Mark as Paid"**
+   - PaymentConfirmModal opens
+   - Selects payment method
+   - Adds optional notes
+   - Clicks Confirm
+
+5. **System auto-creates:**
+   - Order number generated (MQ-XXXXXX)
+   - ShopFlow order created
+   - ApproveFlow project created (if design product)
+   - Quote marked as paid with timestamp
+
+6. **Email sent automatically:**
+   - If artwork uploaded: "Order Received - We're Getting Started!"
+   - If no artwork: "Action Needed - Upload Your Design Files"
+
+7. **Order appears in ShopFlow dashboard**
+   - Ready for production workflow
+
+---
+
+## Safety Verification
+
+| WePrintWraps.com Feature | Protected? | Verification |
+|--------------------------|------------|--------------|
+| WooCommerce order sync | ✅ Yes | No changes to `sync-wc-shopflow` |
+| ApproveFlow design orders | ✅ Yes | No changes to `sync-wc-approveflow` |
+| Website chat (Jordan) | ✅ Yes | No changes to `website-chat` |
+| Email templates | ✅ Yes | Reuses existing `send-approveflow-welcome` |
+| Paid gate logic | ✅ Yes | Same logic applied to internal orders |
+| Order number format | ✅ Yes | Internal orders use different prefix (MQ-) |
