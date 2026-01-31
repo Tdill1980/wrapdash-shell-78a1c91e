@@ -15,6 +15,7 @@ const WPW_ALLOWED_PRODUCT_IDS = [
   80,    // Perforated Window Vinyl 50/50 - $5.95/sqft
   58391, // FadeWraps Pre-Designed - $600-$990 based on size
   69439, // InkFusion Premium - $2,075/roll
+  70093, // Wall Wrap Printed Vinyl - $3.25/sqft
   
   // Wrap By The Yard
   1726,  // Camo & Carbon - $95.50/yard
