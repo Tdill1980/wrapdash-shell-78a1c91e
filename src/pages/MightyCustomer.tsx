@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
 import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package, Ruler, CheckCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
-import { isWPW } from "@/lib/wpwProducts";
+import { isWPW, isWBTY, isFadeWrap, STANDALONE_PRODUCTS, WBTY_PRICING, FADEWRAPS_PRICING, WALL_WRAP_PRICING } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -21,6 +21,10 @@ import { VehicleSelectorV2 } from "@/components/VehicleSelectorV2";
 import { VehicleSQFTOptions } from "@/hooks/useVehicleDimensions";
 import { Badge } from "@/components/ui/badge";
 import { QuoteActionButtons } from "@/components/quote/QuoteActionButtons";
+import { QuoteInputModeToggle, InputMode } from "@/components/quote/QuoteInputModeToggle";
+import { WrapByTheYardConfigurator } from "@/components/quote/WrapByTheYardConfigurator";
+import { FadeWrapConfigurator } from "@/components/quote/FadeWrapConfigurator";
+import { WallWrapConfigurator } from "@/components/quote/WallWrapConfigurator";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -83,6 +87,16 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
+  
+  // Quote input mode state (Total Sq Ft | Dimensions | Vehicle)
+  const [inputMode, setInputMode] = useState<InputMode>("vehicle");
+  
+  // Specialty configurator state
+  const [specialtyConfig, setSpecialtyConfig] = useState<{
+    wbty?: { collection: string; pattern: string; yards: number };
+    fadewrap?: { color: string; size: string; addOns: string[] };
+    wallwrap?: { height: number; width: number; finish: string };
+  }>({});
   
   // Saved quote state for payment workflow
   const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
@@ -414,7 +428,21 @@ export default function MightyCustomer() {
 
   const handleProductSelect = (product: Product) => {
     setSelectedProduct(product);
+    // Reset specialty config when product changes
+    setSpecialtyConfig({});
   };
+
+  // Specialty product detection
+  const getSpecialtyProductType = (product: Product | null): 'wbty' | 'fadewrap' | 'wallwrap' | null => {
+    if (!product?.woo_product_id) return null;
+    if (isWBTY(product.woo_product_id)) return 'wbty';
+    if (isFadeWrap(product.woo_product_id)) return 'fadewrap';
+    if (product.woo_product_id === STANDALONE_PRODUCTS.wallWrap.id) return 'wallwrap';
+    return null;
+  };
+
+  const specialtyType = getSpecialtyProductType(selectedProduct);
+
 
   const handleAddToCart = async (product: Product) => {
     // Validate product is WPW and has valid WooCommerce ID
@@ -611,418 +639,488 @@ export default function MightyCustomer() {
             );
           })()}
 
-          {/* Vehicle Information & Auto-SQFT */}
-          <div className="space-y-4 pt-4 border-t">
-            <Label className="text-lg font-semibold">Vehicle Information</Label>
-            
-            {/* Supabase-powered Vehicle Selector V2 */}
-            <VehicleSelectorV2
-              value={{
-                make: customerData.vehicleMake,
-                model: customerData.vehicleModel,
-                year: customerData.vehicleYear,
-              }}
-              onChange={(v) => setCustomerData(prev => ({
-                ...prev,
-                vehicleMake: v.make,
-                vehicleModel: v.model,
-                vehicleYear: v.year,
-              }))}
-              onSQFTOptionsChange={handleSQFTOptionsChange}
-            />
+          {/* Specialty Product Configurators OR Standard Vehicle Input */}
+          {selectedProduct && specialtyType ? (
+            <div className="space-y-4 pt-4 border-t">
+              {specialtyType === 'wbty' && (
+                <WrapByTheYardConfigurator
+                  collectionId={selectedProduct.woo_product_id!}
+                  onAddToCart={async (config) => {
+                    setSpecialtyConfig({ 
+                      wbty: { 
+                        collection: selectedProduct.product_name, 
+                        pattern: config.pattern, 
+                        yards: config.yards 
+                      } 
+                    });
+                    // Call the add-to-cart
+                    try {
+                      setIsSending(true);
+                      const { error } = await supabase.functions.invoke('add-to-woo-cart', {
+                        body: {
+                          product_id: config.productId,
+                          quantity: config.yards,
+                          meta_data: [
+                            { key: 'Pattern', value: config.pattern },
+                            { key: 'Yards', value: config.yards.toString() },
+                          ],
+                        },
+                      });
+                      if (error) throw error;
+                      toast({
+                        title: "Added to Cart",
+                        description: `${selectedProduct.product_name} - ${config.pattern} (${config.yards} yards) added!`,
+                      });
+                    } catch (error) {
+                      console.error("Cart error:", error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to add item to cart. Please try again.",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsSending(false);
+                    }
+                  }}
+                  isLoading={isSending}
+                />
+              )}
+              
+              {specialtyType === 'fadewrap' && (
+                <FadeWrapConfigurator
+                  onAddToCart={async (config) => {
+                    setSpecialtyConfig({ 
+                      fadewrap: { 
+                        color: config.color, 
+                        size: config.size, 
+                        addOns: config.addOns 
+                      } 
+                    });
+                    // Call the add-to-cart
+                    try {
+                      setIsSending(true);
+                      const { error } = await supabase.functions.invoke('add-to-woo-cart', {
+                        body: {
+                          product_id: config.productId,
+                          quantity: 1,
+                          meta_data: [
+                            { key: 'Color', value: config.color },
+                            { key: 'Size', value: config.size },
+                            { key: 'Add-Ons', value: config.addOns.join(', ') || 'None' },
+                          ],
+                        },
+                      });
+                      if (error) throw error;
+                      toast({
+                        title: "Added to Cart",
+                        description: `FadeWrap - ${config.color} ${config.size} added!`,
+                      });
+                    } catch (error) {
+                      console.error("Cart error:", error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to add item to cart. Please try again.",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsSending(false);
+                    }
+                  }}
+                  isLoading={isSending}
+                />
+              )}
+              
+              {specialtyType === 'wallwrap' && (
+                <WallWrapConfigurator
+                  onQuote={(config) => {
+                    setSpecialtyConfig({ 
+                      wallwrap: { 
+                        height: 0, // Will be calculated from sqft
+                        width: 0, 
+                        finish: config.finish 
+                      } 
+                    });
+                    // Set sqft for quote engine
+                    setSqft(config.sqft);
+                    toast({
+                      title: "Wall Wrap Added",
+                      description: `${config.sqft} sq ft at $${config.total.toFixed(2)} added to quote.`,
+                    });
+                  }}
+                  isLoading={isSending}
+                />
+              )}
+            </div>
+          ) : (
+            /* Standard Vehicle Information & Auto-SQFT */
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="text-lg font-semibold">How would you like to enter area?</Label>
+              
+              {/* 3-Mode Quote Input Toggle */}
+              <QuoteInputModeToggle
+                mode={inputMode}
+                onModeChange={setInputMode}
+                sqft={sqft}
+                onSqftChange={handleSqftChange}
+                vehicle={{
+                  year: customerData.vehicleYear,
+                  make: customerData.vehicleMake,
+                  model: customerData.vehicleModel,
+                }}
+                onVehicleChange={(v) => setCustomerData(prev => ({
+                  ...prev,
+                  vehicleYear: v.year,
+                  vehicleMake: v.make,
+                  vehicleModel: v.model,
+                }))}
+                onSQFTOptionsChange={handleSQFTOptionsChange}
+              />
 
-            {/* Wrap Type Selection */}
-            {dbSqftOptions && (
-              <div className="space-y-4">
-                {/* Show Panel Visualization Button */}
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPanelVisualization(true)}
-                    className="gap-2"
-                  >
-                    <Eye className="h-4 w-4" />
-                    View Panel Diagram
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold">Wrap Type</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setWrapType('full')}
-                      type="button"
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        wrapType === 'full'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/50'
-                      }`}
+              {/* Wrap Type Selection - only show in vehicle mode when we have SQFT options */}
+              {inputMode === 'vehicle' && dbSqftOptions && (
+                <div className="space-y-4">
+                  {/* Show Panel Visualization Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowPanelVisualization(true)}
+                      className="gap-2"
                     >
-                      <div className="text-sm font-semibold text-foreground">Full Wrap</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Complete vehicle coverage
-                      </div>
-                    </button>
-                    
-                    <button
-                      onClick={() => setWrapType('partial')}
-                      type="button"
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        wrapType === 'partial'
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <div className="text-sm font-semibold text-foreground">Partial Wrap</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Select specific panels
-                      </div>
-                    </button>
+                      <Eye className="h-4 w-4" />
+                      View Panel Diagram
+                    </Button>
                   </div>
-                </div>
 
-                {/* Full Wrap - Roof Options */}
-                {wrapType === 'full' && (
                   <div className="space-y-3">
-                    <Label className="text-base font-semibold">Roof Coverage Options</Label>
+                    <Label className="text-base font-semibold">Wrap Type</Label>
                     <div className="grid grid-cols-2 gap-3">
                       <button
-                        onClick={() => setIncludeRoof(false)}
+                        onClick={() => setWrapType('full')}
                         type="button"
                         className={`p-4 rounded-lg border-2 transition-all ${
-                          !includeRoof 
-                            ? 'border-primary bg-primary/10' 
+                          wrapType === 'full'
+                            ? 'border-primary bg-primary/10'
                             : 'border-border hover:border-primary/50'
                         }`}
                       >
-                        <div className="text-sm font-semibold text-foreground">No Roof Included</div>
-                        <div className="text-2xl font-bold text-primary">
-                          {dbSqftOptions.withoutRoof} sq. ft.
+                        <div className="text-sm font-semibold text-foreground">Full Wrap</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Complete vehicle coverage
                         </div>
                       </button>
                       
                       <button
-                        onClick={() => setIncludeRoof(true)}
+                        onClick={() => setWrapType('partial')}
                         type="button"
                         className={`p-4 rounded-lg border-2 transition-all ${
-                          includeRoof 
-                            ? 'border-primary bg-primary/10' 
+                          wrapType === 'partial'
+                            ? 'border-primary bg-primary/10'
                             : 'border-border hover:border-primary/50'
                         }`}
                       >
-                        <div className="text-sm font-semibold text-foreground">Roof Included</div>
-                        <div className="text-2xl font-bold text-primary">
-                          {dbSqftOptions.withRoof} sq. ft.
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          +{dbSqftOptions.roofOnly} sq. ft. roof
+                        <div className="text-sm font-semibold text-foreground">Partial Wrap</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Select specific panels
                         </div>
                       </button>
                     </div>
                   </div>
-                )}
 
-                {/* Partial Wrap - Panel Selection */}
-                {wrapType === 'partial' && (
-                  <div className="space-y-3">
-                    <Label className="text-base font-semibold">Select Panels to Wrap</Label>
-                    {selectedProduct && selectedProduct.pricing_type === 'per_sqft' ? (
+                  {/* Full Wrap - Roof Options */}
+                  {wrapType === 'full' && (
+                    <div className="space-y-3">
+                      <Label className="text-base font-semibold">Roof Coverage Options</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
+                          onClick={() => setIncludeRoof(false)}
                           type="button"
                           className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.sides
-                              ? 'border-primary bg-primary/10'
+                            !includeRoof 
+                              ? 'border-primary bg-primary/10' 
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
-                        <div className="text-sm font-semibold text-foreground">Both Sides</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.sides} sq. ft.
+                          <div className="text-sm font-semibold text-foreground">No Roof Included</div>
+                          <div className="text-2xl font-bold text-primary">
+                            {dbSqftOptions.withoutRoof} sq. ft.
                           </div>
-                          {panelCosts.sides > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              ${panelCosts.sides.toFixed(2)}
-                            </div>
-                          )}
                         </button>
-
+                        
                         <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
+                          onClick={() => setIncludeRoof(true)}
                           type="button"
                           className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.back
-                              ? 'border-primary bg-primary/10'
+                            includeRoof 
+                              ? 'border-primary bg-primary/10' 
                               : 'border-border hover:border-primary/50'
                           }`}
                         >
-                        <div className="text-sm font-semibold text-foreground">Back</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.back} sq. ft.
+                          <div className="text-sm font-semibold text-foreground">Roof Included</div>
+                          <div className="text-2xl font-bold text-primary">
+                            {dbSqftOptions.withRoof} sq. ft.
                           </div>
-                          {panelCosts.back > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              ${panelCosts.back.toFixed(2)}
-                            </div>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
-                          type="button"
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.hood
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
-                        <div className="text-sm font-semibold text-foreground">Hood</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.hood} sq. ft.
+                          <div className="text-xs text-muted-foreground">
+                            +{dbSqftOptions.roofOnly} sq. ft. roof
                           </div>
-                          {panelCosts.hood > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              ${panelCosts.hood.toFixed(2)}
-                            </div>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
-                          type="button"
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.roof
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
-                        <div className="text-sm font-semibold text-foreground">Roof</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.roof} sq. ft.
-                          </div>
-                          {panelCosts.roof > 0 && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              ${panelCosts.roof.toFixed(2)}
-                            </div>
-                          )}
                         </button>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
-                          type="button"
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.sides
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
+                    </div>
+                  )}
+
+                  {/* Partial Wrap - Panel Selection */}
+                  {wrapType === 'partial' && (
+                    <div className="space-y-3">
+                      <Label className="text-base font-semibold">Select Panels to Wrap</Label>
+                      {selectedProduct && selectedProduct.pricing_type === 'per_sqft' ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.sides
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
                           <div className="text-sm font-semibold text-foreground">Both Sides</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.sides} sq. ft.
-                          </div>
-                        </button>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.sides} sq. ft.
+                            </div>
+                            {panelCosts.sides > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                ${panelCosts.sides.toFixed(2)}
+                              </div>
+                            )}
+                          </button>
 
-                        <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
-                          type="button"
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.back
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.back
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
                           <div className="text-sm font-semibold text-foreground">Back</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.back} sq. ft.
-                          </div>
-                        </button>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.back} sq. ft.
+                            </div>
+                            {panelCosts.back > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                ${panelCosts.back.toFixed(2)}
+                              </div>
+                            )}
+                          </button>
 
-                        <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
-                          type="button"
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.hood
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.hood
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
                           <div className="text-sm font-semibold text-foreground">Hood</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.hood} sq. ft.
-                          </div>
-                        </button>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.hood} sq. ft.
+                            </div>
+                            {panelCosts.hood > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                ${panelCosts.hood.toFixed(2)}
+                              </div>
+                            )}
+                          </button>
 
-                        <button
-                          onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
-                          type="button"
-                          className={`p-4 rounded-lg border-2 transition-all ${
-                            selectedPanels.roof
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                        >
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.roof
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
                           <div className="text-sm font-semibold text-foreground">Roof</div>
-                          <div className="text-lg font-bold text-primary">
-                            {dbSqftOptions.panels.roof} sq. ft.
-                          </div>
-                        </button>
-                      </div>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.roof} sq. ft.
+                            </div>
+                            {panelCosts.roof > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                ${panelCosts.roof.toFixed(2)}
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, sides: !prev.sides }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.sides
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-foreground">Both Sides</div>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.sides} sq. ft.
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, back: !prev.back }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.back
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-foreground">Back</div>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.back} sq. ft.
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, hood: !prev.hood }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.hood
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-foreground">Hood</div>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.hood} sq. ft.
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => setSelectedPanels(prev => ({ ...prev, roof: !prev.roof }))}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              selectedPanels.roof
+                                ? 'border-primary bg-primary/10'
+                                : 'border-border hover:border-primary/50'
+                            }`}
+                          >
+                            <div className="text-sm font-semibold text-foreground">Roof</div>
+                            <div className="text-lg font-bold text-primary">
+                              {dbSqftOptions.panels.roof} sq. ft.
+                            </div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Vehicle Not Found Manual Override */}
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    {vehicleMatchFound ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-primary" />
+                        <span className="text-sm text-foreground">Vehicle found in database</span>
+                      </>
+                    ) : vehicle ? (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-yellow-500" />
+                        <span className="text-sm text-muted-foreground">Vehicle not found — enter SQFT manually below</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Select a vehicle or enter SQFT manually</span>
+                      </>
                     )}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
 
-            {/* Validation Messages */}
-            {!vehicle && (
-              <div className="flex items-center gap-2 p-3 bg-yellow-950/30 border border-yellow-500/30 rounded-lg text-yellow-200 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>Enter vehicle details to auto-calculate square footage</span>
-              </div>
-            )}
-            
-            {vehicle && !dbSqftOptions && (
-              <div className="flex items-center gap-2 p-3 bg-orange-950/30 border border-orange-500/30 rounded-lg text-orange-200 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>Vehicle not in database - please enter square footage manually below</span>
-              </div>
-            )}
-
-            {wrapType === 'partial' && !selectedPanels.sides && !selectedPanels.back && !selectedPanels.hood && !selectedPanels.roof && (
-              <div className="flex items-center gap-2 p-3 bg-blue-950/30 border border-blue-500/30 rounded-lg text-blue-200 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>Select at least one panel to wrap</span>
-              </div>
-            )}
-
-            {/* Auto-calculated SQFT Display with Visual Feedback */}
-            <div className={`p-4 rounded-lg border-2 transition-all ${
-              vehicleMatchFound && !isManualSqft
-                ? 'bg-gradient-to-r from-green-950/50 to-green-900/30 border-green-500/40'
-                : isManualSqft
-                  ? 'bg-gradient-to-r from-purple-950/50 to-purple-900/30 border-purple-500/40'
-                  : 'bg-gradient-to-r from-blue-950/50 to-blue-900/30 border-blue-500/20'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Label className={`text-base font-semibold ${
-                      vehicleMatchFound && !isManualSqft
-                        ? 'text-green-300'
-                        : isManualSqft
-                          ? 'text-purple-300'
-                          : 'text-blue-300'
-                    }`}>
-                    {dbSqftOptions 
-                        ? wrapType === 'full'
-                          ? (includeRoof ? "Total SQFT (Roof Included)" : "Total SQFT (No Roof)")
-                          : "Total SQFT (Selected Panels)"
-                        : "Total SQFT"
-                      }
-                    </Label>
-                    {vehicleMatchFound && !isManualSqft && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 bg-green-500/20 rounded-full border border-green-500/40">
-                        <svg className="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                        </svg>
-                        <span className="text-xs font-medium text-green-400">Auto</span>
-                      </div>
-                    )}
-                    {isManualSqft && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-500/20 rounded-full border border-purple-500/40">
-                        <svg className="w-3 h-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                        </svg>
-                        <span className="text-xs font-medium text-purple-400">Manual</span>
-                      </div>
-                    )}
+              {/* Manual SQFT Override - show when not in vehicle mode or vehicle not found */}
+              {(inputMode !== 'vehicle' || !vehicleMatchFound) && (
+                <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/30">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <Ruler className="h-4 w-4" />
+                    Manual Sq. Ft. Entry
+                  </Label>
+                  <div className="flex gap-3">
+                    <Input
+                      type="number"
+                      placeholder="Enter total sq. ft."
+                      value={sqft > 0 && isManualSqft ? sqft : ""}
+                      onChange={(e) => handleSqftChange(Number(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="flex items-center text-lg font-semibold text-primary">
+                      {sqft > 0 ? `${sqft} sq ft` : '—'}
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {vehicleMatchFound && !isManualSqft
-                      ? wrapType === 'partial'
-                        ? "✓ Calculated from selected panels"
-                        : "✓ Vehicle matched in database"
-                      : isManualSqft
-                        ? "✎ Manually entered value"
-                        : sqft > 0
-                          ? "Calculated from panels"
-                          : "Enter vehicle details above"
+                </div>
+              )}
+
+              {/* Dimension Calculator for Trailers/Custom */}
+              <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/30">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Ruler className="h-4 w-4" />
+                  Dimension Calculator (Trailers, RVs, Custom)
+                </Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Length (ft)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="14" 
+                      value={dimLength || ""} 
+                      onChange={(e) => setDimLength(Number(e.target.value))}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Height (ft)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="6" 
+                      value={dimHeight || ""} 
+                      onChange={(e) => setDimHeight(Number(e.target.value))}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground"># of Sides</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="2" 
+                      min="1" 
+                      max="4" 
+                      value={dimSides || ""} 
+                      onChange={(e) => setDimSides(Number(e.target.value))}
+                      className="bg-background"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const calculatedSqft = dimLength * dimHeight * dimSides;
+                    if (calculatedSqft > 0) {
+                      handleSqftChange(calculatedSqft);
                     }
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="number"
-                    value={sqft || ""}
-                    onChange={(e) => handleSqftChange(Number(e.target.value))}
-                    placeholder="0"
-                    className="w-28 text-xl font-bold text-right bg-background"
-                  />
-                  <span className="text-sm text-muted-foreground font-medium">sq ft</span>
-                </div>
+                  }}
+                  disabled={dimLength <= 0 || dimHeight <= 0 || dimSides <= 0}
+                  className="w-full"
+                >
+                  Calculate: {dimLength * dimHeight * dimSides} sq ft → Apply
+                </Button>
               </div>
             </div>
-
-            {/* Dimension Calculator for Trailers/Custom */}
-            <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/30">
-              <Label className="text-base font-semibold flex items-center gap-2">
-                <Ruler className="h-4 w-4" />
-                Dimension Calculator (Trailers, RVs, Custom)
-              </Label>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Length (ft)</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="14" 
-                    value={dimLength || ""} 
-                    onChange={(e) => setDimLength(Number(e.target.value))}
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Height (ft)</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="6" 
-                    value={dimHeight || ""} 
-                    onChange={(e) => setDimHeight(Number(e.target.value))}
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground"># of Sides</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="2" 
-                    min="1" 
-                    max="4" 
-                    value={dimSides || ""} 
-                    onChange={(e) => setDimSides(Number(e.target.value))}
-                    className="bg-background"
-                  />
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  const calculatedSqft = dimLength * dimHeight * dimSides;
-                  if (calculatedSqft > 0) {
-                    handleSqftChange(calculatedSqft);
-                  }
-                }}
-                disabled={dimLength <= 0 || dimHeight <= 0 || dimSides <= 0}
-                className="w-full"
-              >
-                Calculate: {dimLength * dimHeight * dimSides} sq ft → Apply
-              </Button>
-            </div>
-          </div>
+          )}
 
           {/* Quote Summary */}
           {selectedProduct && sqft > 0 && (
