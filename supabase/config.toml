@@ -392,3 +392,6 @@ verify_jwt = false
 
 [functions.vapi-webhook]
 verify_jwt = false
+
+[functions.convert-quote-to-order]
+verify_jwt = false
