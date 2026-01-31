@@ -9,7 +9,7 @@ import { Slider } from "@/components/ui/slider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
-import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package, Ruler } from "lucide-react";
+import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package, Ruler, CheckCircle } from "lucide-react";
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VehicleSelectorV2 } from "@/components/VehicleSelectorV2";
 import { VehicleSQFTOptions } from "@/hooks/useVehicleDimensions";
 import { Badge } from "@/components/ui/badge";
+import { QuoteActionButtons } from "@/components/quote/QuoteActionButtons";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -82,6 +83,13 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
+  
+  // Saved quote state for payment workflow
+  const [savedQuoteId, setSavedQuoteId] = useState<string | null>(null);
+  const [savedQuoteNumber, setSavedQuoteNumber] = useState<string | null>(null);
+  const [quoteIsPaid, setQuoteIsPaid] = useState(false);
+  const [quoteShopflowOrderId, setQuoteShopflowOrderId] = useState<string | null>(null);
+  const [quoteArtworkFiles, setQuoteArtworkFiles] = useState<Array<{ name: string; url: string; size: number }>>([]);
   
   // Dimension calculator state for trailers/custom
   const [dimLength, setDimLength] = useState(0);
@@ -320,7 +328,7 @@ export default function MightyCustomer() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
 
-      const { error } = await supabase.from("quotes").insert({
+      const { data: savedQuote, error } = await supabase.from("quotes").insert({
         quote_number: quoteNumber,
         customer_name: customerData.name,
         customer_email: customerData.email,
@@ -352,13 +360,24 @@ export default function MightyCustomer() {
         // WPW Internal mode fields
         quote_type: isWPWInternal ? 'wpw_material_only' : 'standard',
         source_conversation_id: sourceConversationId,
-      } as any); // Type assertion needed until types regenerate
+        // New payment fields
+        is_paid: false,
+        artwork_files: [],
+        artwork_status: 'none',
+      } as any).select().single(); // Type assertion needed until types regenerate
 
       if (error) throw error;
 
+      // Store the saved quote info for payment workflow
+      setSavedQuoteId(savedQuote.id);
+      setSavedQuoteNumber(quoteNumber);
+      setQuoteIsPaid(false);
+      setQuoteShopflowOrderId(null);
+      setQuoteArtworkFiles([]);
+
       toast({
         title: "Quote Saved!",
-        description: `Quote ${quoteNumber} has been saved successfully`,
+        description: `Quote ${quoteNumber} has been saved. You can now mark it as paid to create an order.`,
       });
     } catch (error: any) {
       console.error("Error saving quote:", error);
@@ -370,6 +389,19 @@ export default function MightyCustomer() {
     } finally {
       setIsSavingQuote(false);
     }
+  };
+
+  const handlePaymentComplete = (result: { order_number: string; shopflow_order_id: string }) => {
+    setQuoteIsPaid(true);
+    setQuoteShopflowOrderId(result.shopflow_order_id);
+    toast({
+      title: "Order Created!",
+      description: `Order ${result.order_number} has been created and customer has been notified.`,
+    });
+  };
+
+  const handleArtworkUpload = (files: Array<{ name: string; url: string; size: number }>) => {
+    setQuoteArtworkFiles(files);
   };
 
   const toggleAddOn = (addOn: string) => {
@@ -1246,6 +1278,24 @@ export default function MightyCustomer() {
               );
             })()}
           </div>
+
+          {/* Quote Payment & Order Conversion Section */}
+          {savedQuoteId && (
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-primary" />
+                <span className="font-medium">Quote Saved: {savedQuoteNumber}</span>
+              </div>
+              <QuoteActionButtons
+                quoteId={savedQuoteId}
+                isPaid={quoteIsPaid}
+                shopflowOrderId={quoteShopflowOrderId}
+                artworkFiles={quoteArtworkFiles}
+                onPaymentComplete={handlePaymentComplete}
+                onArtworkUpload={handleArtworkUpload}
+              />
+            </div>
+          )}
         </Card>
         
         <EmailPreviewDialog

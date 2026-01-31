@@ -6345,6 +6345,9 @@ export type Database = {
           ai_vehicle_class: string | null
           approved_at: string | null
           approved_by: string | null
+          approveflow_project_id: string | null
+          artwork_files: Json | null
+          artwork_status: string | null
           auto_retarget: boolean | null
           category: string | null
           click_count: number | null
@@ -6371,6 +6374,7 @@ export type Database = {
           installation_hours: number | null
           installation_included: boolean | null
           installation_rate: number | null
+          is_paid: boolean | null
           labor_cost: number | null
           last_activity: string | null
           last_follow_up_sent: string | null
@@ -6378,11 +6382,15 @@ export type Database = {
           material_cost: number | null
           open_count: number | null
           organization_id: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_notes: string | null
           product_name: string | null
           quote_number: string
           quote_type: string | null
           reseller_profit: number | null
           sent_at: string | null
+          shopflow_order_id: string | null
           source: string | null
           source_conversation_id: string | null
           source_message: string | null
@@ -6414,6 +6422,9 @@ export type Database = {
           ai_vehicle_class?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          approveflow_project_id?: string | null
+          artwork_files?: Json | null
+          artwork_status?: string | null
           auto_retarget?: boolean | null
           category?: string | null
           click_count?: number | null
@@ -6440,6 +6451,7 @@ export type Database = {
           installation_hours?: number | null
           installation_included?: boolean | null
           installation_rate?: number | null
+          is_paid?: boolean | null
           labor_cost?: number | null
           last_activity?: string | null
           last_follow_up_sent?: string | null
@@ -6447,11 +6459,15 @@ export type Database = {
           material_cost?: number | null
           open_count?: number | null
           organization_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
           product_name?: string | null
           quote_number: string
           quote_type?: string | null
           reseller_profit?: number | null
           sent_at?: string | null
+          shopflow_order_id?: string | null
           source?: string | null
           source_conversation_id?: string | null
           source_message?: string | null
@@ -6483,6 +6499,9 @@ export type Database = {
           ai_vehicle_class?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          approveflow_project_id?: string | null
+          artwork_files?: Json | null
+          artwork_status?: string | null
           auto_retarget?: boolean | null
           category?: string | null
           click_count?: number | null
@@ -6509,6 +6528,7 @@ export type Database = {
           installation_hours?: number | null
           installation_included?: boolean | null
           installation_rate?: number | null
+          is_paid?: boolean | null
           labor_cost?: number | null
           last_activity?: string | null
           last_follow_up_sent?: string | null
@@ -6516,11 +6536,15 @@ export type Database = {
           material_cost?: number | null
           open_count?: number | null
           organization_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
           product_name?: string | null
           quote_number?: string
           quote_type?: string | null
           reseller_profit?: number | null
           sent_at?: string | null
+          shopflow_order_id?: string | null
           source?: string | null
           source_conversation_id?: string | null
           source_message?: string | null
@@ -6543,6 +6567,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "quotes_approveflow_project_id_fkey"
+            columns: ["approveflow_project_id"]
+            isOneToOne: false
+            referencedRelation: "approveflow_projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "quotes_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -6554,6 +6585,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_shopflow_order_id_fkey"
+            columns: ["shopflow_order_id"]
+            isOneToOne: false
+            referencedRelation: "shopflow_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -6866,6 +6904,7 @@ export type Database = {
           shipping_city: string | null
           shipping_state: string | null
           source_organization_id: string | null
+          source_quote_id: string | null
           status: string
           timeline: Json | null
           tracking_number: string | null
@@ -6906,6 +6945,7 @@ export type Database = {
           shipping_city?: string | null
           shipping_state?: string | null
           source_organization_id?: string | null
+          source_quote_id?: string | null
           status?: string
           timeline?: Json | null
           tracking_number?: string | null
@@ -6946,6 +6986,7 @@ export type Database = {
           shipping_city?: string | null
           shipping_state?: string | null
           source_organization_id?: string | null
+          source_quote_id?: string | null
           status?: string
           timeline?: Json | null
           tracking_number?: string | null
@@ -6978,6 +7019,13 @@ export type Database = {
             columns: ["source_organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shopflow_orders_source_quote_id_fkey"
+            columns: ["source_quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
           {
