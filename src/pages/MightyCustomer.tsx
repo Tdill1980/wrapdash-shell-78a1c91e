@@ -25,6 +25,9 @@ import { QuoteInputModeToggle, InputMode } from "@/components/quote/QuoteInputMo
 import { WrapByTheYardConfigurator } from "@/components/quote/WrapByTheYardConfigurator";
 import { FadeWrapConfigurator } from "@/components/quote/FadeWrapConfigurator";
 import { WallWrapConfigurator } from "@/components/quote/WallWrapConfigurator";
+import { QuoteModeSelector, QuoteMode } from "@/components/quote/QuoteModeSelector";
+import { CustomerInfoSection } from "@/components/quote/CustomerInfoSection";
+import { ContactData } from "@/hooks/useContactLookup";
 
 const categories = ["WePrintWraps.com products", "Full Wraps", "Partial Wraps", "Chrome Delete", "PPF", "Window Tint"];
 
@@ -87,6 +90,10 @@ export default function MightyCustomer() {
   const [activeProductTab, setActiveProductTab] = useState("regular");
   const [isManualSqft, setIsManualSqft] = useState(false);
   const [vehicleMatchFound, setVehicleMatchFound] = useState(false);
+  
+  // Quote mode: Quick Price (skip customer info) vs Full Quote
+  const [quoteMode, setQuoteMode] = useState<QuoteMode>("full");
+  const [foundContact, setFoundContact] = useState<ContactData | null>(null);
   
   // Quote input mode state (Total Sq Ft | Dimensions | Vehicle)
   const [inputMode, setInputMode] = useState<InputMode>("vehicle");
@@ -508,8 +515,27 @@ export default function MightyCustomer() {
 
         <Card className="dashboard-card p-6 space-y-6 relative">
           <VoiceCommand onTranscript={handleVoiceTranscript} />
+          
+          {/* Step 0: Quote Mode Selector */}
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">Quote Mode</Label>
+            <QuoteModeSelector mode={quoteMode} onModeChange={setQuoteMode} />
+          </div>
+
+          {/* Step 1: Customer Info (Full Quote mode only) */}
+          {quoteMode === "full" && (
+            <CustomerInfoSection
+              customerData={customerData}
+              onCustomerDataChange={(data) => setCustomerData(prev => ({ ...prev, ...data }))}
+              onContactFound={(contact) => setFoundContact(contact)}
+            />
+          )}
+
+          {/* Step 2: Select Category */}
           <div className="space-y-4">
-            <Label className="text-lg font-semibold">Select Category</Label>
+            <Label className="text-lg font-semibold">
+              {quoteMode === "quick" ? "1. Select Category" : "2. Select Category"}
+            </Label>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {categories.map((category) => {
                 const isWPWCategory = category === "WePrintWraps.com products";
@@ -525,7 +551,7 @@ export default function MightyCustomer() {
                     }}
                     className={`whitespace-nowrap px-6 ${
                       isWPWCategory
-                        ? `bg-gradient-to-r from-[#D946EF] to-[#2F81F7] hover:from-[#E879F9] hover:to-[#60A5FA] text-white border-0 ${isSelected ? 'ring-2 ring-white/50' : ''}`
+                        ? `bg-gradient-to-r from-primary to-primary/60 hover:from-primary/90 hover:to-primary/50 text-primary-foreground border-0 ${isSelected ? 'ring-2 ring-primary/50' : ''}`
                         : ""
                     }`}
                   >
@@ -573,7 +599,9 @@ export default function MightyCustomer() {
 
             return (
               <div className="space-y-4">
-                <Label className="text-lg font-semibold">Select Product</Label>
+                <Label className="text-lg font-semibold">
+                  {quoteMode === "quick" ? "2. Select Product" : "3. Select Product"}
+                </Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {categoryFiltered.map((product) => {
                     const productIsWPW = product.woo_product_id && isWPW(product.woo_product_id);
@@ -754,7 +782,9 @@ export default function MightyCustomer() {
           ) : selectedProduct ? (
             /* Standard Vehicle Information & Auto-SQFT - Only show after product selected */
             <div className="space-y-4 pt-4 border-t">
-              <Label className="text-lg font-semibold">How would you like to enter area?</Label>
+              <Label className="text-lg font-semibold">
+                {quoteMode === "quick" ? "3. Size / Square Footage" : "4. Size / Square Footage"}
+              </Label>
               
               {/* 3-Mode Quote Input Toggle */}
               <QuoteInputModeToggle
