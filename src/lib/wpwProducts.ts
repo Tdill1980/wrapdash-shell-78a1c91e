@@ -12,6 +12,7 @@ export const WPW_ALLOWED_PRODUCT_IDS = [
   80,    // Perforated Window Vinyl 50/50 - $5.95/sqft
   58391, // FadeWraps Pre-Designed - $600-$990 based on size
   69439, // InkFusion Premium - $2,075/roll
+  70093, // Wall Wrap Printed Vinyl - $3.25/sqft
   
   // Wrap By The Yard
   1726,  // Camo & Carbon - $95.50/yard
@@ -95,6 +96,7 @@ export const FADEWRAPS_PRICING = {
 
 // Wall Wrap - Custom printed wall graphics
 export const WALL_WRAP_PRICING = {
+  productId: 70093,
   pricePerSqft: 3.25,
   material: "Avery HP MPI 2610",
   finishes: ["Matte", "Luster"]
@@ -105,7 +107,7 @@ export const STANDALONE_PRODUCTS = {
   windowPerf: { id: 80, pricePerSqft: 5.95, name: "Window Perf 50/50" },
   averyContour: { id: 108, pricePerSqft: 6.32, name: "Avery Cut Contour" },
   threeMContour: { id: 19420, pricePerSqft: 6.92, name: "3M Cut Contour" },
-  wallWrap: { id: null, pricePerSqft: 3.25, name: "Wall Wrap Printed Vinyl" }
+  wallWrap: { id: 70093, pricePerSqft: 3.25, name: "Wall Wrap Printed Vinyl" }
 };
 
 // Product type detection helpers
