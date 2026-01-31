@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calculator, Ruler, Car } from "lucide-react";
 import { VehicleSelectorV2 } from "@/components/VehicleSelectorV2";
 import { VehicleSQFTOptions } from "@/hooks/useVehicleDimensions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type InputMode = "total" | "dimensions" | "vehicle";
 
@@ -47,36 +53,32 @@ export function QuoteInputModeToggle({
 
   return (
     <div className="space-y-4">
-      {/* Mode Toggle Buttons */}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={mode === "total" ? "default" : "outline"}
-          onClick={() => onModeChange("total")}
-          className="flex-1 gap-2"
-        >
-          <Calculator className="h-4 w-4" />
-          Total Sq. Ft.
-        </Button>
-        <Button
-          type="button"
-          variant={mode === "dimensions" ? "default" : "outline"}
-          onClick={() => onModeChange("dimensions")}
-          className="flex-1 gap-2"
-        >
-          <Ruler className="h-4 w-4" />
-          Dimensions
-        </Button>
-        <Button
-          type="button"
-          variant={mode === "vehicle" ? "default" : "outline"}
-          onClick={() => onModeChange("vehicle")}
-          className="flex-1 gap-2"
-        >
-          <Car className="h-4 w-4" />
-          Vehicle
-        </Button>
-      </div>
+      {/* Mode Dropdown */}
+      <Select value={mode} onValueChange={(value) => onModeChange(value as InputMode)}>
+        <SelectTrigger className="w-full bg-background">
+          <SelectValue placeholder="Select input method" />
+        </SelectTrigger>
+        <SelectContent className="bg-background z-50">
+          <SelectItem value="total">
+            <div className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              <span>Enter Total Sq. Ft.</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="dimensions">
+            <div className="flex items-center gap-2">
+              <Ruler className="h-4 w-4" />
+              <span>Enter Dimensions (H × W)</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="vehicle">
+            <div className="flex items-center gap-2">
+              <Car className="h-4 w-4" />
+              <span>Select Vehicle</span>
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
 
       {/* Mode-specific inputs */}
       {mode === "total" && (
