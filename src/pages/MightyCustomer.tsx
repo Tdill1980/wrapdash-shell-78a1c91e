@@ -751,8 +751,8 @@ export default function MightyCustomer() {
                 />
               )}
             </div>
-          ) : (
-            /* Standard Vehicle Information & Auto-SQFT */
+          ) : selectedProduct ? (
+            /* Standard Vehicle Information & Auto-SQFT - Only show after product selected */
             <div className="space-y-4 pt-4 border-t">
               <Label className="text-lg font-semibold">How would you like to enter area?</Label>
               
@@ -1120,7 +1120,7 @@ export default function MightyCustomer() {
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Quote Summary */}
           {selectedProduct && sqft > 0 && (
