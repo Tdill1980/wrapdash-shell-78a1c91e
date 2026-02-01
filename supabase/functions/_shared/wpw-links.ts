@@ -1,72 +1,112 @@
 // WePrintWraps Approved Links - Single Source of Truth
+// VERIFIED URLS - February 2026
 // Jordan Lee and other agents ONLY use links from this map
 // Prevents hallucinated URLs
 
 export const APPROVED_LINKS = {
+  // ============================================================================
+  // MAIN SITE PAGES
+  // ============================================================================
+  site: {
+    homepage: "https://weprintwraps.com/",
+    how_to_order: "https://weprintwraps.com/how-to-order/",
+    faqs: "https://weprintwraps.com/faqs/",
+    shipping: "https://weprintwraps.com/#shipping",
+    rewards: "https://weprintwraps.com/reward-landing/",
+    media: "https://weprintwraps.com/media/",
+    design_videos: "https://weprintwraps.com/design-videos/",
+    video_gallery: "https://weprintwraps.com/video-gallery/",
+    contact: "https://weprintwraps.com/contact/",
+  },
+
+  // ============================================================================
+  // PRODUCT PAGES (VERIFIED - DO NOT CHANGE)
+  // ============================================================================
   products: {
-    custom_printed_wraps: "https://weprintwraps.com/products/custom-printed-wraps",
-    commercialpro: "https://weprintwraps.com/pages/commercialpro",
-    restylepro: "https://weprintwraps.com/pages/restylepro",
-    laminates: "https://weprintwraps.com/collections/laminates",
-    // Core product pages from PDF
-    wall_wrap: "https://weprintwraps.com/our-products/wall-wrap-printed-vinyl/",
-    custom_wrap_design: "https://weprintwraps.com/our-products/custom-wrap-design/",
-    design_setup_file_output: "https://weprintwraps.com/our-products/design-setup-file-output/",
-    pre_designed_fade_wraps: "https://weprintwraps.com/our-products/pre-designed-fade-wraps/",
+    // Printed Wrap Films
     avery_1105: "https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/",
     "3m_ij180": "https://weprintwraps.com/our-products/3m-ij180-printed-wrap-film/",
-    avery_cut_contour: "https://weprintwraps.com/our-products/avery-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/",
-    "3m_cut_contour": "https://weprintwraps.com/our-products/3m-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/",
-    perforated_window: "https://weprintwraps.com/our-products/perforated-window-vinyl-50-50-unlaminated/",
-    // Wrap By The Yard collections
+    
+    // Contour Cut
+    avery_contour: "https://weprintwraps.com/our-products/avery-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/",
+    "3m_contour": "https://weprintwraps.com/our-products/3m-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/",
+    
+    // Window & Wall
+    window_perf: "https://weprintwraps.com/our-products/perforated-window-vinyl-5050-unlaminated/",
+    wall_wrap: "https://weprintwraps.com/our-products/wall-wrap-printed-vinyl/",
+    
+    // Pre-Designed
+    fade_wraps: "https://weprintwraps.com/our-products/pre-designed-fade-wraps/",
+    
+    // Wrap By The Yard Collections
     wbty_wicked_wild: "https://weprintwraps.com/our-products/wrap-by-the-yard-wicked-wild-wrap-prints/",
     wbty_bape_camo: "https://weprintwraps.com/our-products/wrap-by-the-yard-bape-camo/",
     wbty_modern_trippy: "https://weprintwraps.com/our-products/wrap-by-the-yard-modern-trippy/",
     wbty_metal_marble: "https://weprintwraps.com/our-products/wrap-by-the-yard-metal-marble/",
     wbty_camo_carbon: "https://weprintwraps.com/our-products/camo-carbon-wrap-by-the-yard/",
+    
+    // Design Services
+    custom_design: "https://weprintwraps.com/our-products/custom-wrap-design/",
+    design_setup: "https://weprintwraps.com/our-products/design-setupfile-output/",
   },
+
+  // ============================================================================
+  // ORDERING & ACCOUNT
+  // ============================================================================
   ordering: {
     homepage_quote: "https://weprintwraps.com/#quote",
-    upload_artwork: "https://weprintwraps.com/pages/upload-artwork",
-    login: "https://weprintwraps.com/my-account",
+    how_to_order: "https://weprintwraps.com/how-to-order/",
   },
-  rewards: {
-    clubwpw: "https://weprintwraps.com/pages/clubwpw",
-  },
-  apps: {
-    ink_and_edge: "https://inkandedgemagazine.com",
-    wrapcommandai: "https://weprintwraps.com/pages/wrapcommandai",
-  },
+
 } as const;
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 // Helper to format links for system prompt injection
 export function getApprovedLinksForPrompt(): string {
   return `
 APPROVED LINKS (use ONLY these - never invent URLs):
-- Custom Printed Wraps: ${APPROVED_LINKS.products.custom_printed_wraps}
-- CommercialPro (fleets/business): ${APPROVED_LINKS.products.commercialpro}
-- RestylePro (restyle/enthusiast): ${APPROVED_LINKS.products.restylepro}
-- Avery 1105 Printed Wrap: ${APPROVED_LINKS.products.avery_1105}
-- 3M IJ180 Printed Wrap: ${APPROVED_LINKS.products["3m_ij180"]}
-- Avery Cut Contour Vinyl: ${APPROVED_LINKS.products.avery_cut_contour}
-- 3M Cut Contour Vinyl: ${APPROVED_LINKS.products["3m_cut_contour"]}
-- Perforated Window Vinyl: ${APPROVED_LINKS.products.perforated_window}
-- Pre-Designed Fade Wraps: ${APPROVED_LINKS.products.pre_designed_fade_wraps}
-- Wrap By The Yard - Wicked Wild: ${APPROVED_LINKS.products.wbty_wicked_wild}
-- Wrap By The Yard - Bape Camo: ${APPROVED_LINKS.products.wbty_bape_camo}
-- Homepage Quote Tool: ${APPROVED_LINKS.ordering.homepage_quote}
-- Upload Artwork: ${APPROVED_LINKS.ordering.upload_artwork}
-- Account Login: ${APPROVED_LINKS.ordering.login}
-- ClubWPW Rewards: ${APPROVED_LINKS.rewards.clubwpw}
-- Ink & Edge Magazine: ${APPROVED_LINKS.apps.ink_and_edge}
-- WrapCommandAI: ${APPROVED_LINKS.apps.wrapcommandai}`;
+
+MAIN SITE:
+- Homepage: ${APPROVED_LINKS.site.homepage}
+- How to Order: ${APPROVED_LINKS.site.how_to_order}
+- FAQs: ${APPROVED_LINKS.site.faqs}
+- Shipping Info: ${APPROVED_LINKS.site.shipping}
+- Rewards: ${APPROVED_LINKS.site.rewards}
+- Contact: ${APPROVED_LINKS.site.contact}
+
+PRINTED WRAP FILMS:
+- Avery MPI 1105 ($5.27/sqft): ${APPROVED_LINKS.products.avery_1105}
+- 3M IJ180 ($5.27/sqft): ${APPROVED_LINKS.products["3m_ij180"]}
+
+CONTOUR CUT:
+- Avery Contour ($6.32/sqft): ${APPROVED_LINKS.products.avery_contour}
+- 3M Contour ($6.92/sqft): ${APPROVED_LINKS.products["3m_contour"]}
+
+SPECIALTY:
+- Window Perf ($5.95/sqft): ${APPROVED_LINKS.products.window_perf}
+- Wall Wrap ($3.25/sqft): ${APPROVED_LINKS.products.wall_wrap}
+- Fade Wraps ($600-$990): ${APPROVED_LINKS.products.fade_wraps}
+
+WRAP BY THE YARD ($95.50/yard):
+- Wicked & Wild: ${APPROVED_LINKS.products.wbty_wicked_wild}
+- Bape Camo: ${APPROVED_LINKS.products.wbty_bape_camo}
+- Modern & Trippy: ${APPROVED_LINKS.products.wbty_modern_trippy}
+- Metal & Marble: ${APPROVED_LINKS.products.wbty_metal_marble}
+- Camo & Carbon: ${APPROVED_LINKS.products.wbty_camo_carbon}
+
+DESIGN SERVICES:
+- Custom Design ($750): ${APPROVED_LINKS.products.custom_design}
+- Design Setup ($50): ${APPROVED_LINKS.products.design_setup}`;
 }
 
 // Link-aware behavior rules for system prompt
 export const LINK_AWARE_RULES = `
-────────────────────────────────────
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 LINK-AWARE BEHAVIOR (CRITICAL)
-────────────────────────────────────
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 You are link-aware.
 
@@ -84,8 +124,7 @@ WHEN TO OFFER LINKS:
 • User says "how do I order" → offer ordering link
 • User says "send me the link" → send the relevant link
 • User is ready to buy → offer product or quote link
-• User asks about rewards, apps, or platforms → offer relevant link
-• User asks about CommercialPro or RestylePro → explain + offer link
+• User asks about specific products → offer that product's page
 
 WHEN NOT TO OFFER LINKS:
 • User is still confused → clarify first
@@ -101,44 +140,21 @@ When appropriate, you may say:
 Do not stack links.
 Do not push links aggressively.
 Trust is more important than clicks.
-
-────────────────────────────────────
-PLATFORM ROUTING KNOWLEDGE
-────────────────────────────────────
-
-• For businesses / fleets / repeat orders → CommercialPro
-• For custom, restyle, enthusiast wraps → RestylePro
-• For standard online orders → WePrintWraps.com
-
-────────────────────────────────────
-CLUBWPW ELITE REWARDS
-────────────────────────────────────
-
-You may:
-• Ask if the customer is logged in
-• Offer to help them sign in or create an account
-• Explain rewards points, discounts, and perks
-• Mention points earnings on orders
-• Explain how rewards apply at checkout
-
-If they are not logged in:
-→ Offer to help them log in before checkout.
-
-────────────────────────────────────
-ECOSYSTEM KNOWLEDGE
-────────────────────────────────────
-
-You know and can explain:
-
-• Ink & Edge Magazine
-  – Industry publication for wrap culture
-  – Features trends, tips, and community stories
-
-• RestylePro
-  – Visualizer & restyle tools for enthusiasts
-  – Design-forward ordering experience
-
-• WrapCommandAI
-  – Backend order, quote, and automation system
-  – Powers chat, quotes, follow-ups, and workflows
 `;
+
+// ============================================================================
+// URL VALIDATION (for testing)
+// ============================================================================
+export function getAllUrls(): string[] {
+  const urls: string[] = [];
+  
+  Object.values(APPROVED_LINKS.site).forEach(url => urls.push(url));
+  Object.values(APPROVED_LINKS.products).forEach(url => urls.push(url));
+  Object.values(APPROVED_LINKS.ordering).forEach(url => urls.push(url));
+  
+  return urls;
+}
+
+// Count of approved URLs (for verification)
+export const APPROVED_URL_COUNT = getAllUrls().length; // Should be 22
+
