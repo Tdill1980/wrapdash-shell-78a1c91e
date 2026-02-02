@@ -702,40 +702,41 @@ serve(async (req) => {
     const bulkVehicleTypes = vehicleTypesMatch ? [...new Set(vehicleTypesMatch.map((v: string) => v.toLowerCase()))].join(', ') : null;
 
     // ============================================
-    // VEHICLE CONTEXT RESET
-    // If user mentions a NEW vehicle that's different from the one stored in
-    // chatState, clear the old vehicle/sqft fields. This prevents the "Model Y
-    // remembered while asking for Mustang" bug.
+    // VEHICLE CONTEXT RESET - AGGRESSIVE
+    // ALWAYS clear and overwrite when user mentions ANY vehicle.
+    // This prevents old vehicle data from bleeding into new conversations.
     // ============================================
     if (vehicleInfo) {
-      const newVehicleKey = vehicleInfo.vehicle.toLowerCase().replace(/\s+/g, '');
-      const oldVehicleKey = chatState.vehicle?.toLowerCase().replace(/\s+/g, '') || '';
+      console.log('[JordanLee] Vehicle detected, CLEARING all old vehicle data. New vehicle:', vehicleInfo.vehicle);
 
-      if (newVehicleKey !== oldVehicleKey) {
-        console.log('[JordanLee] Vehicle change detected, clearing old context:', oldVehicleKey, '=>', newVehicleKey);
-        // Clear previous vehicle-specific data (but keep profile: name, email, phone, shop)
-        delete chatState.sqft;
-        delete chatState.sqftWithRoof;
-        delete chatState.roofSqft;
-        delete chatState.is_estimate;
-        delete chatState.similar_to;
-        delete chatState.vehicle_year;
-        delete chatState.quote_created;
-        delete chatState.quote_id;
-        delete chatState.price_given;
-        delete chatState.awaiting_trailer_dimensions;
-        delete chatState.trailer_dimensions;
-        delete chatState.window_type_clarified;
-        delete chatState.dimensions;
-        delete chatState.from_dimensions;
-      }
+      // ALWAYS clear ALL previous vehicle-specific data (keep profile: name, email, phone, shop)
+      delete chatState.sqft;
+      delete chatState.sqftWithRoof;
+      delete chatState.roofSqft;
+      delete chatState.is_estimate;
+      delete chatState.similar_to;
+      delete chatState.vehicle_year;
+      delete chatState.quote_created;
+      delete chatState.quote_id;
+      delete chatState.quote_number;
+      delete chatState.price_given;
+      delete chatState.quoted_price;
+      delete chatState.quote_sent;
+      delete chatState.awaiting_trailer_dimensions;
+      delete chatState.trailer_dimensions;
+      delete chatState.window_type_clarified;
+      delete chatState.dimensions;
+      delete chatState.from_dimensions;
+      delete chatState.stage; // Reset stage to start fresh quote flow
 
+      // Set NEW vehicle data
       chatState.vehicle = vehicleInfo.vehicle;
       chatState.sqft = vehicleInfo.sqft;
       chatState.sqftWithRoof = vehicleInfo.sqftWithRoof;
       chatState.roofSqft = vehicleInfo.roof;
       chatState.is_estimate = vehicleInfo.isEstimate || false;
       chatState.similar_to = vehicleInfo.similarTo || '';
+      chatState.stage = 'vehicle_captured'; // Fresh stage
       if (vehicleInfo.year) chatState.vehicle_year = vehicleInfo.year;
     }
     if (dimensionMatch) {
@@ -1359,7 +1360,38 @@ REMEMBER: We PRINT and SHIP - customer arranges local installation.`;
           chatState.quoted_price = price;
           chatState.quote_sent = true;
           
-          // Trigger quote creation via create-quote-from-chat function (creates DB record + sends email)
+          // DIRECT INSERT into quotes table (guaranteed to save)
+          try {
+            const { data: quoteData, error: quoteError } = await supabase
+              .from('quotes')
+              .insert({
+                organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
+                customer_name: chatState.customer_name,
+                customer_email: chatState.customer_email,
+                customer_phone: chatState.customer_phone || null,
+                vehicle_model: chatState.vehicle || vehicleDisplay,
+                sqft: chatState.sqft || sqft,
+                total_price: price,
+                status: 'sent',
+                source: 'website_chat',
+                ai_generated: true,
+                source_conversation_id: conversationId
+              })
+              .select('id')
+              .single();
+
+            if (quoteError) {
+              console.error('[JordanLee] Direct quote insert failed:', quoteError);
+            } else {
+              console.log('[JordanLee] Quote saved to database:', quoteData?.id);
+              chatState.quote_id = quoteData?.id;
+              chatState.quote_created = true;
+            }
+          } catch (e) {
+            console.error('[JordanLee] Quote insert error:', e);
+          }
+
+          // ALSO call create-quote-from-chat to send the email
           try {
             const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
             const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1384,17 +1416,13 @@ REMEMBER: We PRINT and SHIP - customer arranges local installation.`;
 
             if (quoteResponse.ok) {
               const quoteResult = await quoteResponse.json();
-              console.log('[JordanLee] Quote created via create-quote-from-chat:', quoteResult);
-              if (quoteResult.quote_id) {
-                chatState.quote_id = quoteResult.quote_id;
-                chatState.quote_number = quoteResult.quote_number;
-              }
+              console.log('[JordanLee] Email sent via create-quote-from-chat:', quoteResult);
             } else {
               const errorText = await quoteResponse.text();
               console.error('[JordanLee] create-quote-from-chat failed:', quoteResponse.status, errorText);
             }
           } catch (e) {
-            console.error('[JordanLee] Quote creation failed:', e);
+            console.error('[JordanLee] Quote email failed:', e);
           }
         }
       }
@@ -1500,11 +1528,11 @@ ${WPW_KNOWLEDGE.guarantee}
 ${WPW_KNOWLEDGE.specs}
 ${WPW_KNOWLEDGE.contact}`;
 
-    // Call AI using OpenAI API
+    // Call AI using Anthropic API
     let aiReply = "Hey! What vehicle are you looking to wrap? I'll get you a price!";
 
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (openaiApiKey) {
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (anthropicApiKey) {
       try {
         const { data: history } = await supabase
           .from('messages')
@@ -1551,36 +1579,35 @@ PRICING RULE (CONTACT-GATED):
 
 ${!chatState.customer_email ? '📧 GATE ACTIVE: Get name + email BEFORE giving price!' : '✅ Have email - give ONE price at $5.27/sqft and ask Avery or 3M!'}`;
 
-        // Use OpenAI API
-        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        // Use Anthropic API
+        const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
+            'x-api-key': anthropicApiKey,
+            'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              ...messages
-            ],
-            max_tokens: 600
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 600,
+            system: systemPrompt,
+            messages: messages
           })
         });
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
-          if (aiData.choices?.[0]?.message?.content) {
-            aiReply = aiData.choices[0].message.content;
+          if (aiData.content?.[0]?.text) {
+            aiReply = aiData.content[0].text;
           }
         } else {
-          console.error('[JordanLee] OpenAI API error:', aiResponse.status);
+          console.error('[JordanLee] Anthropic API error:', aiResponse.status);
         }
       } catch (e) {
         console.error('[JordanLee] AI error:', e);
       }
     } else {
-      console.warn('[JordanLee] OPENAI_API_KEY not configured');
+      console.warn('[JordanLee] ANTHROPIC_API_KEY not configured');
     }
 
     // Save state and response - FIXED: Only update valid columns (chat_state JSONB holds all contact info)
