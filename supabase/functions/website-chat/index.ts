@@ -1528,13 +1528,19 @@ ${attachmentContext}
 KNOWLEDGE BASE:
 ${knowledgeContext}
 
-CUSTOMER STATE:
+CUSTOMER STATE (AUTHORITATIVE - USE THIS, NOT CONVERSATION HISTORY):
 - Name: ${chatState.customer_name || '❌ NOT CAPTURED'}
 - Email: ${chatState.customer_email || '❌ NOT CAPTURED'}
 - Phone: ${chatState.customer_phone || '❌ NOT CAPTURED'}
 - Shop: ${chatState.shop_name || '❌ NOT CAPTURED'}
 - Vehicle: ${chatState.vehicle || 'Unknown'}
 - SQFT: ${chatState.sqft || 'Unknown'}
+
+⚠️ CRITICAL VEHICLE RULE:
+- ALWAYS use the vehicle shown above in CUSTOMER STATE
+- If conversation history mentions a different vehicle (like a previous quote), IGNORE IT
+- The customer may have changed vehicles - only reference the CURRENT vehicle above
+- NEVER mix up or reference old vehicles from earlier in the conversation
 
 PRICING RULE (CONTACT-GATED):
 - DO NOT give ANY specific pricing until you have at minimum: Name + Email
