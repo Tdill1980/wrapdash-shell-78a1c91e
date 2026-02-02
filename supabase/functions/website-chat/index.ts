@@ -1500,11 +1500,11 @@ ${WPW_KNOWLEDGE.guarantee}
 ${WPW_KNOWLEDGE.specs}
 ${WPW_KNOWLEDGE.contact}`;
 
-    // Call AI using Lovable AI Gateway (no Anthropic key needed)
+    // Call AI using OpenAI API
     let aiReply = "Hey! What vehicle are you looking to wrap? I'll get you a price!";
-    
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (lovableApiKey) {
+
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (openaiApiKey) {
       try {
         const { data: history } = await supabase
           .from('messages')
@@ -1545,15 +1545,15 @@ PRICING RULE (CONTACT-GATED):
 
 ${!chatState.customer_email ? '📧 GATE ACTIVE: Get name + email BEFORE giving price!' : '✅ Have email - give ONE price at $5.27/sqft and ask Avery or 3M!'}`;
 
-        // Use Lovable AI Gateway instead of Anthropic
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        // Use OpenAI API
+        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
+            'Authorization': `Bearer ${openaiApiKey}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'google/gemini-3-flash-preview',
+            model: 'gpt-4o-mini',
             messages: [
               { role: 'system', content: systemPrompt },
               ...messages
@@ -1568,13 +1568,13 @@ ${!chatState.customer_email ? '📧 GATE ACTIVE: Get name + email BEFORE giving 
             aiReply = aiData.choices[0].message.content;
           }
         } else {
-          console.error('[JordanLee] AI Gateway error:', aiResponse.status);
+          console.error('[JordanLee] OpenAI API error:', aiResponse.status);
         }
       } catch (e) {
         console.error('[JordanLee] AI error:', e);
       }
     } else {
-      console.warn('[JordanLee] LOVABLE_API_KEY not configured');
+      console.warn('[JordanLee] OPENAI_API_KEY not configured');
     }
 
     // Save state and response - FIXED: Only update valid columns (chat_state JSONB holds all contact info)
