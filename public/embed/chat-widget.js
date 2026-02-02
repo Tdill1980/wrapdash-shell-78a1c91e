@@ -627,17 +627,18 @@
   styleEl.textContent = styles;
   document.head.appendChild(styleEl);
 
-  // Session ID for conversation continuity
-  // (Used by the backend to associate messages into a single transcript + context.)
-  // FIXED: Use sessionStorage instead of localStorage so each browser session starts fresh.
-  // Old behavior: localStorage persisted session across browser restarts, loading OLD conversation data.
-  // New behavior: sessionStorage = fresh start on new tab/page load, but persists within same tab.
+  // Session ID - ALWAYS FRESH on every page load
+  // Each page load = new conversation = no old data bleeding through
   function generateSessionId() {
     return 'wcai_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
   }
 
-  let sessionId = sessionStorage.getItem('wcai_session') || generateSessionId();
-  sessionStorage.setItem('wcai_session', sessionId);
+  // Clear any old session data
+  localStorage.removeItem('wcai_session');
+  sessionStorage.removeItem('wcai_session');
+
+  // Always generate fresh session
+  let sessionId = generateSessionId();
 
   // Create quick actions HTML - only 3 wired buttons
   const quickActionsHTML = quickActions.map(action => {
@@ -804,7 +805,6 @@
   function resetConversation() {
     // Fresh sessionId => fresh transcript + fresh backend context
     sessionId = generateSessionId();
-    sessionStorage.setItem('wcai_session', sessionId);
 
     // Clear messages and re-run welcome
     if (messagesContainer && welcomeMessage) {
