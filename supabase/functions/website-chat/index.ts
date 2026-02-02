@@ -1362,19 +1362,23 @@ REMEMBER: We PRINT and SHIP - customer arranges local installation.`;
           
           // DIRECT INSERT into quotes table (guaranteed to save)
           try {
+            const quoteNumber = 'WPW-CHAT-' + Date.now();
             const { data: quoteData, error: quoteError } = await supabase
               .from('quotes')
               .insert({
+                quote_number: quoteNumber,
                 organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
                 customer_name: chatState.customer_name,
                 customer_email: chatState.customer_email,
                 customer_phone: chatState.customer_phone || null,
                 vehicle_model: chatState.vehicle || vehicleDisplay,
                 sqft: chatState.sqft || sqft,
+                material_cost: price,
                 total_price: price,
                 status: 'sent',
                 source: 'website_chat',
                 ai_generated: true,
+                email_sent: true,
                 source_conversation_id: conversationId
               })
               .select('id')
@@ -1534,18 +1538,10 @@ ${WPW_KNOWLEDGE.contact}`;
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (anthropicApiKey) {
       try {
-        const { data: history } = await supabase
-          .from('messages')
-          .select('direction, content')
-          .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true })
-          .limit(10);
-
-        const messages = (history || []).map((m: any) => ({
-          role: m.direction === 'inbound' ? 'user' : 'assistant',
-          content: m.content
-        }));
-        messages.push({ role: 'user', content: message_text });
+        // DO NOT load old message history - it causes vehicle confusion!
+        // The AI was mixing up "Prius" from old conversations with "F-150" from current.
+        // All context is provided via chatState in the system prompt.
+        const messages = [{ role: 'user', content: message_text }];
 
         const systemPrompt = `${JORDAN_PERSONA}
 
