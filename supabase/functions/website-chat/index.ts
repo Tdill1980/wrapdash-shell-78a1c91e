@@ -1359,88 +1359,42 @@ REMEMBER: We PRINT and SHIP - customer arranges local installation.`;
           chatState.quoted_price = price;
           chatState.quote_sent = true;
           
-          // Trigger quote email
+          // Trigger quote creation via create-quote-from-chat function (creates DB record + sends email)
           try {
-            const resendKey = Deno.env.get('RESEND_API_KEY');
-            if (resendKey) {
-              const resend = new Resend(resendKey);
-              await resend.emails.send({
-                from: 'WePrintWraps <quotes@weprintwraps.com>',
-                to: chatState.customer_email,
-                cc: SILENT_CC,
-                subject: `Your Vehicle Wrap Quote - ${vehicleDisplay} - ${isEstimate ? '~' : ''}$${price}`,
-                html: `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <div style="background: linear-gradient(135deg, #e6007e, #9b00ff); padding: 20px; text-align: center;">
-    <h1 style="color: white; margin: 0;">WePrintWraps.com</h1>
-    <p style="color: white; margin: 5px 0 0 0;">Your Vehicle Wrap Quote${isEstimate ? ' (Estimate)' : ''}</p>
-  </div>
-  
-  <div style="padding: 30px; background: #f9f9f9;">
-    <p>Hey ${chatState.customer_name}!</p>
-    <p>Thanks for reaching out from <strong>${chatState.shop_name}</strong>! Here's your quote:</p>
-    
-    ${isEstimate ? '<div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><strong>⚠️ Note:</strong> This is an estimate based on similar vehicles. Our team will follow up with exact measurements.</div>' : ''}
-    
-    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-      <tr style="background: #e6007e; color: white;">
-        <th style="padding: 12px; text-align: left;">Item</th>
-        <th style="padding: 12px; text-align: right;">Details</th>
-      </tr>
-      <tr style="background: white;">
-        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Vehicle</td>
-        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">${vehicleDisplay}</td>
-      </tr>
-      <tr style="background: white;">
-        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Square Footage</td>
-        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">${isEstimate ? '~' : ''}${chatState.sqft} sqft (no roof)${isEstimate ? ' (estimate)' : ''}</td>
-      </tr>
-      <tr style="background: white;">
-        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Material</td>
-        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">Avery MPI 1105 + DOL1460Z Lamination</td>
-      </tr>
-      <tr style="background: white;">
-        <td style="padding: 12px; border-bottom: 1px solid #ddd;">Price per sqft</td>
-        <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">$5.27</td>
-      </tr>
-      <tr style="background: #fff3cd;">
-        <td style="padding: 12px; font-weight: bold; font-size: 18px;">TOTAL</td>
-        <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px; color: #e6007e;">${isEstimate ? '~' : ''}$${price}</td>
-      </tr>
-    </table>
-    
-    ${price >= 750 ? '<p style="background: #d4edda; padding: 10px; border-radius: 5px; text-align: center;">🎉 <strong>FREE SHIPPING</strong> on orders over $750!</p>' : ''}
-    
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${productUrl}" style="background: #e6007e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">ORDER NOW</a>
-    </div>
-    
-    <p><strong>What's Included:</strong></p>
-    <ul>
-      <li>Premium Avery MPI 1105 printed wrap film</li>
-      <li>DOL1460Z overlaminate for UV protection</li>
-      <li>5-7 year outdoor durability</li>
-      <li>1-2 business day print time</li>
-      ${price >= 750 ? '<li>FREE shipping</li>' : '<li>Standard shipping rates at checkout</li>'}
-    </ul>
-    
-    <p><strong>Note:</strong> We are a print shop - we print and ship your wrap. Installation is done by your local installer.</p>
-    
-    <p>Questions? Reply to this email or chat with us at weprintwraps.com!</p>
-    
-    <p>- Jordan Lee<br>WePrintWraps.com</p>
-  </div>
-  
-  <div style="background: #333; color: white; padding: 15px; text-align: center; font-size: 12px;">
-    <p>WePrintWraps.com | (833) 335-1382 | hello@weprintwraps.com</p>
-  </div>
-</div>
-`
-              });
-              console.log('[JordanLee] Quote email sent to:', chatState.customer_email);
+            const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+            const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+            const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/create-quote-from-chat`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`
+              },
+              body: JSON.stringify({
+                conversation_id: conversationId,
+                customer_email: chatState.customer_email,
+                customer_name: chatState.customer_name,
+                vehicle_year: chatState.vehicle_year || null,
+                vehicle_make: '',
+                vehicle_model: chatState.vehicle || vehicleDisplay,
+                product_type: 'avery',
+                send_email: true
+              })
+            });
+
+            if (quoteResponse.ok) {
+              const quoteResult = await quoteResponse.json();
+              console.log('[JordanLee] Quote created via create-quote-from-chat:', quoteResult);
+              if (quoteResult.quote_id) {
+                chatState.quote_id = quoteResult.quote_id;
+                chatState.quote_number = quoteResult.quote_number;
+              }
+            } else {
+              const errorText = await quoteResponse.text();
+              console.error('[JordanLee] create-quote-from-chat failed:', quoteResponse.status, errorText);
             }
           } catch (e) {
-            console.error('[JordanLee] Quote email failed:', e);
+            console.error('[JordanLee] Quote creation failed:', e);
           }
         }
       }
