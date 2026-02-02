@@ -785,7 +785,7 @@
 
   // Type welcome message on first open
   function showWelcomeMessage() {
-    const welcomeText = "Hey! I'm Jordan with WePrintWraps.com. What can I help you with today?";
+    const welcomeText = "Hey! How can I help you?";
     typeMessage(welcomeMessage, welcomeText, 25);
   }
 
