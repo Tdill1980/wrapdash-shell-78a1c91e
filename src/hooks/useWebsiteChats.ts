@@ -78,59 +78,25 @@ export function useWebsiteChats() {
   const query = useQuery({
     queryKey: ['website-page-chats'],
     queryFn: async (): Promise<ChatConversation[]> => {
-      // ADMIN OS: Fetch ALL conversations - NO filters, NO limits
-      // Filters belong in UI controls, not in the query
-      const { data: conversations, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          contact_id,
-          channel,
-          status,
-          priority,
-          subject,
-          last_message_at,
-          created_at,
-          unread_count,
-          chat_state,
-          metadata
-        `)
-        .order('last_message_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch contacts and messages for each conversation
-      const enrichedConversations = await Promise.all(
-        (conversations || []).map(async (convo) => {
-          // Get contact
-          let contact = null;
-          if (convo.contact_id) {
-            const { data: contactData } = await supabase
-              .from('contacts')
-              .select('id, name, email, phone, tags')
-              .eq('id', convo.contact_id)
-              .single();
-            contact = contactData;
+      // Use edge function to bypass RLS
+      const response = await fetch(
+        'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/get-website-chats',
+        {
+          headers: {
+            'Content-Type': 'application/json',
           }
-
-          // Get messages
-          const { data: messages } = await supabase
-            .from('messages')
-            .select('id, content, direction, sender_name, created_at, metadata')
-            .eq('conversation_id', convo.id)
-            .order('created_at', { ascending: true });
-
-          return {
-            ...convo,
-            chat_state: convo.chat_state as ChatConversation['chat_state'],
-            metadata: convo.metadata as ChatConversation['metadata'],
-            contact,
-            messages: messages || []
-          };
-        })
+        }
       );
 
-      return enrichedConversations;
+      if (!response.ok) throw new Error('Failed to fetch chats');
+
+      const data = await response.json();
+
+      return (data.conversations || []).map((convo: any) => ({
+        ...convo,
+        chat_state: convo.chat_state as ChatConversation['chat_state'],
+        metadata: convo.metadata as ChatConversation['metadata'],
+      }));
     },
     refetchInterval: 30000 // Refresh every 30 seconds
   });

@@ -16,8 +16,10 @@ import { EscalationStatusCard } from "./EscalationStatusCard";
 import { InternalReplyPanel } from "./InternalReplyPanel";
 import { QuoteUploadPanel } from "./QuoteUploadPanel";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 function getCountryFlag(countryCode?: string): string {
@@ -39,6 +41,9 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReplyPanel, setShowReplyPanel] = useState(false);
   const [showQuoteUpload, setShowQuoteUpload] = useState(false);
+  const [liveReplyText, setLiveReplyText] = useState('');
+  const [isSendingLiveReply, setIsSendingLiveReply] = useState(false);
+  const liveReplyInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { data: events, isLoading: eventsLoading } = useConversationEvents(conversation?.id || null);
   const { data: quotes, isLoading: quotesLoading } = useConversationQuotes(conversation?.id || null);
@@ -85,6 +90,41 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
   
   const handleRefreshEvents = () => {
     queryClient.invalidateQueries({ queryKey: ['conversation-events', conversation.id] });
+  };
+
+  // LIVE CHAT REPLY - Sends message directly to chat widget via Supabase Realtime
+  const handleSendLiveReply = async () => {
+    if (!liveReplyText.trim() || isSendingLiveReply) return;
+
+    setIsSendingLiveReply(true);
+    try {
+      // Insert message - chat widget will receive via Supabase Realtime
+      const { error: msgError } = await supabase.from('messages').insert({
+        conversation_id: conversation.id,
+        channel: 'website',
+        direction: 'outbound',
+        content: liveReplyText.trim(),
+        sender_name: 'Jackson',
+        metadata: { source: 'dashboard_reply' }
+      });
+
+      if (msgError) throw msgError;
+
+      // Update conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversation.id);
+
+      setLiveReplyText('');
+      queryClient.invalidateQueries({ queryKey: ['website-page-chats'] });
+      toast.success('Message sent to chat widget');
+    } catch (err) {
+      console.error('Failed to send live reply:', err);
+      toast.error('Failed to send message');
+    } finally {
+      setIsSendingLiveReply(false);
+    }
   };
 
   const geo = conversation.metadata?.geo;
@@ -194,11 +234,40 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                   </div>
                 </ScrollArea>
                 
-                {/* Reply Box */}
-                <div className="border border-t-0 rounded-b-lg p-3">
+                {/* Live Chat Reply Input */}
+                <div className="border border-t-0 rounded-b-lg p-3 space-y-2">
+                  {/* Live chat input - sends directly to widget */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      ref={liveReplyInputRef}
+                      placeholder="Type a message to send to chat widget..."
+                      value={liveReplyText}
+                      onChange={(e) => setLiveReplyText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendLiveReply();
+                        }
+                      }}
+                      disabled={isSendingLiveReply}
+                      className="flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleSendLiveReply}
+                      disabled={!liveReplyText.trim() || isSendingLiveReply}
+                      className="gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Send
+                    </Button>
+                  </div>
+
+                  {/* Email reply and quote upload buttons */}
                   <div className="flex items-center gap-2">
                     {contact?.email && !contact.email.includes('@capture.local') ? (
                       <Button
+                        variant="outline"
                         className="flex-1 gap-2"
                         size="sm"
                         onClick={() => {
@@ -207,12 +276,12 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
                         }}
                       >
                         <Reply className="h-4 w-4" />
-                        Reply to {contact.name || contact.email}
+                        Send Email to {contact.name || contact.email}
                       </Button>
                     ) : (
                       <div className="flex-1 flex items-center gap-2 text-muted-foreground text-sm bg-muted/50 rounded p-2">
                         <Mail className="h-4 w-4 flex-shrink-0" />
-                        <span>No email — collect email to reply</span>
+                        <span>No email for email reply</span>
                       </div>
                     )}
                     <Button

@@ -6,6 +6,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 
 export interface VehicleSqFtResult {
   sqft: number;
+  defaultWrapSqft: number;  // CRITICAL: Total - Roof (default quote excludes roof)
   panels?: {
     sides: number;
     back: number;
@@ -169,28 +170,37 @@ function getModelSearchVariants(model: string): string[] {
 function getQuickRefSqft(make: string, model: string): VehicleSqFtResult | null {
   const normalizedMake = normalizeString(make);
   const normalizedModel = normalizeString(model);
-  
+
   // Try exact match with fully normalized key
   const key = `${normalizedMake}_${normalizedModel}`;
   if (VEHICLE_QUICK_REF[key]) {
-    console.log(`[MightySqFt] Quick ref exact: ${key} → ${VEHICLE_QUICK_REF[key].sqft} sqft`);
+    const sqft = VEHICLE_QUICK_REF[key].sqft;
+    // Estimate roof as ~10% of total for quick ref (no panel data)
+    const estimatedRoof = Math.round(sqft * 0.10);
+    const defaultWrap = sqft - estimatedRoof;
+    console.log(`[MightySqFt] Quick ref exact: ${key} → ${sqft} sqft total, ${defaultWrap} sqft default`);
     return {
-      sqft: VEHICLE_QUICK_REF[key].sqft,
+      sqft: sqft,
+      defaultWrapSqft: defaultWrap,
       source: 'quick_ref',
     };
   }
-  
+
   // Try partial match (model contains)
   for (const [refKey, data] of Object.entries(VEHICLE_QUICK_REF)) {
     if (refKey.startsWith(`${normalizedMake}_`) && refKey.includes(normalizedModel)) {
-      console.log(`[MightySqFt] Quick ref partial: ${refKey} → ${data.sqft} sqft`);
+      const sqft = data.sqft;
+      const estimatedRoof = Math.round(sqft * 0.10);
+      const defaultWrap = sqft - estimatedRoof;
+      console.log(`[MightySqFt] Quick ref partial: ${refKey} → ${sqft} sqft total, ${defaultWrap} sqft default`);
       return {
-        sqft: data.sqft,
+        sqft: sqft,
+        defaultWrapSqft: defaultWrap,
         source: 'quick_ref',
       };
     }
   }
-  
+
   console.log(`[MightySqFt] Quick ref miss: tried "${key}"`);
   return null;
 }
@@ -238,14 +248,17 @@ export async function getVehicleSqFt(
         .maybeSingle();
       
       if (data && !error && data.corrected_sqft) {
-        console.log(`[MightySqFt] Database hit: ${data.make} ${data.model} (${data.year_start}-${data.year_end}) = ${data.corrected_sqft} sqft`);
+        const roofSqft = data.roof_sqft || 0;
+        const defaultWrap = data.corrected_sqft - roofSqft;
+        console.log(`[MightySqFt] Database hit: ${data.make} ${data.model} (${data.year_start}-${data.year_end}) = ${data.corrected_sqft} sqft total, ${defaultWrap} sqft default (no roof)`);
         return {
           sqft: data.corrected_sqft,
+          defaultWrapSqft: defaultWrap,  // CRITICAL: Default quote excludes roof
           panels: {
             sides: data.side_sqft || 0,
             back: data.back_sqft || 0,
             hood: data.hood_sqft || 0,
-            roof: data.roof_sqft || 0,
+            roof: roofSqft,
           },
           source: 'database',
         };

@@ -28,8 +28,9 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { getVehicleSqFt, VehicleSqFtResult } from "../_shared/mighty-vehicle-sqft.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -415,7 +416,113 @@ const VEHICLE_SQFT: Record<string, { total: number; roof: number; noRoof: number
   '911': { total: 195, roof: 17, noRoof: 178 },
   'cayman': { total: 185, roof: 16, noRoof: 169 },
   'boxster': { total: 180, roof: 15, noRoof: 165 },
+  // Malibu - from PVO database
+  'malibu': { total: 222, roof: 25, noRoof: 197 },
 };
+
+// ============================================
+// MAKE ALIASES - Handle common abbreviations
+// ============================================
+const MAKE_ALIASES: Record<string, string> = {
+  'chevy': 'Chevrolet',
+  'vw': 'Volkswagen',
+  'merc': 'Mercedes-Benz',
+  'mercedes': 'Mercedes-Benz',
+  'benz': 'Mercedes-Benz',
+};
+
+// ============================================
+// DATABASE VEHICLE LOOKUP - Uses mighty-vehicle-sqft
+// This is the PRIMARY lookup, falls back to VEHICLE_SQFT
+// ============================================
+interface VehicleLookupResult {
+  sqft: number;
+  sqftWithRoof: number;
+  vehicle: string;
+  year?: string;
+  roof: number;
+  isEstimate?: boolean;
+  similarTo?: string;
+  source: 'database' | 'local' | 'category_estimate';
+}
+
+async function lookupVehicleFromDatabase(
+  supabase: SupabaseClient,
+  message: string
+): Promise<VehicleLookupResult | null> {
+  const lower = message.toLowerCase();
+
+  // Try to extract year (4 digit number between 1990-2030)
+  const yearMatch = message.match(/\b(19\d{2}|20[0-3]\d)\b/);
+  const year = yearMatch ? parseInt(yearMatch[1]) : 2022; // Default to recent year
+
+  // Try to extract make from message
+  const makePatterns = /\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|subaru|mazda|hyundai|kia|lexus|acura|cadillac|buick|lincoln|chrysler|porsche|jaguar|volvo|rivian|lucid|vw|merc|benz)\b/i;
+  const makeMatch = message.match(makePatterns);
+
+  if (!makeMatch) {
+    console.log('[JordanLee] No make found in message');
+    return null;
+  }
+
+  let make = makeMatch[1];
+
+  // Apply make aliases (Chevy → Chevrolet)
+  const normalizedMake = make.toLowerCase();
+  if (MAKE_ALIASES[normalizedMake]) {
+    make = MAKE_ALIASES[normalizedMake];
+    console.log(`[JordanLee] Applied make alias: ${makeMatch[1]} → ${make}`);
+  } else {
+    // Capitalize first letter
+    make = make.charAt(0).toUpperCase() + make.slice(1).toLowerCase();
+  }
+
+  // Try to extract model - look for words after the make
+  const afterMake = message.substring(message.toLowerCase().indexOf(makeMatch[1].toLowerCase()) + makeMatch[1].length).trim();
+  const modelMatch = afterMake.match(/^[\s,]*([\w\-\s]+?)(?:\s*(\d{4}|\.|,|$))/i);
+  let model = modelMatch ? modelMatch[1].trim() : '';
+
+  // Clean up model name
+  model = model.replace(/\b(for|the|a|an|in|on|at|to|is|are|my|our|your|this|that|these|those)\b/gi, '').trim();
+
+  if (!model) {
+    console.log('[JordanLee] No model found after make:', make);
+    return null;
+  }
+
+  console.log(`[JordanLee] Attempting database lookup: ${year} ${make} ${model}`);
+
+  try {
+    const result = await getVehicleSqFt(supabase, year, make, model);
+
+    if (result) {
+      const roofSqft = result.panels?.roof || Math.round(result.sqft * 0.10);
+      console.log(`[JordanLee] Database hit: ${make} ${model} = ${result.sqft} sqft total, ${result.defaultWrapSqft} sqft default (no roof)`);
+
+      return {
+        sqft: result.defaultWrapSqft,  // CRITICAL: Use defaultWrapSqft (total - roof)
+        sqftWithRoof: result.sqft,      // Full total with roof
+        vehicle: `${make} ${model}`,
+        year: yearMatch ? yearMatch[1] : undefined,
+        roof: roofSqft,
+        isEstimate: result.source !== 'database',
+        source: result.source === 'database' ? 'database' : 'local'
+      };
+    }
+  } catch (err) {
+    console.error('[JordanLee] Database lookup error:', err);
+  }
+
+  return null;
+}
+
+// ============================================
+// DETECT IF "FULL WRAP" is mentioned (include roof)
+// ============================================
+function wantsFullWrap(message: string): boolean {
+  const lower = message.toLowerCase();
+  return /\b(full wrap|include.*roof|with.*roof|entire vehicle|complete wrap|whole car|whole vehicle)\b/i.test(lower);
+}
 
 function findVehicleSqft(message: string): { sqft: number; sqftWithRoof: number; vehicle: string; year?: string; roof: number; isEstimate?: boolean; similarTo?: string } | null {
   const lower = message.toLowerCase();
@@ -542,11 +649,24 @@ FLOW:
 4. User gives email → Give price + ask for shop name and phone
 5. User gives info → "Done! Quote's in your inbox. Hit me up if you need anything!"
 
-PRICE FORMAT:
-"Your [vehicle] is **$[PRICE]** ([SQFT] sqft).
-Order here: https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/
+PRICE FORMAT - CRITICAL:
+Always clearly state whether roof is included or excluded!
 
-What's your shop name and number? I'll add it and send the quote over."
+DEFAULT (excludes roof):
+"[Vehicle] wrap is **$[PRICE]** ([SQFT] sqft - excludes roof).
+Want the full wrap including roof? That's **$[FULL_PRICE]** ([FULL_SQFT] sqft).
+
+Order here: https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/"
+
+FULL WRAP (includes roof):
+"[Vehicle] FULL wrap including roof is **$[PRICE]** ([SQFT] sqft).
+
+Order here: https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/"
+
+ALWAYS mention:
+- The sqft being quoted
+- Whether roof is included or excluded
+- Offer the alternative option
 
 RULES:
 - We PRINT and SHIP only - no installation
@@ -610,7 +730,11 @@ serve(async (req) => {
     if (existingConv) {
       conversationId = existingConv.id;
       chatState = existingConv.chat_state || { stage: 'initial' };
+      // DEBUG: Log chatState persistence
+      console.log('[JordanLee] Session:', { session_id, found: true });
+      console.log('[JordanLee] Loaded state:', JSON.stringify(chatState));
     } else {
+      console.log('[JordanLee] Session:', { session_id, found: false });
       const { data: newConv } = await supabase
         .from('conversations')
         .insert({
@@ -641,7 +765,25 @@ serve(async (req) => {
 
     // Extract info from message
     const msg = message_text.toLowerCase();
-    const vehicleInfo = findVehicleSqft(message_text);
+
+    // FIRST: Try database lookup (uses mighty-vehicle-sqft with full 1664 vehicles)
+    let vehicleInfo = await lookupVehicleFromDatabase(supabase, message_text);
+
+    // FALLBACK: Use local findVehicleSqft if database lookup failed
+    if (!vehicleInfo) {
+      const localVehicleInfo = findVehicleSqft(message_text);
+      if (localVehicleInfo) {
+        vehicleInfo = { ...localVehicleInfo, source: 'local' as const };
+      }
+    }
+
+    // Check if customer wants full wrap (include roof)
+    const includeRoof = wantsFullWrap(message_text);
+    if (vehicleInfo && includeRoof) {
+      console.log('[JordanLee] Customer requested FULL WRAP - using total sqft with roof');
+      vehicleInfo.sqft = vehicleInfo.sqftWithRoof; // Override to use full sqft
+    }
+
     const emailMatch = message_text.match(/[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}/i);
     const email = emailMatch ? emailMatch[0].toLowerCase() : null;
     
@@ -1247,10 +1389,18 @@ ${!chatState.shop_name ? '- Shop or company name?' : ''}"
 DO NOT give price until you have ALL 4 items!`;
         } else {
           // Has all info - give price and create quote
-          const price = Math.round(chatState.sqft * pricePerSqft);
+          // CRITICAL: Calculate both default (no roof) and full wrap (with roof) prices
+          const defaultSqft = chatState.sqft || 0;  // Already excludes roof
+          const fullSqft = chatState.sqftWithRoof || (defaultSqft + (chatState.roofSqft || 0));
+          const roofSqft = chatState.roofSqft || (fullSqft - defaultSqft);
+
+          const price = Math.round(defaultSqft * pricePerSqft);
+          const fullPrice = Math.round(fullSqft * pricePerSqft);
+          const roofPrice = Math.round(roofSqft * pricePerSqft);
+
           const freeShip = price >= 750 ? '🎉 FREE shipping included!' : '';
           const productUrl = 'https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/';
-          
+
           let vehicleDisplay = chatState.vehicle || '';
           if (chatState.vehicle_year) vehicleDisplay = `${chatState.vehicle_year} ${vehicleDisplay}`;
           
@@ -1263,20 +1413,23 @@ Email: ${chatState.customer_email}
 Phone: ${chatState.customer_phone}
 Shop: ${chatState.shop_name}
 Vehicle: ${vehicleDisplay}
-SQFT: ~${chatState.sqft} (ESTIMATE based on ${similarTo})
-PRICE: ~$${price} (ESTIMATE)
+
+ESTIMATED PRICING (excludes roof):
+- Default (no roof): ~${defaultSqft} sqft = ~$${price}
+- Full wrap (with roof): ~${fullSqft} sqft = ~$${fullPrice}
 
 SAY: "Thanks ${chatState.customer_name} from ${chatState.shop_name}! 🙌
 
-I don't have exact specs for a **${vehicleDisplay}**, but based on similar vehicles (like ${similarTo}), I estimate it's around **${chatState.sqft} sqft**.
+I don't have exact specs for **${vehicleDisplay}**, but based on similar vehicles (like ${similarTo}):
 
-That would be approximately **$${price}** for Avery MPI 1105 with lamination. ${freeShip}
+Estimated wrap is ~**$${price}** (~${defaultSqft} sqft - excludes roof).
+Full wrap with roof would be ~**$${fullPrice}** (~${fullSqft} sqft).
 
-I'm sending this estimate to ${chatState.customer_email} and flagging it for our team to get you exact measurements. We'll follow up with a precise quote!
+${freeShip}
 
-**Order here:** ${productUrl}
+I'm sending this estimate to ${chatState.customer_email} and flagging it for our team to get you exact measurements!
 
-Anything else I can help with?"
+**Order here:** ${productUrl}"
 
 IMPORTANT: This is an ESTIMATE - escalate to team for exact sqft!`;
             
@@ -1313,23 +1466,32 @@ Email: ${chatState.customer_email}
 Phone: ${chatState.customer_phone}
 Shop: ${chatState.shop_name}
 Vehicle: ${vehicleDisplay}
-SQFT: ${chatState.sqft} (no roof)
-PRICE: $${price} (at $5.27/sqft - SAME for Avery AND 3M!)
+
+PRICING BREAKDOWN:
+- Default (excludes roof): ${defaultSqft} sqft = **$${price}**
+- Full wrap (with roof): ${fullSqft} sqft = **$${fullPrice}**
+- Roof only: ${roofSqft} sqft = +$${roofPrice}
 
 SAY: "Thanks ${chatState.customer_name} from ${chatState.shop_name}! 🙌
 
-A **${vehicleDisplay}** is about **${chatState.sqft} sqft**. At $5.27/sqft, that's **$${price}** for printed wrap film with lamination. ${freeShip}
+**${vehicleDisplay}** wrap is **$${price}** (${defaultSqft} sqft - excludes roof).
 
-Would you prefer **Avery MPI 1105** or **3M IJ180Cv3**? Both are the same price! 
+Want the full wrap including roof? That's **$${fullPrice}** (${fullSqft} sqft total).
+
+${freeShip}
+
+Would you prefer **Avery MPI 1105** or **3M IJ180Cv3**? Same price!
 
 I'm sending your quote to ${chatState.customer_email} now! 📧
 
-**Order here:** ${productUrl}
+**Order here:** ${productUrl}"
 
-Anything else I can help with?"
-
-IMPORTANT: NEVER show two different prices for Avery vs 3M. They are BOTH $5.27/sqft!
-REMEMBER: We PRINT and SHIP - customer arranges local installation.`;
+CRITICAL PRICING RULES:
+- ALWAYS state sqft being quoted
+- ALWAYS state whether roof is included or excluded
+- ALWAYS offer the alternative (full wrap price if they got default)
+- NEVER show different prices for Avery vs 3M - BOTH are $5.27/sqft
+- We PRINT and SHIP - customer arranges local installation`;
           }
           
           chatState.stage = 'price_given';
