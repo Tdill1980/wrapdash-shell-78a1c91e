@@ -785,7 +785,7 @@
 
   // Type welcome message on first open
   function showWelcomeMessage() {
-    const welcomeText = "Hey! How can I help you?";
+    const welcomeText = "How can I help you?";
     typeMessage(welcomeMessage, welcomeText, 25);
   }
 
