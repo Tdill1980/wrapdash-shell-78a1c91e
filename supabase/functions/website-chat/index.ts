@@ -685,7 +685,7 @@ serve(async (req) => {
   }
 
   try {
-    const { org, agent, mode, session_id, message_text, page_url, referrer, geo, attachments } = await req.json();
+    const { org, agent, mode, session_id, message_text, page_url, referrer, geo, attachments, customer_name, customer_email } = await req.json();
 
     if (!message_text || !session_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -730,11 +730,18 @@ serve(async (req) => {
     if (existingConv) {
       conversationId = existingConv.id;
       chatState = existingConv.chat_state || { stage: 'initial' };
+      // Pre-populate with onboarding data if provided and not already set
+      if (customer_name && !chatState.customer_name) chatState.customer_name = customer_name;
+      if (customer_email && !chatState.customer_email) chatState.customer_email = customer_email;
       // DEBUG: Log chatState persistence
       console.log('[JordanLee] Session:', { session_id, found: true });
       console.log('[JordanLee] Loaded state:', JSON.stringify(chatState));
     } else {
       console.log('[JordanLee] Session:', { session_id, found: false });
+      // Pre-populate chatState with onboarding data if provided
+      if (customer_name) chatState.customer_name = customer_name;
+      if (customer_email) chatState.customer_email = customer_email;
+
       const { data: newConv, error: convError } = await supabase
         .from('conversations')
         .insert({

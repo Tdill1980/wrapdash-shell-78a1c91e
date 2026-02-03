@@ -613,7 +613,74 @@
       font-size: 13px;
       color: #e2e8f0;
     }
-    
+
+    /* Onboarding screen */
+    .wcai-onboarding {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 20px;
+      flex: 1;
+      text-align: center;
+    }
+    .wcai-onboarding-text {
+      font-size: 15px;
+      color: #e2e8f0;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .wcai-onboarding-input {
+      width: 100%;
+      max-width: 260px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 8px;
+      background: #16213e;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .wcai-onboarding-input:focus {
+      border-color: ${colors.primary};
+    }
+    .wcai-onboarding-input::placeholder {
+      color: #64748b;
+    }
+    .wcai-onboarding-start {
+      width: 100%;
+      max-width: 260px;
+      padding: 12px 24px;
+      margin-top: 8px;
+      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .wcai-onboarding-start:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(230,0,126,0.4);
+    }
+    .wcai-onboarding-skip {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 13px;
+      margin-top: 12px;
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+    .wcai-onboarding-skip:hover {
+      color: #94a3b8;
+    }
+
     @media (max-width: 480px) {
       .wcai-chat-window {
         width: calc(100vw - 40px);
@@ -657,23 +724,30 @@
   container.innerHTML = `
     <div class="wcai-chat-window" id="wcai-window">
       <div class="wcai-chat-header">
-        <div class="wcai-chat-header-avatar">J</div>
+        <div class="wcai-chat-header-avatar">W</div>
         <div class="wcai-chat-header-info">
-          <h3>Jordan</h3>
-          <p><span class="wcai-live-dot"></span> WPW Live Chat Agent • Online</p>
+          <h3>WPW Chat Team Member</h3>
+          <p><span class="wcai-live-dot"></span> Online</p>
         </div>
         <button class="wcai-chat-reset" id="wcai-reset" title="Start a new quote (clears this chat)">
           ↻ New quote
         </button>
         <button class="wcai-chat-close" id="wcai-close">&times;</button>
       </div>
-      <div class="wcai-chat-messages" id="wcai-messages">
+      <div class="wcai-onboarding" id="wcai-onboarding">
+        <div class="wcai-onboarding-text">Enter Name and email to begin chat session</div>
+        <input type="text" class="wcai-onboarding-input" id="wcai-onboard-name" placeholder="Your Name" />
+        <input type="email" class="wcai-onboarding-input" id="wcai-onboard-email" placeholder="Your Email" />
+        <button class="wcai-onboarding-start" id="wcai-onboard-start">Start Chat</button>
+        <button class="wcai-onboarding-skip" id="wcai-onboard-skip">skip</button>
+      </div>
+      <div class="wcai-chat-messages" id="wcai-messages" style="display:none;">
         <div class="wcai-message agent" id="wcai-welcome"></div>
       </div>
-      <div class="wcai-quick-actions" id="wcai-quick-actions">
+      <div class="wcai-quick-actions" id="wcai-quick-actions" style="display:none;">
         ${quickActionsHTML}
       </div>
-      <div class="wcai-chat-input-area">
+      <div class="wcai-chat-input-area" id="wcai-input-area" style="display:none;">
         <button class="wcai-chat-attach" id="wcai-attach" title="Attach file – AI will analyze your artwork">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
@@ -723,8 +797,19 @@
   const attachBtn = document.getElementById('wcai-attach');
   const fileInput = document.getElementById('wcai-file-input');
 
+  // Onboarding elements
+  const onboardingPanel = document.getElementById('wcai-onboarding');
+  const onboardNameInput = document.getElementById('wcai-onboard-name');
+  const onboardEmailInput = document.getElementById('wcai-onboard-email');
+  const onboardStartBtn = document.getElementById('wcai-onboard-start');
+  const onboardSkipBtn = document.getElementById('wcai-onboard-skip');
+  const inputArea = document.getElementById('wcai-input-area');
+
   let isOpen = false;
   let hasInteracted = false;
+  let hasOnboarded = false; // Tracks if user completed or skipped onboarding
+  let collectedName = '';
+  let collectedEmail = '';
   let isCheckMyFileFlow = false; // Tracks if file upload is from "Check My File" button
 
   // Attach button opens file picker directly (no confirmation modal for general uploads)
@@ -787,8 +872,38 @@
 
   // Type welcome message on first open
   function showWelcomeMessage() {
-    const welcomeText = "How can I help you?";
+    const name = collectedName ? collectedName.split(' ')[0] : '';
+    const welcomeText = name
+      ? `Hi ${name}! How can I help you today?`
+      : "Hi! How can I help you today?";
     typeMessage(welcomeMessage, welcomeText, 25);
+  }
+
+  // Complete onboarding and start chat
+  async function completeOnboarding() {
+    // Collect values
+    collectedName = onboardNameInput?.value?.trim() || '';
+    collectedEmail = onboardEmailInput?.value?.trim() || '';
+
+    // Hide onboarding, show messages and input area
+    if (onboardingPanel) onboardingPanel.style.display = 'none';
+    if (messagesContainer) messagesContainer.style.display = 'flex';
+    if (inputArea) inputArea.style.display = 'flex';
+    if (quickActionsContainer) quickActionsContainer.style.display = 'flex';
+
+    hasOnboarded = true;
+    hasInteracted = true;
+
+    // Show typing indicator for 1.5 seconds
+    showTyping();
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    hideTyping();
+
+    // Show welcome with typewriter effect
+    showWelcomeMessage();
+
+    // Focus input for chat
+    if (input) input.focus();
   }
 
   // Toggle chat
@@ -796,10 +911,16 @@
     isOpen = !isOpen;
     chatWindow.classList.toggle('open', isOpen);
     if (isOpen) {
-      input.focus();
-      if (!hasInteracted) {
-        hasInteracted = true;
-        showWelcomeMessage();
+      if (!hasOnboarded) {
+        // Show onboarding, focus name input
+        if (onboardNameInput) onboardNameInput.focus();
+      } else {
+        // Already onboarded, focus chat input
+        if (input) input.focus();
+        if (!hasInteracted) {
+          hasInteracted = true;
+          showWelcomeMessage();
+        }
       }
     }
   }
@@ -826,6 +947,31 @@
 
   bubble.addEventListener('click', toggleChat);
   closeBtn.addEventListener('click', toggleChat);
+
+  // Onboarding button handlers
+  if (onboardStartBtn) {
+    onboardStartBtn.addEventListener('click', completeOnboarding);
+  }
+  if (onboardSkipBtn) {
+    onboardSkipBtn.addEventListener('click', completeOnboarding);
+  }
+  // Allow Enter key in onboarding inputs
+  if (onboardNameInput) {
+    onboardNameInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (onboardEmailInput) onboardEmailInput.focus();
+      }
+    });
+  }
+  if (onboardEmailInput) {
+    onboardEmailInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        completeOnboarding();
+      }
+    });
+  }
 
   if (resetBtn) {
     resetBtn.addEventListener('click', (e) => {
@@ -1108,22 +1254,29 @@
     showTyping();
 
     try {
+      // Build payload with optional collected contact info
+      const payload = {
+        org: config.org,
+        agent: config.agent,
+        mode: config.mode,
+        session_id: sessionId,
+        message_text: messageText,
+        page_url: window.location.href,
+        referrer: document.referrer,
+        geo: geoData
+      };
+
+      // Include collected name/email if available (from onboarding)
+      if (collectedName) payload.customer_name = collectedName;
+      if (collectedEmail) payload.customer_email = collectedEmail;
+
       const response = await fetch(config.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': config.supabaseAnonKey
         },
-        body: JSON.stringify({
-          org: config.org,
-          agent: config.agent,
-          mode: config.mode,
-          session_id: sessionId,
-          message_text: messageText,
-          page_url: window.location.href,
-          referrer: document.referrer,
-          geo: geoData
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
