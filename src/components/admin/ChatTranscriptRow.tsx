@@ -42,10 +42,15 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
   const lastMsg = conversation.messages?.[conversation.messages?.length - 1];
   const duration = formatDuration(firstMsg?.created_at || null, lastMsg?.created_at || null);
 
-  // Get display name
-  const displayName = contact?.email && !contact.email.includes('@capture.local')
-    ? contact.email
-    : contact?.name || 'Anonymous Visitor';
+  // Get display name - check chat_state first (AI extracted), then contact
+  const displayName =
+    chatState?.customer_email && !chatState.customer_email.includes('@capture.local')
+      ? chatState.customer_email
+      : chatState?.customer_name
+        ? chatState.customer_name
+        : contact?.email && !contact.email.includes('@capture.local')
+          ? contact.email
+          : contact?.name || 'Anonymous Visitor';
 
   // Get full location string
   const locationStr = geo?.city && geo?.region && geo?.country
@@ -86,7 +91,7 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
       <div className="flex items-start justify-between gap-4">
         {/* Left: Session info */}
         <div className="flex-1 min-w-0 space-y-2">
-          {/* Session ID header */}
+          {/* Customer name & Session ID header */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Channel badge */}
             {conversation.channel === 'instagram' ? (
@@ -100,7 +105,7 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
                 Website
               </Badge>
             )}
-            <span className="font-semibold">Session {sessionId}</span>
+            <span className="font-semibold">{displayName !== 'Anonymous Visitor' ? displayName : `Session ${sessionId}`}</span>
             {chatState?.customer_email && (
               <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
                 <Mail className="h-3 w-3 mr-1" />
@@ -138,6 +143,20 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           <div className="text-sm text-muted-foreground">
             Duration: {duration}
           </div>
+
+          {/* First customer message preview */}
+          {firstMsg?.direction === 'inbound' && firstMsg?.content && (
+            <div className="text-sm text-muted-foreground italic truncate max-w-md">
+              "{firstMsg.content.substring(0, 100)}{firstMsg.content.length > 100 ? '...' : ''}"
+            </div>
+          )}
+
+          {/* AI Summary if available */}
+          {chatState?.ai_summary && (
+            <div className="text-sm text-primary/80">
+              💡 {chatState.ai_summary}
+            </div>
+          )}
 
           {/* Escalation tags */}
           {escalations.length > 0 && (

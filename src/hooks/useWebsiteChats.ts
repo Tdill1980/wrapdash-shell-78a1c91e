@@ -14,9 +14,18 @@ export interface ChatConversation {
   unread_count: number | null;
   chat_state: {
     stage?: string;
+    mode?: string;
+    operator?: string;
+    customer_name?: string;
     customer_email?: string;
+    customer_phone?: string;
     vehicle?: { year?: string; make?: string; model?: string };
+    intent?: string;
+    urgency?: string;
+    tags?: string[];
+    ai_summary?: string;
     escalations_sent?: string[];
+    last_parsed?: string;
   } | null;
   metadata: {
     session_id?: string;
