@@ -63,10 +63,24 @@ export interface QuoteSettings {
   tax_rate_percentage: number;
 }
 
-export function useProducts() {
+interface UseProductsOptions {
+  /**
+   * Whether to load install-related settings (labor rates).
+   * When false (print-only tenants like WPW):
+   * - Labor rates are NOT queried from the database
+   * - install_rate_per_hour will remain at default (unused)
+   *
+   * Defaults to false to ensure print-only behavior by default.
+   */
+  loadInstallSettings?: boolean;
+}
+
+export function useProducts(options: UseProductsOptions = {}) {
+  const { loadInstallSettings = false } = options;
+
   const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<QuoteSettings>({
-    install_rate_per_hour: 75,
+    install_rate_per_hour: 75, // Default, only used if loadInstallSettings is true
     tax_rate_percentage: 8,
   });
   const [loading, setLoading] = useState(true);
@@ -241,7 +255,14 @@ export function useProducts() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchProducts(), fetchSettings()]);
+      // Only load install settings (labor rates) when explicitly enabled
+      // For print-only tenants (WPW), this query is skipped entirely
+      if (loadInstallSettings) {
+        await Promise.all([fetchProducts(), fetchSettings()]);
+      } else {
+        await fetchProducts();
+        // Settings remain at defaults - install_rate_per_hour is unused
+      }
       setLoading(false);
     };
 
@@ -259,22 +280,28 @@ export function useProducts() {
       )
       .subscribe();
 
-    const settingsChannel = supabase
-      .channel("settings_changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "quote_settings" },
-        () => {
-          fetchSettings();
-        }
-      )
-      .subscribe();
+    // Only subscribe to settings changes if install settings are loaded
+    let settingsChannel: ReturnType<typeof supabase.channel> | null = null;
+    if (loadInstallSettings) {
+      settingsChannel = supabase
+        .channel("settings_changes")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "quote_settings" },
+          () => {
+            fetchSettings();
+          }
+        )
+        .subscribe();
+    }
 
     return () => {
       supabase.removeChannel(productsChannel);
-      supabase.removeChannel(settingsChannel);
+      if (settingsChannel) {
+        supabase.removeChannel(settingsChannel);
+      }
     };
-  }, []);
+  }, [loadInstallSettings]);
 
   return {
     products,

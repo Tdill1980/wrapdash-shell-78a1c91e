@@ -13,6 +13,7 @@ import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package, Ruler, Check
 import { useProducts, type Product } from "@/hooks/useProducts";
 import { isWPW, isWBTY, isFadeWrap, STANDALONE_PRODUCTS, WBTY_PRICING, FADEWRAPS_PRICING, WALL_WRAP_PRICING } from "@/lib/wpwProducts";
 import { useQuoteEngine } from "@/hooks/useQuoteEngine";
+import { useTenantCapabilities } from "@/hooks/useTenantCapabilities";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { MainLayout } from "@/layouts/MainLayout";
 import { PanelVisualization } from "@/components/PanelVisualization";
@@ -45,9 +46,17 @@ export default function MightyCustomer() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { products: allProducts, loading: productsLoading, settings } = useProducts();
 
-  // WPW Internal Mode - detect from URL params
+  // Tenant capabilities - gates install features at the data layer
+  const { installsEnabled } = useTenantCapabilities();
+
+  // Products hook - only loads install settings (labor rates) when installs are enabled
+  // For print-only tenants (WPW), labor rates are NOT queried
+  const { products: allProducts, loading: productsLoading, settings } = useProducts({
+    loadInstallSettings: installsEnabled,
+  });
+
+  // WPW Internal Mode - detect from URL params (legacy support)
   const isWPWInternal = searchParams.get('mode') === 'wpw_internal';
   const sourceConversationId = searchParams.get('conversation_id') || null;
   const prefillCustomer = searchParams.get('customer') || '';
@@ -69,7 +78,7 @@ export default function MightyCustomer() {
     vehicleMake: prefillMake,
     vehicleModel: prefillModel,
   });
-  const [margin, setMargin] = useState(isWPWInternal ? 0 : 65);
+  const [margin, setMargin] = useState(65); // Only used when installsEnabled is true
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
   const [includeRoof, setIncludeRoof] = useState(true);
@@ -129,6 +138,8 @@ export default function MightyCustomer() {
       }
     : null;
 
+  // Quote engine with tenant-gated install features
+  // When installsEnabled is false (WPW tenant), labor/margin are NOT calculated
   const {
     sqft,
     setSqft,
@@ -143,11 +154,14 @@ export default function MightyCustomer() {
     selectedProduct,
     vehicle,
     quantity,
-    settings.install_rate_per_hour,
-    isWPWInternal ? 0 : margin,
-    includeRoof,
-    wrapType === 'partial' ? selectedPanels : null,
-    isWPWInternal // WPW mode flag
+    {
+      // Tenant capability gate - when false, install data is never loaded
+      installsEnabled,
+      installRatePerHour: settings.install_rate_per_hour,
+      margin,
+      includeRoof,
+      selectedPanels: wrapType === 'partial' ? selectedPanels : null,
+    }
   );
 
   // Track vehicle match status - now driven by Supabase lookup
@@ -369,17 +383,17 @@ export default function MightyCustomer() {
         }),
         product_name: selectedProduct.product_name,
         sqft: sqft,
-        material_cost: isWPWInternal ? materialCost : materialCost,
-        labor_cost: isWPWInternal ? 0 : laborCost,
+        material_cost: materialCost,
+        labor_cost: installsEnabled ? laborCost : 0, // Only include labor when installs enabled
         total_price: total,
-        margin: isWPWInternal ? 0 : margin,
+        margin: installsEnabled ? margin : 0, // Only include margin when installs enabled
         status: "draft", // Always start as draft now
-        auto_retarget: !isWPWInternal, // No auto-retarget for WPW internal quotes
+        auto_retarget: installsEnabled, // Only auto-retarget for install-enabled tenants
         email_tone: emailTone,
         email_design: emailDesign,
         expires_at: expiresAt.toISOString(),
-        // WPW Internal mode fields
-        quote_type: isWPWInternal ? 'wpw_material_only' : 'standard',
+        // Quote type based on tenant capability
+        quote_type: installsEnabled ? 'standard' : 'material_only',
         source_conversation_id: sourceConversationId,
         // New payment fields
         is_paid: false,
@@ -501,15 +515,15 @@ export default function MightyCustomer() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               MightyCustomer™
             </h1>
-            {isWPWInternal && (
+            {!installsEnabled && (
               <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/40 flex items-center gap-1">
                 <Package className="h-3 w-3" />
-                WPW Internal - Material Only
+                Print Only
               </Badge>
             )}
           </div>
           <p className="text-muted-foreground">
-            {isWPWInternal ? 'Material-Only Quote for Installer Pricing' : 'Quote Builder & Order Management'}
+            {!installsEnabled ? 'Material-Only Quote Builder' : 'Quote Builder & Order Management'}
           </p>
         </div>
 
@@ -1156,16 +1170,16 @@ export default function MightyCustomer() {
           {selectedProduct && sqft > 0 && (
             <div className="space-y-4 pt-4 border-t">
               <Label className="text-lg font-semibold">
-                {isWPWInternal ? 'Material Quote Summary' : 'Quote Summary'}
+                {!installsEnabled ? 'Material Quote Summary' : 'Quote Summary'}
               </Label>
               <div className="p-4 bg-gradient-to-br from-background to-muted/20 rounded-lg border space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Material Cost:</span>
                   <span className="font-semibold">${materialCost.toFixed(2)}</span>
                 </div>
-                
-                {/* Hide labor/margin in WPW Internal mode */}
-                {!isWPWInternal && (
+
+                {/* Install-related UI - only mounted when installsEnabled is true */}
+                {installsEnabled && (
                   <>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
@@ -1173,31 +1187,31 @@ export default function MightyCustomer() {
                       </span>
                       <span className="font-semibold">${laborCost.toFixed(2)}</span>
                     </div>
-                    
+
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal:</span>
                       <span className="font-semibold">${subtotal.toFixed(2)}</span>
                     </div>
-                    
+
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Margin ({margin}%):</span>
                       <span className="font-semibold text-blue-400">${marginAmount.toFixed(2)}</span>
                     </div>
                   </>
                 )}
-                
+
                 <div className="pt-3 border-t border-border">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold">
-                      {isWPWInternal ? 'Material Total:' : 'Total:'}
+                      {!installsEnabled ? 'Material Total:' : 'Total:'}
                     </span>
                     <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
                       ${total.toFixed(2)}
                     </span>
                   </div>
-                  {isWPWInternal && (
+                  {!installsEnabled && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      WPW Internal pricing at $5.27/sq ft • No installer labor or margin
+                      Print-only pricing • No installation labor or margin
                     </p>
                   )}
                 </div>
@@ -1248,8 +1262,8 @@ export default function MightyCustomer() {
             </div>
           </div>
 
-          {/* Margin slider - hidden in WPW Internal mode */}
-          {!isWPWInternal && (
+          {/* Margin slider - only mounted when installsEnabled is true */}
+          {installsEnabled && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <Label>Margin: {margin}%</Label>

@@ -15,20 +15,65 @@ interface PanelCosts {
   roof: number;
 }
 
+interface SelectedPanels {
+  sides: boolean;
+  back: boolean;
+  hood: boolean;
+  roof: boolean;
+}
+
+export interface QuoteEngineOptions {
+  /**
+   * Whether installation services are enabled for this tenant.
+   * When false (WPW/print-only tenants):
+   * - Labor data is NOT loaded or calculated
+   * - Install hours are NOT computed
+   * - Margin is NOT applied
+   * - Total = material cost only
+   *
+   * When true (SaaS customer tenants):
+   * - Full quote with labor, hours, and margin
+   */
+  installsEnabled?: boolean;
+  /** Install rate per hour - only used when installsEnabled is true */
+  installRatePerHour?: number;
+  /** Margin percentage - only used when installsEnabled is true */
+  margin?: number;
+  /** Whether to include roof in full wrap calculations */
+  includeRoof?: boolean;
+  /** Selected panels for partial wrap mode - null for full wrap */
+  selectedPanels?: SelectedPanels | null;
+}
+
+/**
+ * Quote Engine Hook
+ *
+ * Calculates material costs and optionally labor/margin based on tenant capabilities.
+ * Install features are gated at the data layer - when disabled, install data is
+ * never loaded, queried, or calculated.
+ */
 export function useQuoteEngine(
   product: Product | null,
   vehicle: Vehicle | null,
   quantity: number = 1,
-  installRatePerHour: number = 75,
-  margin: number = 65,
-  includeRoof: boolean = true,
-  selectedPanels: { sides: boolean; back: boolean; hood: boolean; roof: boolean } | null = null,
-  wpwMode: boolean = false // WPW Internal mode - material only, no labor/margin
+  options: QuoteEngineOptions = {}
 ) {
+  // Extract options with defaults
+  // CRITICAL: installsEnabled defaults to false (print-only mode)
+  // This ensures WPW and unknown tenants never load install data
+  const {
+    installsEnabled = false,
+    installRatePerHour = 75,
+    margin = 65,
+    includeRoof = true,
+    selectedPanels = null,
+  } = options;
+
   const [sqft, setSqft] = useState<number>(0);
   const [sqftOptions, setSqftOptions] = useState<VehicleSQFTOptions | null>(null);
   const [panelCosts, setPanelCosts] = useState<PanelCosts>({ sides: 0, back: 0, hood: 0, roof: 0 });
   const [materialCost, setMaterialCost] = useState(0);
+  // Install-related state - only used when installsEnabled is true
   const [laborCost, setLaborCost] = useState(0);
   const [installHours, setInstallHours] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
@@ -43,26 +88,26 @@ export function useQuoteEngine(
       return;
     }
 
-    const options = getVehicleSQFTOptions(
+    const opts = getVehicleSQFTOptions(
       vehicle.year,
       vehicle.make,
       vehicle.model
     );
 
-    if (options) {
-      setSqftOptions(options);
-      
+    if (opts) {
+      setSqftOptions(opts);
+
       // Calculate based on selected panels if in partial wrap mode
       if (selectedPanels) {
         let totalSqft = 0;
-        if (selectedPanels.sides) totalSqft += options.panels.sides;
-        if (selectedPanels.back) totalSqft += options.panels.back;
-        if (selectedPanels.hood) totalSqft += options.panels.hood;
-        if (selectedPanels.roof) totalSqft += options.panels.roof;
+        if (selectedPanels.sides) totalSqft += opts.panels.sides;
+        if (selectedPanels.back) totalSqft += opts.panels.back;
+        if (selectedPanels.hood) totalSqft += opts.panels.hood;
+        if (selectedPanels.roof) totalSqft += opts.panels.roof;
         setSqft(totalSqft);
       } else {
         // Full wrap mode
-        setSqft(includeRoof ? options.withRoof : options.withoutRoof);
+        setSqft(includeRoof ? opts.withRoof : opts.withoutRoof);
       }
     } else {
       setSqftOptions(null);
@@ -99,11 +144,26 @@ export function useQuoteEngine(
       return;
     }
 
-    // WPW Internal Mode: Material only, no labor, no margin
-    if (wpwMode) {
-      const WPW_PRICE_PER_SQFT = 5.27;
-      const material = sqft * WPW_PRICE_PER_SQFT * quantity;
-      setMaterialCost(material);
+    // Calculate material cost based on pricing type
+    let material = 0;
+    if (product.pricing_type === 'per_sqft' && product.price_per_sqft) {
+      material = sqft * product.price_per_sqft * quantity;
+    } else if (product.pricing_type === 'flat' && product.flat_price) {
+      material = product.flat_price * quantity;
+    }
+    setMaterialCost(material);
+
+    // =================================================================
+    // TENANT CAPABILITY GATE: Installation Features
+    // =================================================================
+    // When installsEnabled is false (WPW/print-only tenants):
+    // - Skip ALL install calculations
+    // - Do NOT load labor rates
+    // - Do NOT compute install hours
+    // - Do NOT apply margin
+    // - Total = material cost only
+    // =================================================================
+    if (!installsEnabled) {
       setLaborCost(0);
       setInstallHours(0);
       setSubtotal(material);
@@ -112,16 +172,9 @@ export function useQuoteEngine(
       return;
     }
 
-    let material = 0;
-
-    // Calculate material cost based on pricing type
-    if (product.pricing_type === 'per_sqft' && product.price_per_sqft) {
-      material = sqft * product.price_per_sqft * quantity;
-    } else if (product.pricing_type === 'flat' && product.flat_price) {
-      material = product.flat_price * quantity;
-    }
-
-    setMaterialCost(material);
+    // =================================================================
+    // INSTALL-ENABLED TENANT: Full quote calculation
+    // =================================================================
 
     // Calculate install hours - panel-specific complexity
     let hours = 0;
@@ -153,7 +206,7 @@ export function useQuoteEngine(
     const totalCalc = sub + marginCalc;
     setTotal(totalCalc);
 
-  }, [sqft, product, quantity, installRatePerHour, margin, selectedPanels, sqftOptions, wpwMode]);
+  }, [sqft, product, quantity, installsEnabled, installRatePerHour, margin, selectedPanels, sqftOptions]);
 
   return {
     sqft,
@@ -161,10 +214,13 @@ export function useQuoteEngine(
     sqftOptions,
     panelCosts,
     materialCost,
+    // Install-related values - will be 0 when installsEnabled is false
     laborCost,
     installHours,
     subtotal,
     marginAmount,
     total,
+    // Expose capability state for UI gating
+    installsEnabled,
   };
 }

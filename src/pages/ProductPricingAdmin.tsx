@@ -15,7 +15,10 @@ import {
 import { MainLayout } from "@/layouts/MainLayout";
 
 export default function ProductPricingAdmin() {
-  const { products, settings, loading, updateProduct, addProduct, deleteProduct, updateSettings } = useProducts();
+  // Admin always loads install settings to allow configuration
+  const { products, settings, loading, updateProduct, addProduct, deleteProduct, updateSettings } = useProducts({
+    loadInstallSettings: true,
+  });
   const [installRate, setInstallRate] = useState(settings.install_rate_per_hour);
   const [taxRate, setTaxRate] = useState(settings.tax_rate_percentage);
   
