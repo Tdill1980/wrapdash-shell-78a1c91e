@@ -79,11 +79,15 @@ export function useWebsiteChats() {
     queryKey: ['website-page-chats'],
     queryFn: async (): Promise<ChatConversation[]> => {
       // Use edge function to bypass RLS
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qxllysilzonrlyoaomce.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const response = await fetch(
-        'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/get-website-chats',
+        `${supabaseUrl}/functions/v1/get-website-chats`,
         {
           headers: {
             'Content-Type': 'application/json',
+            'apikey': supabaseKey,
           }
         }
       );
