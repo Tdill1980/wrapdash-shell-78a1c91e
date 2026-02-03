@@ -395,3 +395,6 @@ verify_jwt = false
 
 [functions.convert-quote-to-order]
 verify_jwt = false
+
+[functions.get-website-chats]
+verify_jwt = false

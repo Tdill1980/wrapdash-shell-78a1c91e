@@ -735,7 +735,7 @@ serve(async (req) => {
       console.log('[JordanLee] Loaded state:', JSON.stringify(chatState));
     } else {
       console.log('[JordanLee] Session:', { session_id, found: false });
-      const { data: newConv } = await supabase
+      const { data: newConv, error: convError } = await supabase
         .from('conversations')
         .insert({
           channel: 'website',
@@ -746,7 +746,15 @@ serve(async (req) => {
         })
         .select('id')
         .single();
-      conversationId = newConv?.id || '';
+
+      if (convError || !newConv?.id) {
+        console.error('[JordanLee] Failed to create conversation:', convError);
+        return new Response(JSON.stringify({
+          error: 'Failed to create conversation',
+          reply: 'Sorry, I encountered a technical issue. Please try again in a moment.'
+        }), { status: 500, headers: corsHeaders });
+      }
+      conversationId = newConv.id;
     }
 
     // Save inbound message with attachments
@@ -1175,8 +1183,8 @@ Want me to get you a quote while you send the file over?"
 
 DO NOT say "Grant will reach out" - give the link directly!`;
     }
-    // Handle escalations
-    else if (escalationType && !chatState.escalation_sent) {
+    // Handle escalations - use array to track multiple escalation types
+    else if (escalationType && !chatState.escalations_sent?.includes(escalationType)) {
       const teamMember = WPW_TEAM[escalationType];
       
       // Log escalation
@@ -1307,7 +1315,12 @@ SAY: "I'm connecting you with ${teamMember.name} now - they'll reach out to you 
 <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #e6007e;">${message_text}</div>
 `
             });
-            chatState.escalation_sent = escalationType;
+            // Track escalations as array to support multiple types
+            if (!chatState.escalations_sent) {
+              chatState.escalations_sent = [];
+            }
+            chatState.escalations_sent.push(escalationType);
+            chatState.escalation_sent = escalationType; // Keep legacy field for compatibility
             console.log('[JordanLee] Escalation email sent to:', teamMember.email);
           }
         } catch (e) {

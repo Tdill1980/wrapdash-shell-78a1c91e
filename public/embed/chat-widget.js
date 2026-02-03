@@ -52,7 +52,9 @@
   // This happens BEFORE rendering anything. Fail-safe = OFF.
   // ========================================
   try {
-    const statusRes = await fetch(`${config.statusUrl}?agent=${config.agent}`);
+    const statusRes = await fetch(`${config.statusUrl}?agent=${config.agent}`, {
+      headers: { 'apikey': config.supabaseAnonKey }
+    });
     const { active, reason } = await statusRes.json();
     
     if (!active) {
@@ -1013,7 +1015,10 @@
         
         const checkResponse = await fetch(config.artworkCheckUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': config.supabaseAnonKey
+          },
           body: JSON.stringify({
             session_id: sessionId,
             file_url: fileUrl,
@@ -1046,7 +1051,10 @@
         
         const chatResponse = await fetch(config.apiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': config.supabaseAnonKey
+          },
           body: JSON.stringify({
             org: config.org,
             agent: config.agent,
@@ -1102,7 +1110,10 @@
     try {
       const response = await fetch(config.apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.supabaseAnonKey
+        },
         body: JSON.stringify({
           org: config.org,
           agent: config.agent,
