@@ -62,7 +62,7 @@ export interface ParsedQuery {
 // RAW DATA EXPORT
 // ============================================
 
-export const VEHICLE_SQFT: VehicleEntry[] = vehicleData.vehicles as VehicleEntry[];
+export const VEHICLE_SQFT: VehicleEntry[] = vehicleData as VehicleEntry[];
 
 // ============================================
 // ALIAS MAPPING
