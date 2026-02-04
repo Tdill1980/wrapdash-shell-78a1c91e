@@ -52,16 +52,16 @@ export const useShopFlow = (orderId?: string) => {
   const fetchOrders = async () => {
     console.log('[ShopFlow] fetchOrders called');
     try {
-      // Use edge function to bypass RLS
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qxllysilzonrlyoaomce.supabase.co';
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      // Use edge function to bypass RLS - route through Lovable's Supabase
+      const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
+      const lovableAnonKey = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
 
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/get-shopflow-orders`,
+        `${lovableFunctionsUrl}/get-shopflow-orders`,
         {
           headers: {
             'Content-Type': 'application/json',
-            'apikey': supabaseKey,
+            'Authorization': `Bearer ${lovableAnonKey}`,
           }
         }
       );
