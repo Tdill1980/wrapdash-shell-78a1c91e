@@ -1696,10 +1696,26 @@ ${WPW_KNOWLEDGE.contact}`;
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (anthropicApiKey) {
       try {
-        // DO NOT load old message history - it causes vehicle confusion!
-        // The AI was mixing up "Prius" from old conversations with "F-150" from current.
-        // All context is provided via chatState in the system prompt.
-        const messages = [{ role: 'user', content: message_text }];
+        // Load message history from CURRENT conversation only (same session)
+        // This prevents old vehicle data from bleeding in while keeping current context
+        const { data: recentMessages } = await supabase
+          .from('messages')
+          .select('direction, content')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true })
+          .limit(10);
+
+        const messages: Array<{role: string, content: string}> = [];
+        if (recentMessages && recentMessages.length > 0) {
+          for (const msg of recentMessages) {
+            messages.push({
+              role: msg.direction === 'inbound' ? 'user' : 'assistant',
+              content: msg.content
+            });
+          }
+        }
+        // Add current message
+        messages.push({ role: 'user', content: message_text });
 
         const systemPrompt = `${JORDAN_PERSONA}
 
