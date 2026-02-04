@@ -229,16 +229,9 @@ serve(async (req) => {
         material_cost: materialCost,
         total_price: materialCost,
         product_name: productName,
-        status: 'created', // Start as 'created', update to 'sent' after email
-        source: 'website_chat',
-        ai_generated: true,
-        ai_sqft_estimate: sqft,
-        ai_message: needsReview 
-          ? `⚠️ SQFT estimated (~${sqft} sqft). Vehicle "${vehicle_model}" not in database - manual review recommended. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`
-          : `Auto-generated from chat. ${product_type.toUpperCase()} material at $${pricePerSqft}/sqft.`,
+        status: 'pending', // Valid status value
         source_conversation_id: conversation_id || null,
         email_sent: false
-        // Note: needs_review flag is captured in ai_message field above
       })
       .select()
       .single();
