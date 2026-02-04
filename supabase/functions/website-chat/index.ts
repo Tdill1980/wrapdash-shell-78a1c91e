@@ -462,7 +462,7 @@ async function lookupVehicleFromDatabase(
 
   // Try to extract make from message
   const makePatterns = /\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|subaru|mazda|hyundai|kia|lexus|acura|cadillac|buick|lincoln|chrysler|porsche|jaguar|volvo|rivian|lucid|vw|merc|benz)\b/i;
-  const makeMatch = message.match(makePatterns);
+  let makeMatch = message.match(makePatterns);
 
   // Special case: "911" almost always means Porsche 911
   if (!makeMatch && /\b911\b/i.test(message)) {
@@ -1617,7 +1617,7 @@ CRITICAL PRICING RULES:
                 customer_email: chatState.customer_email,
                 customer_phone: chatState.customer_phone || null,
                 vehicle_model: chatState.vehicle || vehicleDisplay,
-                sqft: chatState.sqft || sqft,
+                sqft: chatState.sqft || defaultSqft,
                 material_cost: price,
                 total_price: price,
                 product_name: chatState.product_name || 'Avery MPI 1105 with DOL 1460Z',
