@@ -105,7 +105,10 @@ export function useWebsiteChats() {
 
       const data = await response.json();
 
-      return (data.conversations || []).map((convo: any) => ({
+      // Edge function returns array directly, not wrapped in { conversations: [...] }
+      const chats = Array.isArray(data) ? data : (data.conversations || []);
+
+      return chats.map((convo: any) => ({
         ...convo,
         chat_state: convo.chat_state as ChatConversation['chat_state'],
         metadata: convo.metadata as ChatConversation['metadata'],

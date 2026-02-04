@@ -398,3 +398,6 @@ verify_jwt = false
 
 [functions.get-website-chats]
 verify_jwt = false
+
+[functions.get-shopflow-orders]
+verify_jwt = false

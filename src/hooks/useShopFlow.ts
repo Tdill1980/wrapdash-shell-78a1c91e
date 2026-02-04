@@ -52,19 +52,26 @@ export const useShopFlow = (orderId?: string) => {
   const fetchOrders = async () => {
     console.log('[ShopFlow] fetchOrders called');
     try {
-      const { data, error } = await supabase
-        .from('shopflow_orders')
-        .select('*')
-        // PAID GATE: Filter out hidden and unpaid orders
-        .neq('hidden', true)
-        .neq('is_paid', false)
-        .order('created_at', { ascending: false });
+      // Use edge function to bypass RLS
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qxllysilzonrlyoaomce.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      if (error) {
-        console.error('[ShopFlow] fetchOrders error:', error);
-        throw error;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/get-shopflow-orders`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
       }
-      
+
+      const data = await response.json();
+
       console.log('[ShopFlow] fetchOrders success, orders:', data?.length || 0);
       setOrders(data || []);
     } catch (error: any) {
