@@ -406,9 +406,11 @@ export default function ApproveFlow() {
         description: "Creating 6 photorealistic views... This may take 30-60 seconds.",
       });
 
-      // Generate renders with the determined vehicle info
-      const { data, error } = await supabase.functions.invoke('generate-studio-renders', {
-        body: {
+      // Generate renders via Lovable's edge function
+      const renderResponse = await fetch('https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/generate-studio-renders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           projectId: urlProjectId,
           versionId: latestProof.id,
           panelUrl: latestProof.file_url,
@@ -418,15 +420,13 @@ export default function ApproveFlow() {
           vehicleMake: vehicleInfo.make,
           vehicleModel: vehicleInfo.model,
           vehicleCategory: detectedCategory // Pass category for enforcement in prompt
-        }
+        })
       });
 
-      if (error) {
-        console.error('StudioRenderOS error:', error);
-        throw error;
-      }
+      const data = await renderResponse.json();
 
-      if (!data?.success) {
+      if (!renderResponse.ok || !data?.success) {
+        console.error('StudioRenderOS error:', data?.error);
         throw new Error(data?.error || 'Studio render generation failed');
       }
 
