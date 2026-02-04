@@ -404,6 +404,10 @@ const VEHICLE_SQFT: Record<string, { total: number; roof: number; noRoof: number
   'pacifica': { total: 290, roof: 34, noRoof: 256 },
   'carnival': { total: 295, roof: 35, noRoof: 260 },
   
+  // Porsche SUVs
+  'macan': { total: 265, roof: 27, noRoof: 238 },
+  'cayenne': { total: 295, roof: 31, noRoof: 264 },
+
   // Sports/Coupes
   'corvette': { total: 200, roof: 18, noRoof: 182 },
   'camaro': { total: 210, roof: 19, noRoof: 191 },
@@ -1378,20 +1382,18 @@ Email: ${chatState.customer_email}
 SAY: "I totally understand - that's not the experience we want. I'm flagging this for our team right now. Would you like someone to call you? What's the best number?"`;
         }
       }
-      // Handle pricing with vehicle - BUT REQUIRE ALL CONTACT INFO FIRST
+      // Handle pricing with vehicle - REQUIRE NAME + EMAIL (phone/shop optional)
       else if (chatState.sqft && chatState.stage !== 'price_given') {
-        const hasAllInfo = chatState.customer_name && chatState.customer_email && chatState.customer_phone && chatState.shop_name;
+        const hasAllInfo = chatState.customer_name && chatState.customer_email; // Relaxed: only need name + email
         const isEstimate = chatState.is_estimate || false;
         const similarTo = chatState.similar_to || '';
         
         if (!hasAllInfo) {
-          // Missing info - collect it first
+          // Missing info - collect name + email (minimum required)
           const missing = [];
           if (!chatState.customer_name) missing.push('name');
           if (!chatState.customer_email) missing.push('email');
-          if (!chatState.customer_phone) missing.push('phone');
-          if (!chatState.shop_name) missing.push('shop/company name');
-          
+
           contextNotes = `📋 VEHICLE DETECTED BUT MISSING CONTACT INFO!
 
 Vehicle: ${chatState.vehicle || 'Unknown'}
@@ -1400,13 +1402,9 @@ ${isEstimate ? `Based on similar: ${similarTo}` : ''}
 
 MISSING: ${missing.join(', ')}
 
-SAY: "Got it - ${chatState.vehicle || 'that vehicle'}!" + (isEstimate ? " I don't have exact specs for that model, but I can give you an estimate based on similar vehicles." : "") + " Before I get your quote, let me grab your info real quick:
-${!chatState.customer_name ? '- Your name?' : ''}
-${!chatState.customer_email ? '- Email address?' : ''}
-${!chatState.customer_phone ? '- Phone number?' : ''}
-${!chatState.shop_name ? '- Shop or company name?' : ''}"
+SAY: "Got it - ${chatState.vehicle || 'that vehicle'}!" + (isEstimate ? " I don't have exact specs for that model, but I can give you an estimate based on similar vehicles." : "") + " Quick question - what's your ${missing.join(' and ')}? Then I'll get you a quote!"
 
-DO NOT give price until you have ALL 4 items!`;
+DO NOT give price until you have name + email!`;
         } else {
           // Has all info - give price and create quote
           // CRITICAL: Calculate both default (no roof) and full wrap (with roof) prices
