@@ -118,6 +118,13 @@ const VEHICLE_QUICK_REF: Record<string, { sqft: number; category: string }> = {
   'honda_crv': { sqft: 200, category: 'suv' },
   'toyota_4runner': { sqft: 220, category: 'suv' },
   'acura_mdx': { sqft: 220, category: 'suv' },
+
+  // Porsche
+  'porsche_macan': { sqft: 238, category: 'suv' },
+  'porsche_cayenne': { sqft: 264, category: 'suv' },
+  'porsche_911': { sqft: 178, category: 'sports' },
+  'porsche_taycan': { sqft: 210, category: 'car' },
+  'porsche_panamera': { sqft: 230, category: 'car' },
 };
 
 // Category-based fallback estimates
