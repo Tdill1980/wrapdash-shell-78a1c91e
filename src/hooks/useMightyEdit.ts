@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, type Creative, type FormatSlug } from "@/lib/creativeVault";
 import { validateAndNormalizeBlueprint, type SceneBlueprintV1 } from "@/lib/blueprints";
@@ -97,7 +97,7 @@ export function useMightyEdit() {
     console.log("[useMightyEdit] Scanning content library:", options);
     
     try {
-      const { data, error } = await supabase.functions.invoke("ai-scan-content-library", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-scan-content-library", {
         body: {
           content_file_id: options?.contentFileId,
           scan_all: options?.scanAll
@@ -142,7 +142,7 @@ export function useMightyEdit() {
     
     // Try to call AI blueprint generator
     try {
-      const { data, error } = await supabase.functions.invoke("ai-generate-video-blueprint", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-video-blueprint", {
         body: {
           video_url: video.source_url,
           duration_seconds: video.duration_seconds,
@@ -269,7 +269,7 @@ export function useMightyEdit() {
     console.log("[useMightyEdit] Matching music for:", videoEditId);
     
     try {
-      const { data, error } = await supabase.functions.invoke("ai-match-music", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-match-music", {
         body: {
           video_edit_id: videoEditId,
           transcript,
@@ -407,7 +407,7 @@ export function useMightyEdit() {
       
       console.log("[useMightyEdit] Invoking ai-execute-edits edge function...");
       
-      const { data, error } = await supabase.functions.invoke("ai-execute-edits", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-execute-edits", {
         body: {
           video_edit_id: videoEditId,
           render_type: renderType

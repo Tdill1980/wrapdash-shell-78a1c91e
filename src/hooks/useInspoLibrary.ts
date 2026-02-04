@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -96,7 +96,7 @@ export function useInspoLibrary() {
           ? { videoUrl: urlData.publicUrl, platform: "upload", organizationId }
           : { imageUrl: urlData.publicUrl, organizationId, contentFileId: data.id };
         
-        supabase.functions.invoke(functionName, { body: bodyPayload })
+        lovableFunctions.functions.invoke(functionName, { body: bodyPayload })
           .then(({ data: analysisData, error: analysisError }) => {
             if (analysisError) {
               console.error("[useInspoLibrary] Auto-analysis failed:", analysisError);
@@ -163,7 +163,7 @@ export function useInspoLibrary() {
           ? { videoUrl: file.file_url, platform: "library", organizationId }
           : { imageUrl: file.file_url, organizationId, contentFileId: file.id };
 
-        const { error } = await supabase.functions.invoke(functionName, { body: bodyPayload });
+        const { error } = await lovableFunctions.functions.invoke(functionName, { body: bodyPayload });
         
         if (error) {
           console.error(`Failed to analyze ${file.original_filename}:`, error);

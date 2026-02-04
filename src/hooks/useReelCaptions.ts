@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 export type CaptionStyle = "sabri" | "dara" | "clean";
 
@@ -56,7 +56,7 @@ export function useReelCaptions() {
     ): Promise<Caption[]> => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke("ai-generate-captions", {
+        const { data, error } = await lovableFunctions.functions.invoke("ai-generate-captions", {
           body: { 
             video_url: videoUrl, 
             style,

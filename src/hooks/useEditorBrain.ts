@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface EditorBrainClip {
@@ -61,7 +61,7 @@ export function useEditorBrain() {
       }
 
       // Call AI to analyze inspo style
-      const { data: styleData, error: styleError } = await supabase.functions.invoke("ai-generate-from-inspiration", {
+      const { data: styleData, error: styleError } = await lovableFunctions.functions.invoke("ai-generate-from-inspiration", {
         body: {
           action: "analyze_library",
           mediaIds: inspoFiles.map(f => f.id),
@@ -107,7 +107,7 @@ export function useEditorBrain() {
           if (!clipUrl) return { hookScore: 50, energyLevel: 50, overlay: null };
 
           try {
-            const { data, error } = await supabase.functions.invoke("ai-video-process", {
+            const { data, error } = await lovableFunctions.functions.invoke("ai-video-process", {
               body: {
                 action: "ai_enhance",
                 fileUrl: clipUrl,

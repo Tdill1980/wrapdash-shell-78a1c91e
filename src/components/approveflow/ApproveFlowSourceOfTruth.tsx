@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Lock, FileText, Download, ExternalLink, Clock, RefreshCw } from "lucide-react";
 import { formatFullDateTime, formatShortDate, formatTimeOnly } from "@/lib/timezone-utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 // OS-TRUE file role labels
@@ -96,7 +96,7 @@ export function ApproveFlowSourceOfTruth({
     try {
       // Step 1: Fetch order data from WooCommerce via woo-proxy
       // Browser requests aren't blocked by Cloudflare like edge function IPs
-      const { data: orderData, error: proxyError } = await supabase.functions.invoke('woo-proxy', {
+      const { data: orderData, error: proxyError } = await lovableFunctions.functions.invoke('woo-proxy', {
         body: { 
           action: 'getOrder',
           orderNumber: orderNumber,
@@ -113,7 +113,7 @@ export function ApproveFlowSourceOfTruth({
       const order = Array.isArray(orderData) ? orderData[0] : orderData;
 
       // Step 2: Process the order data and update ApproveFlow
-      const { data: processResult, error: processError } = await supabase.functions.invoke('process-woocommerce-resync', {
+      const { data: processResult, error: processError } = await lovableFunctions.functions.invoke('process-woocommerce-resync', {
         body: { 
           projectId,
           orderData: order,

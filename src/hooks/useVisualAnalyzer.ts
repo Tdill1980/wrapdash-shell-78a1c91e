@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 export function useVisualAnalyzer() {
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
   const analyzeVideo = async (videoId: string) => {
-    const { error } = await supabase.functions.invoke("ai-analyze-video-frame", {
+    const { error } = await lovableFunctions.functions.invoke("ai-analyze-video-frame", {
       body: { video_id: videoId }
     });
 
@@ -17,7 +17,7 @@ export function useVisualAnalyzer() {
     setAnalyzing(true);
     setProgress({ current: 0, total: limit });
 
-    const { data, error } = await supabase.functions.invoke(
+    const { data, error } = await lovableFunctions.functions.invoke(
       "backfill-video-visual-tags",
       { body: { limit } }
     );

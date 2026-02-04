@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, Send, Settings, Users, TrendingUp, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { MainLayout } from "@/layouts/MainLayout";
 
 export default function MightyMail() {
@@ -71,7 +71,7 @@ export default function MightyMail() {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('send-mightymail-test', {
+      const { error } = await lovableFunctions.functions.invoke('send-mightymail-test', {
         body: {
           testEmail: testEmail,
           campaignName: campaign.name,

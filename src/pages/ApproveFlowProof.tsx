@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ProofHeader } from "@/components/approveflow/ProofHeader";
 import { ProofSixViewGrid } from "@/components/approveflow/ProofSixViewGrid";
@@ -173,7 +173,7 @@ export default function ApproveFlowProof() {
     if (!proofVersion?.id || !customerName.trim()) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('approve-approveflow-proof', {
+      const { data, error } = await lovableFunctions.functions.invoke('approve-approveflow-proof', {
         body: {
           proof_version_id: proofVersion.id,
           customer_name: customerName.trim(),

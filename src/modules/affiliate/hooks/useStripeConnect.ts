@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface StripeStatus {
@@ -25,7 +25,7 @@ export const useStripeConnect = (founderId: string | undefined) => {
     if (!founderId) return null;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('affiliate-stripe-connect', {
+      const { data, error } = await lovableFunctions.functions.invoke('affiliate-stripe-connect', {
         body: { action: 'create_account', founderId }
       });
       if (error) throw error;
@@ -43,7 +43,7 @@ export const useStripeConnect = (founderId: string | undefined) => {
     if (!founderId) return null;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('affiliate-stripe-connect', {
+      const { data, error } = await lovableFunctions.functions.invoke('affiliate-stripe-connect', {
         body: { action: 'get_onboarding_link', founderId, returnUrl }
       });
       if (error) throw error;
@@ -61,7 +61,7 @@ export const useStripeConnect = (founderId: string | undefined) => {
     if (!founderId) return null;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('affiliate-stripe-connect', {
+      const { data, error } = await lovableFunctions.functions.invoke('affiliate-stripe-connect', {
         body: { action: 'check_status', founderId }
       });
       if (error) throw error;
@@ -78,7 +78,7 @@ export const useStripeConnect = (founderId: string | undefined) => {
   const getBalance = useCallback(async () => {
     if (!founderId) return null;
     try {
-      const { data, error } = await supabase.functions.invoke('affiliate-stripe-connect', {
+      const { data, error } = await lovableFunctions.functions.invoke('affiliate-stripe-connect', {
         body: { action: 'get_balance', founderId }
       });
       if (error) throw error;

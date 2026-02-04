@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { VehicleSelector } from "../components/VehicleSelector";
 import { FinishSelector } from "../components/FinishSelector";
@@ -63,7 +63,7 @@ export default function DesignPanelPro() {
 
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-color-render", {
+      const { data, error } = await lovableFunctions.functions.invoke("generate-color-render", {
         body: {
           vehicleMake,
           vehicleModel,

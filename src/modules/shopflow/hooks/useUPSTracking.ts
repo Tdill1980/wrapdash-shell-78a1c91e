@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 
 export interface TrackingEvent {
   time: string;
@@ -26,7 +26,7 @@ export const useUPSTracking = (trackingNumber: string | null | undefined, orderI
     setError(null);
     
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ups-track', {
+      const { data, error: fnError } = await lovableFunctions.functions.invoke('ups-track', {
         body: { 
           tracking_number: trackingNumber,
           order_id: orderId,

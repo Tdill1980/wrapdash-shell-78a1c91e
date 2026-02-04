@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface AgentChatMessage {
@@ -75,7 +75,7 @@ export function useAgentChat(): UseAgentChatReturn {
 
       if (!userId) return;
 
-      const { data, error } = await supabase.functions.invoke("agent-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("agent-chat", {
         body: {
           action: "list",
           user_id: userId,
@@ -99,7 +99,7 @@ export function useAgentChat(): UseAgentChatReturn {
     setSuggestedTask(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("agent-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("agent-chat", {
         body: {
           action: "resume",
           chat_id: existingChatId,
@@ -160,7 +160,7 @@ export function useAgentChat(): UseAgentChatReturn {
         .eq("user_id", userId)
         .single();
 
-      const { data, error } = await supabase.functions.invoke("agent-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("agent-chat", {
         body: {
           action: "start",
           agent_id: agentId,
@@ -194,7 +194,7 @@ export function useAgentChat(): UseAgentChatReturn {
             };
             setMessages(prev => [...prev, tempUserMsg]);
 
-            const { data: sendData, error: sendError } = await supabase.functions.invoke("agent-chat", {
+            const { data: sendData, error: sendError } = await lovableFunctions.functions.invoke("agent-chat", {
               body: {
                 action: "send",
                 chat_id: newChatId,
@@ -248,7 +248,7 @@ export function useAgentChat(): UseAgentChatReturn {
     setMessages((prev) => [...prev, tempUserMsg]);
 
     try {
-      const { data, error } = await supabase.functions.invoke("agent-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("agent-chat", {
         body: {
           action: "send",
           chat_id: chatId,
@@ -308,7 +308,7 @@ export function useAgentChat(): UseAgentChatReturn {
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id || null;
 
-      const { data, error } = await supabase.functions.invoke("agent-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("agent-chat", {
         body: {
           action: "delegate",
           chat_id: chatId,

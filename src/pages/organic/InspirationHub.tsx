@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { SINGLE_PATH_MODE } from "@/lib/featureFlags";
 import { useInspoAnalysis, StyleAnalysis as HookStyleAnalysis } from "@/hooks/useInspoAnalysis";
 import { useInspoLibrary, InspoFile } from "@/hooks/useInspoLibrary";
@@ -288,7 +288,7 @@ export default function InspirationHub() {
         organizationId = orgMember?.organization_id;
       }
 
-      const { data, error } = await supabase.functions.invoke("analyze-inspo-image", {
+      const { data, error } = await lovableFunctions.functions.invoke("analyze-inspo-image", {
         body: { imageUrl: file.file_url, organizationId, contentFileId: file.id },
       });
 

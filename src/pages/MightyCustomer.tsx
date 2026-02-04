@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
 import { Plus, ShoppingCart, Lock, Mail, Eye, AlertCircle, Package, Ruler, CheckCircle } from "lucide-react";
@@ -307,7 +307,7 @@ export default function MightyCustomer() {
         .eq('email', customerData.email)
         .maybeSingle();
 
-      const { data, error } = await supabase.functions.invoke("send-mightymail-quote", {
+      const { data, error } = await lovableFunctions.functions.invoke("send-mightymail-quote", {
         body: {
           customerEmail: customerData.email,
           customerName: customerData.name,
@@ -497,7 +497,7 @@ export default function MightyCustomer() {
       setIsSending(true);
       
       // Call server-side protected edge function
-      const { data, error } = await supabase.functions.invoke('add-to-woo-cart', {
+      const { data, error } = await lovableFunctions.functions.invoke('add-to-woo-cart', {
         body: {
           product_id: product.woo_product_id,
           quantity: quantity,
@@ -715,7 +715,7 @@ export default function MightyCustomer() {
                     // Call the add-to-cart
                     try {
                       setIsSending(true);
-                      const { error } = await supabase.functions.invoke('add-to-woo-cart', {
+                      const { error } = await lovableFunctions.functions.invoke('add-to-woo-cart', {
                         body: {
                           product_id: config.productId,
                           quantity: config.yards,
@@ -758,7 +758,7 @@ export default function MightyCustomer() {
                     // Call the add-to-cart
                     try {
                       setIsSending(true);
-                      const { error } = await supabase.functions.invoke('add-to-woo-cart', {
+                      const { error } = await lovableFunctions.functions.invoke('add-to-woo-cart', {
                         body: {
                           product_id: config.productId,
                           quantity: 1,

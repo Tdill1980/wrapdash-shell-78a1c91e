@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
@@ -68,7 +68,7 @@ export default function MetaCallback() {
     try {
       setMessage("Exchanging authorization code...");
 
-      const { data, error: fnError } = await supabase.functions.invoke("meta-oauth-exchange", {
+      const { data, error: fnError } = await lovableFunctions.functions.invoke("meta-oauth-exchange", {
         body: { 
           code,
           redirectUri: `${window.location.origin}/auth/meta/callback`

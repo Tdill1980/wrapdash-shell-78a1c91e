@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Database, RefreshCw, Download, Car, DollarSign, Wrench, Activity, Play, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { BacklogTable } from "./BacklogTable";
 import { AIActionsQueueTable } from "./AIActionsQueueTable";
@@ -91,7 +91,7 @@ export function ToolsTab() {
   const processAIActions = async () => {
     setProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("process-ai-actions");
+      const { data, error } = await lovableFunctions.functions.invoke("process-ai-actions");
 
       if (error) throw error;
 

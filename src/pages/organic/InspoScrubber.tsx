@@ -20,7 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { copyToClipboard, downloadAsJson, generateFilename } from "@/lib/downloadUtils";
 
@@ -89,7 +89,7 @@ export default function InspoScrubber() {
         platform = "youtube";
       }
 
-      const { data, error } = await supabase.functions.invoke("analyze-inspo-video", {
+      const { data, error } = await lovableFunctions.functions.invoke("analyze-inspo-video", {
         body: { 
           videoUrl: url, 
           platform 

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Check, Globe, MessageSquare, Zap, Shield, ExternalLink, FileText, TestTubeDiagonal } from "lucide-react";
 import { toast } from "sonner";
 import { ChatTranscriptViewer } from "@/components/admin/ChatTranscriptViewer";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 export default function WebsiteAgentAdmin() {
@@ -42,7 +42,7 @@ export default function WebsiteAgentAdmin() {
   const runSmokeTest = async () => {
     setIsTesting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("website-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
         body: {
           org: "wpw",
           agent: "wpw_ai_team",

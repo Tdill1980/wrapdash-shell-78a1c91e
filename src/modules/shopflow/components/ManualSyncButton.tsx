@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 interface ManualSyncButtonProps {
   orderNumber: string;
@@ -15,7 +15,7 @@ export const ManualSyncButton = ({ orderNumber, onSyncComplete }: ManualSyncButt
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+      const { data, error } = await lovableFunctions.functions.invoke('sync-woo-manual', {
         body: { 
           order_number: orderNumber,
           sync_type: 'shopflow'

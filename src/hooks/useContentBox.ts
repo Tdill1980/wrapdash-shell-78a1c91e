@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface ContentFile {
@@ -202,13 +202,13 @@ export function useContentBox() {
         data.content_category !== 'inspo_reference'
       ) {
         if (fileType === 'video') {
-          supabase.functions.invoke('ai-analyze-video-frame', {
+          lovableFunctions.functions.invoke('ai-analyze-video-frame', {
             body: { video_id: data.id }
           }).catch(err => console.error('Auto-analyze video failed:', err));
         }
 
         if (fileType === 'image') {
-          supabase.functions.invoke('ai-analyze-image', {
+          lovableFunctions.functions.invoke('ai-analyze-image', {
             body: { content_file_id: data.id }
           }).catch(err => console.error('Auto-analyze image failed:', err));
         }
@@ -242,7 +242,7 @@ export function useContentBox() {
       trim_end?: number;
       brand?: string;
     }): Promise<VideoProcessResult> => {
-      const { data, error } = await supabase.functions.invoke("ai-video-process", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-video-process", {
         body: { action, file_id, file_url, trim_start, trim_end, brand }
       });
 
@@ -279,7 +279,7 @@ export function useContentBox() {
       headline?: string;
       cta?: string;
     }): Promise<AdGenerationResult> => {
-      const { data, error } = await supabase.functions.invoke("ai-generate-ad", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-ad", {
         body: { brand, objective, platform, format, media_urls, media_context, headline, cta }
       });
 
@@ -312,7 +312,7 @@ export function useContentBox() {
       target_formats: string[];
       enhancements?: string[];
     }): Promise<RepurposeResult> => {
-      const { data, error } = await supabase.functions.invoke("ai-repurpose-content", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-repurpose-content", {
         body: { brand, source_url, source_type, source_transcript, target_formats, enhancements }
       });
 
@@ -351,7 +351,7 @@ export function useContentBox() {
       vehicle_info?: Record<string, unknown>;
       additional_context?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke("generate-social-content", {
+      const { data, error } = await lovableFunctions.functions.invoke("generate-social-content", {
         body: {
           brand,
           content_type,
@@ -380,7 +380,7 @@ export function useContentBox() {
   // Sync Instagram mutation
   const syncInstagram = useMutation({
     mutationFn: async ({ brand = 'wpw' }: { brand?: string }) => {
-      const { data, error } = await supabase.functions.invoke("sync-instagram-media", {
+      const { data, error } = await lovableFunctions.functions.invoke("sync-instagram-media", {
         body: { brand }
       });
 
@@ -399,7 +399,7 @@ export function useContentBox() {
   // Generate calendar mutation
   const generateCalendar = useMutation({
     mutationFn: async ({ weeks_ahead = 2 }: { weeks_ahead?: number }) => {
-      const { data, error } = await supabase.functions.invoke("generate-content-calendar", {
+      const { data, error } = await lovableFunctions.functions.invoke("generate-content-calendar", {
         body: { weeks_ahead }
       });
 

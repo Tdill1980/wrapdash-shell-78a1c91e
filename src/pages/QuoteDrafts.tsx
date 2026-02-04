@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { AppLayout } from "@/layouts/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export default function QuoteDrafts() {
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: async (draftId: string) => {
-      const { data, error } = await supabase.functions.invoke('execute-quote-draft', {
+      const { data, error } = await lovableFunctions.functions.invoke('execute-quote-draft', {
         body: { draft_id: draftId, approving_agent: 'ops_desk' }
       });
       if (error) throw error;

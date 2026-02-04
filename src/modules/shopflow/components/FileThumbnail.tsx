@@ -1,14 +1,14 @@
 // 🖼 FILE THUMBNAIL — generates previews using API (PDF/AI/PNG/JPG)
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 export const FileThumbnail = ({ file, orderId }: any) => {
   const [thumb, setThumb] = useState<string | null>(null);
 
   useEffect(() => {
     const generateThumb = async () => {
-      const { data, error } = await supabase.functions.invoke("generate-thumbnail", {
+      const { data, error } = await lovableFunctions.functions.invoke("generate-thumbnail", {
         body: { url: file.url, orderId },
       });
 

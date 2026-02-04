@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { Send, Eye, Loader2, CheckCircle, Sparkles, Calendar, AlertTriangle, ShieldCheck } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmailCalendar } from "@/components/email/EmailCalendar";
@@ -190,7 +190,7 @@ const MightyMailCampaignSender = () => {
 
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-klaviyo-campaign', {
+      const { data, error } = await lovableFunctions.functions.invoke('create-klaviyo-campaign', {
         body: {
           campaignType: selectedFranchise === 'declaration' ? 'newsletter' : selectedFranchise,
           name: campaignName,

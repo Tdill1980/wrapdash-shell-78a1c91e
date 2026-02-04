@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Type, Loader2, Sparkles, Trash2, CheckCircle2, Plus, Wand2, LayoutTemplate } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Caption,
@@ -162,7 +162,7 @@ export function CaptionsPanel({
 
         const promptToUse = bulkPromptRaw.trim() || defaultOverlayPrompt(currentText);
 
-        const { data, error } = await supabase.functions.invoke("generate-text-overlay", {
+        const { data, error } = await lovableFunctions.functions.invoke("generate-text-overlay", {
           body: {
             scene: { ...scene, text: currentText },
             prompt: promptToUse,
@@ -198,7 +198,7 @@ export function CaptionsPanel({
         const currentText = getSceneText(scene);
         const promptToUse = template.prompt?.trim() || defaultOverlayPrompt(currentText);
 
-        const { data } = await supabase.functions.invoke("generate-text-overlay", {
+        const { data } = await lovableFunctions.functions.invoke("generate-text-overlay", {
           body: {
             scene: { ...scene, text: currentText },
             prompt: promptToUse,
@@ -229,7 +229,7 @@ export function CaptionsPanel({
       const promptRaw = aiPrompt[scene.sceneId] || "";
       const promptToUse = promptRaw.trim() || defaultOverlayPrompt(currentText);
 
-      const { data, error } = await supabase.functions.invoke("generate-text-overlay", {
+      const { data, error } = await lovableFunctions.functions.invoke("generate-text-overlay", {
         body: {
           scene: { ...scene, text: currentText },
           prompt: promptToUse,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 interface WooCommerceOrder {
   id: number;
@@ -39,7 +39,7 @@ export const useWooCommerceData = (orderNumber: string) => {
       
       try {
         // Use edge function proxy instead of direct API call
-        const { data, error: fnError } = await supabase.functions.invoke('woo-proxy', {
+        const { data, error: fnError } = await lovableFunctions.functions.invoke('woo-proxy', {
           body: { 
             action: 'getOrder',
             orderNumber: orderNumber 

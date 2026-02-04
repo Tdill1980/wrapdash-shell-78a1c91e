@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Phone, User, Loader2, Mail, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AlexApprovalModal } from "./AlexApprovalModal";
 import { useTeamAvailability } from "@/hooks/useTeamAvailability";
@@ -93,7 +93,7 @@ export function CallRequestModal({
       const reasonLabel = CALL_REASONS.find(r => r.value === reason)?.label || reason;
       const availability = getAvailabilityText(assignedTo);
       
-      const { data, error } = await supabase.functions.invoke('agent-chat', {
+      const { data, error } = await lovableFunctions.functions.invoke('agent-chat', {
         body: {
           action: 'quick',
           agent_id: 'alex_morgan',

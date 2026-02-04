@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -100,7 +100,7 @@ export default function AutoSplit() {
 
       // 2. Transcribe the video
       setProcessingStep("transcribing");
-      const { data: transcriptData, error: transcriptError } = await supabase.functions.invoke(
+      const { data: transcriptData, error: transcriptError } = await lovableFunctions.functions.invoke(
         "transcribe-audio",
         { body: { video_url: videoUrl } }
       );
@@ -114,7 +114,7 @@ export default function AutoSplit() {
 
       // 3. Detect scenes
       setProcessingStep("detecting_scenes");
-      const { data: sceneData, error: sceneError } = await supabase.functions.invoke(
+      const { data: sceneData, error: sceneError } = await lovableFunctions.functions.invoke(
         "yt-scene-detect",
         { body: { video_url: videoUrl, transcript } }
       );
@@ -128,7 +128,7 @@ export default function AutoSplit() {
 
       // 4. Generate shorts with AI
       setProcessingStep("generating_shorts");
-      const { data: shortsData, error: shortsError } = await supabase.functions.invoke(
+      const { data: shortsData, error: shortsError } = await lovableFunctions.functions.invoke(
         "yt-generate-shorts",
         {
           body: {
@@ -208,7 +208,7 @@ export default function AutoSplit() {
       );
 
       // First upload to Mux if needed
-      const { data: muxData, error: muxError } = await supabase.functions.invoke("mux-upload", {
+      const { data: muxData, error: muxError } = await lovableFunctions.functions.invoke("mux-upload", {
         body: { file_url: sourceVideoUrl },
       });
 
@@ -225,7 +225,7 @@ export default function AutoSplit() {
       await new Promise((r) => setTimeout(r, 3000));
 
       // Create clip
-      const { data: clipData, error: clipError } = await supabase.functions.invoke("mux-create-clip", {
+      const { data: clipData, error: clipError } = await lovableFunctions.functions.invoke("mux-create-clip", {
         body: {
           asset_id: muxAssetId,
           playback_id: muxPlaybackId,

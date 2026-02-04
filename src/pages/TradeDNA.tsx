@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import {
   Sparkles,
@@ -101,7 +101,7 @@ export default function TradeDNA() {
     setCurrentStep(2);
 
     try {
-      const { data, error } = await supabase.functions.invoke("analyze-brand-voice", {
+      const { data, error } = await lovableFunctions.functions.invoke("analyze-brand-voice", {
         body: {
           shopName,
           websiteUrl,

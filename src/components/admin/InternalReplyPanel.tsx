@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Send, Sparkles, X, Mail, CheckCircle, MessageCircle, Bot, User, Receipt, ShoppingCart, Palette } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 import { QuoteSelector } from "./QuoteSelector";
 
@@ -85,7 +85,7 @@ export function InternalReplyPanel({
         ? 'You are Jordan Lee, a friendly and knowledgeable wrap specialist. You speak casually but professionally, with enthusiasm about vehicle wraps.'
         : 'You are Alex Morgan, a senior customer success manager. You speak professionally and are excellent at de-escalation and problem-solving.';
 
-      const { data, error } = await supabase.functions.invoke('agent-chat', {
+      const { data, error } = await lovableFunctions.functions.invoke('agent-chat', {
         body: {
           agent: selectedAgent === 'jordan' ? 'jordan_lee' : 'alex_morgan',
           prompt: `${agentPersonality}
@@ -134,7 +134,7 @@ Provide helpful, concise advice. If they ask you to rephrase or write something,
     try {
       const conversationSummary = getConversationContext();
 
-      const { data, error } = await supabase.functions.invoke('agent-chat', {
+      const { data, error } = await lovableFunctions.functions.invoke('agent-chat', {
         body: {
           agent: 'alex_morgan',
           prompt: `You are drafting a professional follow-up email to a customer. 
@@ -182,7 +182,7 @@ Keep it concise (2-3 short paragraphs max). Do NOT include the subject line, jus
       // Get current user for approved_by field
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase.functions.invoke('send-admin-reply', {
+      const { data, error } = await lovableFunctions.functions.invoke('send-admin-reply', {
         body: {
           conversation_id: conversation.id,
           to_email: customerEmail,

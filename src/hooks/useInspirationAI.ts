@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface HookItem {
@@ -64,7 +64,7 @@ export function useInspirationAI() {
   const analyzeLibrary = async (mediaIds?: string[]) => {
     setAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-generate-from-inspiration", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-from-inspiration", {
         body: { action: "analyze_library", mediaIds }
       });
 
@@ -85,7 +85,7 @@ export function useInspirationAI() {
   const generateHooks = async (mediaIds?: string[]) => {
     setGeneratingHooks(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-generate-from-inspiration", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-from-inspiration", {
         body: { action: "generate_hooks", mediaIds }
       });
 
@@ -111,7 +111,7 @@ export function useInspirationAI() {
   }) => {
     setGeneratingAd(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-generate-from-inspiration", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-from-inspiration", {
         body: { 
           action: "generate_ad", 
           mediaIds: params.mediaIds,

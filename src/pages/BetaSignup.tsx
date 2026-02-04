@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DNAHelixAnimation } from "@/components/beta/DNAHelixAnimation";
 import { BetaProgressBar } from "@/components/beta/BetaProgressBar";
@@ -93,7 +93,7 @@ const BetaSignup = () => {
       if (authError) throw authError;
 
       // Call enhanced analyze-brand-voice edge function
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke(
+      const { data: analysisData, error: analysisError } = await lovableFunctions.functions.invoke(
         "analyze-brand-voice-enhanced",
         {
           body: {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface GridRenderParams {
@@ -45,7 +45,7 @@ export function useGridAdRender() {
     setResult(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("render-grid-ad", {
+      const { data, error: fnError } = await lovableFunctions.functions.invoke("render-grid-ad", {
         body: params,
       });
 
@@ -108,7 +108,7 @@ export function useGridAdRender() {
 
       try {
         // Check status via edge function or direct API
-        const { data, error } = await supabase.functions.invoke("render-grid-ad", {
+        const { data, error } = await lovableFunctions.functions.invoke("render-grid-ad", {
           body: { action: "status", renderId },
         });
 

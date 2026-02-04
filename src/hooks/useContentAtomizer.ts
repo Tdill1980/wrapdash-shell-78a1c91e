@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export interface ContentAtom {
@@ -74,7 +74,7 @@ export function useContentAtomizer(organizationId?: string) {
   // Atomize content mutation
   const atomizeMutation = useMutation({
     mutationFn: async ({ text, sourceType }: { text: string; sourceType: string }) => {
-      const { data, error } = await supabase.functions.invoke("ai-atomize-content", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-atomize-content", {
         body: { 
           text, 
           source_type: sourceType,
@@ -124,7 +124,7 @@ export function useContentAtomizer(organizationId?: string) {
   // Generate micro content mutation
   const generateMutation = useMutation({
     mutationFn: async ({ atom, format, style }: { atom: ContentAtom; format: string; style: string }) => {
-      const { data, error } = await supabase.functions.invoke("ai-generate-micro-content", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-micro-content", {
         body: { 
           atom, 
           format, 

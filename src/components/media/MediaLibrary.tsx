@@ -10,7 +10,7 @@ import {
   Wand2, Loader2, AlertTriangle, Scan
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { MediaUploader } from "./MediaUploader";
 import { MediaCard, MediaSelectMode } from "./MediaCard";
 import { TagEditorModal } from "./TagEditorModal";
@@ -169,7 +169,7 @@ export function MediaLibrary({
 
     for (const file of videosToTag) {
       try {
-        const { error } = await supabase.functions.invoke("ai-tag-video", {
+        const { error } = await lovableFunctions.functions.invoke("ai-tag-video", {
           body: {
             content_file_id: file.id,
             video_url: file.file_url,

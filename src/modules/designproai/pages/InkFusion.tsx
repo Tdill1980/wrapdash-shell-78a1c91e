@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { VehicleSelector } from "../components/VehicleSelector";
 import { FinishSelector } from "../components/FinishSelector";
@@ -134,7 +134,7 @@ export default function InkFusion() {
       setVisualizationId(vizData.id);
 
       // Send Klaviyo event
-      await supabase.functions.invoke("send-klaviyo-event", {
+      await lovableFunctions.functions.invoke("send-klaviyo-event", {
         body: {
           event: "inkfusion_render_generated",
           properties: {

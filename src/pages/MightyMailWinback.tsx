@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { 
   Mail, 
   Send, 
@@ -108,7 +108,7 @@ export default function MightyMailWinback() {
         : selectedSegment === "60_day_inactive" ? 60 
         : 90;
 
-      const { data, error } = await supabase.functions.invoke('ai-generate-winback-email', {
+      const { data, error } = await lovableFunctions.functions.invoke('ai-generate-winback-email', {
         body: {
           inactivityDays,
           offerType,
@@ -152,7 +152,7 @@ export default function MightyMailWinback() {
     try {
       console.log('[Klaviyo] Sending campaign with segmentId:', klaviyoSegmentId);
       
-      const { data, error } = await supabase.functions.invoke('create-klaviyo-campaign', {
+      const { data, error } = await lovableFunctions.functions.invoke('create-klaviyo-campaign', {
         body: {
           campaignType: 'winback',
           name: `WinBack ${selectedSegment} - ${new Date().toLocaleDateString()}`,

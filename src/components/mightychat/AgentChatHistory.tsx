@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export function AgentChatHistory({ onResumeChat }: AgentChatHistoryProps) {
       const userId = session?.session?.user?.id;
       if (!userId) return;
 
-      const { data, error } = await supabase.functions.invoke("agent-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("agent-chat", {
         body: {
           action: "list",
           user_id: userId,

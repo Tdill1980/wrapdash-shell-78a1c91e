@@ -24,7 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import { ContentMetadataPanel, useContentMetadata } from "@/components/content/ContentMetadataPanel";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { downloadToDevice, copyToClipboard, generateFilename } from "@/lib/downloadUtils";
 import { StyleReferenceUpload, type ExtractedStyle } from "@/components/static-creator/StyleReferenceUpload";
@@ -83,7 +83,7 @@ export default function StaticCreator() {
     setGenerating(true);
     try {
       // Call AI to generate static post with enhanced options
-      const { data, error } = await supabase.functions.invoke("ai-generate-static", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-static", {
         body: {
           template: selectedTemplate || "product-feature",
           headline,

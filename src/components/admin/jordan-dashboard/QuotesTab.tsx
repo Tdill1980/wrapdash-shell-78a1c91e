@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, RefreshCw, FileText, Clock, CheckCircle, XCircle, Zap, Mail, Eye } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -49,7 +49,7 @@ export function QuotesTab() {
   const runRetargeting = async () => {
     setRunningRetargeting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('run-quote-followups');
+      const { data, error } = await lovableFunctions.functions.invoke('run-quote-followups');
       if (error) throw error;
       
       const processed = data?.processed || 0;

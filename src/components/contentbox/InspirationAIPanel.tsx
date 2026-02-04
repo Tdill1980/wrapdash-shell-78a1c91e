@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useInspirationAI, HookItem, AdPackage } from "@/hooks/useInspirationAI";
 import { useInspoLibrary } from "@/hooks/useInspoLibrary";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -136,7 +136,7 @@ export function InspirationAIPanel({
 
       setRenderingStatic(true);
       try {
-        const { data, error } = await supabase.functions.invoke("render-static-ad", {
+        const { data, error } = await lovableFunctions.functions.invoke("render-static-ad", {
           body: {
             image_url: imageMedia.file_url,
             headline: adPackage.hooks?.[0]?.text || "",

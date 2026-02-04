@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { wooToInternalStatus, internalToCustomerStatus, type InternalStatus } from '@/lib/status-mapping';
 
@@ -148,7 +148,7 @@ export const useShopFlow = (orderId?: string) => {
 
       // Update WooCommerce order meta via secure edge function proxy
       try {
-        await supabase.functions.invoke('woo-proxy', {
+        await lovableFunctions.functions.invoke('woo-proxy', {
           body: {
             action: 'updateOrder',
             orderId: order.order_number,
@@ -167,7 +167,7 @@ export const useShopFlow = (orderId?: string) => {
       if (order.customer_email) {
         try {
           console.log('[Klaviyo] Sending status change event for:', order.customer_email);
-          await supabase.functions.invoke('send-klaviyo-event', {
+          await lovableFunctions.functions.invoke('send-klaviyo-event', {
             body: {
               eventName: 'shopflow_status_changed',
               properties: {
@@ -257,7 +257,7 @@ export const useShopFlow = (orderId?: string) => {
 
       // Trigger WooCommerce update and Klaviyo notification
       if (order?.order_number) {
-        await supabase.functions.invoke('update-woo-order', {
+        await lovableFunctions.functions.invoke('update-woo-order', {
           body: {
             orderNumber: order.order_number,
             metaData: [
@@ -271,7 +271,7 @@ export const useShopFlow = (orderId?: string) => {
         // Send Klaviyo tracking event - only if we have customer email
         if (order.customer_email) {
           console.log('[Klaviyo] Sending tracking event for:', order.customer_email);
-          await supabase.functions.invoke('send-klaviyo-event', {
+          await lovableFunctions.functions.invoke('send-klaviyo-event', {
             body: {
               eventName: 'shopflow_tracking_added',
               customerEmail: order.customer_email,
@@ -355,7 +355,7 @@ export const useShopFlow = (orderId?: string) => {
         description: 'Fetching recent orders from WooCommerce...',
       });
 
-      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+      const { data, error } = await lovableFunctions.functions.invoke('sync-woo-manual', {
         body: { target: 'shopflow', days }
       });
 

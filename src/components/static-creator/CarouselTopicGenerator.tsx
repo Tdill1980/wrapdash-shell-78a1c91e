@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Sparkles, Lightbulb, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Brand voice / content angles
@@ -74,7 +74,7 @@ export function CarouselTopicGenerator({ brand, onTopicGenerated }: CarouselTopi
     setGeneratedTopic(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-generate-carousel-topic", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-generate-carousel-topic", {
         body: {
           seedIdea,
           brandVoice,

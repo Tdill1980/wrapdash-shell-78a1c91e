@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageCircle, Send, X, Loader2, CheckCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 interface ChatMessage {
   id: string;
@@ -65,7 +65,7 @@ export function WebsiteChatAgent() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("website-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
         body: {
           org: "wpw",
           agent: "wpw_ai_team",

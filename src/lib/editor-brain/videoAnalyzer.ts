@@ -11,7 +11,7 @@
  * - Shot types (cinematic, detail, B-roll)
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 export interface AnalyzedScene {
   start: number;
@@ -58,7 +58,7 @@ export async function analyzeVideo(options: VideoAnalyzerOptions): Promise<Video
 
   try {
     // Call the AI video process edge function for analysis
-    const { data, error } = await supabase.functions.invoke("ai-video-process", {
+    const { data, error } = await lovableFunctions.functions.invoke("ai-video-process", {
       body: {
         action: "ai_enhance",
         fileUrl: playbackUrl,

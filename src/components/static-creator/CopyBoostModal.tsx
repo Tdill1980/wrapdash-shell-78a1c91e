@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Sparkles, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { FORMULA_OPTIONS, type CopyFormula } from "@/lib/copywriting-formulas";
 
@@ -57,7 +57,7 @@ export function CopyBoostModal({
     setResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-boost-copy", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-boost-copy", {
         body: {
           rawHeadline,
           rawBody,

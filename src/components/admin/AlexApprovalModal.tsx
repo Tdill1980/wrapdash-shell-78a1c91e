@@ -23,7 +23,7 @@ import {
   User,
   Edit3,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AttachedQuote {
@@ -94,7 +94,7 @@ export function AlexApprovalModal({
       // This ensures atomic truth: if email fails, quote status stays unchanged
 
       // Call the send-admin-reply edge function - the SINGLE source of truth
-      const { data, error } = await supabase.functions.invoke("send-admin-reply", {
+      const { data, error } = await lovableFunctions.functions.invoke("send-admin-reply", {
         body: {
           conversation_id: conversationId,
           to_email: recipient.email,

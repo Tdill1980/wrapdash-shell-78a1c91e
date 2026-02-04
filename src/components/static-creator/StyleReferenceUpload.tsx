@@ -13,7 +13,7 @@ import {
   CheckCircle,
   Car
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface ExtractedStyle {
@@ -82,7 +82,7 @@ export function StyleReferenceUpload({
         // For style references, analyze the image
         setAnalyzing(true);
         
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke(
+        const { data: analysisData, error: analysisError } = await lovableFunctions.functions.invoke(
           "analyze-inspo-image",
           {
             body: {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface SelectedVideo {
@@ -90,7 +90,7 @@ export function useAutoCreateReel() {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("ai-auto-create-reel", {
+      const { data, error: fnError } = await lovableFunctions.functions.invoke("ai-auto-create-reel", {
         body: {
           organization_id: options?.organizationId,
           filter_category: options?.filterCategory,

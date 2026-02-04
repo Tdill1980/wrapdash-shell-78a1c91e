@@ -58,7 +58,7 @@ import { PostRenderModal } from "@/components/reel-builder/PostRenderModal";
 import { ContentMetadataPanel, useContentMetadata, ContentMetadata } from "@/components/content/ContentMetadataPanel";
 import { MediaFile } from "@/components/media/MediaLibrary";
 import { DARA_FORMATS, DaraFormat } from "@/lib/dara-denney-formats";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { sanitizeForJson } from "@/lib/sanitizeForJson";
 import { createCreativeWithTags, saveBlueprintSnapshot, updateCreative, replaceStatusTag, SourceType } from "@/lib/creativeVault";
 import { finalizeRender } from "@/lib/finalizeRender";
@@ -1013,7 +1013,7 @@ export default function ReelBuilder() {
 
       // ============ CALL RENDER-REEL WITH BLUEPRINT ============
       // This is the new blueprint-based render API
-      const { data, error } = await supabase.functions.invoke('render-reel', {
+      const { data, error } = await lovableFunctions.functions.invoke('render-reel', {
         body: {
           job_id: queueEntry.id,
           blueprint: sceneBlueprint,

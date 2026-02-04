@@ -62,7 +62,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useApproveFlow } from "@/hooks/useApproveFlow";
 import { useToast } from "@/hooks/use-toast";
 import { formatFullDateTime, formatShortDate, formatTimeOnly } from "@/lib/timezone-utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { save3DRendersToApproveFlow } from "@/lib/approveflow-helpers";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -353,7 +353,7 @@ export default function ApproveFlow() {
         });
 
         // Call analyze-vehicle to detect vehicle from 2D proof
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-vehicle', {
+        const { data: analysisData, error: analysisError } = await lovableFunctions.functions.invoke('analyze-vehicle', {
           body: { imageUrl: latestProof.file_url }
         });
 
@@ -549,7 +549,7 @@ export default function ApproveFlow() {
       if (specsError) throw specsError;
 
       // Step 4: Call validate-approveflow-proof
-      const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+      const { data: validationResult, error: validationError } = await lovableFunctions.functions.invoke(
         'validate-approveflow-proof',
         { body: { proof_version_id: proofVersion.id } }
       );
@@ -566,7 +566,7 @@ export default function ApproveFlow() {
       }
 
       // Step 5: Call generate-approveflow-proof-pdf
-      const { data: pdfResult, error: pdfError } = await supabase.functions.invoke(
+      const { data: pdfResult, error: pdfError } = await lovableFunctions.functions.invoke(
         'generate-approveflow-proof-pdf',
         { body: { proof_version_id: proofVersion.id } }
       );
@@ -1187,7 +1187,7 @@ export default function ApproveFlow() {
                 if (!latestVersion) return;
                 try {
                   const portalUrl = `${window.location.origin}/approveflow/${urlProjectId}`;
-                  const { error } = await supabase.functions.invoke('send-approveflow-proof', {
+                  const { error } = await lovableFunctions.functions.invoke('send-approveflow-proof', {
                     body: {
                       projectId: urlProjectId,
                       customerEmail: project.customer_email,

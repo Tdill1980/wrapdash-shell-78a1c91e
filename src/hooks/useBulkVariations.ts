@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface BulkVariationConfig {
@@ -58,7 +58,7 @@ export function useBulkVariations() {
       }, 500);
 
       try {
-        const { data, error } = await supabase.functions.invoke("ai-bulk-variations", {
+        const { data, error } = await lovableFunctions.functions.invoke("ai-bulk-variations", {
           body: {
             brief: config.brief,
             source_media_ids: config.source_media_ids,
@@ -99,7 +99,7 @@ export function useBulkVariations() {
       file_type: string;
       original_filename?: string;
     }): Promise<AutoTagResult> => {
-      const { data, error } = await supabase.functions.invoke("ai-auto-tag", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-auto-tag", {
         body: params
       });
 

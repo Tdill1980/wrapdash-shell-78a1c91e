@@ -21,7 +21,7 @@ import {
 import { AgentSelector } from "./AgentSelector";
 import { AgentChatPanel } from "./AgentChatPanel";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -140,7 +140,7 @@ export function ReviewQueue({ onSelectConversation }: ReviewQueueProps) {
   const handleBackfillInstagramProfiles = async () => {
     setBackfillLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("backfill-instagram-profiles", {
+      const { data, error } = await lovableFunctions.functions.invoke("backfill-instagram-profiles", {
         body: {},
       });
       if (error) throw error;

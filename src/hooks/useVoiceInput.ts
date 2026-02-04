@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export const useVoiceInput = () => {
@@ -78,7 +78,7 @@ export const useVoiceInput = () => {
 
           try {
             // Call edge function for transcription
-            const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+            const { data, error } = await lovableFunctions.functions.invoke('transcribe-audio', {
               body: { audio: base64Audio }
             });
 

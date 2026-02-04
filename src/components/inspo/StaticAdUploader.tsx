@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface StaticAdUploaderProps {
@@ -167,7 +167,7 @@ export function StaticAdUploader({ onUploadComplete }: StaticAdUploaderProps) {
 
         // Trigger AI analysis
         if (insertedFile) {
-          await supabase.functions.invoke("analyze-inspo-image", {
+          await lovableFunctions.functions.invoke("analyze-inspo-image", {
             body: { 
               imageUrl: publicUrl, 
               organizationId, 

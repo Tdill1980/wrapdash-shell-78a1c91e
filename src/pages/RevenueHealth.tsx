@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import DOMPurify from 'dompurify';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ export default function RevenueHealth() {
   const { data: healthData, isLoading, refetch } = useQuery({
     queryKey: ['revenue-health'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('revenue-health-monitor', {
+      const { data, error } = await lovableFunctions.functions.invoke('revenue-health-monitor', {
         body: { action: 'check_health' }
       });
       if (error) throw error;
@@ -101,7 +101,7 @@ export default function RevenueHealth() {
   // Generate recovery campaign mutation
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('revenue-health-monitor', {
+      const { data, error } = await lovableFunctions.functions.invoke('revenue-health-monitor', {
         body: { action: 'generate_recovery' }
       });
       if (error) throw error;
@@ -120,7 +120,7 @@ export default function RevenueHealth() {
   const sendCampaignMutation = useMutation({
     mutationFn: async (campaign: RecoveryCampaign) => {
       // Call create-klaviyo-campaign to send
-      const { data, error } = await supabase.functions.invoke('create-klaviyo-campaign', {
+      const { data, error } = await lovableFunctions.functions.invoke('create-klaviyo-campaign', {
         body: {
           campaignType: 'winback',
           name: `Recovery: ${campaign.subject_line}`,
@@ -141,7 +141,7 @@ export default function RevenueHealth() {
       }
       
       // Log to heartbeat
-      await supabase.functions.invoke('revenue-health-monitor', {
+      await lovableFunctions.functions.invoke('revenue-health-monitor', {
         body: {
           action: 'log_campaign',
           campaignType: 'email',
@@ -166,7 +166,7 @@ export default function RevenueHealth() {
   // Override mutation
   const overrideMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.functions.invoke('revenue-health-monitor', {
+      const { error } = await lovableFunctions.functions.invoke('revenue-health-monitor', {
         body: {
           action: 'log_override',
           overrideType,

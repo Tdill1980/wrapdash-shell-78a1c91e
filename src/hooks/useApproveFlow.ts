@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface ApproveFlowProject {
@@ -208,7 +208,7 @@ export const useApproveFlow = (projectId?: string) => {
   // Helper to trigger ApproveFlow events
   const triggerEvent = async (eventType: string, data: any = {}) => {
     try {
-      await supabase.functions.invoke('approveflow-event', {
+      await lovableFunctions.functions.invoke('approveflow-event', {
         body: {
           eventType,
           projectId,

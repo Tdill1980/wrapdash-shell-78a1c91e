@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { MetaPlacement } from "@/lib/meta-ads";
 
 export interface StaticAdLayout {
@@ -97,7 +97,7 @@ export function useStaticAdBuilder() {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
+      const { data, error: fnError } = await lovableFunctions.functions.invoke(
         "ai-generate-static-ad",
         {
           body: {

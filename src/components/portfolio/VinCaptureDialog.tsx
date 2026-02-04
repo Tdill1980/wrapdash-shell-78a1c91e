@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Camera, Upload, Loader2, Check, Edit2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface VinCaptureDialogProps {
@@ -54,7 +54,7 @@ export function VinCaptureDialog({
       // Convert file to base64
       const base64 = await fileToBase64(file);
       
-      const { data, error } = await supabase.functions.invoke("extract-vin-ocr", {
+      const { data, error } = await lovableFunctions.functions.invoke("extract-vin-ocr", {
         body: { image: base64 },
       });
 

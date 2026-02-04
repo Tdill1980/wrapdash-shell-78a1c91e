@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { VehicleSelector } from "../components/VehicleSelector";
 import { FinishSelector } from "../components/FinishSelector";
@@ -207,7 +207,7 @@ export default function Visualize() {
 
       // Send Klaviyo event
       try {
-        await supabase.functions.invoke("send-klaviyo-event", {
+        await lovableFunctions.functions.invoke("send-klaviyo-event", {
           body: {
             eventName: "designproai_render_generated",
             customerEmail: "shop@weprintwraps.com", // Could be replaced with actual customer email if available

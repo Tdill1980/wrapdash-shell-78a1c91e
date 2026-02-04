@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 export interface MetaAdOutput {
   short_texts: string[];
@@ -35,7 +35,7 @@ export function useMetaAdGenerator() {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
+      const { data, error: fnError } = await lovableFunctions.functions.invoke(
         "ai-generate-meta-ads",
         {
           body: {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface TranscriptSegment {
@@ -46,7 +46,7 @@ export function useVideoTranscriber() {
       setProgress(30);
       setStatus('transcribing');
 
-      const { data, error: fnError } = await supabase.functions.invoke('video-transcribe', {
+      const { data, error: fnError } = await lovableFunctions.functions.invoke('video-transcribe', {
         body: {
           ...(isYouTube ? { youtube_url: url } : { video_url: url }),
           include_timestamps: options.includeTimestamps ?? true,
@@ -108,7 +108,7 @@ export function useVideoTranscriber() {
       setProgress(30);
       setStatus('transcribing');
 
-      const { data, error: fnError } = await supabase.functions.invoke('video-transcribe', {
+      const { data, error: fnError } = await lovableFunctions.functions.invoke('video-transcribe', {
         body: {
           audio_base64: base64,
           include_timestamps: options.includeTimestamps ?? true,

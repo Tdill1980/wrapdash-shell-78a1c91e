@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Sparkles, BarChart3, FileText, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -55,7 +55,7 @@ export function AdminJordanChat() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('admin-jordan-chat', {
+      const { data, error } = await lovableFunctions.functions.invoke('admin-jordan-chat', {
         body: {
           message: text.trim(),
           current_page: location.pathname,

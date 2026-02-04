@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
 export interface BrandOverlays {
@@ -67,7 +67,7 @@ export function useVoiceEngine() {
       if (organizationId) params.set('organizationId', organizationId);
       if (organizationSettings.subdomain) params.set('subdomain', organizationSettings.subdomain);
 
-      const { data, error } = await supabase.functions.invoke('load-voice-profile', {
+      const { data, error } = await lovableFunctions.functions.invoke('load-voice-profile', {
         body: null,
         method: 'GET',
       });

@@ -8,7 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { AIApprovalDetailModal } from "./AIApprovalDetailModal";
@@ -187,7 +187,7 @@ export function AIApprovalsCard() {
         const customerEmail = payload?.auto_quote?.customer_email || payload?.customer_email;
         const customerName = payload?.auto_quote?.customer_name || payload?.customer_name;
         
-        const { data, error } = await supabase.functions.invoke('send-approved-quote', {
+        const { data, error } = await lovableFunctions.functions.invoke('send-approved-quote', {
           body: {
             actionId: action.id,
             quoteId,

@@ -3,7 +3,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Instagram, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Unplug } from "lucide-react";
 import { format, formatDistanceToNow, isPast, addDays } from "date-fns";
@@ -83,7 +83,7 @@ export default function InstagramSettings() {
     localStorage.setItem("meta_oauth_state", state);
 
     // Read the App ID from backend config (avoids hardcoded mismatch)
-    const { data: cfg, error: cfgErr } = await supabase.functions.invoke("meta-oauth-config");
+    const { data: cfg, error: cfgErr } = await lovableFunctions.functions.invoke("meta-oauth-config");
     if (cfgErr || !cfg?.appId) {
       toast.error("Meta OAuth is not configured", {
         description: "Missing app configuration in backend."
@@ -122,7 +122,7 @@ export default function InstagramSettings() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("refresh-instagram-token", {
+      const { data, error } = await lovableFunctions.functions.invoke("refresh-instagram-token", {
         body: { force: true }
       });
 

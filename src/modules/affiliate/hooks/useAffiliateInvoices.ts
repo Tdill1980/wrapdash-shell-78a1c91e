@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface AffiliateInvoice {
@@ -59,7 +59,7 @@ export const useAffiliateInvoices = () => {
       periodStart: string;
       periodEnd: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke('generate-affiliate-invoice', {
+      const { data, error } = await lovableFunctions.functions.invoke('generate-affiliate-invoice', {
         body: { founderId, commissionIds, periodStart, periodEnd },
       });
 
@@ -78,7 +78,7 @@ export const useAffiliateInvoices = () => {
 
   const sendInvoice = useMutation({
     mutationFn: async (invoiceId: string) => {
-      const { data, error } = await supabase.functions.invoke('send-affiliate-invoice', {
+      const { data, error } = await lovableFunctions.functions.invoke('send-affiliate-invoice', {
         body: { invoiceId },
       });
 

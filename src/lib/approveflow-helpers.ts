@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 
 /**
  * Create an ApproveFlow project from a MightyCustomer quote
@@ -49,7 +49,7 @@ export async function createApproveFlowProjectFromQuote(
     });
 
     // Trigger event for Klaviyo notification
-    await supabase.functions.invoke('approveflow-event', {
+    await lovableFunctions.functions.invoke('approveflow-event', {
       body: {
         eventType: 'design_requested',
         projectId: project.id,
@@ -62,7 +62,7 @@ export async function createApproveFlowProjectFromQuote(
     if (SEND_CUSTOMER_EMAILS && quoteData.customerEmail) {
       const customerPortalUrl = `${window.location.origin}/customer/${project.id}`;
       
-      await supabase.functions.invoke('send-klaviyo-event', {
+      await lovableFunctions.functions.invoke('send-klaviyo-event', {
         body: {
           eventName: 'approveflow_customer_welcome',
           customerEmail: quoteData.customerEmail,
@@ -156,7 +156,7 @@ export async function save3DRendersToApproveFlow(
     if (error) throw error;
 
     // Trigger event for Klaviyo + WooCommerce notification
-    await supabase.functions.invoke('approveflow-event', {
+    await lovableFunctions.functions.invoke('approveflow-event', {
       body: {
         eventType: '3d_render_ready',
         projectId,

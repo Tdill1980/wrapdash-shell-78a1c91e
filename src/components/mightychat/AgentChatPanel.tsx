@@ -18,7 +18,7 @@ import { AVAILABLE_AGENTS } from "./AgentSelector";
 import { AgentChatFileUpload, type Attachment } from "./AgentChatFileUpload";
 import { RecentAgentChats } from "./RecentAgentChats";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ProducerJob, ProducerJobClip, ProducerJobOverlay } from "@/types/ProducerJob";
 import { 
@@ -455,7 +455,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                             if (!rawCreateContentBlock) return;
                             setIsPreviewing(true);
                             try {
-                              const { data, error } = await supabase.functions.invoke("execute-create-content", {
+                              const { data, error } = await lovableFunctions.functions.invoke("execute-create-content", {
                                 body: {
                                   conversation_id: (context as any)?.conversationId ?? null,
                                   organization_id: (context as any)?.organizationId ?? null,
@@ -495,7 +495,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                             if (!rawCreateContentBlock) return;
                             setIsRendering(true);
                             try {
-                              const { data, error } = await supabase.functions.invoke("execute-create-content", {
+                              const { data, error } = await lovableFunctions.functions.invoke("execute-create-content", {
                                 body: {
                                   conversation_id: (context as any)?.conversationId ?? null,
                                   organization_id: (context as any)?.organizationId ?? null,

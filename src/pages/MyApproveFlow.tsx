@@ -14,7 +14,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { MyApproveFlowHeader } from "@/components/myapproveflow/MyApproveFlowHeader";
 import { MyApproveFlowViewGrid } from "@/components/myapproveflow/MyApproveFlowViewGrid";
@@ -206,7 +206,7 @@ export default function MyApproveFlow() {
 
     setApproving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("approve-approveflow-proof", {
+      const { data, error } = await lovableFunctions.functions.invoke("approve-approveflow-proof", {
         body: {
           proof_version_id: proofVersion.id,
           customer_name: customerName.trim()

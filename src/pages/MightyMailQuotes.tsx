@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { Eye, Mail, RefreshCw, Search, Pencil, MessageSquare, Instagram, Zap, ExternalLink } from "lucide-react";
 import { EmailPreviewDialog } from "@/components/mightymail/EmailPreviewDialog";
 import { QuoteEditDialog } from "@/components/mightymail/QuoteEditDialog";
@@ -67,7 +67,7 @@ export default function MightyMailQuotes() {
   async function runRetargeting() {
     setRunningRetargeting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("run-quote-followups");
+      const { data, error } = await lovableFunctions.functions.invoke("run-quote-followups");
       
       if (error) throw error;
       
@@ -158,7 +158,7 @@ export default function MightyMailQuotes() {
   async function sendOrderConfirmation(quote: Quote) {
     setSendingEmail(quote.id);
     try {
-      const { data, error } = await supabase.functions.invoke("send-mightymail-quote", {
+      const { data, error } = await lovableFunctions.functions.invoke("send-mightymail-quote", {
         body: {
           customerEmail: quote.customer_email,
           customerName: quote.customer_name,

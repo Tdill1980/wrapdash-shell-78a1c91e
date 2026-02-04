@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle, Loader2, Instagram } from "lucide-react";
 
@@ -19,7 +19,7 @@ const InstagramTokenExchange = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("exchange-instagram-token", {
+      const { data, error } = await lovableFunctions.functions.invoke("exchange-instagram-token", {
         body: { short_lived_token: token.trim() },
       });
 

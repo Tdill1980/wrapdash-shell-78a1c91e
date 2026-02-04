@@ -14,7 +14,7 @@ import {
   Send
 } from "lucide-react";
 import { useDropzone } from "react-dropzone";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 
@@ -103,7 +103,7 @@ export function QuoteUploadPanel({
 
       // If send email is enabled, call edge function to email the quote
       if (sendEmail && customerEmail) {
-        const { error: sendError } = await supabase.functions.invoke('send-admin-reply', {
+        const { error: sendError } = await lovableFunctions.functions.invoke('send-admin-reply', {
           body: {
             conversationId: conversation.id,
             toEmail: customerEmail,

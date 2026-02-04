@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CreditCard, Package, AlertCircle } from "lucide-react";
 
@@ -70,7 +70,7 @@ export function PaymentConfirmModal({
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("convert-quote-to-order", {
+      const { data, error } = await lovableFunctions.functions.invoke("convert-quote-to-order", {
         body: {
           quote_id: quoteId,
           payment_method: paymentMethod,

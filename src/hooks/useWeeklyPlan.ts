@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface ContentSuggestion {
@@ -30,7 +30,7 @@ export function useWeeklyPlan() {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
+      const { data, error: fnError } = await lovableFunctions.functions.invoke(
         "ai-weekly-plan",
         {
           body: { organization_id: organizationId },

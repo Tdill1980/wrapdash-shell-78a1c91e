@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { Plus, Send } from "lucide-react";
 
 export default function SequenceManager() {
@@ -53,7 +53,7 @@ export default function SequenceManager() {
     }
 
     try {
-      const { error } = await supabase.functions.invoke('send-mightymail-test', {
+      const { error } = await lovableFunctions.functions.invoke('send-mightymail-test', {
         body: {
           testEmail: testEmail,
           campaignName: sequence.name,

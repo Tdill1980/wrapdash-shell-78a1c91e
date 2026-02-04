@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 export interface AffiliateFounder {
   id: string;
@@ -39,7 +39,7 @@ export const affiliateApi = {
     visitorCountry?: string;
     referrerUrl?: string;
   }) {
-    const { data, error } = await supabase.functions.invoke('track-affiliate-card-view', {
+    const { data, error } = await lovableFunctions.functions.invoke('track-affiliate-card-view', {
       body: {
         affiliateCode,
         ...visitorData,
@@ -56,7 +56,7 @@ export const affiliateApi = {
     orderTotal: number;
     productType: string;
   }) {
-    const { data, error } = await supabase.functions.invoke('track-affiliate-signup', {
+    const { data, error } = await lovableFunctions.functions.invoke('track-affiliate-signup', {
       body: {
         refCode,
         email,
@@ -70,7 +70,7 @@ export const affiliateApi = {
 
   // Verify login token and get founder data
   async verifyLogin(token: string): Promise<{ success: boolean; founder?: AffiliateFounder }> {
-    const { data, error } = await supabase.functions.invoke('affiliate-verify-login', {
+    const { data, error } = await lovableFunctions.functions.invoke('affiliate-verify-login', {
       body: { token },
     });
 
@@ -80,7 +80,7 @@ export const affiliateApi = {
 
   // Request magic link
   async requestMagicLink(email: string) {
-    const { data, error } = await supabase.functions.invoke('affiliate-magic-link', {
+    const { data, error } = await lovableFunctions.functions.invoke('affiliate-magic-link', {
       body: { email },
     });
 
@@ -92,7 +92,7 @@ export const affiliateApi = {
   async sendAccessLink(founderEmail: string) {
     const { data: { session } } = await supabase.auth.getSession();
     
-    const { data, error } = await supabase.functions.invoke('send-affiliate-access-link', {
+    const { data, error } = await lovableFunctions.functions.invoke('send-affiliate-access-link', {
       body: { founderEmail },
       headers: {
         Authorization: `Bearer ${session?.access_token}`,

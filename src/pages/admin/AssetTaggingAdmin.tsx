@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,7 +87,7 @@ const AssetTaggingAdmin = () => {
         ? { video_id: asset.id }
         : { content_file_id: asset.id };
 
-      const { error } = await supabase.functions.invoke(functionName, { body });
+      const { error } = await lovableFunctions.functions.invoke(functionName, { body });
 
       if (error) throw error;
 

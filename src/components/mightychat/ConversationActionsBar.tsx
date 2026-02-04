@@ -18,7 +18,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -67,7 +67,7 @@ export function ConversationActionsBar({
         add_to_order: "ADD TO ORDER",
       };
 
-      const { data, error } = await supabase.functions.invoke("forward-to-team", {
+      const { data, error } = await lovableFunctions.functions.invoke("forward-to-team", {
         body: {
           conversation_id: conversationId,
           to_email: TEAM_EMAILS[assignedTo],
@@ -258,7 +258,7 @@ export function ConversationActionsBar({
         }
       });
 
-      const { error } = await supabase.functions.invoke("forward-to-team", {
+      const { error } = await lovableFunctions.functions.invoke("forward-to-team", {
         body: {
           conversation_id: conversationId,
           to_email: TEAM_EMAILS.Lance,

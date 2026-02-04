@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,7 +87,7 @@ const AddOrganizationWizard = () => {
       }
 
       // Call enhanced analyze-brand-voice with Instagram scrubbing
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke(
+      const { data: analysisData, error: analysisError } = await lovableFunctions.functions.invoke(
         "analyze-brand-voice-enhanced",
         {
           body: {

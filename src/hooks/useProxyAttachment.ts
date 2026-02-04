@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Domains that need proxying due to browser blocks
@@ -43,7 +43,7 @@ export function useProxyAttachment() {
     setLoading((prev) => ({ ...prev, [url]: true }));
 
     try {
-      const { data, error } = await supabase.functions.invoke("proxy-external-attachment", {
+      const { data, error } = await lovableFunctions.functions.invoke("proxy-external-attachment", {
         body: { url },
       });
 
@@ -77,7 +77,7 @@ export function useProxyAttachment() {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke("proxy-external-attachment", {
+      const { data, error } = await lovableFunctions.functions.invoke("proxy-external-attachment", {
         body: { url },
       });
 

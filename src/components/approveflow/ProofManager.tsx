@@ -27,7 +27,7 @@ import {
   Check
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { formatFullDateTime, formatShortDate } from '@/lib/timezone-utils';
 import type { ProofStatus, RenderSpecVersion, PdfTemplateVersion } from '@/types/approveflow-os';
 
@@ -103,7 +103,7 @@ export function ProofManager({
   const handleResendProof = async (proofId: string) => {
     setIsResending(true);
     try {
-      const { error } = await supabase.functions.invoke('send-approveflow-proof', {
+      const { error } = await lovableFunctions.functions.invoke('send-approveflow-proof', {
         body: { proof_version_id: proofId },
       });
 

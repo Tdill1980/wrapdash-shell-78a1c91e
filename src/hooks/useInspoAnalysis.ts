@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -107,7 +107,7 @@ export function useInspoAnalysis() {
         organizationId = orgMember?.organization_id;
       }
 
-      const { data, error } = await supabase.functions.invoke("analyze-inspo-video", {
+      const { data, error } = await lovableFunctions.functions.invoke("analyze-inspo-video", {
         body: { videoUrl, platform, organizationId },
       });
 

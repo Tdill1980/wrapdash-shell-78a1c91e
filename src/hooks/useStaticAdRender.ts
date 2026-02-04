@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 export interface RenderResult {
   render_id: string;
@@ -29,7 +29,7 @@ export function useStaticAdRender() {
 
   const pollStatus = useCallback(async (renderId: string) => {
     try {
-      const { data, error: fnError } = await supabase.functions.invoke(
+      const { data, error: fnError } = await lovableFunctions.functions.invoke(
         "render-static-ad",
         {
           body: { action: "status", render_id: renderId },
@@ -100,7 +100,7 @@ export function useStaticAdRender() {
       stopPolling();
 
       try {
-        const { data, error: fnError } = await supabase.functions.invoke(
+        const { data, error: fnError } = await lovableFunctions.functions.invoke(
           "render-static-ad",
           {
             body: {

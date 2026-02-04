@@ -5,7 +5,7 @@
 
 import { parseAgentResponse, detectResponseMode, AgentResponse } from "@/lib/agentProtocol";
 import { loadConversationMemory, appendConversationMemory, MemoryMessage } from "@/lib/agentMemory";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 // Feature flags - flip these to disable features without code changes
 export const AGENT_CONFIG = {
@@ -219,7 +219,7 @@ export async function runAgentTurn(params: {
   }
 
   // Call the agent-chat edge function
-  const { data, error } = await supabase.functions.invoke("agent-chat", {
+  const { data, error } = await lovableFunctions.functions.invoke("agent-chat", {
     body: {
       chat_id: chatId,
       message: userMessage,

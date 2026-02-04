@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Loader2, Eye, RefreshCw } from "lucide-react";
@@ -44,7 +44,7 @@ export default function ApproveFlowList() {
         description: 'Fetching recent orders from WooCommerce...',
       });
 
-      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+      const { data, error } = await lovableFunctions.functions.invoke('sync-woo-manual', {
         body: { target: 'approveflow', days: 5 }
       });
 

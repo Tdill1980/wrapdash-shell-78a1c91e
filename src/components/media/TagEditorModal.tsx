@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { X, Plus, Wand2, Loader2, AlertTriangle } from "lucide-react";
 import { TAG_LABELS, VALID_STYLE_TAGS, VALID_VISUAL_TAGS, VALID_QUALITY_TAGS } from "@/lib/style-tag-rules";
@@ -76,7 +76,7 @@ export function TagEditorModal({ file, open, onClose, onSave }: TagEditorModalPr
   const handleAIRetag = async () => {
     setRetagging(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-tag-video", {
+      const { data, error } = await lovableFunctions.functions.invoke("ai-tag-video", {
         body: {
           content_file_id: file.id,
           video_url: file.file_url,

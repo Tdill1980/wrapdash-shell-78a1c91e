@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
@@ -44,7 +44,7 @@ export default function ShopFlowList() {
   const handleManualSync = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-woo-manual', {
+      const { data, error } = await lovableFunctions.functions.invoke('sync-woo-manual', {
         body: { target: 'shopflow', days: parseInt(selectedDays) }
       });
 

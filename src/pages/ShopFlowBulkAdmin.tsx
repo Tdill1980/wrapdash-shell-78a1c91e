@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useShopFlow } from "@/hooks/useShopFlow";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { RefreshCw, Zap, Search, Package, DollarSign, MapPin, Clock } from "lucide-react";
 import { formatTimeAZ } from "@/lib/timezone";
@@ -74,7 +74,7 @@ export default function ShopFlowBulkAdmin() {
         ?.filter((o) => selectedOrders.has(o.id))
         .map((o) => o.order_number) || [];
 
-      const { data, error } = await supabase.functions.invoke("bulk-sync-orders", {
+      const { data, error } = await lovableFunctions.functions.invoke("bulk-sync-orders", {
         body: { orderNumbers },
       });
 
@@ -139,7 +139,7 @@ export default function ShopFlowBulkAdmin() {
   const handleBackfillOrderTotals = async () => {
     setIsBackfilling(true);
     try {
-      const { data, error } = await supabase.functions.invoke("backfill-order-totals");
+      const { data, error } = await lovableFunctions.functions.invoke("backfill-order-totals");
 
       if (error) throw error;
 

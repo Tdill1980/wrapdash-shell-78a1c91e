@@ -2,7 +2,7 @@ import { Mic, X, Sparkles, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 
 interface VoiceCommandProps {
   onTranscript: (transcript: string, parsedData: any) => void;
@@ -39,7 +39,7 @@ export default function VoiceCommand({ onTranscript }: VoiceCommandProps) {
         console.log('Voice transcript received:', transcript);
         
         // Call parse-voice-quote edge function for structured extraction
-        const { data, error } = await supabase.functions.invoke('parse-voice-quote', {
+        const { data, error } = await lovableFunctions.functions.invoke('parse-voice-quote', {
           body: { transcript }
         });
         

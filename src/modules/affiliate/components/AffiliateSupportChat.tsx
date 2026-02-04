@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -55,7 +55,7 @@ export const AffiliateSupportChat = ({ founderId, founderName }: AffiliateSuppor
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('affiliate-support-chat', {
+      const { data, error } = await lovableFunctions.functions.invoke('affiliate-support-chat', {
         body: {
           founderId,
           founderName,

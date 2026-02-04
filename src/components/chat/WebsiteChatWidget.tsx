@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send, Car, Palette, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -60,7 +60,7 @@ export function WebsiteChatWidget() {
     setShowQuickActions(false);
 
     try {
-      const { data, error } = await supabase.functions.invoke("website-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
         body: {
           org: "wpw",
           agent: "wpw_ai_team",

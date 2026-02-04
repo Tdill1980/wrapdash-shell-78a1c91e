@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send, Paperclip, Image, Film, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -177,7 +177,7 @@ export function ChatWithUpload({
     onMessageSent?.(userMessage);
 
     try {
-      const { data, error } = await supabase.functions.invoke("website-chat", {
+      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
         body: {
           org,
           agent,

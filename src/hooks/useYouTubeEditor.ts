@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface Scene {
@@ -157,7 +157,7 @@ export function useYouTubeEditor() {
     setProcessingStatus("uploading");
 
     try {
-      const { data, error } = await supabase.functions.invoke("yt-analyze", {
+      const { data, error } = await lovableFunctions.functions.invoke("yt-analyze", {
         body: { file_url: fileUrl, organization_id: organizationId }
       });
 
@@ -251,7 +251,7 @@ export function useYouTubeEditor() {
     setProcessingStatus("enhancing");
 
     try {
-      const { data, error } = await supabase.functions.invoke("yt-enhance-longform", {
+      const { data, error } = await lovableFunctions.functions.invoke("yt-enhance-longform", {
         body: { job_id: jobId, transcript }
       });
 

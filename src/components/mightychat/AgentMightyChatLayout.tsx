@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -551,7 +551,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
   const handleBackfillProfiles = async () => {
     setBackfillLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("backfill-instagram-profiles");
+      const { data, error } = await lovableFunctions.functions.invoke("backfill-instagram-profiles");
       if (error) throw error;
       toast.success(`Updated ${data.updated} of ${data.total} Instagram contacts`);
       loadConversations();
@@ -580,7 +580,7 @@ export function AgentMightyChatLayout({ onOpenOpsDesk, initialConversationId, in
       const instagramSenderId = (contact?.metadata as any)?.instagram_sender_id;
 
       if (selectedConversation.channel === "instagram" && instagramSenderId) {
-        const { error } = await supabase.functions.invoke("send-instagram-reply", {
+        const { error } = await lovableFunctions.functions.invoke("send-instagram-reply", {
           body: { recipient: instagramSenderId, message: messageText }
         });
         if (error) throw error;

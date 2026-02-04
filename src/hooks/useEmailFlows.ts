@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, lovableFunctions } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -186,7 +186,7 @@ export function useEmailFlows() {
   }) => {
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-email-flow', {
+      const { data, error } = await lovableFunctions.functions.invoke('generate-email-flow', {
         body: params,
       });
       if (error) throw error;
@@ -229,7 +229,7 @@ export function useEmailFlows() {
   // Send test email
   const sendTestEmail = async (stepId: string) => {
     try {
-      const { error } = await supabase.functions.invoke('send-mightymail-test', {
+      const { error } = await lovableFunctions.functions.invoke('send-mightymail-test', {
         body: { stepId, testMode: true },
       });
       if (error) throw error;

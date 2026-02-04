@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { MetaPlacement } from "@/lib/meta-ads";
 
 export interface VideoAnalysis {
@@ -86,7 +86,7 @@ export function useMetaVideoAdGenerator() {
       setRenderedUrl(null);
 
       try {
-        const { data, error: fnError } = await supabase.functions.invoke(
+        const { data, error: fnError } = await lovableFunctions.functions.invoke(
           "ai-generate-video-ad",
           {
             body: {
@@ -138,7 +138,7 @@ export function useMetaVideoAdGenerator() {
       setError(null);
 
       try {
-        const { data, error: fnError } = await supabase.functions.invoke(
+        const { data, error: fnError } = await lovableFunctions.functions.invoke(
           "render-video-reel",
           {
             body: {
@@ -182,7 +182,7 @@ export function useMetaVideoAdGenerator() {
       }
 
       try {
-        const { data } = await supabase.functions.invoke("render-video-reel", {
+        const { data } = await lovableFunctions.functions.invoke("render-video-reel", {
           body: { action: "status", render_id: renderId },
         });
 
