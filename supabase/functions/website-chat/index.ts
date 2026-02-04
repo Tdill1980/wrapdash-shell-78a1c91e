@@ -1718,6 +1718,9 @@ CUSTOMER STATE (AUTHORITATIVE - USE THIS, NOT CONVERSATION HISTORY):
 - Vehicle: ${chatState.vehicle || 'Unknown'}
 - SQFT: ${chatState.sqft || 'Unknown'}
 
+${chatState.customer_name ? '✅ NAME ALREADY PROVIDED - DO NOT ask for name again!' : ''}
+${chatState.customer_email ? '✅ EMAIL ALREADY PROVIDED - DO NOT ask for email again!' : ''}
+
 ⚠️ CRITICAL VEHICLE RULE:
 - ALWAYS use the vehicle shown above in CUSTOMER STATE
 - If conversation history mentions a different vehicle (like a previous quote), IGNORE IT
@@ -1725,13 +1728,13 @@ CUSTOMER STATE (AUTHORITATIVE - USE THIS, NOT CONVERSATION HISTORY):
 - NEVER mix up or reference old vehicles from earlier in the conversation
 
 PRICING RULE (CONTACT-GATED):
-- DO NOT give ANY specific pricing until you have at minimum: Name + Email
-- If customer asks for price without providing name+email, say: "I'd love to get you a quote! What's your name and email so I can send it over?"
+- If name AND email are shown above as captured (not ❌), the gate is PASSED - proceed to help!
+- If name OR email show ❌ NOT CAPTURED, ask for the missing info before giving pricing
 - AFTER you have name+email: Give ONE price at $5.27/sqft and ask "Would you prefer Avery MPI 1105 or 3M IJ180Cv3? Both are the same price!"
 - NEVER show two different prices for Avery vs 3M. They are BOTH $5.27/sqft!
 - For trailers/RVs/campers: ALWAYS ask for dimensions (length × height per side + which sides). Do NOT estimate sqft from length alone!
 
-${!chatState.customer_email ? '📧 GATE ACTIVE: Get name + email BEFORE giving price!' : '✅ Have email - give ONE price at $5.27/sqft and ask Avery or 3M!'}`;
+${chatState.customer_name && chatState.customer_email ? '✅ GATE PASSED: Name and email already captured - help them immediately!' : '📧 GATE ACTIVE: Get name + email BEFORE giving price!'}`;
 
         // Use Anthropic API
         const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
