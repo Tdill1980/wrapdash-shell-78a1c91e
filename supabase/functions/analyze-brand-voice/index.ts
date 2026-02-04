@@ -48,12 +48,12 @@ serve(async (req) => {
     }
 
     // Call AI to analyze brand voice
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openaiKey) {
-      throw new Error("OpenAI API key not configured");
+    const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("Gemini API key not configured");
     }
 
-    const systemPrompt = `You are a brand voice analyst specializing in automotive wrap shops. Analyze the provided business information and extract a comprehensive brand voice profile.
+    const prompt = `You are a brand voice analyst specializing in automotive wrap shops. Analyze the provided business information and extract a comprehensive brand voice profile.
 
 Return a JSON object with this exact structure:
 {
@@ -79,36 +79,36 @@ Return a JSON object with this exact structure:
   }
 }
 
-Be specific to the wrap industry. If analyzing a shop that does full wraps, PPF, and tint, incorporate that into the voice. If they focus on high-end vehicles, reflect that premium positioning.`;
+Be specific to the wrap industry. If analyzing a shop that does full wraps, PPF, and tint, incorporate that into the voice. If they focus on high-end vehicles, reflect that premium positioning.
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: `Analyze this wrap shop and create their brand voice profile:\n\n${contextData}`,
-          },
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      }),
-    });
+Analyze this wrap shop and create their brand voice profile:
+
+${contextData}
+
+Return ONLY the JSON object, no markdown.`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7 }
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[analyze-brand-voice] OpenAI error:", errorText);
+      console.error("[analyze-brand-voice] Gemini error:", errorText);
       throw new Error("AI analysis failed");
     }
 
     const data = await response.json();
-    const voiceProfile = JSON.parse(data.choices[0].message.content);
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+    const voiceProfile = JSON.parse(jsonMatch ? jsonMatch[0] : "{}");
 
     console.log("[analyze-brand-voice] Generated profile for:", shopName);
 

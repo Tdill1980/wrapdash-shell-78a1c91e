@@ -611,34 +611,31 @@ serve(async (req) => {
         systemPrompt: "You are a helpful assistant.",
       };
 
-      const openAIKey = Deno.env.get("OPENAI_API_KEY");
-      if (!openAIKey) throw new Error("OpenAI API key not configured");
+      const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+      if (!GEMINI_API_KEY) throw new Error("Gemini API key not configured");
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${openAIKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: agentConfig.systemPrompt },
-            { role: "user", content: message },
-          ],
-          temperature: 0.7,
-          max_tokens: 1500,
-        }),
-      });
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              { role: "user", parts: [{ text: `${agentConfig.systemPrompt}\n\nUser: ${message}` }] }
+            ],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("OpenAI error:", errorText);
-        throw new Error(`OpenAI API error: ${response.status}`);
+        console.error("Gemini error:", errorText);
+        throw new Error(`Gemini API error: ${response.status}`);
       }
 
       const aiData = await response.json();
-      const reply = aiData.choices?.[0]?.message?.content || "Unable to generate response.";
+      const reply = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "Unable to generate response.";
 
       return new Response(
         JSON.stringify({

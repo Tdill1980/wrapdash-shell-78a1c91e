@@ -370,46 +370,83 @@ serve(async (req) => {
       throw new Error('No video source provided. Please provide youtube_url, video_url, or audio_base64');
     }
 
-    // Prepare form data for OpenAI Whisper
-    const formData = new FormData();
-    formData.append('file', audioBlob, fileName);
-    formData.append('model', 'whisper-1');
-    
-    // Request verbose JSON for timestamps
-    if (include_timestamps) {
-      formData.append('response_format', 'verbose_json');
-      formData.append('timestamp_granularities[]', 'segment');
-    }
-    
-    if (language) {
-      formData.append('language', language);
+    // Get Gemini API key
+    const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
 
-    console.log('Sending to OpenAI Whisper...');
-    
-    // Send to OpenAI Whisper
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-      },
-      body: formData,
-    });
+    // Convert blob to base64
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+    }
+    const audioBase64 = btoa(binary);
+
+    console.log('Sending to Gemini for transcription...');
+
+    const transcriptionPrompt = include_timestamps
+      ? `Transcribe this audio with timestamps. Return a JSON object with this structure:
+{
+  "text": "full transcription text",
+  "segments": [
+    {"start": 0.0, "end": 2.5, "text": "segment text"},
+    ...
+  ]
+}
+Return ONLY the JSON, no markdown.`
+      : `Transcribe this audio. Return ONLY the transcription text, nothing else.`;
+
+    // Send to Gemini
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: transcriptionPrompt },
+              { inlineData: { mimeType: mimeType, data: audioBase64 } }
+            ]
+          }]
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('Gemini API error:', errorText);
       throw new Error(`Transcription failed: ${errorText}`);
     }
 
-    const result = await response.json();
-    console.log('Transcription complete, segments:', result.segments?.length || 0);
+    const geminiResult = await response.json();
+    const textContent = geminiResult.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log('Transcription complete');
+
+    // Parse result based on whether timestamps were requested
+    let result: any = { text: textContent };
+    if (include_timestamps) {
+      try {
+        const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        console.log('Could not parse timestamps, using plain text');
+        result = { text: textContent, segments: [] };
+      }
+    }
 
     // Format the response based on output_format
     const segments = result.segments?.map((seg: any) => ({
-      start: seg.start,
-      end: seg.end,
-      text: seg.text
+      start: seg.start || 0,
+      end: seg.end || 0,
+      text: seg.text || ""
     })) || [];
 
     let formattedOutput: string | undefined;

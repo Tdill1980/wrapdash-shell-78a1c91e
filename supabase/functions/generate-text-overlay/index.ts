@@ -31,11 +31,11 @@ serve(async (req) => {
   console.log("[generate-text-overlay] ====== FUNCTION INVOKED ======");
 
   try {
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      console.error("[generate-text-overlay] Missing OPENAI_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      console.error("[generate-text-overlay] Missing GOOGLE_AI_API_KEY");
       return new Response(
-        JSON.stringify({ error: "OpenAI API key not configured" }),
+        JSON.stringify({ error: "Gemini API key not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -66,7 +66,7 @@ serve(async (req) => {
       content: "This is content - make it compelling and relevant.",
     };
 
-    const systemPrompt = `You are an expert video marketing copywriter for WePrintWraps, a B2B print-on-demand company serving wrap installers.
+    const fullPrompt = `You are an expert video marketing copywriter for WePrintWraps, a B2B print-on-demand company serving wrap installers.
 
 BRAND VOICE:
 - Direct, punchy, no fluff
@@ -87,43 +87,37 @@ ${prompt ? `ADDITIONAL DIRECTION: ${prompt}` : ""}
 
 ${scene.text ? `CURRENT TEXT TO IMPROVE: "${scene.text}"` : ""}
 
-Generate ONE short, punchy text overlay. Return ONLY the text, nothing else.`;
+Generate ONE short, punchy text overlay. Return ONLY the text, nothing else.
 
-    console.log("[generate-text-overlay] Calling OpenAI...");
+${scene.text
+  ? `Improve or regenerate this overlay text: "${scene.text}"`
+  : `Generate a text overlay for a ${scene.purpose || 'content'} scene (${scene.start}s - ${scene.end}s)`}`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { 
-            role: 'user', 
-            content: scene.text 
-              ? `Improve or regenerate this overlay text: "${scene.text}"` 
-              : `Generate a text overlay for a ${scene.purpose || 'content'} scene (${scene.start}s - ${scene.end}s)`
-          }
-        ],
-        max_tokens: 50,
-        temperature: 0.8,
-      }),
-    });
+    console.log("[generate-text-overlay] Calling Gemini...");
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+          generationConfig: { maxOutputTokens: 50, temperature: 0.8 }
+        }),
+      }
+    );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("[generate-text-overlay] OpenAI error:", errorData);
+      const errorData = await response.text();
+      console.error("[generate-text-overlay] Gemini error:", errorData);
       return new Response(
-        JSON.stringify({ error: `OpenAI error: ${response.status}` }),
+        JSON.stringify({ error: `Gemini error: ${response.status}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const data = await response.json();
-    const generatedText = data.choices?.[0]?.message?.content?.trim() || "";
+    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
     // Clean up the response - remove quotes if present
     const cleanText = generatedText.replace(/^["']|["']$/g, '').trim();

@@ -101,7 +101,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log('[AdminJordan] Received:', { message: message.substring(0, 50), current_page });
@@ -276,7 +276,7 @@ serve(async (req) => {
     }
 
     // General AI response with context
-    if (!openaiKey) {
+    if (!GEMINI_API_KEY) {
       return new Response(JSON.stringify({
         response: "I can help you with WrapCommand! Try asking:\n• How do I use [feature name]?\n• How many quotes this week?\n• What are customers asking about?\n• Directive: [instruction for website chat]",
         type: 'help'
@@ -286,7 +286,7 @@ serve(async (req) => {
     }
 
     // Build context-aware prompt
-    let systemPrompt = `You are WrapCommand Guide - the internal platform education assistant.
+    const systemPrompt = `You are WrapCommand Guide - the internal platform education assistant.
 
 YOUR ROLE:
 - Teach team members how to use WrapCommand features
@@ -308,24 +308,22 @@ ${Object.values(WRAPCOMMAND_FEATURES).map(f => `• ${f.title} (${f.path}): ${f.
 
 Keep responses concise and educational. Use markdown formatting.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ],
-        max_tokens: 500,
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: `${systemPrompt}\n\nUser message: ${message}` }] }
+          ],
+          generationConfig: { maxOutputTokens: 500 }
+        }),
+      }
+    );
 
     const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || "I'm not sure how to help with that. Try asking about a specific feature!";
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm not sure how to help with that. Try asking about a specific feature!";
 
     return new Response(JSON.stringify({ response: aiResponse, type: 'general' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
