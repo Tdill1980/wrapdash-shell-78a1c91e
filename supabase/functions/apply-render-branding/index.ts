@@ -1,11 +1,7 @@
 // ============================================
 // ApproveFlow OS — Render Branding Function
 // ============================================
-// PHASE 1: Additive function — does not modify existing pipeline
-// 
-// Purpose: Apply locked branding to any render image
-// Branding: "WrapCommandAI™ for WPW" + "ApproveFlow™" (top-left)
-//           "Order #XXXXX" (bottom-right)
+// Applies branding overlay using Gemini image generation
 // ============================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -26,111 +22,134 @@ interface BrandingRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { imageUrl, orderNumber, viewLabel } = await req.json() as BrandingRequest;
-    
+
     console.log('[apply-render-branding] Request received:', {
       imageUrl: imageUrl?.substring(0, 50) + '...',
       orderNumber,
       viewLabel
     });
 
-    if (!imageUrl) {
-      throw new Error('imageUrl is required');
-    }
-    if (!orderNumber) {
-      throw new Error('orderNumber is required');
+    if (!imageUrl) throw new Error('imageUrl is required');
+    if (!orderNumber) throw new Error('orderNumber is required');
+
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
-    // Get Lovable API key for AI image editing
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    // Fetch image and convert to base64
+    let imageBase64: string;
+    let mimeType = "image/png";
+
+    if (imageUrl.startsWith('data:')) {
+      const matches = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        mimeType = matches[1];
+        imageBase64 = matches[2];
+      } else {
+        throw new Error("Invalid data URL format");
+      }
+    } else {
+      const imgResponse = await fetch(imageUrl);
+      if (!imgResponse.ok) throw new Error(`Failed to fetch image: ${imgResponse.status}`);
+      mimeType = imgResponse.headers.get("content-type") || "image/png";
+      const imgBuffer = await imgResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(imgBuffer);
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+      }
+      imageBase64 = btoa(binary);
     }
 
-    // Build the branding prompt for AI overlay
-    const brandingPrompt = `
-Add professional branding overlays to this vehicle render image. The overlays must be:
+    const brandingPrompt = `Add professional branding text overlays to this vehicle render image:
 
 TOP-LEFT CORNER:
-- Line 1: "${BRAND_LINE_1}" in black Inter font, small but legible (approximately 16-20px equivalent)
-- Line 2: "${BRAND_LINE_2}" directly below, same styling but slightly smaller
+- Line 1: "${BRAND_LINE_1}" in small black text
+- Line 2: "${BRAND_LINE_2}" below it, same style
 
 BOTTOM-RIGHT CORNER:
-- Text: "Order #${orderNumber}" in black Inter font, same size as top branding
-${viewLabel ? `- Below that: "${viewLabel}" in slightly smaller text` : ''}
+- Text: "Order #${orderNumber}" in small black text
+${viewLabel ? `- Below: "${viewLabel}"` : ''}
 
-CRITICAL RULES:
-- Branding must be subtle but clearly readable
-- Use a very slight semi-transparent white background behind text for readability
-- Do NOT modify the vehicle or wrap design in any way
-- Do NOT change the studio environment
-- Only add the text overlays exactly as specified
-- Text should be crisp and professional
-`.trim();
+RULES:
+- Add slight semi-transparent white background behind text for readability
+- DO NOT modify the vehicle or wrap design
+- DO NOT change the studio environment
+- Only add the text overlays
+- Keep text crisp and professional`;
 
-    console.log('[apply-render-branding] Calling AI for branding overlay...');
+    console.log('[apply-render-branding] Calling Gemini for branding...');
 
-    // Call AI to apply branding
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: brandingPrompt },
-              { type: 'image_url', image_url: { url: imageUrl } }
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: brandingPrompt },
+              { inlineData: { mimeType, data: imageBase64 } }
             ]
+          }],
+          generationConfig: {
+            responseModalities: ["image", "text"]
           }
-        ],
-        modalities: ['image', 'text']
-      })
-    });
+        })
+      }
+    );
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('[apply-render-branding] AI API error:', errorText);
-      throw new Error(`AI API error: ${aiResponse.status}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const brandedImageBase64 = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!brandedImageBase64) {
-      console.error('[apply-render-branding] No image in AI response');
-      // Return original image URL if branding fails (graceful degradation)
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('[apply-render-branding] Gemini error:', error);
+      // Graceful fallback - return original image
       return new Response(JSON.stringify({
         success: true,
         brandedUrl: imageUrl,
-        warning: 'Branding could not be applied, returning original'
+        warning: 'Branding API error, returning original'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log('[apply-render-branding] Branding applied successfully');
+    const data = await response.json();
+    const parts = data?.candidates?.[0]?.content?.parts || [];
 
-    // Return the branded image (base64)
+    const inlineImage = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
+
+    if (inlineImage?.inlineData?.data) {
+      const brandedUrl = `data:${inlineImage.inlineData.mimeType};base64,${inlineImage.inlineData.data}`;
+      console.log('[apply-render-branding] Branding applied successfully');
+
+      return new Response(JSON.stringify({
+        success: true,
+        brandedUrl,
+        brandingApplied: {
+          line1: BRAND_LINE_1,
+          line2: BRAND_LINE_2,
+          orderNumber: `Order #${orderNumber}`,
+          viewLabel: viewLabel || null
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // No image returned - return original
+    console.log('[apply-render-branding] No image in response, returning original');
     return new Response(JSON.stringify({
       success: true,
-      brandedUrl: brandedImageBase64,
-      brandingApplied: {
-        line1: BRAND_LINE_1,
-        line2: BRAND_LINE_2,
-        orderNumber: `Order #${orderNumber}`,
-        viewLabel: viewLabel || null
-      }
+      brandedUrl: imageUrl,
+      warning: 'No branded image generated, returning original'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

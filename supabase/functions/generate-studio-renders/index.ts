@@ -34,7 +34,7 @@ interface StudioRenderRequest {
 // ============================================
 // OS CONSTANTS — LOCKED (mirrored from src/lib/os-constants.ts)
 // ============================================
-const USE_BRANDED_RENDER_PIPELINE = false; // Phase 2 kill switch - DISABLED until LOVABLE_API_KEY is configured
+const USE_BRANDED_RENDER_PIPELINE = true; // Phase 2 - uses Gemini for branding
 const BRAND_LINE_1 = "WrapCommandAI™ for WPW";
 const BRAND_LINE_2 = "ApproveFlow™";
 
