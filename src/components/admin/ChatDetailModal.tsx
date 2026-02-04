@@ -20,7 +20,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 function getCountryFlag(countryCode?: string): string {
   if (!countryCode || countryCode.length !== 2) return "🌍";
@@ -48,7 +48,29 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
   const { data: events, isLoading: eventsLoading } = useConversationEvents(conversation?.id || null);
   const { data: quotes, isLoading: quotesLoading } = useConversationQuotes(conversation?.id || null);
   const escalationStatus = useEscalationStatus(events);
-  
+
+  // Fetch messages for this conversation (fixes "0 messages" issue)
+  const { data: fetchedMessages, isLoading: messagesLoading } = useQuery({
+    queryKey: ['conversation-messages', conversation?.id],
+    queryFn: async () => {
+      if (!conversation?.id) return [];
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, content, direction, sender_name, created_at, metadata')
+        .eq('conversation_id', conversation.id)
+        .order('created_at', { ascending: true })
+        .limit(500);
+
+      if (error) {
+        console.error('Failed to fetch messages:', error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!conversation?.id && open,
+    refetchInterval: 10000, // Refresh every 10 seconds while open
+  });
+
   if (!conversation) return null;
 
   const logEvent = async (eventType: string, payload: Record<string, unknown> = {}) => {
@@ -118,6 +140,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
 
       setLiveReplyText('');
       queryClient.invalidateQueries({ queryKey: ['website-page-chats'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversation.id] });
       toast.success('Message sent to chat widget');
     } catch (err) {
       console.error('Failed to send live reply:', err);
@@ -130,7 +153,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
   const geo = conversation.metadata?.geo;
   const chatState = conversation.chat_state;
   const contact = conversation.contact;
-  const messages = conversation.messages || [];
+  const messages = fetchedMessages || [];
   const escalations = chatState?.escalations_sent || [];
   const vehicle = chatState?.vehicle;
 
@@ -175,7 +198,7 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
               <TabsList className="mb-3">
                 <TabsTrigger value="transcript" className="gap-2">
                   <MessageSquare className="h-4 w-4" />
-                  Transcript ({messages.length})
+                  Transcript {messagesLoading ? '(...)' : `(${messages.length})`}
                 </TabsTrigger>
                 <TabsTrigger value="timeline" className="gap-2">
                   <AlertCircle className="h-4 w-4" />
@@ -199,7 +222,11 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
               <TabsContent value="transcript" className="mt-0 flex flex-col">
                 <ScrollArea className="h-[calc(90vh-300px)] border rounded-t-lg bg-muted/30 p-4">
                   <div className="space-y-3">
-                    {messages.length === 0 ? (
+                    {messagesLoading ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        Loading messages...
+                      </div>
+                    ) : messages.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">
                         No messages recorded
                       </div>
