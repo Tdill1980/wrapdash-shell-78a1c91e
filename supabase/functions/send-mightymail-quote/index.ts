@@ -233,7 +233,7 @@ function renderEmailTemplate(
         <div style="font-size:13px;color:#6b7280;">
           ${vehicleDisplay !== 'Your Vehicle' ? `<strong>Vehicle:</strong> ${vehicleDisplay}<br/>` : ''}
           ${sqft > 0 ? `<strong>Coverage:</strong> ${sqft} sq ft<br/>` : ''}
-          <strong>Material:</strong> Premium Cast Vinyl<br/>
+          <strong>Material:</strong> ${data.product_name || 'Premium Cast Vinyl'}<br/>
           <em style="color:#9ca3af;">Printed wrap material only. Installation not included.</em>
         </div>
       </div>

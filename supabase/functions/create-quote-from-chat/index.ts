@@ -203,6 +203,11 @@ serve(async (req) => {
     const materialCost = Math.round(sqft * pricePerSqft * 100) / 100;
     const quoteNumber = generateQuoteNumber();
 
+    // Get actual product name from product_type
+    const productName = product_type === '3m'
+      ? '3M IJ180Cv3 with 8518'
+      : 'Avery MPI 1105 with DOL 1460Z';
+
     console.log('[CreateQuoteFromChat] Calculated:', { sqft, pricePerSqft, materialCost, quoteNumber, needsReview });
 
     // Create quote record (using ONLY columns that exist in quotes table)
@@ -219,6 +224,7 @@ serve(async (req) => {
         sqft,
         material_cost: materialCost,
         total_price: materialCost,
+        product_name: productName,
         status: 'created', // Start as 'created', update to 'sent' after email
         source: 'website_chat',
         ai_generated: true,

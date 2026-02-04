@@ -921,6 +921,28 @@ serve(async (req) => {
     if (shopName) chatState.shop_name = shopName;
 
     // ============================================
+    // PRODUCT PREFERENCE DETECTION (Avery vs 3M)
+    // ============================================
+    const averyPattern = /\b(avery|mpi\s*1105|avery\s*mpi|1105)\b/i;
+    const threeMPattern = /\b(3m|three\s*m|ij180|180cv3)\b/i;
+
+    if (averyPattern.test(msg) && !chatState.product_type) {
+      chatState.product_type = 'avery';
+      chatState.product_name = 'Avery MPI 1105 with DOL 1460Z';
+      console.log('[JordanLee] Product preference detected: Avery');
+    } else if (threeMPattern.test(msg) && !chatState.product_type) {
+      chatState.product_type = '3m';
+      chatState.product_name = '3M IJ180Cv3 with 8518';
+      console.log('[JordanLee] Product preference detected: 3M');
+    }
+
+    // Default to Avery if not specified (both same price)
+    if (!chatState.product_type) {
+      chatState.product_type = 'avery';
+      chatState.product_name = 'Avery MPI 1105 with DOL 1460Z';
+    }
+
+    // ============================================
     // DESIGN SERVICE QUESTION
     // ============================================
     const isDesignQuestion = /\b(design|custom design|need.*design|create.*wrap|don't have.*art|no.*artwork|design.*service)\b/i.test(msg);
@@ -1548,6 +1570,7 @@ CRITICAL PRICING RULES:
                 sqft: chatState.sqft || sqft,
                 material_cost: price,
                 total_price: price,
+                product_name: chatState.product_name || 'Avery MPI 1105 with DOL 1460Z',
                 status: 'sent',
                 source: 'website_chat',
                 ai_generated: true,
@@ -1586,7 +1609,7 @@ CRITICAL PRICING RULES:
                 vehicle_year: chatState.vehicle_year || null,
                 vehicle_make: '',
                 vehicle_model: chatState.vehicle || vehicleDisplay,
-                product_type: 'avery',
+                product_type: chatState.product_type || 'avery',
                 send_email: true
               })
             });
