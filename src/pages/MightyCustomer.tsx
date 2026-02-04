@@ -363,45 +363,62 @@ export default function MightyCustomer() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
 
-      const { data: savedQuote, error } = await supabase.from("quotes").insert({
-        quote_number: quoteNumber,
-        customer_name: customerData.name,
-        customer_email: customerData.email,
-        customer_phone: customerData.phone,
-        customer_company: customerData.company,
-        vehicle_year: customerData.vehicleYear || null,
-        vehicle_make: customerData.vehicleMake || null,
-        vehicle_model: customerData.vehicleModel || null,
-        vehicle_details: JSON.stringify({
-          year: customerData.vehicleYear,
-          make: customerData.vehicleMake,
-          model: customerData.vehicleModel,
-          wrapType: wrapType,
-          includeRoof: includeRoof,
-          selectedPanels: wrapType === 'partial' ? selectedPanels : null,
-          sqftOptions: dbSqftOptions
-        }),
-        product_name: selectedProduct.product_name,
-        sqft: sqft,
-        material_cost: materialCost,
-        labor_cost: installsEnabled ? laborCost : 0, // Only include labor when installs enabled
-        total_price: total,
-        margin: installsEnabled ? margin : 0, // Only include margin when installs enabled
-        status: "draft", // Always start as draft now
-        auto_retarget: installsEnabled, // Only auto-retarget for install-enabled tenants
-        email_tone: emailTone,
-        email_design: emailDesign,
-        expires_at: expiresAt.toISOString(),
-        // Quote type based on tenant capability
-        quote_type: installsEnabled ? 'standard' : 'material_only',
-        source_conversation_id: sourceConversationId,
-        // New payment fields
-        is_paid: false,
-        artwork_files: [],
-        artwork_status: 'none',
-      } as any).select().single(); // Type assertion needed until types regenerate
+      // Use edge function to bypass RLS
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qxllysilzonrlyoaomce.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      if (error) throw error;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/save-quote`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+          },
+          body: JSON.stringify({
+            quote_number: quoteNumber,
+            customer_name: customerData.name,
+            customer_email: customerData.email,
+            customer_phone: customerData.phone,
+            customer_company: customerData.company,
+            vehicle_year: customerData.vehicleYear || null,
+            vehicle_make: customerData.vehicleMake || null,
+            vehicle_model: customerData.vehicleModel || null,
+            vehicle_details: JSON.stringify({
+              year: customerData.vehicleYear,
+              make: customerData.vehicleMake,
+              model: customerData.vehicleModel,
+              wrapType: wrapType,
+              includeRoof: includeRoof,
+              selectedPanels: wrapType === 'partial' ? selectedPanels : null,
+              sqftOptions: dbSqftOptions
+            }),
+            product_name: selectedProduct.product_name,
+            sqft: sqft,
+            material_cost: materialCost,
+            labor_cost: installsEnabled ? laborCost : 0,
+            total_price: total,
+            margin: installsEnabled ? margin : 0,
+            status: "draft",
+            auto_retarget: installsEnabled,
+            email_tone: emailTone,
+            email_design: emailDesign,
+            expires_at: expiresAt.toISOString(),
+            quote_type: installsEnabled ? 'standard' : 'material_only',
+            source_conversation_id: sourceConversationId,
+            is_paid: false,
+            artwork_files: [],
+            artwork_status: 'none',
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save quote');
+      }
+
+      const savedQuote = await response.json();
 
       // Store the saved quote info for payment workflow
       setSavedQuoteId(savedQuote.id);

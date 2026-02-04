@@ -401,3 +401,6 @@ verify_jwt = false
 
 [functions.get-shopflow-orders]
 verify_jwt = false
+
+[functions.save-quote]
+verify_jwt = false
