@@ -213,115 +213,48 @@ async function generateSingleView(
   panelUrl: string,
   viewKey: string,
   viewConfig: typeof VIEW_CONFIGS.driver_side,
-  vehicleCategory?: string // Explicit category from detection
+  vehicleCategory?: string
 ): Promise<string | null> {
-  // Determine vehicle type - prefer explicit category, fallback to string detection
+  // Simple vehicle type detection
   const vehicleLower = vehicle.toLowerCase();
+  const isVan = vehicleCategory === 'van' || vehicleLower.includes('van') || vehicleLower.includes('transit') || vehicleLower.includes('sprinter') || vehicleLower.includes('promaster');
+  const isTruck = vehicleCategory === 'truck' || vehicleCategory === 'pickup_truck' || vehicleLower.includes('f-150') || vehicleLower.includes('silverado') || vehicleLower.includes('ram 1500');
 
-  // Priority 1: Explicit category from frontend detection
-  let isVan = vehicleCategory === 'van';
-  let isTruck = vehicleCategory === 'truck' || vehicleCategory === 'pickup_truck';
-  let isSuv = vehicleCategory === 'suv';
-  let isCar = vehicleCategory === 'car';
-
-  // Priority 2: Fallback to string detection if no explicit category
-  if (!vehicleCategory) {
-    isVan = vehicleLower.includes('van') || vehicleLower.includes('transit') ||
-            vehicleLower.includes('sprinter') || vehicleLower.includes('promaster') ||
-            vehicleLower.includes('cargo');
-    isTruck = vehicleLower.includes('truck') || vehicleLower.includes('f-150') ||
-              vehicleLower.includes('f150') || vehicleLower.includes('silverado') ||
-              vehicleLower.includes('ram 1500') || vehicleLower.includes('pickup');
-  }
-
-  // Build STRONG vehicle type enforcement based on detected/specified category
-  let vehicleTypeEnforcement = '';
+  // Minimal vehicle type line
+  let vehicleTypeLine = '';
   if (isVan) {
-    vehicleTypeEnforcement = `
-🚐 ⚠️ CRITICAL - THIS IS A CARGO VAN - READ CAREFULLY ⚠️ 🚐
-
-THE VEHICLE TYPE IS: CARGO VAN (${vehicle})
-
-A CARGO VAN looks like this:
-✅ TALL, BOXY, RECTANGULAR body shape (like a box on wheels)
-✅ The cab and cargo area are ONE CONTINUOUS ENCLOSED BODY
-✅ Has SLIDING SIDE DOORS (not swing doors like a pickup)
-✅ Has REAR CARGO DOORS (double doors or lift gate)
-✅ NO OPEN BED - the entire back is enclosed
-✅ Examples: Ford Transit, Mercedes Sprinter, RAM ProMaster, Chevy Express
-
-A cargo van is NOT:
-❌ NOT a pickup truck (no open bed)
-❌ NOT a sedan or SUV
-❌ NOT a box truck (no separate cab)
-
-🛑 ABSOLUTE REQUIREMENT: The rendered vehicle MUST be a TALL BOXY VAN with an enclosed cargo area. If you render a pickup truck with an open bed, THE IMAGE IS WRONG.`;
+    vehicleTypeLine = `VEHICLE TYPE: Cargo Van (tall boxy body, sliding doors, NO open truck bed)`;
   } else if (isTruck) {
-    vehicleTypeEnforcement = `
-🛻 ⚠️ CRITICAL - THIS IS A PICKUP TRUCK - READ CAREFULLY ⚠️ 🛻
-
-THE VEHICLE TYPE IS: PICKUP TRUCK (${vehicle})
-
-A PICKUP TRUCK looks like this:
-✅ Has a CAB (front) + SEPARATE OPEN BED (rear)
-✅ The bed is OPEN TO THE SKY (not enclosed)
-✅ The cab and bed are VISUALLY DISTINCT sections
-✅ May have 2 doors (regular cab) or 4 doors (crew cab)
-✅ Examples: Ford F-150, Chevy Silverado, RAM 1500, Toyota Tundra
-
-A pickup truck is NOT:
-❌ NOT a cargo van (no enclosed boxy cargo area)
-❌ NOT an SUV (has open bed, not enclosed cargo)
-
-🛑 ABSOLUTE REQUIREMENT: The rendered vehicle MUST be a PICKUP TRUCK with an OPEN BED. If you render a cargo van with enclosed cargo area, THE IMAGE IS WRONG.`;
-  } else if (isSuv) {
-    vehicleTypeEnforcement = `
-🚙 THIS IS AN SUV (${vehicle})
-- Sport Utility Vehicle with enclosed cargo area
-- Higher ground clearance than sedans
-- Examples: Ford Explorer, Chevy Tahoe, Toyota 4Runner`;
-  } else if (isCar) {
-    vehicleTypeEnforcement = `
-🚗 THIS IS A CAR (${vehicle})
-- Sedan, coupe, or hatchback body style
-- Lower profile than SUVs or vans`;
+    vehicleTypeLine = `VEHICLE TYPE: Pickup Truck (cab + open bed in rear)`;
   }
 
-  const prompt = `You are an expert automotive visualization artist creating a PHOTOREALISTIC studio render.
+  const prompt = `Generate a photorealistic 3D render of a ${vehicle} with this wrap design applied.
 
-TASK: Generate a professional 3D render of a ${vehicle} with the provided wrap design applied.
-${vehicleTypeEnforcement}
+${vehicleTypeLine}
 
 VIEW: ${viewConfig.label}
 CAMERA: ${viewConfig.camera}
-FOCUS: ${viewConfig.focus}
 
 ${STUDIO_ENVIRONMENT}
 
-VEHICLE ACCURACY (ABSOLUTELY CRITICAL):
-✓ The vehicle MUST be exactly a ${vehicle} - correct body type, proportions, and shape
-✓ Match the exact vehicle silhouette - do not substitute a different vehicle type
-✓ If this is a VAN, render a VAN body (tall rectangular cargo area, sliding doors)
-✓ If this is a TRUCK, render a TRUCK body (cab + separate open bed)
-✓ NEVER confuse vans and trucks - they have completely different body shapes
+CRITICAL - WRAP MUST BE VISIBLE:
+- The vehicle MUST display the wrap design from the 2D proof image
+- DO NOT render a blank or unwrapped vehicle
+- All graphics, logos, and text from the proof must appear on the vehicle
+- If you cannot see the company name/logo on the render, it is WRONG
 
-WRAP APPLICATION RULES (CRITICAL):
-✓ Apply the 2D panel artwork as a PROFESSIONALLY INSTALLED vehicle wrap
-✓ Wrap follows all vehicle body contours naturally - doors, fenders, panels, curves
-✓ Design maintains proportions - no stretching, no distortion, no tiling artifacts
-✓ Seamless application across panel gaps and body lines
-✓ Show realistic vinyl wrap material properties - appropriate for the finish
-✓ No bubbles, no wrinkles, no imperfections - professional installation quality
+QUALITY REQUIREMENTS:
+- Ultra high resolution, sharp details
+- Every letter must be crisp and readable
+- Professional wrap shop portfolio quality
+- Good enough to email to a paying customer
 
-PHOTOREALISM REQUIREMENTS (NON-NEGOTIABLE):
-✓ Real-world accurate vehicle proportions and body shape for ${vehicle}
-✓ Physically accurate lighting and shadows
-✓ Realistic material reflections and surface properties
-✓ Professional automotive photography quality
-✓ No cartoon style, no CGI artifacts, no uncanny valley
-✓ The render should be indistinguishable from a real photograph
+TEXT RULES:
+- Do NOT mirror or reverse any text
+- All text must read correctly left-to-right
+- Phone numbers, URLs, company names must be legible
 
-OUTPUT: Single photorealistic image of a ${vehicle}, no text, no labels, no watermarks.`;
+OUTPUT: Single photorealistic studio photo of ${vehicle} with wrap applied.`;
 
   try {
     // Convert image URL to base64 (chunked to avoid stack overflow)
