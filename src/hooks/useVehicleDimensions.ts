@@ -1,27 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-interface VehicleDimensions {
-  id: string;
-  make: string;
-  model: string;
-  year_start: number;
-  year_end: number;
-  side_width: number | null;
-  side_height: number | null;
-  side_sqft: number | null;
-  back_width: number | null;
-  back_height: number | null;
-  back_sqft: number | null;
-  hood_width: number | null;
-  hood_length: number | null;
-  hood_sqft: number | null;
-  roof_width: number | null;
-  roof_length: number | null;
-  roof_sqft: number | null;
-  total_sqft: number | null;
-  corrected_sqft: number;
-}
 
 export interface VehicleSQFTOptions {
   withRoof: number;
@@ -35,35 +12,50 @@ export interface VehicleSQFTOptions {
   };
 }
 
+// Get Supabase URL and key from environment
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://qxllysilzonrlyoaomce.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 export function useVehicleDimensions() {
   const [makes, setMakes] = useState<string[]>([]);
   const [models, setModels] = useState<string[]>([]);
   const [years, setYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch all unique makes on mount
+  // Fetch all unique makes on mount via edge function
   useEffect(() => {
     async function fetchMakes() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("vehicle_dimensions")
-        .select("make")
-        .order("make", { ascending: true });
+      try {
+        // Use current year to get makes (most vehicles will cover current year)
+        const currentYear = new Date().getFullYear();
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/vehicle-list?type=makes&year=${currentYear}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey,
+            },
+          }
+        );
 
-      if (error) {
+        if (!response.ok) {
+          throw new Error('Failed to fetch makes');
+        }
+
+        const data = await response.json();
+        setMakes(data.makes || []);
+      } catch (error) {
         console.error("Error fetching makes:", error);
+        setMakes([]);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const uniqueMakes = [...new Set(data?.map((d) => d.make) || [])];
-      setMakes(uniqueMakes);
-      setLoading(false);
     }
     fetchMakes();
   }, []);
 
-  // Fetch models for a given make
+  // Fetch models for a given make via edge function
   const fetchModels = useCallback(async (make: string) => {
     if (!make) {
       setModels([]);
@@ -71,24 +63,33 @@ export function useVehicleDimensions() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase
-      .from("vehicle_dimensions")
-      .select("model")
-      .eq("make", make)
-      .order("model", { ascending: true });
+    try {
+      const currentYear = new Date().getFullYear();
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/vehicle-list?type=models&year=${currentYear}&make=${encodeURIComponent(make)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+          },
+        }
+      );
 
-    if (error) {
+      if (!response.ok) {
+        throw new Error('Failed to fetch models');
+      }
+
+      const data = await response.json();
+      setModels(data.models || []);
+    } catch (error) {
       console.error("Error fetching models:", error);
+      setModels([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const uniqueModels = [...new Set(data?.map((d) => d.model) || [])];
-    setModels(uniqueModels);
-    setLoading(false);
   }, []);
 
-  // Fetch years for a given make/model, expanding year ranges
+  // Fetch years for a given make/model via edge function
   const fetchYears = useCallback(async (make: string, model: string) => {
     if (!make || !model) {
       setYears([]);
@@ -96,32 +97,32 @@ export function useVehicleDimensions() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase
-      .from("vehicle_dimensions")
-      .select("year_start, year_end")
-      .eq("make", make)
-      .eq("model", model);
+    try {
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/vehicle-list?type=years&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+          },
+        }
+      );
 
-    if (error) {
-      console.error("Error fetching years:", error);
-      setLoading(false);
-      return;
-    }
-
-    // Expand year ranges into individual years
-    const yearSet = new Set<number>();
-    data?.forEach((row) => {
-      for (let y = row.year_start; y <= row.year_end; y++) {
-        yearSet.add(y);
+      if (!response.ok) {
+        throw new Error('Failed to fetch years');
       }
-    });
 
-    const sortedYears = Array.from(yearSet).sort((a, b) => b - a); // Descending
-    setYears(sortedYears);
-    setLoading(false);
+      const data = await response.json();
+      setYears(data.years || []);
+    } catch (error) {
+      console.error("Error fetching years:", error);
+      setYears([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Look up SQFT options for a specific vehicle
+  // Look up SQFT options for a specific vehicle via edge function
   const getSQFTOptions = useCallback(async (
     make: string,
     model: string,
@@ -129,45 +130,58 @@ export function useVehicleDimensions() {
   ): Promise<VehicleSQFTOptions | null> => {
     if (!make || !model || !year) return null;
 
-    const { data, error } = await supabase
-      .from("vehicle_dimensions")
-      .select("*")
-      .eq("make", make)
-      .eq("model", model)
-      .lte("year_start", year)
-      .gte("year_end", year)
-      .maybeSingle();
+    try {
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/vehicle-sqft`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+          },
+          body: JSON.stringify({ year, make, model }),
+        }
+      );
 
-    if (error || !data) {
-      console.log("Vehicle not found in database:", { make, model, year });
+      if (!response.ok) {
+        throw new Error('Failed to fetch SQFT');
+      }
+
+      const data = await response.json();
+
+      if (!data.sqft || data.needs_review) {
+        console.log("Vehicle not found in database:", { make, model, year });
+        return null;
+      }
+
+      // Calculate SQFT options from panel data
+      const panels = data.panels || { sides: 0, back: 0, hood: 0, roof: 0 };
+      const sideSqft = panels.sides || 0;
+      const backSqft = panels.back || 0;
+      const hoodSqft = panels.hood || 0;
+      const roofSqft = panels.roof || 0;
+
+      const withoutRoof = sideSqft + backSqft + hoodSqft;
+      const withRoof = withoutRoof + roofSqft;
+
+      return {
+        withRoof: Math.round(withRoof * 10) / 10,
+        withoutRoof: Math.round(withoutRoof * 10) / 10,
+        roofOnly: Math.round(roofSqft * 10) / 10,
+        panels: {
+          sides: Math.round(sideSqft * 10) / 10,
+          back: Math.round(backSqft * 10) / 10,
+          hood: Math.round(hoodSqft * 10) / 10,
+          roof: Math.round(roofSqft * 10) / 10,
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching SQFT:", error);
       return null;
     }
-
-    const dims = data as VehicleDimensions;
-    
-    // Calculate SQFT options from panel data
-    const sideSqft = dims.side_sqft || 0;
-    const backSqft = dims.back_sqft || 0;
-    const hoodSqft = dims.hood_sqft || 0;
-    const roofSqft = dims.roof_sqft || 0;
-
-    const withoutRoof = sideSqft + backSqft + hoodSqft;
-    const withRoof = withoutRoof + roofSqft;
-
-    return {
-      withRoof: Math.round(withRoof * 10) / 10,
-      withoutRoof: Math.round(withoutRoof * 10) / 10,
-      roofOnly: Math.round(roofSqft * 10) / 10,
-      panels: {
-        sides: Math.round(sideSqft * 10) / 10,
-        back: Math.round(backSqft * 10) / 10,
-        hood: Math.round(hoodSqft * 10) / 10,
-        roof: Math.round(roofSqft * 10) / 10,
-      },
-    };
   }, []);
 
-  // Get the corrected SQFT for quoting
+  // Get the corrected SQFT for quoting via edge function
   const getCorrectedSQFT = useCallback(async (
     make: string,
     model: string,
@@ -175,17 +189,27 @@ export function useVehicleDimensions() {
   ): Promise<number | null> => {
     if (!make || !model || !year) return null;
 
-    const { data, error } = await supabase
-      .from("vehicle_dimensions")
-      .select("corrected_sqft")
-      .eq("make", make)
-      .eq("model", model)
-      .lte("year_start", year)
-      .gte("year_end", year)
-      .maybeSingle();
+    try {
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/vehicle-sqft`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+          },
+          body: JSON.stringify({ year, make, model }),
+        }
+      );
 
-    if (error || !data) return null;
-    return data.corrected_sqft;
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      return data.sqft || null;
+    } catch (error) {
+      console.error("Error fetching corrected SQFT:", error);
+      return null;
+    }
   }, []);
 
   return {
