@@ -611,8 +611,8 @@ serve(async (req) => {
         systemPrompt: "You are a helpful assistant.",
       };
 
-      const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-      if (!GEMINI_API_KEY) throw new Error("Gemini API key not configured");
+      const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+      if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,

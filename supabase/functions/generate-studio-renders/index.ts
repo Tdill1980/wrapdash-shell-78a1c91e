@@ -424,11 +424,11 @@ serve(async (req) => {
     const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel, vehicleCategory } =
       await req.json() as StudioRenderRequest;
 
-    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!GOOGLE_AI_API_KEY) throw new Error("Missing GOOGLE_AI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase credentials");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -455,7 +455,7 @@ serve(async (req) => {
     if (!vehicleDesc || vehicleDesc.trim() === '') {
       console.log("[StudioRenderOS] ⚠️ No vehicle info provided - detecting from 2D proof...");
 
-      const detected = await detectVehicleFromProof(GOOGLE_AI_API_KEY, panelUrl);
+      const detected = await detectVehicleFromProof(GEMINI_API_KEY, panelUrl);
 
       if (detected.confidence > 0.5) {
         vehicleDesc = detected.suggestedVehicle || `${detected.year} ${detected.make} ${detected.model}`.trim();
@@ -494,7 +494,7 @@ serve(async (req) => {
 
         // Step 1: Generate raw render
         const base64Image = await generateSingleView(
-          GOOGLE_AI_API_KEY,
+          GEMINI_API_KEY,
           vehicleDesc,
           panelUrl,
           viewKey,

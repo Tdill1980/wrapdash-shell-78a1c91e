@@ -31,11 +31,11 @@ serve(async (req) => {
   console.log("[generate-text-overlay] ====== FUNCTION INVOKED ======");
 
   try {
-    const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
-      console.error("[generate-text-overlay] Missing GOOGLE_AI_API_KEY");
+      console.error("[generate-text-overlay] Missing GEMINI_API_KEY");
       return new Response(
-        JSON.stringify({ error: "Gemini API key not configured" }),
+        JSON.stringify({ error: "GEMINI_API_KEY not configured" }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

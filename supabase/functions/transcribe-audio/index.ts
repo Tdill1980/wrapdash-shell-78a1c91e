@@ -18,9 +18,9 @@ serve(async (req) => {
       throw new Error('No audio data provided');
     }
 
-    const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
     console.log('Processing audio transcription with Gemini...');

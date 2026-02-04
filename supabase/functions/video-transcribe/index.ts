@@ -371,9 +371,9 @@ serve(async (req) => {
     }
 
     // Get Gemini API key
-    const GEMINI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
     // Convert blob to base64
