@@ -442,6 +442,25 @@ export function DesignerProductionSpecs({
           {/* Vehicle Info Section */}
           <div className="space-y-3 pt-3 mt-3 border-t border-border">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase">Vehicle</span>
+
+            {/* Auto-Detect Toggle */}
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30">
+              <Checkbox
+                id="autoDetectVehicle"
+                checked={specs.vehicleYear === '' && specs.vehicleMake === '' && specs.vehicleModel === ''}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    // Clear fields to trigger auto-detect
+                    setSpecs({ ...specs, vehicleYear: '', vehicleMake: '', vehicleModel: '' });
+                  }
+                }}
+              />
+              <Label htmlFor="autoDetectVehicle" className="text-xs text-purple-300 cursor-pointer flex items-center gap-2">
+                <span>🔍</span>
+                <span>Auto-detect vehicle from my 2D proof</span>
+              </Label>
+            </div>
+
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label htmlFor="vehicleYear" className="text-[10px]">Year</Label>
@@ -474,6 +493,13 @@ export function DesignerProductionSpecs({
                 />
               </div>
             </div>
+
+            {/* Helper text */}
+            <p className="text-[10px] text-muted-foreground">
+              {specs.vehicleYear || specs.vehicleMake || specs.vehicleModel
+                ? "Using your vehicle selection above"
+                : "Will auto-detect vehicle type from your 2D proof"}
+            </p>
           </div>
 
           {/* Optional Specs Section */}

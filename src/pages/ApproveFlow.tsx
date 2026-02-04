@@ -318,24 +318,102 @@ export default function ApproveFlow() {
     try {
       // Always use the latest version (first in array)
       const latestProof = versions[0];
-      const vehicleInfo = project?.vehicle_info as any;
+      const storedVehicleInfo = project?.vehicle_info as any;
+
+      // Check if user has provided vehicle override (Mode 1)
+      const hasUserOverride = storedVehicleInfo?.year && storedVehicleInfo?.make && storedVehicleInfo?.model;
+
+      let vehicleInfo = {
+        year: storedVehicleInfo?.year || null,
+        make: storedVehicleInfo?.make || null,
+        model: storedVehicleInfo?.model || null,
+        type: storedVehicleInfo?.type || null
+      };
+
+      let vehicleDescription = '';
+      let detectedCategory: string | null = null;
+
+      if (hasUserOverride) {
+        // MODE 1: User Override — Use the vehicle info they typed
+        console.log('[ApproveFlow] Mode 1: Using user-provided vehicle info:', vehicleInfo);
+        vehicleDescription = `${vehicleInfo.year} ${vehicleInfo.make} ${vehicleInfo.model}`.trim();
+
+        toast({
+          title: "Using Selected Vehicle",
+          description: vehicleDescription,
+        });
+      } else {
+        // MODE 2: Auto-Detect — Detect vehicle from 2D proof
+        console.log('[ApproveFlow] Mode 2: Auto-detecting vehicle from 2D proof...');
+
+        toast({
+          title: "Analyzing Vehicle",
+          description: "Detecting vehicle type from your 2D proof...",
+        });
+
+        // Call analyze-vehicle to detect vehicle from 2D proof
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-vehicle', {
+          body: { imageUrl: latestProof.file_url }
+        });
+
+        if (analysisError) {
+          console.error('[ApproveFlow] Vehicle analysis error:', analysisError);
+        }
+
+        // Use detected vehicle info if available and confident
+        if (analysisData?.success && analysisData?.analysis?.confidence > 0.5) {
+          const detected = analysisData.analysis;
+          console.log('[ApproveFlow] Vehicle detected:', detected);
+
+          vehicleInfo = {
+            year: detected.year || '2024',
+            make: detected.make || 'Unknown',
+            model: detected.model || 'Vehicle',
+            type: detected.vehicleType
+          };
+          detectedCategory = detected.vehicleType; // van, truck, car, suv, etc.
+          vehicleDescription = detected.suggestedVehicle || `${vehicleInfo.year} ${vehicleInfo.make} ${vehicleInfo.model}`;
+
+          // Update project with detected vehicle info for future use
+          await supabase
+            .from('approveflow_projects')
+            .update({ vehicle_info: vehicleInfo })
+            .eq('id', urlProjectId);
+
+          toast({
+            title: `Vehicle Detected: ${detected.suggestedVehicle}`,
+            description: `Category: ${detected.vehicleType?.toUpperCase()} • Confidence: ${Math.round(detected.confidence * 100)}%`,
+          });
+        } else {
+          // Detection failed or low confidence - use generic
+          console.log('[ApproveFlow] Vehicle detection failed or low confidence');
+          vehicleDescription = project?.product_type || 'vehicle';
+
+          toast({
+            title: "Vehicle Detection Uncertain",
+            description: "Using default vehicle. For best results, specify Year/Make/Model in Production Specs.",
+            variant: "destructive",
+          });
+        }
+      }
 
       toast({
         title: "Generating Studio Renders",
         description: "Creating 6 photorealistic views... This may take 30-60 seconds.",
       });
 
-      // Use StudioRenderOS for locked 6-view generation
+      // Generate renders with the determined vehicle info
       const { data, error } = await supabase.functions.invoke('generate-studio-renders', {
         body: {
           projectId: urlProjectId,
           versionId: latestProof.id,
           panelUrl: latestProof.file_url,
-          orderNumber: project.order_number, // Required for branding
-          vehicle: `${vehicleInfo?.year || ''} ${vehicleInfo?.make || ''} ${vehicleInfo?.model || ''}`.trim() || project?.product_type || 'vehicle',
-          vehicleYear: vehicleInfo?.year,
-          vehicleMake: vehicleInfo?.make,
-          vehicleModel: vehicleInfo?.model
+          orderNumber: project.order_number,
+          vehicle: vehicleDescription,
+          vehicleYear: vehicleInfo.year,
+          vehicleMake: vehicleInfo.make,
+          vehicleModel: vehicleInfo.model,
+          vehicleCategory: detectedCategory // Pass category for enforcement in prompt
         }
       });
 

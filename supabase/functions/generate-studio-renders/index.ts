@@ -27,6 +27,7 @@ interface StudioRenderRequest {
   vehicleYear?: string;
   vehicleMake?: string;
   vehicleModel?: string;
+  vehicleCategory?: string; // Explicit category from detection: "van", "truck", "car", "suv", etc.
   // orderNumber resolved internally from approveflow_projects - NEVER from request
 }
 
@@ -86,22 +87,223 @@ const VIEW_CONFIGS = {
   }
 };
 
+/**
+ * Detect vehicle type from 2D proof using Gemini Vision
+ * Called when vehicleYear/Make/Model are not provided (Mode 2: Auto-Detect)
+ */
+async function detectVehicleFromProof(
+  apiKey: string,
+  panelUrl: string
+): Promise<{ category: string; year: string; make: string; model: string; confidence: number; suggestedVehicle: string }> {
+
+  const detectionPrompt = `Analyze this 2D vehicle wrap proof sheet.
+
+TASK: Identify the EXACT vehicle shown in this proof.
+
+VEHICLE TYPE RULES:
+━━━━━━━━━━━━━━━━━━
+🚐 VAN = tall boxy cargo body, sliding side door, NO open bed
+   Examples: Ford Transit, Mercedes Sprinter, Ram ProMaster, Chevy Express
+
+🛻 PICKUP TRUCK = open cargo bed in rear, cab + bed separate
+   Examples: Ford F-150, Chevy Silverado, Ram 1500, Toyota Tundra
+
+📦 BOX TRUCK = large box cargo area, cab-over style
+   Examples: Isuzu NPR, Ford E-450 Box
+
+🚗 CAR = sedan, coupe, hatchback - low profile
+
+🚙 SUV = enclosed cargo, raised body, wagon-style
+   Examples: Ford Explorer, Chevy Tahoe
+
+LOOK AT THE SHAPE OF THE VEHICLE, NOT THE GRAPHICS.
+
+Return ONLY valid JSON (no markdown):
+{
+  "category": "van" | "pickup_truck" | "box_truck" | "car" | "suv",
+  "year": "2024",
+  "make": "Ford",
+  "model": "Transit",
+  "confidence": 0.95,
+  "suggestedVehicle": "2024 Ford Transit Cargo Van"
+}`;
+
+  try {
+    // Fetch and convert image to base64
+    let imageBase64: string;
+    let mimeType = "image/png";
+
+    if (panelUrl.startsWith('data:')) {
+      const matches = panelUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        mimeType = matches[1];
+        imageBase64 = matches[2];
+      } else {
+        throw new Error("Invalid data URL format");
+      }
+    } else {
+      const imgResponse = await fetch(panelUrl);
+      if (!imgResponse.ok) throw new Error(`Failed to fetch image: ${imgResponse.status}`);
+      mimeType = imgResponse.headers.get("content-type") || "image/png";
+      const imgBuffer = await imgResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(imgBuffer);
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+      }
+      imageBase64 = btoa(binary);
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: detectionPrompt },
+              { inlineData: { mimeType, data: imageBase64 } }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1, // Low temperature for consistent detection
+            maxOutputTokens: 512
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("[StudioRenderOS] Vehicle detection API error:", response.status, error);
+      return { category: "unknown", year: "", make: "", model: "", confidence: 0, suggestedVehicle: "" };
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log("[StudioRenderOS] Vehicle detected:", parsed);
+      return {
+        category: parsed.category || "unknown",
+        year: parsed.year || "",
+        make: parsed.make || "",
+        model: parsed.model || "",
+        confidence: parsed.confidence || 0,
+        suggestedVehicle: parsed.suggestedVehicle || `${parsed.year || ''} ${parsed.make || ''} ${parsed.model || ''}`.trim()
+      };
+    }
+
+    return { category: "unknown", year: "", make: "", model: "", confidence: 0, suggestedVehicle: "" };
+  } catch (error) {
+    console.error("[StudioRenderOS] Vehicle detection error:", error);
+    return { category: "unknown", year: "", make: "", model: "", confidence: 0, suggestedVehicle: "" };
+  }
+}
+
 async function generateSingleView(
   apiKey: string,
   vehicle: string,
   panelUrl: string,
   viewKey: string,
-  viewConfig: typeof VIEW_CONFIGS.driver_side
+  viewConfig: typeof VIEW_CONFIGS.driver_side,
+  vehicleCategory?: string // Explicit category from detection
 ): Promise<string | null> {
+  // Determine vehicle type - prefer explicit category, fallback to string detection
+  const vehicleLower = vehicle.toLowerCase();
+
+  // Priority 1: Explicit category from frontend detection
+  let isVan = vehicleCategory === 'van';
+  let isTruck = vehicleCategory === 'truck' || vehicleCategory === 'pickup_truck';
+  let isSuv = vehicleCategory === 'suv';
+  let isCar = vehicleCategory === 'car';
+
+  // Priority 2: Fallback to string detection if no explicit category
+  if (!vehicleCategory) {
+    isVan = vehicleLower.includes('van') || vehicleLower.includes('transit') ||
+            vehicleLower.includes('sprinter') || vehicleLower.includes('promaster') ||
+            vehicleLower.includes('cargo');
+    isTruck = vehicleLower.includes('truck') || vehicleLower.includes('f-150') ||
+              vehicleLower.includes('f150') || vehicleLower.includes('silverado') ||
+              vehicleLower.includes('ram 1500') || vehicleLower.includes('pickup');
+  }
+
+  // Build STRONG vehicle type enforcement based on detected/specified category
+  let vehicleTypeEnforcement = '';
+  if (isVan) {
+    vehicleTypeEnforcement = `
+🚐 ⚠️ CRITICAL - THIS IS A CARGO VAN - READ CAREFULLY ⚠️ 🚐
+
+THE VEHICLE TYPE IS: CARGO VAN (${vehicle})
+
+A CARGO VAN looks like this:
+✅ TALL, BOXY, RECTANGULAR body shape (like a box on wheels)
+✅ The cab and cargo area are ONE CONTINUOUS ENCLOSED BODY
+✅ Has SLIDING SIDE DOORS (not swing doors like a pickup)
+✅ Has REAR CARGO DOORS (double doors or lift gate)
+✅ NO OPEN BED - the entire back is enclosed
+✅ Examples: Ford Transit, Mercedes Sprinter, RAM ProMaster, Chevy Express
+
+A cargo van is NOT:
+❌ NOT a pickup truck (no open bed)
+❌ NOT a sedan or SUV
+❌ NOT a box truck (no separate cab)
+
+🛑 ABSOLUTE REQUIREMENT: The rendered vehicle MUST be a TALL BOXY VAN with an enclosed cargo area. If you render a pickup truck with an open bed, THE IMAGE IS WRONG.`;
+  } else if (isTruck) {
+    vehicleTypeEnforcement = `
+🛻 ⚠️ CRITICAL - THIS IS A PICKUP TRUCK - READ CAREFULLY ⚠️ 🛻
+
+THE VEHICLE TYPE IS: PICKUP TRUCK (${vehicle})
+
+A PICKUP TRUCK looks like this:
+✅ Has a CAB (front) + SEPARATE OPEN BED (rear)
+✅ The bed is OPEN TO THE SKY (not enclosed)
+✅ The cab and bed are VISUALLY DISTINCT sections
+✅ May have 2 doors (regular cab) or 4 doors (crew cab)
+✅ Examples: Ford F-150, Chevy Silverado, RAM 1500, Toyota Tundra
+
+A pickup truck is NOT:
+❌ NOT a cargo van (no enclosed boxy cargo area)
+❌ NOT an SUV (has open bed, not enclosed cargo)
+
+🛑 ABSOLUTE REQUIREMENT: The rendered vehicle MUST be a PICKUP TRUCK with an OPEN BED. If you render a cargo van with enclosed cargo area, THE IMAGE IS WRONG.`;
+  } else if (isSuv) {
+    vehicleTypeEnforcement = `
+🚙 THIS IS AN SUV (${vehicle})
+- Sport Utility Vehicle with enclosed cargo area
+- Higher ground clearance than sedans
+- Examples: Ford Explorer, Chevy Tahoe, Toyota 4Runner`;
+  } else if (isCar) {
+    vehicleTypeEnforcement = `
+🚗 THIS IS A CAR (${vehicle})
+- Sedan, coupe, or hatchback body style
+- Lower profile than SUVs or vans`;
+  }
+
   const prompt = `You are an expert automotive visualization artist creating a PHOTOREALISTIC studio render.
 
 TASK: Generate a professional 3D render of a ${vehicle} with the provided wrap design applied.
+${vehicleTypeEnforcement}
 
 VIEW: ${viewConfig.label}
 CAMERA: ${viewConfig.camera}
 FOCUS: ${viewConfig.focus}
 
 ${STUDIO_ENVIRONMENT}
+
+VEHICLE ACCURACY (ABSOLUTELY CRITICAL):
+✓ The vehicle MUST be exactly a ${vehicle} - correct body type, proportions, and shape
+✓ Match the exact vehicle silhouette - do not substitute a different vehicle type
+✓ If this is a VAN, render a VAN body (tall rectangular cargo area, sliding doors)
+✓ If this is a TRUCK, render a TRUCK body (cab + separate open bed)
+✓ NEVER confuse vans and trucks - they have completely different body shapes
 
 WRAP APPLICATION RULES (CRITICAL):
 ✓ Apply the 2D panel artwork as a PROFESSIONALLY INSTALLED vehicle wrap
@@ -119,29 +321,51 @@ PHOTOREALISM REQUIREMENTS (NON-NEGOTIABLE):
 ✓ No cartoon style, no CGI artifacts, no uncanny valley
 ✓ The render should be indistinguishable from a real photograph
 
-OUTPUT: Single photorealistic image, no text, no labels, no watermarks.`;
+OUTPUT: Single photorealistic image of a ${vehicle}, no text, no labels, no watermarks.`;
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: panelUrl } }
+    // Convert image URL to base64 (chunked to avoid stack overflow)
+    let imageBase64 = panelUrl;
+    let mimeType = "image/png";
+    if (panelUrl.startsWith('http')) {
+      const imgResponse = await fetch(panelUrl);
+      if (!imgResponse.ok) throw new Error(`Failed to fetch panel image: ${imgResponse.status}`);
+      mimeType = imgResponse.headers.get("content-type") || "image/png";
+      const imgBuffer = await imgResponse.arrayBuffer();
+      const uint8Array = new Uint8Array(imgBuffer);
+      let binary = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+      }
+      imageBase64 = btoa(binary);
+    } else if (panelUrl.startsWith('data:')) {
+      const matches = panelUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        mimeType = matches[1];
+        imageBase64 = matches[2];
+      }
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType, data: imageBase64 } }
             ]
+          }],
+          generationConfig: {
+            responseModalities: ["image", "text"]
           }
-        ],
-        modalities: ["image"]
-      })
-    });
+        })
+      }
+    );
 
     if (!response.ok) {
       const error = await response.text();
@@ -150,7 +374,19 @@ OUTPUT: Single photorealistic image, no text, no labels, no watermarks.`;
     }
 
     const data = await response.json();
-    return data?.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+
+    const inlineImage = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
+    const fileImage = parts.find((p: any) => p.fileData?.mimeType?.startsWith("image/"));
+
+    if (inlineImage?.inlineData?.data) {
+      return `data:${inlineImage.inlineData.mimeType};base64,${inlineImage.inlineData.data}`;
+    } else if (fileImage?.fileData?.fileUri) {
+      return fileImage.fileData.fileUri;
+    }
+
+    console.error(`No image returned for ${viewKey}`);
+    return null;
   } catch (error) {
     console.error(`Error generating ${viewKey}:`, error);
     return null;
@@ -252,14 +488,14 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel } = 
+    const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel, vehicleCategory } =
       await req.json() as StudioRenderRequest;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!LOVABLE_API_KEY) throw new Error("Missing LOVABLE_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase credentials");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -278,10 +514,36 @@ serve(async (req) => {
 
     const orderNumber = project.order_number;
 
-    // Build vehicle description
-    const vehicleDesc = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(' ') || vehicle;
-    
+    // Build vehicle description - with auto-detection fallback
+    let vehicleDesc = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(' ');
+    let detectedCategory = vehicleCategory; // May be passed from frontend, or we detect here
+
+    // If no vehicle info provided, auto-detect from 2D proof (MODE 2: Auto-Detect)
+    if (!vehicleDesc || vehicleDesc.trim() === '') {
+      console.log("[StudioRenderOS] ⚠️ No vehicle info provided - detecting from 2D proof...");
+
+      const detected = await detectVehicleFromProof(GEMINI_API_KEY, panelUrl);
+
+      if (detected.confidence > 0.5) {
+        vehicleDesc = detected.suggestedVehicle || `${detected.year} ${detected.make} ${detected.model}`.trim();
+        detectedCategory = detected.category;
+        console.log(`[StudioRenderOS] ✅ Auto-detected vehicle: ${vehicleDesc}`);
+        console.log(`[StudioRenderOS] ✅ Category: ${detectedCategory} (confidence: ${detected.confidence})`);
+      } else {
+        console.warn("[StudioRenderOS] ⚠️ Vehicle detection low confidence, using generic fallback");
+        vehicleDesc = vehicle || "vehicle";
+      }
+    } else {
+      console.log(`[StudioRenderOS] Using provided vehicle info: ${vehicleDesc}`);
+    }
+
+    // Fallback if still empty
+    if (!vehicleDesc || vehicleDesc.trim() === '') {
+      vehicleDesc = vehicle || "vehicle";
+    }
+
     console.log(`[StudioRenderOS] Starting 6-view generation for: ${vehicleDesc}`);
+    console.log(`[StudioRenderOS] Vehicle Category: ${detectedCategory || 'not specified'}`);
     console.log(`[StudioRenderOS] Project: ${projectId}, Version: ${versionId}, Order: ${orderNumber} (resolved from DB)`);
     console.log(`[StudioRenderOS] USE_BRANDED_RENDER_PIPELINE: ${USE_BRANDED_RENDER_PIPELINE}`);
 
@@ -293,17 +555,18 @@ serve(async (req) => {
     // Process views in batches of 2 to avoid rate limiting
     for (let i = 0; i < viewKeys.length; i += 2) {
       const batch = viewKeys.slice(i, i + 2);
-      
+
       const batchPromises = batch.map(async (viewKey) => {
-        console.log(`[StudioRenderOS] Generating: ${viewKey}`);
-        
+        console.log(`[StudioRenderOS] Generating: ${viewKey} (category: ${detectedCategory || 'none'})`);
+
         // Step 1: Generate raw render
         const base64Image = await generateSingleView(
-          LOVABLE_API_KEY,
+          GEMINI_API_KEY,
           vehicleDesc,
           panelUrl,
           viewKey,
-          VIEW_CONFIGS[viewKey]
+          VIEW_CONFIGS[viewKey],
+          detectedCategory // Pass detected/provided category for enforcement
         );
 
         if (!base64Image) {
@@ -366,17 +629,37 @@ serve(async (req) => {
       throw new Error("All renders failed - no images generated or branded successfully");
     }
 
-    // Save to approveflow_3d table with upsert
-    const { error: dbError } = await supabase
+    // Save to approveflow_3d table - check if exists first, then update or insert
+    const { data: existing } = await supabase
       .from('approveflow_3d')
-      .upsert({
-        project_id: projectId,
-        version_id: versionId,
-        render_urls: renderUrls,
-        created_at: new Date().toISOString()
-      }, {
-        onConflict: 'project_id,version_id'
-      });
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('version_id', versionId)
+      .maybeSingle();
+
+    let dbError;
+    if (existing) {
+      // Update existing record
+      const { error } = await supabase
+        .from('approveflow_3d')
+        .update({
+          render_urls: renderUrls,
+          created_at: new Date().toISOString()
+        })
+        .eq('id', existing.id);
+      dbError = error;
+    } else {
+      // Insert new record
+      const { error } = await supabase
+        .from('approveflow_3d')
+        .insert({
+          project_id: projectId,
+          version_id: versionId,
+          render_urls: renderUrls,
+          created_at: new Date().toISOString()
+        });
+      dbError = error;
+    }
 
     if (dbError) {
       console.error('[StudioRenderOS] DB save error:', dbError);
