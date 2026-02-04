@@ -44,7 +44,7 @@ export default function AgentControlPanel() {
     toggleForceOn,
     currentStatus,
     refetch
-  } = useAgentSchedule('jordan');
+  } = useAgentSchedule('wpw_support');
 
   if (loading) {
     return (
@@ -59,7 +59,7 @@ export default function AgentControlPanel() {
       <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          No schedule found for Jordan. Please contact support.
+          No schedule found for weprintwraps.com support. Please contact support.
         </AlertDescription>
       </Alert>
     );
@@ -74,7 +74,7 @@ export default function AgentControlPanel() {
             <div className="flex items-center gap-3">
               <div className={`w-4 h-4 rounded-full ${currentStatus.active ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
               <CardTitle className="text-xl">
-                Jordan is {currentStatus.active ? 'ACTIVE' : 'INACTIVE'}
+                weprintwraps.com support is {currentStatus.active ? 'ACTIVE' : 'INACTIVE'}
               </CardTitle>
             </div>
             <Button variant="ghost" size="sm" onClick={refetch}>
@@ -95,7 +95,7 @@ export default function AgentControlPanel() {
               <CardTitle>Force Start</CardTitle>
             </div>
             <CardDescription>
-              Turn Jordan ON outside of scheduled hours
+              Turn chat ON outside of scheduled hours
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -120,7 +120,7 @@ export default function AgentControlPanel() {
             </Button>
             {schedule.force_on && (
               <p className="mt-3 text-sm text-blue-500 text-center">
-                🚀 Force Start is active. Jordan is ON (ignoring schedule).
+                🚀 Force Start is active. Chat is ON (ignoring schedule).
               </p>
             )}
             {schedule.emergency_off && !schedule.force_on && (
@@ -139,7 +139,7 @@ export default function AgentControlPanel() {
               <CardTitle>Emergency Stop</CardTitle>
             </div>
             <CardDescription>
-              Immediately disable Jordan regardless of everything
+              Immediately disable chat regardless of everything
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -164,7 +164,7 @@ export default function AgentControlPanel() {
             </Button>
             {schedule.emergency_off && (
               <p className="mt-3 text-sm text-red-500 text-center">
-                ⚠️ Emergency stop is active. Jordan will not appear on the website.
+                ⚠️ Emergency stop is active. Chat will not appear on the website.
               </p>
             )}
           </CardContent>
@@ -179,7 +179,7 @@ export default function AgentControlPanel() {
             <CardTitle>Master Toggle</CardTitle>
           </div>
           <CardDescription>
-            Enable or disable Jordan (respects schedule when enabled)
+            Enable or disable weprintwraps.com support (respects schedule when enabled)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -205,7 +205,7 @@ export default function AgentControlPanel() {
             <CardTitle>Schedule</CardTitle>
           </div>
           <CardDescription>
-            Jordan is active from "Active After" to "Active Before" (overnight window)
+            Chat is active from "Active After" to "Active Before" (overnight window)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -232,7 +232,7 @@ export default function AgentControlPanel() {
 
           {/* Active After */}
           <div className="space-y-2">
-            <Label>Active After (Jordan turns ON)</Label>
+            <Label>Active After (Chat turns ON)</Label>
             <Select 
               value={schedule.active_after?.slice(0, 5) || '17:00'} 
               onValueChange={(value) => updateSchedule({ active_after: value })}
@@ -252,13 +252,13 @@ export default function AgentControlPanel() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Jordan will turn ON at this time
+              Chat will turn ON at this time
             </p>
           </div>
 
           {/* Active Before */}
           <div className="space-y-2">
-            <Label>Active Before (Jordan turns OFF)</Label>
+            <Label>Active Before (Chat turns OFF)</Label>
             <Select 
               value={schedule.active_before?.slice(0, 5) || '08:30'} 
               onValueChange={(value) => updateSchedule({ active_before: value })}
@@ -278,7 +278,7 @@ export default function AgentControlPanel() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Jordan will turn OFF at this time (next day for overnight)
+              Chat will turn OFF at this time (next day for overnight)
             </p>
           </div>
 
@@ -286,14 +286,14 @@ export default function AgentControlPanel() {
           <div className="rounded-lg bg-muted/50 p-4">
             <p className="text-sm font-medium">Current Schedule:</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Jordan is <span className="font-semibold text-foreground">ACTIVE</span> from{' '}
+              weprintwraps.com support is <span className="font-semibold text-foreground">ACTIVE</span> from{' '}
               <Badge variant="outline">{formatTime12h(schedule.active_after?.slice(0, 5) || '17:00')}</Badge>
               {' '}to{' '}
               <Badge variant="outline">{formatTime12h(schedule.active_before?.slice(0, 5) || '08:30')}</Badge>
               {' '}({schedule.timezone})
             </p>
             <p className="text-xs text-muted-foreground mt-2">
-              This is an overnight schedule: Jordan runs after-hours from 5PM to 8:30AM the next day.
+              This is an overnight schedule: Chat runs after-hours from 5PM to 8:30AM the next day.
             </p>
           </div>
         </CardContent>
@@ -314,7 +314,7 @@ export default function AgentControlPanel() {
                 Active on Weekends
               </Label>
               <p className="text-sm text-muted-foreground">
-                When enabled, Jordan follows the same schedule on Saturday & Sunday
+                When enabled, chat follows the same schedule on Saturday & Sunday
               </p>
             </div>
             <Switch
@@ -337,7 +337,7 @@ export default function AgentControlPanel() {
               <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                 <li>WordPress never needs to change - it loads the same static script</li>
                 <li>The widget checks WrapCommand before rendering</li>
-                <li>If Jordan is inactive, the chat bubble simply doesn't appear</li>
+                <li>If chat is inactive, the chat bubble simply doesn't appear</li>
                 <li>Emergency Stop overrides all other settings instantly</li>
                 <li>All changes take effect immediately - no deployment needed</li>
               </ul>

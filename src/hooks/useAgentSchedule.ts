@@ -17,7 +17,7 @@ export interface AgentSchedule {
   updated_at: string;
 }
 
-export function useAgentSchedule(agentName: string = 'jordan') {
+export function useAgentSchedule(agentName: string = 'wpw_support') {
   const [schedule, setSchedule] = useState<AgentSchedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,9 +107,9 @@ export function useAgentSchedule(agentName: string = 'jordan') {
       setSchedule(prev => prev ? { ...prev, emergency_off: newValue } : null);
       toast({
         title: newValue ? '🚨 Emergency Stop Activated' : '✅ Emergency Stop Deactivated',
-        description: newValue 
-          ? 'Jordan is now OFFLINE immediately' 
-          : 'Jordan is back to normal schedule',
+        description: newValue
+          ? 'weprintwraps.com support is now OFFLINE immediately'
+          : 'weprintwraps.com support is back to normal schedule',
         variant: newValue ? 'destructive' : 'default'
       });
     } catch (err) {
@@ -141,9 +141,9 @@ export function useAgentSchedule(agentName: string = 'jordan') {
       setSchedule(prev => prev ? { ...prev, force_on: newValue } : null);
       toast({
         title: newValue ? '🚀 Force Start Activated' : '⏹️ Force Start Deactivated',
-        description: newValue 
-          ? 'Jordan is now ONLINE (ignoring schedule)' 
-          : 'Jordan is back to auto-schedule',
+        description: newValue
+          ? 'weprintwraps.com support is now ONLINE (ignoring schedule)'
+          : 'weprintwraps.com support is back to auto-schedule',
       });
     } catch (err) {
       console.error('Error toggling force on:', err);

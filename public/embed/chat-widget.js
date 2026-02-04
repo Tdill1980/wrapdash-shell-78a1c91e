@@ -15,9 +15,9 @@
   const scriptTag = document.currentScript;
   const config = {
     org: scriptTag?.getAttribute('data-org') || 'wpw',
-    agent: scriptTag?.getAttribute('data-agent') || 'jordan',
+    agent: scriptTag?.getAttribute('data-agent') || 'wpw_support',
     mode: scriptTag?.getAttribute('data-mode') || 'live',
-    theme: scriptTag?.getAttribute('data-theme') || 'wpw',
+    theme: scriptTag?.getAttribute('data-theme') || 'dark-pro',
     apiUrl: 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/website-chat',
     statusUrl: 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/check-agent-status',
     artworkCheckUrl: 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/check-artwork-file',
@@ -36,9 +36,15 @@
       text: '#ffffff',         // White text on colored backgrounds
       accent: '#22c55e'        // Green - online indicator
     },
+    'dark-pro': {
+      primary: '#e6007e',      // WPW Magenta
+      secondary: '#0057b8',    // WPW Blue
+      text: '#ffffff',         // White text
+      accent: '#22c55e'        // Green - online indicator
+    },
     default: {
       primary: '#e6007e',
-      secondary: '#0057b8', 
+      secondary: '#0057b8',
       text: '#ffffff',
       accent: '#22c55e'
     }
@@ -48,25 +54,10 @@
   console.log(`[WCAI] Theme: ${config.theme}`, colors);
 
   // ========================================
-  // RUNTIME SCHEDULE CHECK - Ask WrapCommand if agent is active
-  // This happens BEFORE rendering anything. Fail-safe = OFF.
+  // ALWAYS ON - No schedule check, widget runs 24/7
+  // To re-enable scheduling, restore the status check block
   // ========================================
-  try {
-    const statusRes = await fetch(`${config.statusUrl}?agent=${config.agent}`, {
-      headers: { 'apikey': config.supabaseAnonKey }
-    });
-    const { active, reason } = await statusRes.json();
-    
-    if (!active) {
-      console.log(`[WCAI] Agent inactive: ${reason}`);
-      return; // Exit silently, no bubble rendered
-    }
-    console.log(`[WCAI] Agent active: ${reason}`);
-  } catch (err) {
-    // FAIL SAFE - if status check fails, don't show widget
-    console.log('[WCAI] Status check failed, exiting (fail-safe)');
-    return;
-  }
+  console.log('[WCAI] Widget running 24/7 (no schedule check)');
   // ========================================
 
   // WPW Logo (base64 encoded small version for embed)
@@ -738,6 +729,7 @@
         <div class="wcai-onboarding-text">Enter Name and email to begin chat session</div>
         <input type="text" class="wcai-onboarding-input" id="wcai-onboard-name" placeholder="Your Name" />
         <input type="email" class="wcai-onboarding-input" id="wcai-onboard-email" placeholder="Your Email" />
+        <input type="text" class="wcai-onboarding-input" id="wcai-onboard-order" placeholder="Order Number (if applicable)" />
         <button class="wcai-onboarding-start" id="wcai-onboard-start">Start Chat</button>
         <button class="wcai-onboarding-skip" id="wcai-onboard-skip">skip</button>
       </div>
@@ -771,7 +763,7 @@
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        Need wrap pricing?
+        Need Help? Ask Me Anything
       </div>
       <div class="wcai-chat-bubble" id="wcai-bubble">
         ${config.mode === 'test' ? '<span class="wcai-test-badge">TEST</span>' : ''}
@@ -801,6 +793,7 @@
   const onboardingPanel = document.getElementById('wcai-onboarding');
   const onboardNameInput = document.getElementById('wcai-onboard-name');
   const onboardEmailInput = document.getElementById('wcai-onboard-email');
+  const onboardOrderInput = document.getElementById('wcai-onboard-order');
   const onboardStartBtn = document.getElementById('wcai-onboard-start');
   const onboardSkipBtn = document.getElementById('wcai-onboard-skip');
   const inputArea = document.getElementById('wcai-input-area');
@@ -810,6 +803,7 @@
   let hasOnboarded = false; // Tracks if user completed or skipped onboarding
   let collectedName = '';
   let collectedEmail = '';
+  let collectedOrderNumber = '';
   let isCheckMyFileFlow = false; // Tracks if file upload is from "Check My File" button
 
   // Attach button opens file picker directly (no confirmation modal for general uploads)
@@ -873,9 +867,14 @@
   // Type welcome message on first open
   function showWelcomeMessage() {
     const name = collectedName ? collectedName.split(' ')[0] : '';
-    const welcomeText = name
-      ? `Hi ${name}! How can I help you today?`
-      : "Hi! How can I help you today?";
+    let welcomeText;
+    if (name && collectedOrderNumber) {
+      welcomeText = `Hi ${name}! I see you have order #${collectedOrderNumber}. How can I help you today?`;
+    } else if (name) {
+      welcomeText = `Hi ${name}! How can I help you today?`;
+    } else {
+      welcomeText = "Hi! How can I help you today?";
+    }
     typeMessage(welcomeMessage, welcomeText, 25);
   }
 
@@ -884,6 +883,7 @@
     // Collect values
     collectedName = onboardNameInput?.value?.trim() || '';
     collectedEmail = onboardEmailInput?.value?.trim() || '';
+    collectedOrderNumber = onboardOrderInput?.value?.trim() || '';
 
     // Hide onboarding, show messages and input area
     if (onboardingPanel) onboardingPanel.style.display = 'none';
@@ -966,6 +966,14 @@
   }
   if (onboardEmailInput) {
     onboardEmailInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (onboardOrderInput) onboardOrderInput.focus();
+      }
+    });
+  }
+  if (onboardOrderInput) {
+    onboardOrderInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         completeOnboarding();
@@ -1266,9 +1274,10 @@
         geo: geoData
       };
 
-      // Include collected name/email if available (from onboarding)
+      // Include collected name/email/order if available (from onboarding)
       if (collectedName) payload.customer_name = collectedName;
       if (collectedEmail) payload.customer_email = collectedEmail;
+      if (collectedOrderNumber) payload.order_number = collectedOrderNumber;
 
       const response = await fetch(config.apiUrl, {
         method: 'POST',
