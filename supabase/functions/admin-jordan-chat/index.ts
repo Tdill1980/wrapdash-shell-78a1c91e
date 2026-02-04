@@ -101,7 +101,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log('[AdminJordan] Received:', { message: message.substring(0, 50), current_page });
@@ -276,7 +276,7 @@ serve(async (req) => {
     }
 
     // General AI response with context
-    if (!GEMINI_API_KEY) {
+    if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({
         response: "I can help you with WrapCommand! Try asking:\n• How do I use [feature name]?\n• How many quotes this week?\n• What are customers asking about?\n• Directive: [instruction for website chat]",
         type: 'help'
@@ -309,21 +309,23 @@ ${Object.values(WRAPCOMMAND_FEATURES).map(f => `• ${f.title} (${f.path}): ${f.
 Keep responses concise and educational. Use markdown formatting.`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`
+        },
         body: JSON.stringify({
-          contents: [
-            { role: 'user', parts: [{ text: `${systemPrompt}\n\nUser message: ${message}` }] }
-          ],
-          generationConfig: { maxOutputTokens: 500 }
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: 'user', content: `${systemPrompt}\n\nUser message: ${message}` }],
+          max_tokens: 500
         }),
       }
     );
 
     const data = await response.json();
-    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm not sure how to help with that. Try asking about a specific feature!";
+    const aiResponse = data?.choices?.[0]?.message?.content || "I'm not sure how to help with that. Try asking about a specific feature!";
 
     return new Response(JSON.stringify({ response: aiResponse, type: 'general' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

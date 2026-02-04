@@ -28,8 +28,8 @@ serve(async (req) => {
   try {
     const { imageUrl } = await req.json();
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("Missing LOVABLE_API_KEY");
 
     if (!imageUrl) throw new Error("imageUrl is required");
 
@@ -113,33 +113,36 @@ CRITICAL:
 - A Ford F-150 is a TRUCK, not a van`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: analysisPrompt },
-              { inlineData: { mimeType, data: imageBase64 } }
+          model: "google/gemini-2.5-flash",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: analysisPrompt },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
             ]
           }],
-          generationConfig: {
-            temperature: 0.1, // Low temperature for consistent detection
-            maxOutputTokens: 1024
-          }
+          temperature: 0.1,
+          max_tokens: 1024
         })
       }
     );
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("[analyze-vehicle] Gemini API error:", response.status, error);
+      console.error("[analyze-vehicle] Lovable API error:", response.status, error);
       throw new Error(`Vehicle analysis failed: ${error}`);
     }
 
     const data = await response.json();
-    const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textContent = data?.choices?.[0]?.message?.content;
 
     if (!textContent) {
       throw new Error("No analysis returned from Gemini");

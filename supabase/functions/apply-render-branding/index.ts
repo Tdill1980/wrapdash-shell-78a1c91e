@@ -38,9 +38,9 @@ serve(async (req) => {
     if (!imageUrl) throw new Error('imageUrl is required');
     if (!orderNumber) throw new Error('orderNumber is required');
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
     // Fetch image and convert to base64
@@ -87,30 +87,33 @@ RULES:
 - Only add the text overlays
 - Keep text crisp and professional`;
 
-    console.log('[apply-render-branding] Calling Gemini for branding...');
+    console.log('[apply-render-branding] Calling Lovable Gateway for branding...');
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: brandingPrompt },
-              { inlineData: { mimeType, data: imageBase64 } }
+          model: "google/gemini-3-pro-image-preview",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: brandingPrompt },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
             ]
           }],
-          generationConfig: {
-            responseModalities: ["image", "text"]
-          }
+          modalities: ["image", "text"]
         })
       }
     );
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('[apply-render-branding] Gemini error:', error);
+      console.error('[apply-render-branding] Lovable error:', error);
       // Graceful fallback - return original image
       return new Response(JSON.stringify({
         success: true,
@@ -122,12 +125,9 @@ RULES:
     }
 
     const data = await response.json();
-    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const brandedUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    const inlineImage = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
-
-    if (inlineImage?.inlineData?.data) {
-      const brandedUrl = `data:${inlineImage.inlineData.mimeType};base64,${inlineImage.inlineData.data}`;
+    if (brandedUrl) {
       console.log('[apply-render-branding] Branding applied successfully');
 
       return new Response(JSON.stringify({
