@@ -157,21 +157,24 @@ Return ONLY valid JSON (no markdown):
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: detectionPrompt },
-              { inlineData: { mimeType, data: imageBase64 } }
+          model: "google/gemini-2.5-flash",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: detectionPrompt },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
             ]
           }],
-          generationConfig: {
-            temperature: 0.1, // Low temperature for consistent detection
-            maxOutputTokens: 512
-          }
+          temperature: 0.1,
+          max_tokens: 512
         })
       }
     );
@@ -183,7 +186,7 @@ Return ONLY valid JSON (no markdown):
     }
 
     const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const text = data?.choices?.[0]?.message?.content || "";
 
     // Parse JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -282,20 +285,23 @@ OUTPUT: Single photorealistic studio photo of ${vehicle} with wrap applied.`;
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType, data: imageBase64 } }
+          model: "google/gemini-3-pro-image-preview",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
             ]
           }],
-          generationConfig: {
-            responseModalities: ["image", "text"]
-          }
+          modalities: ["image", "text"]
         })
       }
     );
@@ -307,15 +313,10 @@ OUTPUT: Single photorealistic studio photo of ${vehicle} with wrap applied.`;
     }
 
     const data = await response.json();
-    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const imageUrl = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    const inlineImage = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
-    const fileImage = parts.find((p: any) => p.fileData?.mimeType?.startsWith("image/"));
-
-    if (inlineImage?.inlineData?.data) {
-      return `data:${inlineImage.inlineData.mimeType};base64,${inlineImage.inlineData.data}`;
-    } else if (fileImage?.fileData?.fileUri) {
-      return fileImage.fileData.fileUri;
+    if (imageUrl) {
+      return imageUrl;
     }
 
     console.error(`No image returned for ${viewKey}`);
@@ -424,11 +425,11 @@ serve(async (req) => {
     const { projectId, versionId, panelUrl, vehicle, vehicleYear, vehicleMake, vehicleModel, vehicleCategory } =
       await req.json() as StudioRenderRequest;
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("Missing LOVABLE_API_KEY");
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase credentials");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -455,7 +456,7 @@ serve(async (req) => {
     if (!vehicleDesc || vehicleDesc.trim() === '') {
       console.log("[StudioRenderOS] ⚠️ No vehicle info provided - detecting from 2D proof...");
 
-      const detected = await detectVehicleFromProof(GEMINI_API_KEY, panelUrl);
+      const detected = await detectVehicleFromProof(LOVABLE_API_KEY, panelUrl);
 
       if (detected.confidence > 0.5) {
         vehicleDesc = detected.suggestedVehicle || `${detected.year} ${detected.make} ${detected.model}`.trim();
@@ -494,7 +495,7 @@ serve(async (req) => {
 
         // Step 1: Generate raw render
         const base64Image = await generateSingleView(
-          GEMINI_API_KEY,
+          LOVABLE_API_KEY,
           vehicleDesc,
           panelUrl,
           viewKey,
