@@ -1,16 +1,12 @@
 // ============================================
 // ApproveFlow OS — Designer Production Specs Panel (Zone 4)
 // ============================================
-// OS ARCHITECTURE — ACTION + VALIDATION PANEL
-//
-// OS RULES (LOCKED — DO NOT REORDER):
-// 1. Validation Status — ALWAYS FIRST (shows requirements)
-// 2. Upload 2D Proof — SECOND (first designer action)
-// 3. Action Buttons — THIRD (Generate 3D → Generate Proof → Email)
-// 4. Production Specs Form — LAST (inputs that feed validation)
-//
-// DESIGNER WORKFLOW:
-// Order Received → Upload 2D → Generate 3D → Fill Specs → Generate Proof → Send
+// LAYOUT ORDER (TOP TO BOTTOM):
+// 1. Validation Status
+// 2. Vehicle for 3D Render (with auto-detect checkbox)
+// 3. Upload 2D Proof
+// 4. Actions (Generate 3D, Generate Proof, Email)
+// 5. Production Specifications (SQ FT, Wrap Scope)
 // ============================================
 
 import { useState, useEffect, useRef } from "react";
@@ -23,22 +19,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  FileText, 
-  Loader2, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  FileText,
+  Loader2,
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   Rocket,
   Upload,
   Image as ImageIcon,
   Box,
-  Mail
+  Mail,
+  Car
 } from "lucide-react";
 
 const WRAP_SCOPE_OPTIONS = [
   "Full Wrap",
-  "Partial Wrap", 
+  "Partial Wrap",
   "Color Change",
   "Commercial Fleet",
   "Racing Livery",
@@ -65,6 +62,7 @@ export interface ProductionSpecsData {
   panelCount: number | null;
   panelCountIsNa: boolean;
   internalNotes: string;
+  autoDetectVehicle: boolean;
 }
 
 interface DesignerProductionSpecsProps {
@@ -79,9 +77,8 @@ interface DesignerProductionSpecsProps {
   existingProofVersionId?: string;
   onGenerateProof: (specs: ProductionSpecsData) => Promise<void>;
   isGenerating: boolean;
-  // Upload 2D handlers
   onUpload?: (file: File, notes: string) => Promise<void>;
-  onGenerate3D?: () => Promise<void>;
+  onGenerate3D?: (autoDetect: boolean) => Promise<void>;
   onEmailProof?: () => Promise<void>;
   isUploading?: boolean;
   isGenerating3D?: boolean;
@@ -103,6 +100,9 @@ export function DesignerProductionSpecs({
   isGenerating3D = false,
   hasVersions = false,
 }: DesignerProductionSpecsProps) {
+  // Auto-detect checkbox state - DEFAULT ON
+  const [autoDetectVehicle, setAutoDetectVehicle] = useState(true);
+
   // Form state
   const [specs, setSpecs] = useState<ProductionSpecsData>({
     totalSqFt: null,
@@ -121,6 +121,7 @@ export function DesignerProductionSpecs({
     panelCount: null,
     panelCountIsNa: false,
     internalNotes: "",
+    autoDetectVehicle: true,
   });
 
   const [uploadNotes, setUploadNotes] = useState("");
@@ -135,26 +136,18 @@ export function DesignerProductionSpecs({
         vehicleMake: vehicleInfo.make || prev.vehicleMake,
         vehicleModel: vehicleInfo.model || prev.vehicleModel,
       }));
+      // If vehicle info is provided, turn off auto-detect
+      if (vehicleInfo.year && vehicleInfo.make && vehicleInfo.model) {
+        setAutoDetectVehicle(false);
+      }
     }
   }, [vehicleInfo]);
 
   // Validation
   const validationItems = [
-    { 
-      label: "3D renders", 
-      met: has3DRenders,
-      required: true 
-    },
-    { 
-      label: "Total SQ FT", 
-      met: specs.totalSqFt !== null && specs.totalSqFt > 0,
-      required: true 
-    },
-    { 
-      label: "Wrap scope", 
-      met: !!specs.wrapScope,
-      required: true 
-    },
+    { label: "3D renders", met: has3DRenders, required: true },
+    { label: "Total SQ FT", met: specs.totalSqFt !== null && specs.totalSqFt > 0, required: true },
+    { label: "Wrap scope", met: !!specs.wrapScope, required: true },
   ];
 
   const metCount = validationItems.filter(v => v.met).length;
@@ -163,7 +156,7 @@ export function DesignerProductionSpecs({
 
   const handleGenerateProof = async () => {
     if (!isValid) return;
-    await onGenerateProof(specs);
+    await onGenerateProof({ ...specs, autoDetectVehicle });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,6 +165,12 @@ export function DesignerProductionSpecs({
     await onUpload(file, uploadNotes);
     setUploadNotes("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleGenerate3D = () => {
+    if (onGenerate3D) {
+      onGenerate3D(autoDetectVehicle);
+    }
   };
 
   return (
@@ -184,15 +183,15 @@ export function DesignerProductionSpecs({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* ============================================ */}
-        {/* 1️⃣ VALIDATION STATUS — OS RULE: ALWAYS FIRST */}
+        {/* 1. VALIDATION STATUS */}
         {/* ============================================ */}
         <div className="bg-muted/30 rounded-lg p-3 border border-border">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-foreground uppercase tracking-wide">
               Validation Status
             </span>
-            <Badge 
-              variant={isValid ? "default" : "outline"} 
+            <Badge
+              variant={isValid ? "default" : "outline"}
               className={`text-[10px] ${isValid ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50' : 'border-indigo-500/50 text-indigo-300'}`}
             >
               {metCount} of {totalRequired} requirements met
@@ -219,7 +218,146 @@ export function DesignerProductionSpecs({
         </div>
 
         {/* ============================================ */}
-        {/* 2️⃣ UPLOAD 2D PROOF — OS RULE: FIRST DESIGNER ACTION */}
+        {/* 2. VEHICLE FOR 3D RENDER — ABOVE UPLOAD */}
+        {/* ============================================ */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-2">
+            <Car className="w-3.5 h-3.5" />
+            Vehicle for 3D Render
+          </h4>
+
+          {/* Auto-detect checkbox */}
+          <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 hover:border-purple-500/50 transition-colors">
+            <Checkbox
+              checked={autoDetectVehicle}
+              onCheckedChange={(checked) => setAutoDetectVehicle(!!checked)}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <span className="text-sm text-white font-medium flex items-center gap-2">
+                <span>🔍</span>
+                Auto-detect vehicle from my 2D proof
+              </span>
+              <p className="text-xs text-muted-foreground mt-1">
+                AI will identify the vehicle type automatically when generating 3D renders
+              </p>
+            </div>
+          </label>
+
+          {/* Manual entry fields - disabled when auto-detect is on */}
+          <div className={`space-y-3 transition-opacity ${autoDetectVehicle ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+            <p className="text-xs text-muted-foreground border-b border-border/50 pb-2">
+              — OR enter vehicle manually —
+            </p>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[10px]">Year</Label>
+                <Input
+                  placeholder="2024"
+                  value={specs.vehicleYear}
+                  onChange={(e) => setSpecs({ ...specs, vehicleYear: e.target.value })}
+                  disabled={autoDetectVehicle}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Make</Label>
+                <Input
+                  placeholder="Ford"
+                  value={specs.vehicleMake}
+                  onChange={(e) => setSpecs({ ...specs, vehicleMake: e.target.value })}
+                  disabled={autoDetectVehicle}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px]">Model</Label>
+                <Input
+                  placeholder="Transit"
+                  value={specs.vehicleModel}
+                  onChange={(e) => setSpecs({ ...specs, vehicleModel: e.target.value })}
+                  disabled={autoDetectVehicle}
+                  className="h-7 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Optional vehicle specs */}
+            <div className="space-y-2 pt-2">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Optional</span>
+
+              {/* Wheelbase */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input
+                    placeholder='Wheelbase (e.g., 130")'
+                    value={specs.wheelbase}
+                    onChange={(e) => setSpecs({ ...specs, wheelbase: e.target.value })}
+                    disabled={autoDetectVehicle || specs.wheelbaseIsNa}
+                    className="h-7 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <Checkbox
+                    id="wheelbaseNa"
+                    checked={specs.wheelbaseIsNa}
+                    disabled={autoDetectVehicle}
+                    onCheckedChange={(checked) => setSpecs({ ...specs, wheelbaseIsNa: !!checked, wheelbase: checked ? "" : specs.wheelbase })}
+                  />
+                  <Label htmlFor="wheelbaseNa" className="text-[10px] text-muted-foreground">N/A</Label>
+                </div>
+              </div>
+
+              {/* Roof Height */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Roof Height (e.g., High Roof)"
+                    value={specs.roofHeight}
+                    onChange={(e) => setSpecs({ ...specs, roofHeight: e.target.value })}
+                    disabled={autoDetectVehicle || specs.roofHeightIsNa}
+                    className="h-7 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <Checkbox
+                    id="roofHeightNa"
+                    checked={specs.roofHeightIsNa}
+                    disabled={autoDetectVehicle}
+                    onCheckedChange={(checked) => setSpecs({ ...specs, roofHeightIsNa: !!checked, roofHeight: checked ? "" : specs.roofHeight })}
+                  />
+                  <Label htmlFor="roofHeightNa" className="text-[10px] text-muted-foreground">N/A</Label>
+                </div>
+              </div>
+
+              {/* Body Length */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Body Length (e.g., Extended)"
+                    value={specs.bodyLength}
+                    onChange={(e) => setSpecs({ ...specs, bodyLength: e.target.value })}
+                    disabled={autoDetectVehicle || specs.bodyLengthIsNa}
+                    className="h-7 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <Checkbox
+                    id="bodyLengthNa"
+                    checked={specs.bodyLengthIsNa}
+                    disabled={autoDetectVehicle}
+                    onCheckedChange={(checked) => setSpecs({ ...specs, bodyLengthIsNa: !!checked, bodyLength: checked ? "" : specs.bodyLength })}
+                  />
+                  <Label htmlFor="bodyLengthNa" className="text-[10px] text-muted-foreground">N/A</Label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================ */}
+        {/* 3. UPLOAD 2D PROOF — AFTER VEHICLE */}
         {/* ============================================ */}
         {onUpload && (
           <div className="pt-4 border-t border-border space-y-3">
@@ -263,18 +401,18 @@ export function DesignerProductionSpecs({
         )}
 
         {/* ============================================ */}
-        {/* 3️⃣ ACTION BUTTONS — OS RULE: ALWAYS VISIBLE, DISABLED WHEN NOT READY */}
+        {/* 4. ACTIONS */}
         {/* ============================================ */}
         <div className="pt-4 border-t border-border space-y-3">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase">Actions</h4>
-          
-          {/* Generate 3D Render — ALWAYS VISIBLE */}
+
+          {/* Generate 3D Render */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="w-full">
                   <Button
-                    onClick={onGenerate3D}
+                    onClick={handleGenerate3D}
                     disabled={!hasVersions || isGenerating3D || !onGenerate3D}
                     size="sm"
                     variant="outline"
@@ -283,12 +421,13 @@ export function DesignerProductionSpecs({
                     {isGenerating3D ? (
                       <>
                         <Loader2 className="w-3 h-3 animate-spin" />
-                        Generating 3D...
+                        {autoDetectVehicle ? "Detecting & Generating..." : "Generating 3D..."}
                       </>
                     ) : (
                       <>
                         <Box className="w-3 h-3" />
                         Generate 3D Render
+                        {autoDetectVehicle && <Badge className="ml-1 text-[9px] bg-purple-500/20 text-purple-300">Auto-detect</Badge>}
                       </>
                     )}
                   </Button>
@@ -302,7 +441,7 @@ export function DesignerProductionSpecs({
             </Tooltip>
           </TooltipProvider>
 
-          {/* Generate Approval Proof Button — ALWAYS VISIBLE */}
+          {/* Generate Approval Proof Button */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -360,7 +499,7 @@ export function DesignerProductionSpecs({
             </div>
           )}
 
-          {/* Email Proof to Customer — ALWAYS VISIBLE */}
+          {/* Email Proof to Customer */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -387,20 +526,12 @@ export function DesignerProductionSpecs({
         </div>
 
         {/* ============================================ */}
-        {/* 4️⃣ PRODUCTION SPECS FORM — OS RULE: LAST (SUPPORTS VALIDATION) */}
+        {/* 5. PRODUCTION SPECIFICATIONS */}
         {/* ============================================ */}
-        <div className="pt-3 border-t border-border">
-          <h4 className="text-xs font-semibold mb-3">Production Specifications</h4>
-          
-          {/* Required Fields Section */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Required</span>
-              <Badge variant="outline" className="text-[9px] border-indigo-500/50 text-indigo-300">
-                Must complete
-              </Badge>
-            </div>
+        <div className="pt-4 border-t border-border space-y-3">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase">Production Specifications</h4>
 
+          <div className="space-y-3">
             {/* Total SQ FT */}
             <div className="space-y-1.5">
               <Label htmlFor="totalSqFt" className="text-xs">
@@ -421,8 +552,8 @@ export function DesignerProductionSpecs({
               <Label htmlFor="wrapScope" className="text-xs">
                 Wrap Scope <span className="text-indigo-400">*</span>
               </Label>
-              <Select 
-                value={specs.wrapScope || ""} 
+              <Select
+                value={specs.wrapScope || ""}
                 onValueChange={(value) => setSpecs({ ...specs, wrapScope: value })}
               >
                 <SelectTrigger className="h-8 text-xs">
@@ -437,204 +568,20 @@ export function DesignerProductionSpecs({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Vehicle Info Section */}
-          <div className="space-y-3 pt-3 mt-3 border-t border-border">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase">Vehicle</span>
-
-            {/* Auto-Detect Toggle */}
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30">
-              <Checkbox
-                id="autoDetectVehicle"
-                checked={specs.vehicleYear === '' && specs.vehicleMake === '' && specs.vehicleModel === ''}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    // Clear fields to trigger auto-detect
-                    setSpecs({ ...specs, vehicleYear: '', vehicleMake: '', vehicleModel: '' });
-                  }
-                }}
-              />
-              <Label htmlFor="autoDetectVehicle" className="text-xs text-purple-300 cursor-pointer flex items-center gap-2">
-                <span>🔍</span>
-                <span>Auto-detect vehicle from my 2D proof</span>
+            {/* Internal Notes */}
+            <div className="space-y-1.5 pt-2">
+              <Label htmlFor="internalNotes" className="text-xs text-muted-foreground">
+                Internal Notes (not shown to customer)
               </Label>
+              <Textarea
+                id="internalNotes"
+                placeholder="Any notes for production team..."
+                value={specs.internalNotes}
+                onChange={(e) => setSpecs({ ...specs, internalNotes: e.target.value })}
+                className="h-14 text-xs resize-none"
+              />
             </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="vehicleYear" className="text-[10px]">Year</Label>
-                <Input
-                  id="vehicleYear"
-                  placeholder="2024"
-                  value={specs.vehicleYear}
-                  onChange={(e) => setSpecs({ ...specs, vehicleYear: e.target.value })}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vehicleMake" className="text-[10px]">Make</Label>
-                <Input
-                  id="vehicleMake"
-                  placeholder="Ford"
-                  value={specs.vehicleMake}
-                  onChange={(e) => setSpecs({ ...specs, vehicleMake: e.target.value })}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vehicleModel" className="text-[10px]">Model</Label>
-                <Input
-                  id="vehicleModel"
-                  placeholder="Transit"
-                  value={specs.vehicleModel}
-                  onChange={(e) => setSpecs({ ...specs, vehicleModel: e.target.value })}
-                  className="h-7 text-xs"
-                />
-              </div>
-            </div>
-
-            {/* Helper text */}
-            <p className="text-[10px] text-muted-foreground">
-              {specs.vehicleYear || specs.vehicleMake || specs.vehicleModel
-                ? "Using your vehicle selection above"
-                : "Will auto-detect vehicle type from your 2D proof"}
-            </p>
-          </div>
-
-          {/* Optional Specs Section */}
-          <div className="space-y-3 pt-3 mt-3 border-t border-border">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase">Optional Specifications</span>
-            
-            {/* Wheelbase */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="wheelbase" className="text-[10px]">Wheelbase</Label>
-                <Input
-                  id="wheelbase"
-                  placeholder='e.g., 130"'
-                  value={specs.wheelbase}
-                  onChange={(e) => setSpecs({ ...specs, wheelbase: e.target.value })}
-                  disabled={specs.wheelbaseIsNa}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-1.5 pt-5">
-                <Checkbox
-                  id="wheelbaseNa"
-                  checked={specs.wheelbaseIsNa}
-                  onCheckedChange={(checked) => setSpecs({ ...specs, wheelbaseIsNa: !!checked, wheelbase: checked ? "" : specs.wheelbase })}
-                />
-                <Label htmlFor="wheelbaseNa" className="text-[10px] text-muted-foreground">N/A</Label>
-              </div>
-            </div>
-
-            {/* Roof Height */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="roofHeight" className="text-[10px]">Roof Height</Label>
-                <Input
-                  id="roofHeight"
-                  placeholder="e.g., High Roof"
-                  value={specs.roofHeight}
-                  onChange={(e) => setSpecs({ ...specs, roofHeight: e.target.value })}
-                  disabled={specs.roofHeightIsNa}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-1.5 pt-5">
-                <Checkbox
-                  id="roofHeightNa"
-                  checked={specs.roofHeightIsNa}
-                  onCheckedChange={(checked) => setSpecs({ ...specs, roofHeightIsNa: !!checked, roofHeight: checked ? "" : specs.roofHeight })}
-                />
-                <Label htmlFor="roofHeightNa" className="text-[10px] text-muted-foreground">N/A</Label>
-              </div>
-            </div>
-
-            {/* Body Length */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="bodyLength" className="text-[10px]">Body Length</Label>
-                <Input
-                  id="bodyLength"
-                  placeholder="e.g., Extended"
-                  value={specs.bodyLength}
-                  onChange={(e) => setSpecs({ ...specs, bodyLength: e.target.value })}
-                  disabled={specs.bodyLengthIsNa}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-1.5 pt-5">
-                <Checkbox
-                  id="bodyLengthNa"
-                  checked={specs.bodyLengthIsNa}
-                  onCheckedChange={(checked) => setSpecs({ ...specs, bodyLengthIsNa: !!checked, bodyLength: checked ? "" : specs.bodyLength })}
-                />
-                <Label htmlFor="bodyLengthNa" className="text-[10px] text-muted-foreground">N/A</Label>
-              </div>
-            </div>
-
-            {/* Scale Reference */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="scaleReference" className="text-[10px]">Scale Reference</Label>
-                <Input
-                  id="scaleReference"
-                  placeholder='e.g., 1" = 12"'
-                  value={specs.scaleReference}
-                  onChange={(e) => setSpecs({ ...specs, scaleReference: e.target.value })}
-                  disabled={specs.scaleReferenceIsNa}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-1.5 pt-5">
-                <Checkbox
-                  id="scaleReferenceNa"
-                  checked={specs.scaleReferenceIsNa}
-                  onCheckedChange={(checked) => setSpecs({ ...specs, scaleReferenceIsNa: !!checked, scaleReference: checked ? "" : specs.scaleReference })}
-                />
-                <Label htmlFor="scaleReferenceNa" className="text-[10px] text-muted-foreground">N/A</Label>
-              </div>
-            </div>
-
-            {/* Panel Count */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 space-y-1">
-                <Label htmlFor="panelCount" className="text-[10px]">Panel Count</Label>
-                <Input
-                  id="panelCount"
-                  type="number"
-                  placeholder="e.g., 6"
-                  value={specs.panelCount || ""}
-                  onChange={(e) => setSpecs({ ...specs, panelCount: e.target.value ? Number(e.target.value) : null })}
-                  disabled={specs.panelCountIsNa}
-                  className="h-7 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-1.5 pt-5">
-                <Checkbox
-                  id="panelCountNa"
-                  checked={specs.panelCountIsNa}
-                  onCheckedChange={(checked) => setSpecs({ ...specs, panelCountIsNa: !!checked, panelCount: checked ? null : specs.panelCount })}
-                />
-                <Label htmlFor="panelCountNa" className="text-[10px] text-muted-foreground">N/A</Label>
-              </div>
-            </div>
-          </div>
-
-          {/* Internal Notes */}
-          <div className="space-y-1.5 pt-3 mt-3 border-t border-border">
-            <Label htmlFor="internalNotes" className="text-xs text-muted-foreground">
-              Internal Notes (not shown to customer)
-            </Label>
-            <Textarea
-              id="internalNotes"
-              placeholder="Any notes for production team..."
-              value={specs.internalNotes}
-              onChange={(e) => setSpecs({ ...specs, internalNotes: e.target.value })}
-              className="h-14 text-xs resize-none"
-            />
           </div>
         </div>
       </CardContent>

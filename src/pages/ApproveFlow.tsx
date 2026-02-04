@@ -294,7 +294,7 @@ export default function ApproveFlow() {
     await approveDesign();
   };
 
-  const handleGenerate3D = async () => {
+  const handleGenerate3D = async (autoDetect: boolean = true) => {
     if (!latestVersion) {
       toast({
         title: "No design available",
@@ -320,9 +320,6 @@ export default function ApproveFlow() {
       const latestProof = versions[0];
       const storedVehicleInfo = project?.vehicle_info as any;
 
-      // Check if user has provided vehicle override (Mode 1)
-      const hasUserOverride = storedVehicleInfo?.year && storedVehicleInfo?.make && storedVehicleInfo?.model;
-
       let vehicleInfo = {
         year: storedVehicleInfo?.year || null,
         make: storedVehicleInfo?.make || null,
@@ -333,7 +330,11 @@ export default function ApproveFlow() {
       let vehicleDescription = '';
       let detectedCategory: string | null = null;
 
-      if (hasUserOverride) {
+      // Check if user wants auto-detect OR manual override
+      const useAutoDetect = autoDetect;
+      const hasManualVehicle = !autoDetect && storedVehicleInfo?.year && storedVehicleInfo?.make && storedVehicleInfo?.model;
+
+      if (hasManualVehicle) {
         // MODE 1: User Override — Use the vehicle info they typed
         console.log('[ApproveFlow] Mode 1: Using user-provided vehicle info:', vehicleInfo);
         vehicleDescription = `${vehicleInfo.year} ${vehicleInfo.make} ${vehicleInfo.model}`.trim();
@@ -342,13 +343,13 @@ export default function ApproveFlow() {
           title: "Using Selected Vehicle",
           description: vehicleDescription,
         });
-      } else {
+      } else if (useAutoDetect) {
         // MODE 2: Auto-Detect — Detect vehicle from 2D proof
         console.log('[ApproveFlow] Mode 2: Auto-detecting vehicle from 2D proof...');
 
         toast({
-          title: "Analyzing Vehicle",
-          description: "Detecting vehicle type from your 2D proof...",
+          title: "🔍 Analyzing Vehicle",
+          description: "AI is detecting vehicle type from your 2D proof...",
         });
 
         // Call analyze-vehicle to detect vehicle from 2D proof
@@ -381,20 +382,23 @@ export default function ApproveFlow() {
             .eq('id', urlProjectId);
 
           toast({
-            title: `Vehicle Detected: ${detected.suggestedVehicle}`,
+            title: `✅ Vehicle Detected: ${detected.suggestedVehicle}`,
             description: `Category: ${detected.vehicleType?.toUpperCase()} • Confidence: ${Math.round(detected.confidence * 100)}%`,
           });
         } else {
-          // Detection failed or low confidence - use generic
-          console.log('[ApproveFlow] Vehicle detection failed or low confidence');
-          vehicleDescription = project?.product_type || 'vehicle';
+          // Detection failed or low confidence - let edge function handle it
+          console.log('[ApproveFlow] Vehicle detection low confidence, letting edge function detect');
+          vehicleDescription = ''; // Empty = edge function will detect
 
           toast({
-            title: "Vehicle Detection Uncertain",
-            description: "Using default vehicle. For best results, specify Year/Make/Model in Production Specs.",
-            variant: "destructive",
+            title: "Detection in progress...",
+            description: "Edge function will detect vehicle type",
           });
         }
+      } else {
+        // No auto-detect and no manual vehicle - let edge function handle it
+        console.log('[ApproveFlow] No vehicle info, edge function will detect');
+        vehicleDescription = '';
       }
 
       toast({
