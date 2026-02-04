@@ -464,6 +464,12 @@ async function lookupVehicleFromDatabase(
   const makePatterns = /\b(ford|chevy|chevrolet|dodge|ram|toyota|honda|nissan|gmc|jeep|bmw|audi|mercedes|tesla|volkswagen|subaru|mazda|hyundai|kia|lexus|acura|cadillac|buick|lincoln|chrysler|porsche|jaguar|volvo|rivian|lucid|vw|merc|benz)\b/i;
   const makeMatch = message.match(makePatterns);
 
+  // Special case: "911" almost always means Porsche 911
+  if (!makeMatch && /\b911\b/i.test(message)) {
+    console.log('[JordanLee] Detected 911 - assuming Porsche');
+    makeMatch = ['porsche', 'porsche'];
+  }
+
   if (!makeMatch) {
     console.log('[JordanLee] No make found in message');
     return null;
@@ -482,15 +488,26 @@ async function lookupVehicleFromDatabase(
   }
 
   // Try to extract model - look for words after the make
-  const afterMake = message.substring(message.toLowerCase().indexOf(makeMatch[1].toLowerCase()) + makeMatch[1].length).trim();
+  const makeIndex = message.toLowerCase().indexOf(makeMatch[1].toLowerCase());
+  const afterMake = message.substring(makeIndex + makeMatch[1].length).trim();
   const modelMatch = afterMake.match(/^[\s,]*([\w\-\s]+?)(?:\s*(\d{4}|\.|,|$))/i);
   let model = modelMatch ? modelMatch[1].trim() : '';
 
   // Clean up model name
   model = model.replace(/\b(for|the|a|an|in|on|at|to|is|are|my|our|your|this|that|these|those)\b/gi, '').trim();
 
+  // If no model found after make, try BEFORE make (e.g., "911 Porsche")
+  if (!model && makeIndex > 0) {
+    const beforeMake = message.substring(0, makeIndex).trim();
+    const beforeModelMatch = beforeMake.match(/([\w\-\d]+)[\s,]*$/i);
+    if (beforeModelMatch) {
+      model = beforeModelMatch[1].trim();
+      console.log('[JordanLee] Found model BEFORE make:', model);
+    }
+  }
+
   if (!model) {
-    console.log('[JordanLee] No model found after make:', make);
+    console.log('[JordanLee] No model found for make:', make);
     return null;
   }
 
