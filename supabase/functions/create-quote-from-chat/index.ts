@@ -161,14 +161,17 @@ serve(async (req) => {
   }
 
   try {
-    const { 
+    const {
       conversation_id,
       customer_email,
       customer_name,
       vehicle_year,
       vehicle_make,
       vehicle_model,
-      product_type = 'avery', // 'avery' or '3m'
+      product_type = 'avery_wrap',
+      product_id = 79,
+      product_name: passedProductName,
+      product_price = 5.27,
       send_email = true,
       organization_id = '51aa96db-c06d-41ae-b3cb-25b045c75caf'
     } = await req.json();
@@ -199,14 +202,15 @@ serve(async (req) => {
       needsReview
     });
     
-    const pricePerSqft = 5.27; // Both Avery and 3M are now $5.27
+    // Use passed product price or default to $5.27
+    const pricePerSqft = product_price || 5.27;
     const materialCost = Math.round(sqft * pricePerSqft * 100) / 100;
     const quoteNumber = generateQuoteNumber();
 
-    // Get actual product name from product_type
-    const productName = product_type === '3m'
+    // Use passed product name or derive from product_type
+    const productName = passedProductName || (product_type === '3m' || product_type === 'threem_wrap'
       ? '3M IJ180Cv3 with 8518'
-      : 'Avery MPI 1105 with DOL 1460Z';
+      : 'Avery MPI 1105 with DOL 1460Z');
 
     console.log('[CreateQuoteFromChat] Calculated:', { sqft, pricePerSqft, materialCost, quoteNumber, needsReview });
 

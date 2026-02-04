@@ -921,25 +921,73 @@ serve(async (req) => {
     if (shopName) chatState.shop_name = shopName;
 
     // ============================================
-    // PRODUCT PREFERENCE DETECTION (Avery vs 3M)
+    // PRODUCT DETECTION - All 23 WPW Products
     // ============================================
-    const averyPattern = /\b(avery|mpi\s*1105|avery\s*mpi|1105)\b/i;
-    const threeMPattern = /\b(3m|three\s*m|ij180|180cv3)\b/i;
+    const WPW_PRODUCTS = {
+      // PRINTED WRAP FILMS (per sqft)
+      avery_wrap: { id: 79, name: 'Avery MPI 1105 with DOL 1460Z', price: 5.27, type: 'per_sqft', pattern: /\b(avery|mpi\s*1105|avery\s*mpi|1105)\b/i },
+      threem_wrap: { id: 72, name: '3M IJ180Cv3 with 8518', price: 5.27, type: 'per_sqft', pattern: /\b(3m|three\s*m|ij180|180cv3)\b/i },
 
-    if (averyPattern.test(msg) && !chatState.product_type) {
-      chatState.product_type = 'avery';
-      chatState.product_name = 'Avery MPI 1105 with DOL 1460Z';
-      console.log('[JordanLee] Product preference detected: Avery');
-    } else if (threeMPattern.test(msg) && !chatState.product_type) {
-      chatState.product_type = '3m';
-      chatState.product_name = '3M IJ180Cv3 with 8518';
-      console.log('[JordanLee] Product preference detected: 3M');
+      // CONTOUR CUT (per sqft)
+      avery_contour: { id: 108, name: 'Avery Contour-Cut', price: 6.32, type: 'per_sqft', pattern: /\b(avery\s*contour|contour\s*cut\s*avery)\b/i },
+      threem_contour: { id: 19420, name: '3M Contour-Cut', price: 6.92, type: 'per_sqft', pattern: /\b(3m\s*contour|contour\s*cut\s*3m)\b/i },
+
+      // SPECIALTY (per sqft or flat)
+      window_perf: { id: 80, name: 'Perforated Window Vinyl 50/50', price: 5.95, type: 'per_sqft', pattern: /\b(window\s*perf|perforated|perf\s*vinyl|50\s*50)\b/i },
+      fadewraps: { id: 58391, name: 'FadeWraps Pre-Designed', price: 600, type: 'flat', pattern: /\b(fade\s*wrap|fadewrap|fade\s*graphics)\b/i },
+      inkfusion: { id: 69439, name: 'InkFusion Premium', price: 2075, type: 'flat', pattern: /\b(inkfusion|ink\s*fusion)\b/i },
+      wall_wrap: { id: 70093, name: 'Wall Wrap Printed Vinyl', price: 3.25, type: 'per_sqft', pattern: /\b(wall\s*wrap|wall\s*vinyl|wall\s*graphic)\b/i },
+
+      // WRAP BY THE YARD (flat per yard)
+      camo_carbon: { id: 1726, name: 'Camo & Carbon', price: 95.50, type: 'per_yard', pattern: /\b(camo\s*carbon|camo\s*&\s*carbon)\b/i },
+      metal_marble: { id: 39698, name: 'Metal & Marble', price: 95.50, type: 'per_yard', pattern: /\b(metal\s*marble|metal\s*&\s*marble|marble\s*metal)\b/i },
+      wicked_wild: { id: 4181, name: 'Wicked & Wild', price: 95.50, type: 'per_yard', pattern: /\b(wicked\s*wild|wicked\s*&\s*wild)\b/i },
+      bape_camo: { id: 42809, name: 'Bape Camo', price: 95.50, type: 'per_yard', pattern: /\b(bape|bape\s*camo)\b/i },
+      modern_trippy: { id: 52489, name: 'Modern & Trippy', price: 95.50, type: 'per_yard', pattern: /\b(modern\s*trippy|trippy|modern\s*&\s*trippy)\b/i },
+
+      // DESIGN SERVICES (flat)
+      custom_design: { id: 234, name: 'Custom Vehicle Wrap Design', price: 750, type: 'flat', pattern: /\b(custom\s*design|full\s*design|design\s*service|need\s*design)\b/i },
+      design_copy: { id: 58160, name: 'Custom Design (Copy/Draft)', price: 500, type: 'flat', pattern: /\b(copy\s*draft|design\s*copy|draft\s*design)\b/i },
+
+      // SAMPLE BOOKS (flat)
+      pantone: { id: 15192, name: 'Pantone Color Chart', price: 42, type: 'flat', pattern: /\b(pantone|color\s*chart)\b/i },
+      camo_sample: { id: 475, name: 'Camo & Carbon Sample Book', price: 26.50, type: 'flat', pattern: /\b(camo\s*sample|camo\s*swatch)\b/i },
+      marble_sample: { id: 39628, name: 'Marble & Metals Swatch Book', price: 26.50, type: 'flat', pattern: /\b(marble\s*sample|marble\s*swatch|metal\s*sample)\b/i },
+      wicked_sample: { id: 4179, name: 'Wicked & Wild Swatch Book', price: 26.50, type: 'flat', pattern: /\b(wicked\s*sample|wicked\s*swatch|wild\s*sample)\b/i },
+
+      // PRINT PRODUCTION PACKS (flat)
+      pack_small: { id: 69664, name: 'Small Print Production Pack', price: 299, type: 'flat', pattern: /\b(small\s*pack|small\s*production)\b/i },
+      pack_medium: { id: 69671, name: 'Medium Print Production Pack', price: 499, type: 'flat', pattern: /\b(medium\s*pack|medium\s*production)\b/i },
+      pack_large: { id: 69680, name: 'Large Print Production Pack', price: 699, type: 'flat', pattern: /\b(large\s*pack|large\s*production)\b/i },
+      pack_xlarge: { id: 69686, name: 'XLarge Print Production Pack', price: 899, type: 'flat', pattern: /\b(xlarge\s*pack|xl\s*pack|xlarge\s*production)\b/i },
+    };
+
+    // Detect product from message
+    let detectedProduct = null;
+    for (const [key, product] of Object.entries(WPW_PRODUCTS)) {
+      if (product.pattern.test(msg)) {
+        detectedProduct = { key, ...product };
+        break;
+      }
     }
 
-    // Default to Avery if not specified (both same price)
-    if (!chatState.product_type) {
-      chatState.product_type = 'avery';
+    // Update chatState with detected product
+    if (detectedProduct && !chatState.product_locked) {
+      chatState.product_key = detectedProduct.key;
+      chatState.product_id = detectedProduct.id;
+      chatState.product_name = detectedProduct.name;
+      chatState.product_price = detectedProduct.price;
+      chatState.product_type = detectedProduct.type;
+      console.log('[JordanLee] Product detected:', detectedProduct.name, '- $' + detectedProduct.price);
+    }
+
+    // Default to Avery printed wrap if no product specified
+    if (!chatState.product_name) {
+      chatState.product_key = 'avery_wrap';
+      chatState.product_id = 79;
       chatState.product_name = 'Avery MPI 1105 with DOL 1460Z';
+      chatState.product_price = 5.27;
+      chatState.product_type = 'per_sqft';
     }
 
     // ============================================
@@ -1005,7 +1053,9 @@ serve(async (req) => {
 
     // Build context for AI
     let contextNotes = '';
-    const pricePerSqft = 5.27; // Avery MPI 1105
+    // Use detected product price, default to Avery MPI 1105 at $5.27
+    const pricePerSqft = chatState.product_type === 'per_sqft' ? chatState.product_price : 5.27;
+    const productName = chatState.product_name || 'Avery MPI 1105 with DOL 1460Z';
 
     // ============================================
     // HANDLE INSTALLATION QUESTION FIRST
@@ -1040,7 +1090,7 @@ For example: '20ft long x 8ft tall' for the sides"
 
 After getting dimensions, calculate: length × height = sqft per side
 Then multiply by number of sides they want wrapped.
-Price at $5.27/sqft for Avery MPI 1105.`;
+Price at $${pricePerSqft}/sqft for ${productName}.`;
       
       chatState.awaiting_trailer_dimensions = true;
     }
@@ -1609,7 +1659,10 @@ CRITICAL PRICING RULES:
                 vehicle_year: chatState.vehicle_year || null,
                 vehicle_make: '',
                 vehicle_model: chatState.vehicle || vehicleDisplay,
-                product_type: chatState.product_type || 'avery',
+                product_type: chatState.product_key || 'avery_wrap',
+                product_id: chatState.product_id || 79,
+                product_name: chatState.product_name || 'Avery MPI 1105 with DOL 1460Z',
+                product_price: chatState.product_price || 5.27,
                 send_email: true
               })
             });
