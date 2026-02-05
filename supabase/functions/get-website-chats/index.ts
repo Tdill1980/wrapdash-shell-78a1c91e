@@ -18,8 +18,22 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch website conversations with latest message preview
-    const { data: conversations, error } = await supabase
+    // Parse request body for optional filters
+    let channelFilter: string | null = null;
+    let limitCount = 200; // Increased default limit
+
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        channelFilter = body.channel || null; // null = all channels
+        limitCount = body.limit || 200;
+      } catch {
+        // No body or invalid JSON - use defaults
+      }
+    }
+
+    // Fetch conversations - optionally filter by channel
+    let query = supabase
       .from("conversations")
       .select(`
         id,
@@ -31,11 +45,17 @@ Deno.serve(async (req) => {
         updated_at,
         last_message_at,
         contact_id
-      `)
-      .eq("channel", "website")
+      `);
+
+    // Only filter by channel if explicitly requested
+    if (channelFilter) {
+      query = query.eq("channel", channelFilter);
+    }
+
+    const { data: conversations, error } = await query
       .order("last_message_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(limitCount);
 
     if (error) {
       console.error("[get-website-chats] Query error:", error);
