@@ -1,4 +1,4 @@
-// trigger rebuild v2 - fix sidebar roles for tools section
+// trigger rebuild v3 - VoiceCommandAI dashboard card
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
