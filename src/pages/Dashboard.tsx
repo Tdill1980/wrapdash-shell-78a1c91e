@@ -180,38 +180,38 @@ export default function Dashboard() {
   return (
     <MainLayout userName="Admin">
       <div className="w-full space-y-6 max-w-6xl mx-auto">
-        {/* Hero Header Card with Wrap Image Background */}
-        {/* To change the image, replace the URL in the img src below */}
-        <div className="relative w-full h-48 sm:h-56 overflow-hidden rounded-xl sm:rounded-2xl border border-white/10">
+        {/* ============================================================ */}
+        {/* HERO DASHBOARD CARD                                         */}
+        {/* To change the background image, replace the URL below:      */}
+        {/* ============================================================ */}
+        <div className="relative w-full h-40 sm:h-48 overflow-hidden rounded-xl sm:rounded-2xl border border-white/10">
+          {/* BACKGROUND IMAGE - Replace this URL to change the image */}
           <img
             src="https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=1200&q=80"
             alt="Vehicle wrap background"
-            className="absolute inset-0 w-full h-full object-cover opacity-60"
+            className="absolute inset-0 w-full h-full object-cover opacity-40"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent" />
-          <div className="relative z-10 h-full flex flex-col justify-center px-6 sm:px-10">
-            <h1 className="font-poppins text-3xl sm:text-4xl font-bold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-              WePrintWraps.com <span className="text-gradient">Dashboard</span>
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
-              Your command center for wrap operations
-            </p>
-          </div>
-        </div>
+          {/* Gradient overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/40" />
 
-        {/* Page Header with Primary CTA */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Operational overview</p>
+          {/* Content: Title on left, Button on right */}
+          <div className="relative z-10 h-full flex items-center justify-between px-6 sm:px-10">
+            <div>
+              <h1 className="font-poppins text-2xl sm:text-4xl font-bold text-white mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+                WePrintWraps.com <span className="text-gradient">Dashboard</span>
+              </h1>
+              <p className="text-muted-foreground text-sm sm:text-base" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
+                Operational overview • Command Center
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate("/organic/reel-builder")}
+              className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] hover:from-[#1E6FE0] hover:to-[#00B8E6] text-white font-semibold shadow-lg hover:shadow-xl transition-all hidden sm:flex"
+            >
+              <Film className="w-4 h-4 mr-2" />
+              Create Video Ad
+            </Button>
           </div>
-          <Button
-            onClick={() => navigate("/organic/reel-builder")}
-            className="bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] hover:from-[#FF5252] hover:to-[#FF7043] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-          >
-            <Film className="w-4 h-4 mr-2" />
-            Create Video Ad
-          </Button>
         </div>
 
         {/* Section 1: Today - Operational Status */}
