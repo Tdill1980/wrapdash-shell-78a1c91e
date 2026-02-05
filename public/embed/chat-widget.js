@@ -30,9 +30,9 @@
     agent: scriptTag?.getAttribute('data-agent') || 'wpw_support',
     mode: scriptTag?.getAttribute('data-mode') || 'live',
     theme: scriptTag?.getAttribute('data-theme') || 'dark-pro',
-    apiUrl: 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/website-chat',
-    statusUrl: 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/check-agent-status',
-    artworkCheckUrl: 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/check-artwork-file',
+    apiUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/website-chat',
+    statusUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status',
+    artworkCheckUrl: 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-artwork-file',
     supabaseUrl: 'https://qxllysilzonrlyoaomce.supabase.co',
     supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bGx5c2lsem9ucmx5b2FvbWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY3MTcxMjUsImV4cCI6MjA1MjI5MzEyNX0.gLBJSH-IP7WVNLH7WRBaQPZ8LuG0XErqf68F6U7ELKY'
   };
