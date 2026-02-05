@@ -33,7 +33,7 @@ export function WebsiteChatWidget() {
         {
           id: "welcome",
           role: "assistant",
-          content: "Hey! I'm Jordan with WePrintWraps.com. What can I help you with today?",
+          content: "Hey! Welcome to WePrintWraps support. What can I help you with today?",
         },
       ]);
     }
@@ -189,14 +189,14 @@ export function WebsiteChatWidget() {
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30 text-lg font-bold text-white shadow-lg backdrop-blur-sm">
-              J
+            <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30 shadow-lg backdrop-blur-sm">
+              <MessageCircle className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="font-bold text-white block text-lg tracking-tight">Jordan</span>
+              <span className="font-bold text-white block text-base tracking-tight">WPW Support Team</span>
               <span className="text-white/90 text-xs flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                WPW Live Chat Agent • Online
+                Website Chat • Online
               </span>
             </div>
           </div>
