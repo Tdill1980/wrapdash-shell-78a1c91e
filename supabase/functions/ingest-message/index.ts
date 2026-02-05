@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPricingContext, calculateQuickQuote } from "../_shared/wpw-pricing.ts";
+import { VOICECOMMAND_AI, detectHotLead, detectPricingIntent } from "../_shared/voicecommand-ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
     const body = await req.json();
 
+    console.log(`🤖 [${VOICECOMMAND_AI.name}] Processing inbound message`);
     console.log("📥 Ingesting message:", body);
 
     // ========== CHECK AI STATUS FIRST ==========

@@ -1,8 +1,10 @@
 // ===========================================
 // ⚠️ LOCKED - VAPI WEBHOOK - DO NOT MODIFY ⚠️
 // Last Updated: January 30, 2026
+// Powered by VoiceCommandAI System
 // ===========================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { VOICECOMMAND_AI, detectHotLead } from "../_shared/voicecommand-ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,6 +65,7 @@ Deno.serve(async (req) => {
     );
 
     const body: VapiMessage = await req.json();
+    console.log(`🤖 [${VOICECOMMAND_AI.name}] VAPI webhook received`);
     console.log("[vapi-webhook] Received:", JSON.stringify(body, null, 2));
 
     // Handle different Vapi event types

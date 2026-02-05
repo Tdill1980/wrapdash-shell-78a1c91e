@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { VOICECOMMAND_AI } from "../_shared/voicecommand-ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ Deno.serve(async (req) => {
   try {
     const { callSid, callerPhone, speechResult, organizationId } = await req.json();
 
+    console.log(`🤖 [${VOICECOMMAND_AI.name}] Processing phone speech`);
     console.log(`[process-phone-speech] Processing call ${callSid} for org ${organizationId}`);
     console.log(`[process-phone-speech] Speech: ${speechResult}`);
 
