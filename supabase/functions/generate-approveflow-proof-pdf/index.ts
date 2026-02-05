@@ -127,8 +127,8 @@ serve(async (req) => {
     console.log(`[generate-approveflow-proof-pdf] Starting PDF generation for: ${proof_version_id}`);
 
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("EXTERNAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
     // Fetch proof version
@@ -627,7 +627,7 @@ serve(async (req) => {
       throw new Error(`Upload failed: ${upErr.message}`);
     }
 
-    const publicUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/approveflow-files/${filePath}`;
+    const publicUrl = `${Deno.env.get("EXTERNAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/approveflow-files/${filePath}`;
 
     // Update proof version with PDF URL and set status to 'ready'
     const { error: updateErr } = await supabase
