@@ -29,8 +29,8 @@ const INBOX_AGENT_MAP: Record<string, string> = {
 };
 
 // Initialize Supabase client early for attachment caching
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseUrl = Deno.env.get('EXTERNAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabaseGlobal = createClient(supabaseUrl, supabaseServiceKey);
 
 // Cache an email attachment to Supabase Storage
