@@ -24,6 +24,7 @@ import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { MightyCustomerCard } from "@/components/dashboard/MightyCustomerCard";
 import { EscalationsDashboardCard } from "@/components/dashboard/EscalationsDashboardCard";
 import { PhoneCallsDashboardCard } from "@/components/dashboard/PhoneCallsDashboardCard";
+import { VoiceCommandAIDashboardCard } from "@/components/dashboard/VoiceCommandAIDashboardCard";
 import dashboardHeroImage from "@/assets/dashboard-hero-wrap.jpg";
 
 export default function Dashboard() {
@@ -290,8 +291,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section 2: MightyCustomer - The Brain (Full Width) */}
-        <MightyCustomerCard />
+        {/* Section 2: VoiceCommandAI + MightyCustomer */}
+        <div className="grid md:grid-cols-3 gap-4">
+          <VoiceCommandAIDashboardCard />
+          <div className="md:col-span-2">
+            <MightyCustomerCard />
+          </div>
+        </div>
 
         {/* Section 3: MightyChat, Phone Calls & Escalations */}
         <div className="grid md:grid-cols-3 gap-4">
