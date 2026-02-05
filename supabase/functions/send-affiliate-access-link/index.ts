@@ -3,8 +3,8 @@ import { Resend } from 'https://esm.sh/resend@2.0.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  Deno.env.get('EXTERNAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));

@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const SUPABASE_URL = Deno.env.get('EXTERNAL_SUPABASE_URL') || Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_ROLE = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);

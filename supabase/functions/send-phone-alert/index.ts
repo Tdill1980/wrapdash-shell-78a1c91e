@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
     console.log(`[send-phone-alert] Sending alert for call ${callSid}, org ${organizationId}`);
 
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get('EXTERNAL_SUPABASE_URL') || Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
     // Look up organization's phone settings
