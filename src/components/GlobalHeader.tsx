@@ -10,11 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Menu, X } from "lucide-react";
+import { LogOut, User, Menu, X, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import { AskAgentButton } from "@/components/mightychat/AskAgentButton";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 interface GlobalHeaderProps {
   userName?: string;
@@ -27,25 +28,37 @@ export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMe
   const { toast } = useToast();
   const [isSignedIn, setIsSignedIn] = useState<boolean>(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const { organizationSettings } = useOrganization();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsSignedIn(!!session);
       setEmail(session?.user?.email ?? null);
+      // Get first name from user metadata (set during signup)
+      const userFirstName = session?.user?.user_metadata?.first_name;
+      setFirstName(userFirstName ?? null);
     });
 
     supabase.auth.getSession().then(({ data }) => {
       setIsSignedIn(!!data.session);
       setEmail(data.session?.user?.email ?? null);
+      const userFirstName = data.session?.user?.user_metadata?.first_name;
+      setFirstName(userFirstName ?? null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // Display name: prefer first name, then email username, then fallback
   const displayName = useMemo(() => {
+    if (firstName) return firstName;
     if (email) return email.split("@")[0];
     return userName;
-  }, [email, userName]);
+  }, [firstName, email, userName]);
+
+  // Organization name for display
+  const orgName = organizationSettings?.name || null;
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -100,20 +113,34 @@ export const GlobalHeader = ({ userName = "User", onMobileMenuToggle, isMobileMe
 
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-3 text-white/80 hover:text-white transition-colors cursor-pointer focus:outline-none">
-                  <span className="hidden sm:inline">Hi, {displayName}</span>
+                  <div className="hidden sm:flex flex-col items-end">
+                    {orgName && (
+                      <span className="text-xs text-white/50 font-medium">{orgName}</span>
+                    )}
+                    <span className="text-sm">Hi, {displayName}</span>
+                  </div>
                   <div className="h-8 w-8 rounded-full border border-white/20 bg-gradient-to-br from-[#2F81F7] to-[#15D1FF] flex items-center justify-center text-white font-semibold text-sm hover:border-white/40 transition-all">
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-[#1A1D24] border-white/10 z-[100]">
-                  <DropdownMenuLabel className="text-white/90">My Account</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-white/90">
+                    {orgName || "My Account"}
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuItem
+                    onClick={() => navigate("/admin/settings")}
+                    className="text-white/70 hover:text-white hover:bg-white/5 cursor-pointer"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => navigate("/settings")}
                     className="text-white/70 hover:text-white hover:bg-white/5 cursor-pointer"
                   >
                     <User className="mr-2 h-4 w-4" />
-                    <span>Account Settings</span>
+                    <span>Account</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-white/10" />
                   <DropdownMenuItem

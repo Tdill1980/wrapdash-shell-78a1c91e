@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { supabase, lovableFunctions } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import VoiceCommand from "@/components/VoiceCommand";
@@ -78,7 +79,22 @@ export default function MightyCustomer() {
     vehicleMake: prefillMake,
     vehicleModel: prefillModel,
   });
-  const [margin, setMargin] = useState(65); // Only used when installsEnabled is true
+  // Domain-based defaults: main wrapcommandai.com = wholesale (OFF), subdomains = retail shops (ON)
+  const isSubdomain = useMemo(() => {
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+    // vinylvixen.wrapcommandai.com → true (subdomain shop)
+    // wrapcommandai.com, localhost, lovable previews → false (wholesale/main)
+    return parts.length > 2 &&
+           !hostname.includes('lovableproject.com') &&
+           !hostname.includes('lovable.app') &&
+           hostname !== 'localhost';
+  }, []);
+
+  // Labor and Margin toggles - default based on domain type
+  const [laborEnabled, setLaborEnabled] = useState(isSubdomain);
+  const [marginEnabled, setMarginEnabled] = useState(isSubdomain);
+  const [margin, setMargin] = useState(65);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState("Gloss");
   const [includeRoof, setIncludeRoof] = useState(true);
@@ -129,17 +145,20 @@ export default function MightyCustomer() {
   // Supabase-powered SQFT options from VehicleSelectorV2
   const [dbSqftOptions, setDbSqftOptions] = useState<VehicleSQFTOptions | null>(null);
 
-  // Auto-SQFT Quote Engine
-  const vehicle = customerData.vehicleYear && customerData.vehicleMake && customerData.vehicleModel
-    ? {
-        year: customerData.vehicleYear,
-        make: customerData.vehicleMake,
-        model: customerData.vehicleModel,
-      }
-    : null;
+  // Auto-SQFT Quote Engine - memoize vehicle to prevent re-render loops
+  const vehicle = useMemo(() => {
+    if (!customerData.vehicleYear || !customerData.vehicleMake || !customerData.vehicleModel) {
+      return null;
+    }
+    return {
+      year: customerData.vehicleYear,
+      make: customerData.vehicleMake,
+      model: customerData.vehicleModel,
+    };
+  }, [customerData.vehicleYear, customerData.vehicleMake, customerData.vehicleModel]);
 
   // Quote engine with tenant-gated install features
-  // When installsEnabled is false (WPW tenant), labor/margin are NOT calculated
+  // Labor and margin are controlled by both tenant capability AND manual toggles
   const {
     sqft,
     setSqft,
@@ -155,10 +174,11 @@ export default function MightyCustomer() {
     vehicle,
     quantity,
     {
-      // Tenant capability gate - when false, install data is never loaded
-      installsEnabled,
+      // Labor is enabled when: tenant allows installs AND labor toggle is ON
+      installsEnabled: installsEnabled && laborEnabled,
       installRatePerHour: settings.install_rate_per_hour,
-      margin,
+      // Margin only applied when toggle is ON (pass 0 when disabled)
+      margin: marginEnabled ? margin : 0,
       includeRoof,
       selectedPanels: wrapType === 'partial' ? selectedPanels : null,
     }
@@ -1279,22 +1299,60 @@ export default function MightyCustomer() {
             </div>
           </div>
 
-          {/* Margin slider - only mounted when installsEnabled is true */}
-          {installsEnabled && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <Label>Margin: {margin}%</Label>
+          {/* Labor and Margin toggles - always visible, controlled by toggles */}
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+            <Label className="text-lg font-semibold">Pricing Options</Label>
+            <p className="text-sm text-muted-foreground">
+              {isSubdomain ? "Retail pricing (install shop)" : "Wholesale pricing (material only)"}
+            </p>
+
+            {/* Labor Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="labor-toggle" className="text-base">Include Labor</Label>
+                <p className="text-xs text-muted-foreground">
+                  Add installation labor costs to the quote
+                </p>
               </div>
-              <Slider
-                value={[margin]}
-                onValueChange={([value]) => setMargin(value)}
-                min={0}
-                max={100}
-                step={5}
-                className="w-full"
+              <Switch
+                id="labor-toggle"
+                checked={laborEnabled}
+                onCheckedChange={setLaborEnabled}
               />
             </div>
-          )}
+
+            {/* Margin Toggle + Slider */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="margin-toggle" className="text-base">Include Margin</Label>
+                <p className="text-xs text-muted-foreground">
+                  Add profit margin to the quote
+                </p>
+              </div>
+              <Switch
+                id="margin-toggle"
+                checked={marginEnabled}
+                onCheckedChange={setMarginEnabled}
+              />
+            </div>
+
+            {/* Margin percentage slider - only shown when margin is enabled */}
+            {marginEnabled && (
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm">Margin Percentage: {margin}%</Label>
+                </div>
+                <Slider
+                  value={[margin]}
+                  onValueChange={([value]) => setMargin(value)}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
 
           <div className="space-y-4 pt-4 border-t">
             <Label className="text-lg font-semibold">Customer Information</Label>
