@@ -190,18 +190,18 @@ export default function Dashboard() {
           <img
             src={dashboardHeroImage}
             alt="Vehicle wrap background"
-            className="absolute inset-0 w-full h-full object-cover opacity-50"
+            className="absolute inset-0 w-full h-full object-cover opacity-70"
           />
-          {/* Gradient overlay for text readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/40" />
+          {/* Light gradient overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent" />
 
           {/* Content: Title on left, Button on right */}
           <div className="relative z-10 h-full flex items-center justify-between px-6 sm:px-10">
             <div>
-              <h1 className="font-poppins text-2xl sm:text-4xl font-bold text-white mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                WePrintWraps.com <span className="text-gradient">Dashboard</span>
+              <h1 className="font-['Poppins'] text-2xl sm:text-4xl font-extrabold tracking-wide text-white mb-1" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.6)' }}>
+                WePrintWraps.com Dashboard
               </h1>
-              <p className="text-muted-foreground text-sm sm:text-base" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
+              <p className="text-white/80 text-sm sm:text-base font-medium" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.6)' }}>
                 Operational overview • Command Center
               </p>
             </div>
