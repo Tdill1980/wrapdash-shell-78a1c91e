@@ -12,17 +12,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Use EXTERNAL database (user's Supabase) - this function runs on Lovable but queries external DB
-    const supabaseUrl = Deno.env.get("EXTERNAL_SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")!;
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error("[get-website-chats] Missing EXTERNAL_SUPABASE credentials");
-      return new Response(
-        JSON.stringify({ error: "Database configuration error" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Use EXTERNAL database (user's Supabase) with fallback - this function runs on Lovable but queries external DB
+    const supabaseUrl = Deno.env.get("EXTERNAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
