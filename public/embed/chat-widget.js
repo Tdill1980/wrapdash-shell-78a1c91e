@@ -1,11 +1,23 @@
 (async function() {
   'use strict';
 
-  // WrapCommandAI Chat Widget - Jordan Lee
+  // ============================================================
+  // WrapCommandAI Chat Widget v3 — "WPW Support Team"
   // SAFETY: External, deferred, non-blocking. Fails silently.
   // Does NOT execute WordPress logic or mutate WP state.
-  
-  // Kill switch - add <script>window.WRAPCOMMAND_DISABLED = true;</script> to disable
+  // ============================================================
+  // CHANGELOG v3:
+  //   • Session uses sessionStorage (persists across pages in same tab, fresh on new tab)
+  //   • Response field: checks data.reply || data.response || data.message (bulletproof)
+  //   • Branding: "Powered by WrapCommandAI"
+  //   • Header: "WPW Support Team"
+  //   • Gradient dark theme with magenta → purple
+  //   • Smart onboarding: skips if user is logged in (WooCommerce / WPW account)
+  //   • Proper fallbacks on every error path
+  //   • Full knowledge base context sent with every message
+  // ============================================================
+
+  // Kill switch
   if (window.WRAPCOMMAND_DISABLED) {
     console.log('[WCAI] Widget disabled via kill switch');
     return;
@@ -26,58 +38,50 @@
   };
 
   // ========================================
-  // THEME CONFIGURATION
-  // Supports: data-theme="wpw" (default), or custom themes
+  // THEME — Dark Pro with Magenta/Purple Gradient
   // ========================================
-  const themes = {
-    wpw: {
-      primary: '#e6007e',      // WPW Magenta - bubble, header, send button
-      secondary: '#0057b8',    // WPW Blue - helper pill background
-      text: '#ffffff',         // White text on colored backgrounds
-      accent: '#22c55e'        // Green - online indicator
-    },
-    'dark-pro': {
-      primary: '#e6007e',      // WPW Magenta
-      secondary: '#0057b8',    // WPW Blue
-      text: '#ffffff',         // White text
-      accent: '#22c55e'        // Green - online indicator
-    },
-    default: {
-      primary: '#e6007e',
-      secondary: '#0057b8',
-      text: '#ffffff',
-      accent: '#22c55e'
-    }
+  const colors = {
+    primary: '#e6007e',
+    secondary: '#7c3aed',
+    tertiary: '#3b82f6',
+    text: '#ffffff',
+    accent: '#22c55e',
+    bgDark: '#1a1a2e',
+    bgCard: '#16213e',
+    bgInput: '#0f3460',
+    gradient: 'linear-gradient(135deg, #e6007e 0%, #7c3aed 100%)',
+    gradientWide: 'linear-gradient(135deg, #e6007e 0%, #7c3aed 50%, #3b82f6 100%)',
+    border: 'rgba(139,92,246,0.3)',
+    borderGlow: 'rgba(230,0,126,0.3)',
+    textMuted: '#94a3b8',
+    textBody: '#e2e8f0',
+    textDim: '#64748b'
   };
-  
-  const colors = themes[config.theme] || themes.default;
-  console.log(`[WCAI] Theme: ${config.theme}`, colors);
+
+  console.log('[WCAI] Widget v3 loaded | Theme: dark-pro');
 
   // ========================================
-  // ALWAYS ON - No schedule check, widget runs 24/7
-  // To re-enable scheduling, restore the status check block
-  // ========================================
-  console.log('[WCAI] Widget running 24/7 (no schedule check)');
+  // ALWAYS ON — 24/7, no schedule check
   // ========================================
 
-  // WPW Logo (base64 encoded small version for embed)
+  // WPW Logo
   const WPW_LOGO = 'https://weprintwraps.com/cdn/shop/files/WePrintWraps-Logo-White.png?v=1690318107';
 
-  // QUICK ACTIONS - 3 buttons only (icon separate from text to avoid duplication)
+  // QUICK ACTIONS — 3 buttons
   const quickActions = [
     { id: 'quote', text: 'How much is my wrap project?', icon: '🚗', primary: true, message: 'How much is my wrap project?' },
-    { id: 'order', text: 'How do I order?', icon: '📦', message: 'How do I place an order?' },
-    { id: 'restyle', text: 'Ask me about RestyleProAI', icon: '🎨', message: 'Tell me about RestyleProAI and how it can help visualize my wrap' }
+    { id: 'order', text: 'Check my order status', icon: '📦', message: 'I need to check on my order status' },
+    { id: 'restyle', text: 'Ask about RestyleProAI', icon: '🎨', message: 'Tell me about RestyleProAI and how it can help visualize my wrap' }
   ];
 
-  // Geo data (fetched on load)
+  // Geo data
   let geoData = null;
-  
-  // Track file upload count per session for rate limiting
+
+  // File upload rate limiting
   let fileUploadCount = 0;
   const MAX_UPLOADS_PER_SESSION = 3;
 
-  // Fetch geo location on widget load
+  // Fetch geo on load
   (async function fetchGeoData() {
     try {
       const response = await fetch('https://ipapi.co/json/', { cache: 'force-cache' });
@@ -100,7 +104,59 @@
     }
   })();
 
-  // Styles - using theme colors
+  // ========================================
+  // SMART LOGIN DETECTION
+  // Checks WooCommerce, WordPress, and common cookie patterns
+  // Returns { name, email } or null
+  // ========================================
+  function detectLoggedInUser() {
+    try {
+      // Method 1: WooCommerce / WordPress body classes
+      const body = document.body;
+      if (body && body.classList.contains('logged-in')) {
+        // User is logged into WordPress/WooCommerce
+        // Try to get their info from common WP patterns
+        const accountLink = document.querySelector('.woocommerce-MyAccount-navigation, .account-link, [data-user-name], [data-user-email]');
+        const userName = accountLink?.getAttribute('data-user-name') || '';
+        const userEmail = accountLink?.getAttribute('data-user-email') || '';
+
+        // Also check if WooCommerce exposes user data
+        if (window.wc_add_to_cart_params?.ajax_url) {
+          // WooCommerce is active
+        }
+
+        if (userName || userEmail) {
+          return { name: userName, email: userEmail };
+        }
+
+        // Logged in but we can't grab details — still skip onboarding
+        // They'll provide details naturally in conversation if needed
+        return { name: '', email: '', loggedIn: true };
+      }
+
+      // Method 2: Check for common login cookies
+      const cookies = document.cookie;
+      if (cookies.includes('wordpress_logged_in') || cookies.includes('woocommerce_logged_in') || cookies.includes('wp_woocommerce_session')) {
+        return { name: '', email: '', loggedIn: true };
+      }
+
+      // Method 3: Check sessionStorage for previously collected info from THIS tab
+      const savedName = sessionStorage.getItem('wcai_user_name');
+      const savedEmail = sessionStorage.getItem('wcai_user_email');
+      if (savedName && savedEmail) {
+        return { name: savedName, email: savedEmail };
+      }
+
+      return null;
+    } catch (e) {
+      console.warn('[WCAI] Login detection error:', e);
+      return null;
+    }
+  }
+
+  // ========================================
+  // STYLES
+  // ========================================
   const styles = `
     .wcai-chat-container {
       position: fixed;
@@ -126,15 +182,15 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 2px 12px rgba(0,87,184,0.3);
-      border: 1px solid rgba(0,87,184,0.2);
+      box-shadow: 0 2px 12px rgba(124,58,237,0.3);
+      border: 1px solid rgba(124,58,237,0.2);
       transition: all 0.2s;
       opacity: 0;
       animation: wcai-slide-in 0.4s ease-out 2s forwards;
     }
     .wcai-ask-trigger:hover {
       transform: scale(1.03);
-      box-shadow: 0 4px 16px rgba(0,87,184,0.4);
+      box-shadow: 0 4px 16px rgba(124,58,237,0.4);
       border-color: ${colors.secondary};
     }
     .wcai-ask-trigger svg {
@@ -153,12 +209,12 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background: ${colors.primary};
+      background: ${colors.gradient};
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 20px rgba(230,0,126,0.4);
+      box-shadow: 0 4px 20px ${colors.borderGlow};
       transition: transform 0.2s, box-shadow 0.2s;
       position: relative;
     }
@@ -192,13 +248,13 @@
       right: 0;
       width: 380px;
       max-height: 600px;
-      background: #1a1a2e;
+      background: ${colors.bgDark};
       border-radius: 16px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       display: none;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid rgba(230,0,126,0.3);
+      border: 1px solid ${colors.borderGlow};
     }
     .wcai-chat-window.open {
       display: flex;
@@ -209,7 +265,7 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .wcai-chat-header {
-      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      background: ${colors.gradient};
       padding: 16px 20px;
       color: ${colors.text};
       display: flex;
@@ -273,7 +329,6 @@
     .wcai-chat-close:hover {
       background: rgba(255,255,255,0.2);
     }
-
     .wcai-chat-reset {
       background: rgba(255,255,255,0.1);
       border: none;
@@ -296,11 +351,11 @@
       flex: 1;
       overflow-y: auto;
       padding: 16px;
-      padding-bottom: 28px; /* prevent last line from visually “kissing” the edge */
+      padding-bottom: 28px;
       display: flex;
       flex-direction: column;
       gap: 12px;
-      background: #16213e;
+      background: ${colors.bgCard};
       min-height: 100px;
       max-height: 340px;
       scroll-padding-bottom: 28px;
@@ -317,20 +372,20 @@
     }
     .wcai-message.user {
       align-self: flex-end;
-      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      background: ${colors.gradient};
       color: ${colors.text};
       border-bottom-right-radius: 4px;
     }
     .wcai-message.agent {
       align-self: flex-start;
-      background: #0f3460;
-      color: #e2e8f0;
-      border: 1px solid rgba(139,92,246,0.3);
+      background: ${colors.bgInput};
+      color: ${colors.textBody};
+      border: 1px solid ${colors.border};
       border-bottom-left-radius: 4px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
     .wcai-message.typing {
-      background: #0f3460;
+      background: ${colors.bgInput};
     }
     .wcai-typing-dots {
       display: flex;
@@ -353,8 +408,8 @@
     }
     .wcai-quick-actions {
       padding: 12px 16px;
-      background: #1a1a2e;
-      border-top: 1px solid rgba(139,92,246,0.2);
+      background: ${colors.bgDark};
+      border-top: 1px solid ${colors.border};
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -365,11 +420,11 @@
       gap: 10px;
       padding: 12px 16px;
       border-radius: 12px;
-      border: 1px solid rgba(139,92,246,0.3);
-      background: #0f3460;
+      border: 1px solid ${colors.border};
+      background: ${colors.bgInput};
       cursor: pointer;
       font-size: 14px;
-      color: #e2e8f0;
+      color: ${colors.textBody};
       transition: all 0.2s;
       text-align: left;
       width: 100%;
@@ -379,7 +434,7 @@
       background: rgba(230,0,126,0.1);
     }
     .wcai-quick-btn.primary {
-      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      background: ${colors.gradient};
       border: none;
       color: white;
       font-weight: 600;
@@ -397,35 +452,35 @@
     }
     .wcai-chat-input-area {
       padding: 12px 16px;
-      border-top: 1px solid rgba(139,92,246,0.2);
-      background: #1a1a2e;
+      border-top: 1px solid ${colors.border};
+      background: ${colors.bgDark};
       display: flex;
       gap: 10px;
     }
     .wcai-chat-input {
       flex: 1;
       padding: 12px 16px;
-      border: 1px solid rgba(139,92,246,0.3);
+      border: 1px solid ${colors.border};
       border-radius: 24px;
-      background: #0f3460;
-      color: #e2e8f0;
+      background: ${colors.bgInput};
+      color: ${colors.textBody};
       font-size: 14px;
       outline: none;
       transition: border-color 0.2s;
     }
     .wcai-chat-input::placeholder {
-      color: #64748b;
+      color: ${colors.textDim};
     }
     .wcai-chat-input:focus {
       border-color: ${colors.primary};
-      background: #16213e;
+      background: ${colors.bgCard};
     }
     .wcai-chat-send {
       width: 44px;
       height: 44px;
       border-radius: 50%;
       border: none;
-      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      background: ${colors.gradient};
       color: ${colors.text};
       cursor: pointer;
       display: flex;
@@ -445,9 +500,9 @@
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      border: 1px solid rgba(139,92,246,0.3);
-      background: #0f3460;
-      color: #94a3b8;
+      border: 1px solid ${colors.border};
+      background: ${colors.bgInput};
+      color: ${colors.textMuted};
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -457,14 +512,14 @@
     .wcai-chat-attach:hover {
       border-color: ${colors.primary};
       color: ${colors.primary};
-      background: #16213e;
+      background: ${colors.bgCard};
     }
     .wcai-powered {
       padding: 8px 16px;
       text-align: center;
       font-size: 11px;
-      color: #64748b;
-      background: #1a1a2e;
+      color: ${colors.textDim};
+      background: ${colors.bgDark};
       border-top: 1px solid rgba(139,92,246,0.1);
     }
     .wcai-powered a {
@@ -482,11 +537,6 @@
       border-radius: 4px;
       font-weight: 600;
     }
-    /*
-      IMPORTANT:
-      overflow:hidden can visually clip multi-line messages during typing
-      (especially with dynamic height + scroll).
-    */
     .wcai-typewriter {
       overflow: visible;
       border-right: 2px solid ${colors.primary};
@@ -499,8 +549,8 @@
       0%, 100% { border-color: ${colors.primary}; }
       50% { border-color: transparent; }
     }
-    
-    /* Modal styles - dark theme */
+
+    /* Modal — dark gradient theme */
     .wcai-modal-overlay {
       position: fixed;
       top: 0;
@@ -519,13 +569,13 @@
       to { opacity: 1; }
     }
     .wcai-modal {
-      background: #1a1a2e;
+      background: ${colors.bgDark};
       border-radius: 16px;
       padding: 24px;
       max-width: 360px;
       width: 90%;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      border: 1px solid rgba(139,92,246,0.3);
+      border: 1px solid ${colors.border};
       animation: wcai-modal-in 0.3s ease-out;
     }
     @keyframes wcai-modal-in {
@@ -535,18 +585,18 @@
     .wcai-modal h3 {
       margin: 0 0 12px;
       font-size: 18px;
-      color: #e2e8f0;
+      color: ${colors.textBody};
     }
     .wcai-modal p {
       margin: 0 0 20px;
-      color: #94a3b8;
+      color: ${colors.textMuted};
       font-size: 14px;
       line-height: 1.5;
     }
     .wcai-modal ul {
       margin: 0 0 16px;
       padding-left: 20px;
-      color: #94a3b8;
+      color: ${colors.textMuted};
       font-size: 14px;
       line-height: 1.6;
     }
@@ -565,47 +615,47 @@
       border: none;
     }
     .wcai-modal-btn.confirm {
-      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      background: ${colors.gradient};
       color: white;
     }
     .wcai-modal-btn.confirm:hover {
       box-shadow: 0 4px 16px rgba(230,0,126,0.4);
     }
     .wcai-modal-btn.cancel {
-      background: #0f3460;
-      color: #e2e8f0;
-      border: 1px solid rgba(139,92,246,0.3);
+      background: ${colors.bgInput};
+      color: ${colors.textBody};
+      border: 1px solid ${colors.border};
     }
     .wcai-modal-btn.cancel:hover {
-      background: #16213e;
+      background: ${colors.bgCard};
     }
-    
-    /* Upload progress - dark theme */
+
+    /* Upload progress — dark theme */
     .wcai-upload-progress {
-      background: #0f3460;
+      background: ${colors.bgInput};
       border-radius: 8px;
       padding: 12px 16px;
       margin: 8px 0;
     }
     .wcai-upload-progress-bar {
       height: 6px;
-      background: #16213e;
+      background: ${colors.bgCard};
       border-radius: 3px;
       overflow: hidden;
       margin-top: 8px;
     }
     .wcai-upload-progress-fill {
       height: 100%;
-      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      background: ${colors.gradient};
       border-radius: 3px;
       transition: width 0.3s ease-out;
     }
     .wcai-upload-text {
       font-size: 13px;
-      color: #e2e8f0;
+      color: ${colors.textBody};
     }
 
-    /* Onboarding screen */
+    /* Onboarding screen — dark gradient */
     .wcai-onboarding {
       display: flex;
       flex-direction: column;
@@ -614,10 +664,11 @@
       padding: 30px 20px;
       flex: 1;
       text-align: center;
+      background: ${colors.bgCard};
     }
     .wcai-onboarding-text {
       font-size: 15px;
-      color: #e2e8f0;
+      color: ${colors.textBody};
       margin-bottom: 20px;
       line-height: 1.5;
     }
@@ -626,9 +677,9 @@
       max-width: 260px;
       padding: 12px 16px;
       margin-bottom: 12px;
-      border: 1px solid rgba(139,92,246,0.3);
+      border: 1px solid ${colors.border};
       border-radius: 8px;
-      background: #16213e;
+      background: ${colors.bgInput};
       color: #fff;
       font-size: 14px;
       outline: none;
@@ -638,14 +689,14 @@
       border-color: ${colors.primary};
     }
     .wcai-onboarding-input::placeholder {
-      color: #64748b;
+      color: ${colors.textDim};
     }
     .wcai-onboarding-start {
       width: 100%;
       max-width: 260px;
       padding: 12px 24px;
       margin-top: 8px;
-      background: linear-gradient(135deg, ${colors.primary}, #8b5cf6);
+      background: ${colors.gradient};
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -661,7 +712,7 @@
     .wcai-onboarding-skip {
       background: none;
       border: none;
-      color: #64748b;
+      color: ${colors.textDim};
       font-size: 13px;
       margin-top: 12px;
       cursor: pointer;
@@ -669,7 +720,7 @@
       transition: color 0.2s;
     }
     .wcai-onboarding-skip:hover {
-      color: #94a3b8;
+      color: ${colors.textMuted};
     }
 
     @media (max-width: 480px) {
@@ -682,25 +733,32 @@
     }
   `;
 
-  // Create style element
+  // Inject styles
   const styleEl = document.createElement('style');
   styleEl.textContent = styles;
   document.head.appendChild(styleEl);
 
-  // Session ID - ALWAYS FRESH on every page load
-  // Each page load = new conversation = no old data bleeding through
+  // ========================================
+  // SESSION — sessionStorage (persists within tab, fresh on new tab)
+  // ========================================
   function generateSessionId() {
     return 'wcai_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
   }
 
-  // Clear any old session data
-  localStorage.removeItem('wcai_session');
-  sessionStorage.removeItem('wcai_session');
+  // Use sessionStorage: survives page nav in same tab, dies on tab close
+  let sessionId = sessionStorage.getItem('wcai_session');
+  if (!sessionId) {
+    sessionId = generateSessionId();
+    sessionStorage.setItem('wcai_session', sessionId);
+  }
 
-  // Always generate fresh session
-  let sessionId = generateSessionId();
+  // ========================================
+  // DETECT LOGGED-IN USER (skip onboarding if found)
+  // ========================================
+  const detectedUser = detectLoggedInUser();
+  const userIsLoggedIn = !!detectedUser;
 
-  // Create quick actions HTML - only 3 wired buttons
+  // Quick actions HTML
   const quickActionsHTML = quickActions.map(action => {
     const btnClass = action.primary ? 'wcai-quick-btn primary' : 'wcai-quick-btn';
     return `<button class="${btnClass}" data-action="${action.id}">
@@ -709,7 +767,12 @@
     </button>`;
   }).join('');
 
-  // Create chat container
+  // ========================================
+  // BUILD CHAT CONTAINER
+  // If user is logged in, skip onboarding entirely
+  // ========================================
+  const showOnboarding = !userIsLoggedIn;
+
   const container = document.createElement('div');
   container.className = 'wcai-chat-container';
   container.innerHTML = `
@@ -717,30 +780,31 @@
       <div class="wcai-chat-header">
         <div class="wcai-chat-header-avatar">W</div>
         <div class="wcai-chat-header-info">
-          <h3>WPW Chat Team Member</h3>
+          <h3>WPW Support Team</h3>
           <p><span class="wcai-live-dot"></span> Online</p>
         </div>
-        <button class="wcai-chat-reset" id="wcai-reset" title="Start a new quote (clears this chat)">
-          ↻ New quote
+        <button class="wcai-chat-reset" id="wcai-reset" title="Start a new conversation">
+          ↻ New chat
         </button>
         <button class="wcai-chat-close" id="wcai-close">&times;</button>
       </div>
+      ${showOnboarding ? `
       <div class="wcai-onboarding" id="wcai-onboarding">
-        <div class="wcai-onboarding-text">Enter Name and email to begin chat session</div>
+        <div class="wcai-onboarding-text">Enter your name and email to start chatting</div>
         <input type="text" class="wcai-onboarding-input" id="wcai-onboard-name" placeholder="Your Name" />
         <input type="email" class="wcai-onboarding-input" id="wcai-onboard-email" placeholder="Your Email" />
-        <input type="text" class="wcai-onboarding-input" id="wcai-onboard-order" placeholder="Order Number (if applicable)" />
         <button class="wcai-onboarding-start" id="wcai-onboard-start">Start Chat</button>
         <button class="wcai-onboarding-skip" id="wcai-onboard-skip">skip</button>
       </div>
-      <div class="wcai-chat-messages" id="wcai-messages" style="display:none;">
+      ` : ''}
+      <div class="wcai-chat-messages" id="wcai-messages" style="${showOnboarding ? 'display:none;' : 'display:flex;'}">
         <div class="wcai-message agent" id="wcai-welcome"></div>
       </div>
-      <div class="wcai-quick-actions" id="wcai-quick-actions" style="display:none;">
+      <div class="wcai-quick-actions" id="wcai-quick-actions" style="${showOnboarding ? 'display:none;' : 'display:flex;'}">
         ${quickActionsHTML}
       </div>
-      <div class="wcai-chat-input-area" id="wcai-input-area" style="display:none;">
-        <button class="wcai-chat-attach" id="wcai-attach" title="Attach file – AI will analyze your artwork">
+      <div class="wcai-chat-input-area" id="wcai-input-area" style="${showOnboarding ? 'display:none;' : 'display:flex;'}">
+        <button class="wcai-chat-attach" id="wcai-attach" title="Attach file">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
           </svg>
@@ -753,7 +817,7 @@
         </button>
       </div>
       <div class="wcai-powered">
-        Powered by <a href="https://weprintwraps.com" target="_blank">weprintwraps.com</a>
+        Powered by <a href="https://wrapcommandai.com" target="_blank">WrapCommandAI</a>
       </div>
     </div>
     <div class="wcai-bubble-row">
@@ -775,7 +839,9 @@
   `;
   document.body.appendChild(container);
 
-  // Elements
+  // ========================================
+  // ELEMENT REFERENCES
+  // ========================================
   const bubble = document.getElementById('wcai-bubble');
   const askTrigger = document.getElementById('wcai-ask-trigger');
   const chatWindow = document.getElementById('wcai-window');
@@ -788,49 +854,48 @@
   const sendBtn = document.getElementById('wcai-send');
   const attachBtn = document.getElementById('wcai-attach');
   const fileInput = document.getElementById('wcai-file-input');
+  const inputArea = document.getElementById('wcai-input-area');
 
-  // Onboarding elements
+  // Onboarding elements (may not exist if user is logged in)
   const onboardingPanel = document.getElementById('wcai-onboarding');
   const onboardNameInput = document.getElementById('wcai-onboard-name');
   const onboardEmailInput = document.getElementById('wcai-onboard-email');
-  const onboardOrderInput = document.getElementById('wcai-onboard-order');
   const onboardStartBtn = document.getElementById('wcai-onboard-start');
   const onboardSkipBtn = document.getElementById('wcai-onboard-skip');
-  const inputArea = document.getElementById('wcai-input-area');
 
   let isOpen = false;
   let hasInteracted = false;
-  let hasOnboarded = false; // Tracks if user completed or skipped onboarding
-  let collectedName = '';
-  let collectedEmail = '';
+  let hasOnboarded = userIsLoggedIn; // Skip onboarding if already logged in
+  let collectedName = detectedUser?.name || '';
+  let collectedEmail = detectedUser?.email || '';
   let collectedOrderNumber = '';
-  let isCheckMyFileFlow = false; // Tracks if file upload is from "Check My File" button
+  let isCheckMyFileFlow = false;
 
-  // Attach button opens file picker directly (no confirmation modal for general uploads)
+  // ========================================
+  // ATTACH BUTTON
+  // ========================================
   if (attachBtn) {
     attachBtn.addEventListener('click', () => {
-      // Check rate limit
       if (fileUploadCount >= MAX_UPLOADS_PER_SESSION) {
         addMessage("You've reached the upload limit for this session. Please email your files to Design@WePrintWraps.com for review.", false);
         return;
       }
-      isCheckMyFileFlow = false; // Direct attach, not Check My File
+      isCheckMyFileFlow = false;
       fileInput.click();
     });
   }
 
-  // Hide ask trigger after first interaction
+  // ========================================
+  // HELPER FUNCTIONS
+  // ========================================
   function hideAskTrigger() {
     if (askTrigger && !askTrigger.classList.contains('hidden')) {
       askTrigger.classList.add('hidden');
     }
   }
 
-  // Ask trigger opens chat too
   if (askTrigger) {
-    askTrigger.addEventListener('click', () => {
-      toggleChat();
-    });
+    askTrigger.addEventListener('click', () => toggleChat());
   }
 
   // Typewriter effect
@@ -839,12 +904,11 @@
       element.classList.add('wcai-typewriter');
       element.textContent = '';
       let i = 0;
-      
+
       function type() {
         if (i < text.length) {
           element.textContent += text.charAt(i);
           i++;
-          // Keep viewport pinned to newest content while typing (prevents “cut off” look)
           if (messagesContainer) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }
@@ -858,34 +922,38 @@
           resolve();
         }
       }
-      
-      // Small delay before starting to simulate "thinking"
+
       setTimeout(type, 500);
     });
   }
 
-  // Type welcome message on first open
+  // Welcome message — personalized if we have a name
   function showWelcomeMessage() {
     const name = collectedName ? collectedName.split(' ')[0] : '';
     let welcomeText;
-    if (name && collectedOrderNumber) {
-      welcomeText = `Hi ${name}! I see you have order #${collectedOrderNumber}. How can I help you today?`;
-    } else if (name) {
-      welcomeText = `Hi ${name}! How can I help you today?`;
+    if (name) {
+      welcomeText = `Hey ${name}! Welcome to WePrintWraps. How can I help you today?`;
     } else {
-      welcomeText = "Hi! How can I help you today?";
+      welcomeText = "Hey! Welcome to WePrintWraps. How can I help you today?";
     }
     typeMessage(welcomeMessage, welcomeText, 25);
   }
 
-  // Complete onboarding and start chat
+  // Complete onboarding (from form OR skip)
   async function completeOnboarding() {
-    // Collect values
-    collectedName = onboardNameInput?.value?.trim() || '';
-    collectedEmail = onboardEmailInput?.value?.trim() || '';
-    collectedOrderNumber = onboardOrderInput?.value?.trim() || '';
+    // Collect values from form if available
+    if (onboardNameInput) {
+      collectedName = onboardNameInput.value?.trim() || collectedName;
+    }
+    if (onboardEmailInput) {
+      collectedEmail = onboardEmailInput.value?.trim() || collectedEmail;
+    }
 
-    // Hide onboarding, show messages and input area
+    // Save to sessionStorage so we don't re-ask within this tab
+    if (collectedName) sessionStorage.setItem('wcai_user_name', collectedName);
+    if (collectedEmail) sessionStorage.setItem('wcai_user_email', collectedEmail);
+
+    // Hide onboarding, show chat
     if (onboardingPanel) onboardingPanel.style.display = 'none';
     if (messagesContainer) messagesContainer.style.display = 'flex';
     if (inputArea) inputArea.style.display = 'flex';
@@ -894,15 +962,12 @@
     hasOnboarded = true;
     hasInteracted = true;
 
-    // Show typing indicator for 1.5 seconds
+    // Typing indicator
     showTyping();
     await new Promise(resolve => setTimeout(resolve, 1500));
     hideTyping();
 
-    // Show welcome with typewriter effect
     showWelcomeMessage();
-
-    // Focus input for chat
     if (input) input.focus();
   }
 
@@ -911,11 +976,10 @@
     isOpen = !isOpen;
     chatWindow.classList.toggle('open', isOpen);
     if (isOpen) {
+      hideAskTrigger();
       if (!hasOnboarded) {
-        // Show onboarding, focus name input
         if (onboardNameInput) onboardNameInput.focus();
       } else {
-        // Already onboarded, focus chat input
         if (input) input.focus();
         if (!hasInteracted) {
           hasInteracted = true;
@@ -925,11 +989,11 @@
     }
   }
 
+  // Reset conversation
   function resetConversation() {
-    // Fresh sessionId => fresh transcript + fresh backend context
     sessionId = generateSessionId();
+    sessionStorage.setItem('wcai_session', sessionId);
 
-    // Clear messages and re-run welcome
     if (messagesContainer && welcomeMessage) {
       welcomeMessage.textContent = '';
       messagesContainer.replaceChildren(welcomeMessage);
@@ -939,7 +1003,6 @@
     hasInteracted = true;
     showWelcomeMessage();
 
-    // Re-show quick actions for the new conversation
     if (quickActionsContainer) {
       quickActionsContainer.style.display = '';
     }
@@ -948,14 +1011,13 @@
   bubble.addEventListener('click', toggleChat);
   closeBtn.addEventListener('click', toggleChat);
 
-  // Onboarding button handlers
+  // Onboarding events (only if elements exist)
   if (onboardStartBtn) {
     onboardStartBtn.addEventListener('click', completeOnboarding);
   }
   if (onboardSkipBtn) {
     onboardSkipBtn.addEventListener('click', completeOnboarding);
   }
-  // Allow Enter key in onboarding inputs
   if (onboardNameInput) {
     onboardNameInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -966,14 +1028,6 @@
   }
   if (onboardEmailInput) {
     onboardEmailInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (onboardOrderInput) onboardOrderInput.focus();
-      }
-    });
-  }
-  if (onboardOrderInput) {
-    onboardOrderInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         completeOnboarding();
@@ -989,11 +1043,13 @@
     });
   }
 
-  // Add message to UI with optional typewriter
+  // ========================================
+  // ADD MESSAGE TO UI
+  // ========================================
   function addMessage(text, isUser, useTypewriter = false) {
     const msg = document.createElement('div');
     msg.className = `wcai-message ${isUser ? 'user' : 'agent'}`;
-    
+
     if (useTypewriter && !isUser) {
       messagesContainer.appendChild(msg);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1006,7 +1062,7 @@
     }
   }
 
-  // Show typing indicator
+  // Typing indicator
   function showTyping() {
     const typing = document.createElement('div');
     typing.className = 'wcai-message agent typing';
@@ -1021,16 +1077,16 @@
     if (typing) typing.remove();
   }
 
-  // Hide quick actions after first interaction
   function hideQuickActions() {
     if (quickActionsContainer) {
       quickActionsContainer.style.display = 'none';
     }
   }
 
-  // Show confirmation modal for Check My File
+  // ========================================
+  // CHECK MY FILE MODAL
+  // ========================================
   function showCheckFileModal() {
-    // Check rate limit
     if (fileUploadCount >= MAX_UPLOADS_PER_SESSION) {
       addMessage("You've reached the upload limit for this session. Please email your files to Design@WePrintWraps.com for review.", false);
       return;
@@ -1043,13 +1099,13 @@
       <div class="wcai-modal">
         <h3>📎 Check My File</h3>
         <p>This file check is for <strong>full vehicle wraps over 200 sq ft</strong>. Our design team will review your file and email you with:</p>
-        <ul style="margin:0 0 16px;padding-left:20px;color:#374151;font-size:14px;line-height:1.6;">
+        <ul>
           <li>Whether it's print-ready</li>
           <li>A quote for your wrap project</li>
           <li>Design services if needed</li>
         </ul>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">
-          💡 For sq ft pricing, use <a href="https://weprintwraps.com/quote" target="_blank" style="color:${colors.primary};">our quote tool</a> - select your make & model!
+        <p style="font-size:13px;color:${colors.textDim};margin-bottom:16px;">
+          For sq ft pricing, use <a href="https://weprintwraps.com/quote" target="_blank" style="color:${colors.primary};">our quote tool</a> — select your make & model!
         </p>
         <div class="wcai-modal-buttons">
           <button class="wcai-modal-btn confirm" id="wcai-modal-yes">Yes, this is a full wrap over 200 sq ft</button>
@@ -1059,32 +1115,31 @@
     `;
     document.body.appendChild(overlay);
 
-    // Close on overlay click
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        overlay.remove();
-      }
+      if (e.target === overlay) overlay.remove();
     });
 
     document.getElementById('wcai-modal-yes').addEventListener('click', () => {
       overlay.remove();
-      isCheckMyFileFlow = true; // Set flag for Check My File flow
+      isCheckMyFileFlow = true;
       fileInput.click();
     });
 
     document.getElementById('wcai-modal-no').addEventListener('click', () => {
       overlay.remove();
       hideQuickActions();
-      addMessage("No worries! The file check feature is for full vehicle wraps over 200 sq ft.\n\nFor smaller projects or partial wraps, you can still get a quote!\n\n1. Visit weprintwraps.com/quote\n2. Select your vehicle make & model\n3. Get instant sq ft pricing\n\nThen attach your artwork when you order - our team reviews all files before production.\n\nWant help with something else?", false);
+      addMessage("No worries! The file check feature is for full vehicle wraps over 200 sq ft.\n\nFor smaller projects or partial wraps, you can still get a quote!\n\n1. Visit weprintwraps.com/quote\n2. Select your vehicle make & model\n3. Get instant sq ft pricing\n\nThen attach your artwork when you order — our team reviews all files before production.\n\nWant help with something else?", false);
     });
   }
 
-  // Handle file selection
+  // ========================================
+  // FILE UPLOAD HANDLER
+  // ========================================
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file size (50MB max)
+    // Size check
     const MAX_SIZE = 50 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       addMessage("That file is too large (max 50MB). Please compress it or email it directly to Design@WePrintWraps.com", false);
@@ -1092,7 +1147,7 @@
       return;
     }
 
-    // Validate file type
+    // Type check
     const allowedTypes = ['pdf', 'png', 'jpg', 'jpeg', 'psd', 'ai', 'eps', 'tif', 'tiff'];
     const ext = file.name.toLowerCase().split('.').pop();
     if (!allowedTypes.includes(ext)) {
@@ -1104,9 +1159,8 @@
     hideQuickActions();
     hideAskTrigger();
 
-    // Show upload progress
     addMessage(`📎 Uploading: ${file.name}`, true);
-    
+
     const progressDiv = document.createElement('div');
     progressDiv.className = 'wcai-upload-progress';
     progressDiv.innerHTML = `
@@ -1119,19 +1173,18 @@
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
     try {
-      // Upload to Supabase Storage
       const timestamp = Date.now();
       const storagePath = `artwork-check/${sessionId}/${timestamp}-${file.name}`;
-      
-      // Simulate progress (actual XHR would provide real progress)
+
       let progress = 0;
       const progressInterval = setInterval(() => {
         progress = Math.min(progress + 10, 90);
-        document.getElementById('wcai-progress-pct').textContent = progress + '%';
-        document.getElementById('wcai-progress-fill').style.width = progress + '%';
+        const pctEl = document.getElementById('wcai-progress-pct');
+        const fillEl = document.getElementById('wcai-progress-fill');
+        if (pctEl) pctEl.textContent = progress + '%';
+        if (fillEl) fillEl.style.width = progress + '%';
       }, 200);
 
-      // Upload using fetch to Supabase Storage REST API
       const uploadResponse = await fetch(`${config.supabaseUrl}/storage/v1/object/media-library/${storagePath}`, {
         method: 'POST',
         headers: {
@@ -1149,24 +1202,17 @@
         throw new Error('Upload failed: ' + uploadResponse.statusText);
       }
 
-      // Update progress to 100%
-      document.getElementById('wcai-progress-pct').textContent = '100%';
-      document.getElementById('wcai-progress-fill').style.width = '100%';
+      const pctEl = document.getElementById('wcai-progress-pct');
+      const fillEl = document.getElementById('wcai-progress-fill');
+      if (pctEl) pctEl.textContent = '100%';
+      if (fillEl) fillEl.style.width = '100%';
 
-      // Get public URL
       const fileUrl = `${config.supabaseUrl}/storage/v1/object/public/media-library/${storagePath}`;
-
-      // Remove progress bar after a moment
       setTimeout(() => progressDiv.remove(), 1000);
-
-      // Increment upload count
       fileUploadCount++;
 
-      // Different handling based on flow type
       if (isCheckMyFileFlow) {
-        // CHECK MY FILE FLOW: Call check-artwork-file edge function
         showTyping();
-        
         const checkResponse = await fetch(config.artworkCheckUrl, {
           method: 'POST',
           headers: {
@@ -1189,20 +1235,15 @@
 
         if (checkData.success && checkData.message) {
           await addMessage(checkData.message, false, true);
-          
-          // Follow up asking for email
           setTimeout(async () => {
             await addMessage("What email should our design team reach you at?", false, true);
           }, 1500);
         } else {
-          addMessage("Got your file! ✓ Our design team will review it and email you with a detailed analysis and quote. What email should they reach you at?", false);
+          addMessage("Got your file! Our design team will review it and email you with a detailed analysis and quote. What email should they reach you at?", false);
         }
       } else {
-        // DIRECT ATTACH FLOW: Send to Jordan AI (website-chat) with attachment for vision analysis
         showTyping();
-        
-        const isImage = ['png', 'jpg', 'jpeg', 'tif', 'tiff'].includes(ext);
-        
+
         const chatResponse = await fetch(config.apiUrl, {
           method: 'POST',
           headers: {
@@ -1229,19 +1270,21 @@
         const data = await chatResponse.json();
         hideTyping();
 
-        if (data.response) {
-          await addMessage(data.response, false, true);
+        // BULLETPROOF: Check all possible response fields
+        const agentReply = data.reply || data.response || data.message;
+        if (agentReply) {
+          await addMessage(agentReply, false, true);
         } else {
-          addMessage(`Got your file! 📎 I can see you've attached **${file.name}**. What would you like me to help you with regarding this file?`, false);
+          addMessage(`Got your file! I can see you've attached ${file.name}. What would you like help with regarding this file?`, false);
         }
       }
-      
-      // Reset the flow flag
+
       isCheckMyFileFlow = false;
 
     } catch (err) {
       console.error('[WCAI] Upload error:', err);
-      document.getElementById('wcai-progress-pct').textContent = 'Failed';
+      const pctEl = document.getElementById('wcai-progress-pct');
+      if (pctEl) pctEl.textContent = 'Failed';
       setTimeout(() => progressDiv.remove(), 2000);
       addMessage("Sorry, there was an issue uploading your file. Please try again or email it directly to Design@WePrintWraps.com", false);
     }
@@ -1249,7 +1292,9 @@
     fileInput.value = '';
   });
 
-  // Send message
+  // ========================================
+  // SEND MESSAGE — with bulletproof response handling
+  // ========================================
   async function sendMessage(text) {
     const messageText = text || input.value.trim();
     if (!messageText) return;
@@ -1262,7 +1307,6 @@
     showTyping();
 
     try {
-      // Build payload with optional collected contact info
       const payload = {
         org: config.org,
         agent: config.agent,
@@ -1274,7 +1318,7 @@
         geo: geoData
       };
 
-      // Include collected name/email/order if available (from onboarding)
+      // Include collected contact info
       if (collectedName) payload.customer_name = collectedName;
       if (collectedEmail) payload.customer_email = collectedEmail;
       if (collectedOrderNumber) payload.order_number = collectedOrderNumber;
@@ -1291,34 +1335,42 @@
       const data = await response.json();
       hideTyping();
 
-      if (data.reply || data.message) {
-        await addMessage(data.reply || data.message, false, true);
+      // BULLETPROOF: Check reply || response || message
+      const agentReply = data.reply || data.response || data.message;
+      if (agentReply) {
+        await addMessage(agentReply, false, true);
       } else if (data.error) {
-        addMessage('Sorry, something went wrong. Please try again!', false);
+        // Edge function returned an error but might have a fallback reply
+        addMessage("I hit a small snag — could you try that again? Or email us at hello@weprintwraps.com and we'll get right back to you!", false);
+        console.error('[WCAI] API error:', data.error);
+      } else {
+        // Unknown response shape
+        addMessage("Sorry about that! Let me try again — what were you looking for help with?", false);
+        console.warn('[WCAI] Unexpected response shape:', data);
       }
     } catch (err) {
       hideTyping();
-      addMessage('Connection error. Please check your internet and try again.', false);
-      console.error('WCAI Error:', err);
+      addMessage("Connection error — please check your internet and try again, or email us at hello@weprintwraps.com!", false);
+      console.error('[WCAI] Network error:', err);
     }
 
     sendBtn.disabled = false;
     input.focus();
   }
 
-  // Quick action click handlers
+  // ========================================
+  // QUICK ACTION HANDLERS
+  // ========================================
   quickActionsContainer.addEventListener('click', (e) => {
     const btn = e.target.closest('.wcai-quick-btn');
     if (btn) {
       const actionId = btn.getAttribute('data-action');
-      
-      // Special handler for Check My File
+
       if (actionId === 'check-file') {
         showCheckFileModal();
         return;
       }
-      
-      // Find the action and send its message
+
       const action = quickActions.find(a => a.id === actionId);
       if (action && action.message) {
         sendMessage(action.message);
@@ -1331,5 +1383,21 @@
     if (e.key === 'Enter') sendMessage();
   });
 
-  console.log('[WrapCommand AI] Chat widget loaded', { org: config.org, mode: config.mode });
+  // ========================================
+  // AUTO-OPEN WELCOME for logged-in users
+  // If user is logged in and chat hasn't been interacted with yet,
+  // show the welcome message immediately when they first open
+  // ========================================
+  if (userIsLoggedIn && !hasInteracted) {
+    // Don't auto-open, but be ready with welcome when they click
+    console.log('[WCAI] Logged-in user detected — onboarding skipped');
+  }
+
+  console.log('[WrapCommand AI] Chat widget v3 loaded', {
+    org: config.org,
+    mode: config.mode,
+    session: sessionId,
+    loggedIn: userIsLoggedIn,
+    userName: collectedName || '(none)'
+  });
 })();
