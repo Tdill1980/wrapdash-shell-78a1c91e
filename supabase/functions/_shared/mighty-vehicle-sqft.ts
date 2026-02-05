@@ -292,10 +292,11 @@ export async function getVehicleSqFt(
 
 /**
  * Create a Supabase client for edge functions.
- * Uses service role key for full access.
+ * Uses EXTERNAL database credentials (user's Supabase) with fallback to Lovable's.
+ * This ensures vehicle lookups query the correct database.
  */
 export function createSupabaseClient(): SupabaseClient {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseUrl = Deno.env.get("EXTERNAL_SUPABASE_URL") || Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(supabaseUrl, supabaseServiceKey);
 }

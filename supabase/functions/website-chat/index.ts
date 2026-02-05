@@ -1642,15 +1642,17 @@ CRITICAL PRICING RULES:
           }
 
           // ALSO call create-quote-from-chat to send the email
+          // NOTE: Edge functions are on Lovable's Supabase, so use SUPABASE_URL (not EXTERNAL)
+          // The create-quote-from-chat function itself uses EXTERNAL credentials for database ops
           try {
-            const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-            const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+            const lovableFunctionsUrl = Deno.env.get('SUPABASE_URL')!;
+            const lovableServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-            const quoteResponse = await fetch(`${supabaseUrl}/functions/v1/create-quote-from-chat`, {
+            const quoteResponse = await fetch(`${lovableFunctionsUrl}/functions/v1/create-quote-from-chat`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${supabaseServiceKey}`
+                'Authorization': `Bearer ${lovableServiceKey}`
               },
               body: JSON.stringify({
                 conversation_id: conversationId,
