@@ -407,7 +407,8 @@ export default function ApproveFlow() {
       });
 
       // Generate renders via Lovable's edge function
-      const renderResponse = await fetch('https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/generate-studio-renders', {
+      const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
+      const renderResponse = await fetch(`${lovableFunctionsUrl}/generate-studio-renders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

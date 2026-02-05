@@ -7,8 +7,17 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://qxllysilzonrl
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bGx5c2lsem9ucmx5b2FvbWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMzQxMjIsImV4cCI6MjA4MzgxMDEyMn0.s1IyOY7QAVyrTtG_XLhugJUvxi2X_nHCvqvchYCvwtM';
 
 // Lovable's Supabase for edge functions
-const LOVABLE_FUNCTIONS_URL = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co';
+// Handle both formats: base URL or URL with /functions/v1
+const LOVABLE_ENV_URL = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
+// Strip /functions/v1 for Supabase client (needs base URL)
+const LOVABLE_BASE_URL = LOVABLE_ENV_URL.replace(/\/functions\/v1\/?$/, '');
+// Ensure /functions/v1 is present for raw fetch calls
+const LOVABLE_FUNCTIONS_URL = LOVABLE_BASE_URL;
+export const LOVABLE_FUNCTIONS_API_URL = LOVABLE_ENV_URL.includes('/functions/v1')
+  ? LOVABLE_ENV_URL.replace(/\/$/, '')
+  : `${LOVABLE_BASE_URL}/functions/v1`;
 const LOVABLE_ANON_KEY = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
+export const LOVABLE_AUTH_KEY = LOVABLE_ANON_KEY;
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
