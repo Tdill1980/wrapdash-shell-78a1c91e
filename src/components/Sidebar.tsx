@@ -231,11 +231,12 @@ const operationsItems: NavigationItem[] = [
 
 // TOOLS: Design and content creation
 const toolsItems: NavigationItem[] = [
-  { name: "DesignVault", path: "/designvault", icon: FolderOpen },
-  { 
-    name: "DesignPanelPro™", 
-    path: "/designpanel", 
+  { name: "DesignVault", path: "/designvault", icon: FolderOpen, roles: ["beta_shop", "admin"] },
+  {
+    name: "DesignPanelPro™",
+    path: "/designpanel",
     icon: Sparkles,
+    roles: ["beta_shop", "admin"],
     customRender: (
       <span className="font-medium">
         <span className="text-white">Design</span>
@@ -245,7 +246,7 @@ const toolsItems: NavigationItem[] = [
       </span>
     )
   },
-  { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar },
+  { name: "Monthly Drops", path: "/monthly-drops", icon: Calendar, roles: ["beta_shop", "admin"] },
 ];
 
 // ONBOARDING: Setup and configuration
