@@ -47,13 +47,13 @@ export function PhoneCallsDashboardCard({ className }: { className?: string }) {
     refetchInterval: 30000,
   });
 
-  // Fetch recent calls
+  // Fetch recent calls (include metadata for ai_synopsis and summary)
   const { data: recentCalls } = useQuery({
     queryKey: ["phone-calls-recent"],
     queryFn: async () => {
       const { data } = await supabase
         .from("phone_calls")
-        .select("id, caller_phone, customer_name, is_hot_lead, status, created_at, ai_classification")
+        .select("id, caller_phone, customer_name, is_hot_lead, status, created_at, ai_classification, metadata, summary")
         .order("created_at", { ascending: false })
         .limit(3);
       return data || [];
@@ -126,35 +126,38 @@ export function PhoneCallsDashboardCard({ className }: { className?: string }) {
             </p>
             {recentCalls.map((call) => {
               const classification = call.ai_classification as { intent?: string; summary?: string } | null;
+              const metadata = call.metadata as { ai_synopsis?: string } | null;
+              const synopsis = metadata?.ai_synopsis || call.summary || classification?.summary;
               return (
-                <div 
+                <div
                   key={call.id}
-                  className="flex items-center justify-between p-2 rounded-md bg-background/50 hover:bg-background/80 transition-colors cursor-pointer"
+                  className="p-2 rounded-md bg-background/50 hover:bg-background/80 transition-colors cursor-pointer"
                   onClick={() => navigate(`/website-admin?tab=phone&id=${call.id}`)}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-amber-500/20 text-amber-400">
-                      <Phone className="w-3 h-3" />
-                    </div>
-                    <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center bg-amber-500/20 text-amber-400">
+                        <Phone className="w-3 h-3" />
+                      </div>
                       <p className="text-xs font-medium text-foreground">
                         {call.customer_name || formatPhoneNumber(call.caller_phone)}
                       </p>
-                      {classification?.intent && (
-                        <p className="text-[10px] text-muted-foreground capitalize">
-                          {classification.intent.replace(/_/g, " ")}
-                        </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {call.is_hot_lead && (
+                        <Flame className="w-3 h-3 text-red-500" />
+                      )}
+                      {call.status === "completed" && (
+                        <CheckCircle className="w-3 h-3 text-green-500" />
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {call.is_hot_lead && (
-                      <Flame className="w-3 h-3 text-red-500" />
-                    )}
-                    {call.status === "completed" && (
-                      <CheckCircle className="w-3 h-3 text-green-500" />
-                    )}
-                  </div>
+                  {/* AI Synopsis */}
+                  {synopsis && (
+                    <p className="text-[10px] text-primary/70 mt-1 ml-8 line-clamp-1">
+                      💡 {synopsis}
+                    </p>
+                  )}
                 </div>
               );
             })}

@@ -1877,12 +1877,62 @@ ${chatState.customer_name && chatState.customer_email ? '✅ GATE PASSED: Name a
       console.warn('[JordanLee] ANTHROPIC_API_KEY not configured');
     }
 
+    // Generate AI Synopsis (every 3 messages or when key info captured)
+    const messageCount = (chatState.message_count || 0) + 1;
+    chatState.message_count = messageCount;
+
+    const shouldGenerateSynopsis =
+      messageCount === 1 || // First message
+      messageCount % 3 === 0 || // Every 3 messages
+      (chatState.vehicle && !chatState.ai_summary) || // Vehicle captured
+      (chatState.sqft && chatState.customer_email); // Quote ready
+
+    if (shouldGenerateSynopsis && anthropicApiKey) {
+      try {
+        const synopsisResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': anthropicApiKey,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 100,
+            system: `Generate a 1-line synopsis (max 15 words) of this customer chat. Focus on: what they're asking about, vehicle if mentioned, quote status. No emojis. Examples:
+- "Quote request for 2024 F-150 full wrap, $1,470"
+- "Asking about maximum artwork dimensions for cut-contour graphics"
+- "Fleet inquiry: 5 Sprinter vans, needs bulk pricing"
+- "Design services question, wants custom wrap created"`,
+            messages: [{
+              role: 'user',
+              content: `Customer message: "${message_text}"
+Vehicle: ${chatState.vehicle || 'Not mentioned'}
+SQFT: ${chatState.sqft || 'Unknown'}
+Quote: ${chatState.total_price ? '$' + chatState.total_price : 'Not given'}
+Email: ${chatState.customer_email ? 'Captured' : 'Not captured'}`
+            }]
+          })
+        });
+
+        if (synopsisResponse.ok) {
+          const synopsisData = await synopsisResponse.json();
+          if (synopsisData.content?.[0]?.text) {
+            chatState.ai_summary = synopsisData.content[0].text.trim();
+            console.log('[JordanLee] Synopsis generated:', chatState.ai_summary);
+          }
+        }
+      } catch (e) {
+        console.error('[JordanLee] Synopsis generation error:', e);
+      }
+    }
+
     // Save state and response - FIXED: Only update valid columns (chat_state JSONB holds all contact info)
     await supabase
       .from('conversations')
-      .update({ 
-        chat_state: chatState, 
-        last_message_at: new Date().toISOString() 
+      .update({
+        chat_state: chatState,
+        last_message_at: new Date().toISOString()
       })
       .eq('id', conversationId);
 

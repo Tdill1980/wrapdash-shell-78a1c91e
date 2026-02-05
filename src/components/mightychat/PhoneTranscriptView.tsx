@@ -12,6 +12,7 @@ interface PhoneCall {
   customer_name?: string | null;
   transcript?: string | null;
   recording_url?: string | null;
+  summary?: string | null;
   ai_classification?: {
     intent?: string;
     vehicle_info?: {
@@ -24,6 +25,10 @@ interface PhoneCall {
       role: "ai" | "caller";
       content: string;
     }>;
+  } | null;
+  metadata?: {
+    ai_synopsis?: string;
+    [key: string]: unknown;
   } | null;
   is_hot_lead?: boolean;
   sms_sent?: boolean;
@@ -146,6 +151,13 @@ export function PhoneTranscriptView({ call, onBack, onCallBack }: PhoneTranscrip
             {format(new Date(call.created_at), "MMM d, h:mm a")}
           </Badge>
         </div>
+
+        {/* AI Synopsis - Quick 1-line summary */}
+        {(call.metadata?.ai_synopsis || call.summary) && (
+          <div className="mt-3 text-sm text-primary/80">
+            💡 {call.metadata?.ai_synopsis || call.summary}
+          </div>
+        )}
 
         {/* Audio Player */}
         {call.recording_url && (

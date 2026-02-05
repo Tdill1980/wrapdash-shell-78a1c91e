@@ -1,6 +1,7 @@
 // ===========================================
 // ⚠️ LOCKED - VAPI WEBHOOK - DO NOT MODIFY ⚠️
-// Last Updated: January 30, 2026
+// Last Updated: February 5, 2026
+// VERSION: 1.1 - Added AI Synopsis generation
 // Powered by VoiceCommandAI System
 // ===========================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -241,11 +242,50 @@ Deno.serve(async (req) => {
         const transcript = body.transcript || body.call?.transcript || '';
         const summary = body.summary || '';
         const recordingUrl = body.recordingUrl || body.call?.recordingUrl || null;
-        
+
         console.log(`[vapi-webhook] Call ended: ${callId} from ${customerNumber}`);
         console.log(`[vapi-webhook] Transcript length: ${transcript.length}, Summary: ${summary.substring(0, 100)}`);
 
-        // Insert into phone_calls table
+        // Generate AI Synopsis (short 1-line summary for dashboard display)
+        let aiSynopsis = '';
+        const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+        if (anthropicApiKey && (transcript || summary)) {
+          try {
+            const synopsisResponse = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'x-api-key': anthropicApiKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'claude-3-5-haiku-20241022',
+                max_tokens: 100,
+                system: `Generate a 1-line synopsis (max 15 words) of this phone call. Focus on: what they called about, vehicle if mentioned, quote/pricing discussed. No emojis. Examples:
+- "Quote request for 2024 F-150 full wrap, received pricing"
+- "Fleet inquiry: 5 work vans, needs bulk discount info"
+- "Checking on order status for Silverado wrap"
+- "General questions about turnaround time and shipping"`,
+                messages: [{
+                  role: 'user',
+                  content: `Phone call transcript summary: "${summary || transcript.substring(0, 500)}"`
+                }]
+              })
+            });
+
+            if (synopsisResponse.ok) {
+              const synopsisData = await synopsisResponse.json();
+              if (synopsisData.content?.[0]?.text) {
+                aiSynopsis = synopsisData.content[0].text.trim();
+                console.log('[vapi-webhook] AI Synopsis generated:', aiSynopsis);
+              }
+            }
+          } catch (e) {
+            console.error('[vapi-webhook] Synopsis generation error:', e);
+          }
+        }
+
+        // Insert into phone_calls table (FULL transcript preserved + AI synopsis)
         try {
           const { data: phoneCall, error: insertError } = await supabase
             .from('phone_calls')
@@ -253,15 +293,16 @@ Deno.serve(async (req) => {
               vapi_call_id: callId,
               caller_phone: customerNumber,
               organization_id: WPW_ORG_ID,
-              transcript: transcript,
-              summary: summary,
+              transcript: transcript,  // FULL transcript preserved
+              summary: summary,        // VAPI summary preserved
               recording_url: recordingUrl,
               status: 'completed',
               source: 'vapi',
               call_type: 'inbound',
               metadata: {
                 raw_report: body,
-                processed_at: new Date().toISOString()
+                processed_at: new Date().toISOString(),
+                ai_synopsis: aiSynopsis  // Short synopsis for dashboard
               }
             })
             .select('id')
