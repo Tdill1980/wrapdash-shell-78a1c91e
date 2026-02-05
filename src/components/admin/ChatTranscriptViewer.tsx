@@ -265,12 +265,44 @@ export function ChatTranscriptViewer({
         </div>
       </div>
 
+      {/* Hot Leads Active Banner */}
+      {hotLeadsOnly && (
+        <div className="bg-orange-500/20 border border-orange-500/50 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Flame className="h-6 w-6 text-orange-500" />
+            <div>
+              <h3 className="font-semibold text-orange-400">Hot Leads Filter Active</h3>
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredConversations.length} conversation{filteredConversations.length !== 1 ? 's' : ''} with pending quote requests
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHotLeadsOnly(false)}
+            className="border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
+          >
+            Clear Filter
+          </Button>
+        </div>
+      )}
+
       {/* Main Content - Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Session List */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">All Conversations</h2>
+            <h2 className="text-xl font-bold">
+              {hotLeadsOnly ? (
+                <span className="flex items-center gap-2">
+                  <Flame className="h-5 w-5 text-orange-500" />
+                  Hot Leads
+                </span>
+              ) : (
+                "All Conversations"
+              )}
+            </h2>
             <div className="flex items-center gap-2">
               <Button 
                 variant={todayOnly ? "default" : "outline"} 
