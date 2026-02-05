@@ -171,6 +171,7 @@ const App = () => (
             <Route path="/content-creator" element={<ContentCreator />} />
             <Route path="/content-schedule" element={<ContentSchedule />} />
             <Route path="/content-calendar" element={<ContentCalendar30Day />} />
+            <Route path="/content-drafts" element={<ContentDrafts />} />
             <Route path="/organic" element={<OrganicHub />} />
             <Route path="/mighty-edit" element={<MightyEdit />} />
             <Route path="/organic/reel-builder" element={<ReelBuilder />} />

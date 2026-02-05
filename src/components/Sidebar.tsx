@@ -153,9 +153,9 @@ const operationsItems: NavigationItem[] = [
       </span>
     )
   },
-  { 
-    name: "Escalation Desk", 
-    path: "/website-admin?tab=escalations", 
+  {
+    name: "Escalation Desk",
+    path: "/escalations",
     icon: AlertTriangle,
     roles: ["admin", "beta_shop"],
     customRender: (
@@ -250,9 +250,9 @@ const toolsItems: NavigationItem[] = [
 
 // ONBOARDING: Setup and configuration
 const onboardingItems: NavigationItem[] = [
-  { 
-    name: "TradeDNA Wizard", 
-    path: "/trade-dna", 
+  {
+    name: "TradeDNA Wizard",
+    path: "/tradedna",
     icon: Dna,
     roles: ["beta_shop", "admin"],
     customRender: (
@@ -294,8 +294,8 @@ const affiliateItems: NavigationItem[] = [
 
 // ACCOUNT: Settings and products
 const accountItems: NavigationItem[] = [
-  { name: "My Products", path: "/settings/my-products", icon: DollarSign, roles: ["beta_shop", "admin"] },
-  { name: "Settings", path: "/settings", icon: Settings, roles: ["beta_shop", "affiliate", "admin"] },
+  { name: "My Products", path: "/settings/products", icon: DollarSign, roles: ["beta_shop", "admin"] },
+  { name: "Account Settings", path: "/settings/instagram", icon: Settings, roles: ["beta_shop", "affiliate", "admin"] },
 ];
 
 // ADMIN ONLY: Internal tools
