@@ -1,9 +1,9 @@
 // =====================================================
-// ⚠️⚠️⚠️ LOCKED - DO NOT MODIFY - FINAL V3.0 ⚠️⚠️⚠️
+// ⚠️⚠️⚠️ LOCKED - DO NOT MODIFY - FINAL V3.1 ⚠️⚠️⚠️
 // =====================================================
-// Last Updated: January 30, 2026
-// VERSION: 3.0 - FINAL LOCKED PRODUCTION VERSION
-// 
+// Last Updated: February 5, 2026
+// VERSION: 3.1 - Anthropic API + External Supabase
+//
 // FEATURES (LOCKED - ALL 13 CONFIRMED):
 // 1. ✅ PRINT ONLY - NO INSTALLATION enforced
 // 2. ✅ 4-field collection (name, email, phone, shop name)
@@ -18,8 +18,9 @@
 // 11. ✅ Complete FAQ knowledge
 // 12. ✅ All product URLs
 // 13. ✅ NO coupon codes
-// 
-// AI PROVIDER: Lovable AI Gateway (google/gemini-3-flash-preview)
+//
+// AI PROVIDER: Anthropic API (claude-3-5-haiku-20241022)
+// DATABASE: External Supabase (EXTERNAL_SUPABASE_URL)
 // ORG ID: 51aa96db-c06d-41ae-b3cb-25b045c75caf
 //
 // ⚠️ ANY MODIFICATION REQUIRES EXPLICIT APPROVAL ⚠️
