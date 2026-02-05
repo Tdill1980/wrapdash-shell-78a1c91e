@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { MightyCustomerCard } from "@/components/dashboard/MightyCustomerCard";
 import { EscalationsDashboardCard } from "@/components/dashboard/EscalationsDashboardCard";
+import dashboardHeroImage from "@/assets/dashboard-hero-wrap.jpg";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -185,11 +186,11 @@ export default function Dashboard() {
         {/* To change the background image, replace the URL below:      */}
         {/* ============================================================ */}
         <div className="relative w-full h-40 sm:h-48 overflow-hidden rounded-xl sm:rounded-2xl border border-white/10">
-          {/* BACKGROUND IMAGE - Replace this URL to change the image */}
+          {/* BACKGROUND IMAGE - To change: replace dashboard-hero-wrap.jpg in src/assets/ */}
           <img
-            src="https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=1200&q=80"
+            src={dashboardHeroImage}
             alt="Vehicle wrap background"
-            className="absolute inset-0 w-full h-full object-cover opacity-40"
+            className="absolute inset-0 w-full h-full object-cover opacity-50"
           />
           {/* Gradient overlay for text readability */}
           <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/40" />
