@@ -62,13 +62,14 @@ interface WebsiteChatQuote {
   status: string | null;
   created_at: string;
   email_sent: boolean | null;
-  ai_message: string | null;
   source_conversation_id: string | null;
 }
 
 const statusColors: Record<string, string> = {
+  pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   created: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   sent: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  approved: "bg-green-500/20 text-green-400 border-green-500/30",
   converted: "bg-green-500/20 text-green-400 border-green-500/30",
   expired: "bg-gray-500/20 text-gray-400 border-gray-500/30",
   lead: "bg-purple-500/20 text-purple-400 border-purple-500/30",
@@ -83,10 +84,11 @@ export function WebsiteChatQuotes() {
   const { data: quotes, isLoading, refetch } = useQuery({
     queryKey: ["website-chat-quotes", statusFilter],
     queryFn: async () => {
+      // Query quotes that have a source_conversation_id (linked to website chat)
       let query = supabase
         .from("quotes")
-        .select("id, quote_number, customer_name, customer_email, customer_phone, vehicle_year, vehicle_make, vehicle_model, sqft, material_cost, status, created_at, email_sent, ai_message, source_conversation_id")
-        .eq("source", "website_chat")
+        .select("id, quote_number, customer_name, customer_email, customer_phone, vehicle_year, vehicle_make, vehicle_model, sqft, material_cost, status, created_at, email_sent, source_conversation_id")
+        .not('source_conversation_id', 'is', null)
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
@@ -105,10 +107,11 @@ export function WebsiteChatQuotes() {
       const today = new Date();
       today.setUTCHours(0, 0, 0, 0);
 
+      // Query quotes linked to website chat conversations
       const { data: allQuotes, error } = await supabase
         .from("quotes")
-        .select("id, created_at, material_cost, ai_message")
-        .eq("source", "website_chat");
+        .select("id, created_at, material_cost, email_sent")
+        .not('source_conversation_id', 'is', null);
 
       if (error) throw error;
 
@@ -116,14 +119,13 @@ export function WebsiteChatQuotes() {
         (q) => new Date(q.created_at) >= today
       );
 
-      const needsReview = (allQuotes || []).filter((q) => {
-        return q.ai_message?.includes("⚠️") || q.ai_message?.includes("review");
-      });
+      // Count quotes not yet emailed as "needs attention"
+      const needsAttention = (allQuotes || []).filter((q) => !q.email_sent);
 
       return {
         total: allQuotes?.length || 0,
         today: todayQuotes.length,
-        needsReview: needsReview.length,
+        needsReview: needsAttention.length,
         totalValue: (allQuotes || []).reduce((sum, q) => sum + (q.material_cost || 0), 0),
       };
     },
@@ -178,7 +180,7 @@ export function WebsiteChatQuotes() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-yellow-500" />
-              Needs Review
+              Not Emailed
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -227,9 +229,11 @@ export function WebsiteChatQuotes() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="created">Created</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="converted">Converted</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" onClick={() => refetch()}>
@@ -269,13 +273,13 @@ export function WebsiteChatQuotes() {
               </TableRow>
             ) : (
               filteredQuotes?.map((quote) => {
-                const needsReview = quote.ai_message?.includes("⚠️");
+                const needsAttention = !quote.email_sent;
                 const hasLinkedChat = !!quote.source_conversation_id;
                 return (
                   <TableRow key={quote.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedQuote(quote)}>
                     <TableCell className="font-mono text-sm">
                       <div className="flex items-center gap-2">
-                        {needsReview && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                        {needsAttention && <AlertTriangle className="w-4 h-4 text-yellow-500" title="Not emailed yet" />}
                         {quote.quote_number}
                         {/* No linked chat badge */}
                         {!hasLinkedChat && (
@@ -347,8 +351,8 @@ export function WebsiteChatQuotes() {
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               Quote Details
-              {selectedQuote?.ai_message?.includes("⚠️") && (
-                <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Needs Review</Badge>
+              {selectedQuote && !selectedQuote.email_sent && (
+                <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Not Emailed</Badge>
               )}
             </SheetTitle>
             <SheetDescription>Quote #{selectedQuote?.quote_number}</SheetDescription>
@@ -390,15 +394,6 @@ export function WebsiteChatQuotes() {
                   </div>
                 </div>
               </div>
-
-              {selectedQuote.ai_message && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">AI Note</h4>
-                  <div className={`p-3 rounded-lg text-sm ${selectedQuote.ai_message.includes("⚠️") ? "bg-yellow-500/10 border border-yellow-500/30" : "bg-muted/50"}`}>
-                    {selectedQuote.ai_message}
-                  </div>
-                </div>
-              )}
 
               <div className="flex flex-col gap-3 pt-4 border-t border-border">
                 {/* Show linked chat status */}
