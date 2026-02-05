@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Phone, Flame, Clock, CheckCircle, ArrowLeft, MessageSquare, Bot, User } from "lucide-react";
+import { Phone, Flame, Clock, CheckCircle, ArrowLeft, MessageSquare, Bot, User, Play, Pause, Volume2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface PhoneCall {
@@ -11,6 +11,7 @@ interface PhoneCall {
   caller_phone: string;
   customer_name?: string | null;
   transcript?: string | null;
+  recording_url?: string | null;
   ai_classification?: {
     intent?: string;
     vehicle_info?: {
@@ -39,9 +40,31 @@ interface PhoneTranscriptViewProps {
 }
 
 export function PhoneTranscriptView({ call, onBack, onCallBack }: PhoneTranscriptViewProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+
   const classification = call.ai_classification;
   const vehicleInfo = classification?.vehicle_info;
   const messages = classification?.messages || [];
+
+  const togglePlayback = () => {
+    if (!call.recording_url) return;
+
+    if (!audioRef) {
+      const audio = new Audio(call.recording_url);
+      audio.onended = () => setIsPlaying(false);
+      audio.onpause = () => setIsPlaying(false);
+      audio.onplay = () => setIsPlaying(true);
+      setAudioRef(audio);
+      audio.play();
+    } else {
+      if (isPlaying) {
+        audioRef.pause();
+      } else {
+        audioRef.play();
+      }
+    }
+  };
 
   const formatPhoneNumber = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
@@ -123,6 +146,31 @@ export function PhoneTranscriptView({ call, onBack, onCallBack }: PhoneTranscrip
             {format(new Date(call.created_at), "MMM d, h:mm a")}
           </Badge>
         </div>
+
+        {/* Audio Player */}
+        {call.recording_url && (
+          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-10 w-10 rounded-full bg-amber-500 hover:bg-amber-600 text-white p-0"
+                onClick={togglePlayback}
+              >
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+              </Button>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-amber-400" />
+                  Call Recording
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDuration(call.call_duration_seconds)} • Click to {isPlaying ? "pause" : "play"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Transcript Area */}

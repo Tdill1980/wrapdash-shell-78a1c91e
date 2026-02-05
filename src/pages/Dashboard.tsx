@@ -23,6 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MightyChatCard } from "@/components/dashboard/MightyChatCard";
 import { MightyCustomerCard } from "@/components/dashboard/MightyCustomerCard";
 import { EscalationsDashboardCard } from "@/components/dashboard/EscalationsDashboardCard";
+import { PhoneCallsDashboardCard } from "@/components/dashboard/PhoneCallsDashboardCard";
 import dashboardHeroImage from "@/assets/dashboard-hero-wrap.jpg";
 
 export default function Dashboard() {
@@ -292,9 +293,10 @@ export default function Dashboard() {
         {/* Section 2: MightyCustomer - The Brain (Full Width) */}
         <MightyCustomerCard />
 
-        {/* Section 3: MightyChat & Escalations */}
-        <div className="grid md:grid-cols-2 gap-4">
+        {/* Section 3: MightyChat, Phone Calls & Escalations */}
+        <div className="grid md:grid-cols-3 gap-4">
           <MightyChatCard />
+          <PhoneCallsDashboardCard />
           <EscalationsDashboardCard />
         </div>
 

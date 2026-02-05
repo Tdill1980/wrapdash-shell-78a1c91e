@@ -83,7 +83,7 @@ export function PhoneCallsDashboardCard({ className }: { className?: string }) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/mightychat-v2?filter=phone")}
+            onClick={() => navigate("/website-admin?tab=phone")}
             className="text-xs h-7 px-2"
           >
             View All
@@ -100,7 +100,7 @@ export function PhoneCallsDashboardCard({ className }: { className?: string }) {
           </div>
           <div 
             className="p-2.5 rounded-lg bg-background/50 text-center cursor-pointer hover:bg-background/80 transition-colors"
-            onClick={() => navigate("/mightychat-v2?filter=phone&hot=true")}
+            onClick={() => navigate("/website-admin?tab=phone&hot=true")}
           >
             {hotLeads > 0 ? (
               <Badge className="bg-red-500 text-white animate-pulse flex items-center justify-center gap-1 mb-1">
@@ -130,7 +130,7 @@ export function PhoneCallsDashboardCard({ className }: { className?: string }) {
                 <div 
                   key={call.id}
                   className="flex items-center justify-between p-2 rounded-md bg-background/50 hover:bg-background/80 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/mightychat-v2?filter=phone&id=${call.id}`)}
+                  onClick={() => navigate(`/website-admin?tab=phone&id=${call.id}`)}
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full flex items-center justify-center bg-amber-500/20 text-amber-400">
