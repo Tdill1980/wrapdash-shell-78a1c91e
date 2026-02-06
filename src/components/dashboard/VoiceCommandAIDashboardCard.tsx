@@ -9,10 +9,8 @@ import {
   MessageSquare,
   Phone,
   Instagram,
-  Mail,
   Flame,
-  FileText,
-  CheckCircle
+  FileText
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,11 +51,11 @@ export function VoiceCommandAIDashboardCard({ className }: { className?: string 
           .eq("channel", "instagram")
           .gte("created_at", twentyFourHoursAgo),
 
-        // Auto-generated quotes (last 24h)
+        // Auto-generated quotes from website chat (last 24h)
         supabase
           .from("quotes")
           .select("id", { count: "exact", head: true })
-          .eq("ai_generated", true)
+          .eq("source", "website_chat")
           .gte("created_at", twentyFourHoursAgo),
 
         // Hot leads detected (last 24h)
@@ -89,21 +87,24 @@ export function VoiceCommandAIDashboardCard({ className }: { className?: string 
       icon: MessageSquare,
       count: vcaiStats?.websiteChat || 0,
       color: "text-blue-400",
-      bgColor: "bg-blue-500/20"
+      bgColor: "bg-blue-500/20",
+      path: "/website-admin"
     },
     {
       name: "Phone",
       icon: Phone,
       count: vcaiStats?.phoneCalls || 0,
       color: "text-amber-400",
-      bgColor: "bg-amber-500/20"
+      bgColor: "bg-amber-500/20",
+      path: "/phone-calls"
     },
     {
       name: "Instagram",
       icon: Instagram,
       count: vcaiStats?.instagram || 0,
       color: "text-pink-400",
-      bgColor: "bg-pink-500/20"
+      bgColor: "bg-pink-500/20",
+      path: "/website-admin?channel=instagram"
     },
   ];
 
@@ -156,7 +157,8 @@ export function VoiceCommandAIDashboardCard({ className }: { className?: string 
             return (
               <div
                 key={channel.name}
-                className="p-2 rounded-lg bg-background/50 text-center"
+                onClick={() => navigate(channel.path)}
+                className="p-2 rounded-lg bg-background/50 text-center cursor-pointer hover:bg-background/80 transition-colors"
               >
                 <div className={`w-6 h-6 mx-auto rounded-full ${channel.bgColor} flex items-center justify-center mb-1`}>
                   <Icon className={`w-3 h-3 ${channel.color}`} />
@@ -169,7 +171,10 @@ export function VoiceCommandAIDashboardCard({ className }: { className?: string 
         </div>
 
         {/* Auto-quotes generated */}
-        <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+        <div
+          onClick={() => navigate("/admin/website-quotes")}
+          className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/30 cursor-pointer hover:bg-green-500/20 transition-colors"
+        >
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-green-400" />
             <div>
@@ -179,7 +184,7 @@ export function VoiceCommandAIDashboardCard({ className }: { className?: string 
               <p className="text-[10px] text-muted-foreground">Generated today</p>
             </div>
           </div>
-          <CheckCircle className="w-4 h-4 text-green-400" />
+          <ArrowRight className="w-4 h-4 text-green-400" />
         </div>
 
         {/* View all button */}
