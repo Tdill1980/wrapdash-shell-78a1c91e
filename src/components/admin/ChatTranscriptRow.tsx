@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format, differenceInMinutes, differenceInSeconds } from "date-fns";
-import { MapPin, Mail, Clock, AlertCircle, Download, MessageSquare, Globe, Instagram } from "lucide-react";
+import { MapPin, Mail, Clock, AlertCircle, Download, MessageSquare, Globe, Instagram, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 
@@ -105,7 +105,21 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
                 Website
               </Badge>
             )}
-            <span className="font-semibold">{displayName !== 'Anonymous Visitor' ? displayName : `Session ${sessionId}`}</span>
+            {displayName !== 'Anonymous Visitor' ? (
+              displayName.includes('@') ? (
+                <a
+                  href={`mailto:${displayName}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold hover:underline text-primary"
+                >
+                  {displayName}
+                </a>
+              ) : (
+                <span className="font-semibold">{displayName}</span>
+              )
+            ) : (
+              <span className="font-semibold">`Session ${sessionId}`</span>
+            )}
             {chatState?.customer_email && (
               <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
                 <Mail className="h-3 w-3 mr-1" />
@@ -143,6 +157,20 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
           <div className="text-sm text-muted-foreground">
             Duration: {duration}
           </div>
+
+          {/* Phone - clickable */}
+          {chatState?.customer_phone && (
+            <div className="flex items-center gap-1 text-sm">
+              <Phone className="h-4 w-4 text-green-500" />
+              <a
+                href={`tel:${chatState.customer_phone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-green-500 hover:underline font-medium"
+              >
+                {chatState.customer_phone}
+              </a>
+            </div>
+          )}
 
           {/* First customer message preview */}
           {firstMsg?.direction === 'inbound' && firstMsg?.content && (
