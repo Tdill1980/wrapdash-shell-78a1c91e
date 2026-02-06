@@ -106,8 +106,15 @@ export function useWebsiteChats() {
       // Edge function returns array directly, not wrapped in { conversations: [...] }
       const chats = Array.isArray(data) ? data : (data.conversations || []);
 
+      // Debug: Log messages info
+      if (chats.length > 0) {
+        console.log('[useWebsiteChats] Loaded', chats.length, 'chats');
+        console.log('[useWebsiteChats] First chat has', chats[0].messages?.length || 0, 'messages');
+      }
+
       return chats.map((convo: any) => ({
         ...convo,
+        messages: convo.messages || [], // Explicitly include messages array
         chat_state: convo.chat_state as ChatConversation['chat_state'],
         metadata: convo.metadata as ChatConversation['metadata'],
       }));
