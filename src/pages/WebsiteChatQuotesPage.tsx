@@ -780,11 +780,14 @@ The WePrintWraps Team`;
             />
           </div>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+            <SelectTrigger className="w-48 bg-gray-800 border-gray-700 text-white">
               <SelectValue placeholder="All Sources" />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700">
               <SelectItem value="all">All Sources</SelectItem>
+              <SelectItem value="commandchat">CommandChat</SelectItem>
+              <SelectItem value="chat_widget">Chat Widget</SelectItem>
+              <SelectItem value="website_chat">Website Chat</SelectItem>
               <SelectItem value="ai_website_agent">AI Website Agent</SelectItem>
               <SelectItem value="lance">Lance</SelectItem>
               <SelectItem value="trish">Trish</SelectItem>
