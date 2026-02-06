@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+// IMPORTANT: Use production-client for direct WePrintWraps Supabase access
+import { supabase, WPW_FUNCTIONS_URL } from "@/integrations/supabase/production-client";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, isToday, parseISO, startOfDay } from "date-fns";
 import {
@@ -32,9 +33,6 @@ import {
   Send,
   Calendar as CalendarIcon,
 } from "lucide-react";
-
-// WePrintWraps Edge Functions URL
-const WPW_FUNCTIONS_URL = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
 
 // Types
 interface Quote {
