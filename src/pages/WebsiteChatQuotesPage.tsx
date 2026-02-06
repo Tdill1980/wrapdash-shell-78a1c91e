@@ -10,8 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
-// IMPORTANT: Use production-client for direct WePrintWraps Supabase access
-import { supabase, WPW_FUNCTIONS_URL } from "@/integrations/supabase/production-client";
+// Using standard client - env vars point to WePrintWraps Supabase
+import { supabase } from "@/integrations/supabase/client";
+
+// WePrintWraps Edge Functions URL (hardcoded for reliability)
+const WPW_FUNCTIONS_URL = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, isToday, parseISO, startOfDay } from "date-fns";
 import {
