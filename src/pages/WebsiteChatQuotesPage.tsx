@@ -1,6 +1,40 @@
 import { useState, useEffect, useMemo, Component, ErrorInfo, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { format, differenceInDays, isToday, parseISO, startOfDay } from "date-fns";
+import {
+  ArrowLeft,
+  Plus,
+  RefreshCw,
+  Search,
+  ArrowUpDown,
+  Phone,
+  MessageSquare,
+  Mail,
+  CheckCircle,
+  ShoppingCart,
+  Clock,
+  AlertTriangle,
+  Users,
+  Download,
+  Copy,
+  Send,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+
+// WePrintWraps Edge Functions URL (hardcoded for reliability)
+const WPW_FUNCTIONS_URL = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
 
 // Error Boundary to catch rendering errors
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -30,41 +64,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
     return this.props.children;
   }
 }
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Textarea } from "@/components/ui/textarea";
-// Using standard client - env vars point to WePrintWraps Supabase
-import { supabase } from "@/integrations/supabase/client";
-
-// WePrintWraps Edge Functions URL (hardcoded for reliability)
-const WPW_FUNCTIONS_URL = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
-import { useToast } from "@/hooks/use-toast";
-import { format, differenceInDays, isToday, parseISO, startOfDay } from "date-fns";
-import {
-  ArrowLeft,
-  Plus,
-  RefreshCw,
-  Search,
-  ArrowUpDown,
-  Phone,
-  MessageSquare,
-  Mail,
-  CheckCircle,
-  ShoppingCart,
-  Clock,
-  AlertTriangle,
-  Users,
-  Download,
-  Copy,
-  Send,
-  Calendar as CalendarIcon,
-} from "lucide-react";
 
 // Types
 interface Quote {
