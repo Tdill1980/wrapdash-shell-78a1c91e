@@ -93,9 +93,11 @@ export function WebsiteChatQuotes() {
       const response = await fetch(
         `https://qxllysilzonrlyoaomce.supabase.co/functions/v1/get-website-chat-quotes?${params}`,
         {
+          method: 'POST',
           headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({})
         }
       );
 

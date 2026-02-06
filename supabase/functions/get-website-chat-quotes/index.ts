@@ -24,7 +24,7 @@ serve(async (req) => {
     // Build query - use total_price (what cmd-quote saves)
     let query = supabase
       .from('quotes')
-      .select('id, quote_number, customer_name, customer_email, customer_phone, vehicle_model, sqft, total_price, status, created_at, email_sent, source_conversation_id')
+      .select('id, quote_number, customer_name, customer_email, vehicle_model, sqft, total_price, status, created_at, email_sent, source_conversation_id')
       .eq('source', 'website_chat')
       .order('created_at', { ascending: false });
 

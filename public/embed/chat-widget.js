@@ -772,9 +772,9 @@
 
   // ========================================
   // BUILD CHAT CONTAINER
-  // If user is logged in, skip onboarding entirely
+  // Always show onboarding - we need email for lead tracking
   // ========================================
-  const showOnboarding = !userIsLoggedIn;
+  const showOnboarding = true; // Always collect name/email
 
   const container = document.createElement('div');
   container.className = 'wcai-chat-container';
