@@ -1,3 +1,6 @@
+// ⚠️ LOVABLE CONNECTION - FOR 3D RENDERS ONLY - DO NOT USE FOR DATA
+// This file legitimately uses Lovable's Supabase for vinyl swatch analysis (3D render pipeline)
+
 /**
  * Color extraction utilities for analyzing uploaded vinyl swatches
  */

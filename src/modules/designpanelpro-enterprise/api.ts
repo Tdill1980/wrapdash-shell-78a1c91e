@@ -1,4 +1,5 @@
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+// ⚠️ LOVABLE CONNECTION - FOR 3D RENDERS ONLY - DO NOT USE FOR DATA
+import { supabase, lovable3DRenders } from "@/integrations/supabase/client";
 
 interface GenerateMasterParams {
   width: string;
@@ -24,7 +25,7 @@ interface ConvertPrintParams {
 }
 
 export async function generateMasterCanvas(params: GenerateMasterParams) {
-  const { data, error } = await lovableFunctions.functions.invoke('generate-master', {
+  const { data, error } = await lovable3DRenders.functions.invoke('generate-master', {
     body: params
   });
 
@@ -33,7 +34,7 @@ export async function generateMasterCanvas(params: GenerateMasterParams) {
 }
 
 export async function generate3DRender(params: Generate3DParams) {
-  const { data, error } = await lovableFunctions.functions.invoke('generate-3d', {
+  const { data, error } = await lovable3DRenders.functions.invoke('generate-3d', {
     body: params
   });
 
@@ -42,7 +43,7 @@ export async function generate3DRender(params: Generate3DParams) {
 }
 
 export async function convertToPrint(params: ConvertPrintParams) {
-  const { data, error } = await lovableFunctions.functions.invoke('convert-print', {
+  const { data, error } = await lovable3DRenders.functions.invoke('convert-print', {
     body: params
   });
 

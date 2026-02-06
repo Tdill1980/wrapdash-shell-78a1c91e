@@ -14,7 +14,8 @@
   const org = currentScript.getAttribute("data-org") || "wpw";
   const agent = currentScript.getAttribute("data-agent") || "wpw_ai_team";
   const mode = currentScript.getAttribute("data-mode") || "live";
-  const statusUrl = 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/check-agent-status';
+  // Use WPW Supabase for all edge functions (NOT Lovable - that's for 3D renders only)
+  const statusUrl = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/check-agent-status';
 
   // ========================================
   // RUNTIME SCHEDULE CHECK - Ask WrapCommand if agent is active

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions, WPW_FUNCTIONS_URL } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
 export interface BrandOverlays {
@@ -74,15 +74,12 @@ export function useVoiceEngine() {
 
       // Fallback to direct fetch if invoke doesn't support GET properly
       if (error || !data?.success) {
-        const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
-        const lovableAnonKey = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
-
+        // Use WPW Supabase (NOT Lovable - that's for 3D only)
         const response = await fetch(
-          `${lovableFunctionsUrl}/load-voice-profile?${params.toString()}`,
+          `${WPW_FUNCTIONS_URL}/load-voice-profile?${params.toString()}`,
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${lovableAnonKey}`,
             }
           }
         );

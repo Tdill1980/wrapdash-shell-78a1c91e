@@ -1,6 +1,6 @@
 # PROTECTED CONFIGURATION - READ BEFORE EVERY SESSION
 
-## CORRECT SUPABASE - NEVER CHANGE
+## CORRECT SUPABASE - YOUR PRODUCTION DATABASE
 
 | Setting | Value |
 |---------|-------|
@@ -8,26 +8,36 @@
 | **URL** | `https://qxllysilzonrlyoaomce.supabase.co` |
 | **Anon Key** | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bGx5c2lsem9ucmx5b2FvbWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMzQxMjIsImV4cCI6MjA4MzgxMDEyMn0.s1IyOY7QAVyrTtG_XLhugJUvxi2X_nHCvqvchYCvwtM` |
 
-## WRONG PROJECT - NEVER USE
+## LOVABLE SUPABASE - 3D RENDERS ONLY
 
-**`wzwqhfbmymrengjqikjl`** - This is the OLD/WRONG project. NEVER use this.
+| Setting | Value |
+|---------|-------|
+| **Project ID** | `wzwqhfbmymrengjqikjl` |
+| **URL** | `https://wzwqhfbmymrengjqikjl.supabase.co` |
+| **Allowed Use** | DesignPanelPro and ApproveFlow 3D renders ONLY |
 
-## This Rule Applies To:
+⚠️ **Lovable is NOT for:**
+- Database operations
+- Edge functions (except 3D renders)
+- Any business data
 
-1. **All Supabase Edge Functions** - Every function in `/supabase/functions/`
-2. **Dashboard .env** - `VITE_SUPABASE_URL` and `VITE_SUPABASE_PROJECT_ID`
-3. **Vercel Environment Variables** - Must match the correct project
-4. **Any New Code** - Always use the correct project ID
+## See ARCHITECTURE.md for Full Details
+
+The `ARCHITECTURE.md` file contains:
+- Complete list of files allowed to use Lovable
+- Code examples for correct usage
+- Audit checklist
 
 ## Before Making Changes:
 
-- [ ] Verify you're using `qxllysilzonrlyoaomce`
-- [ ] Never hardcode `wzwqhfbmymrengjqikjl`
-- [ ] Check Vercel env vars match
-- [ ] Check dashboard .env matches
+- [ ] Verify you're using `qxllysilzonrlyoaomce` for data/functions
+- [ ] Only use `wzwqhfbmymrengjqikjl` for 3D renders
+- [ ] Check `.env` has WPW as primary Supabase
+- [ ] Files using Lovable must have warning comment: `// ⚠️ LOVABLE CONNECTION - FOR 3D RENDERS ONLY`
 
-## Key Systems on This Project:
+## Key Systems on YOUR Supabase (qxllysilzonrlyoaomce):
 
+- 160+ Edge Functions including command-chat
 - Website Chat (SMS relay to Jackson)
 - ShopFlow Orders
 - ApproveFlow
@@ -35,6 +45,7 @@
 - Escalations
 - Hot Leads
 - Affiliate System
+- Website Quotes Manager
 
 ---
-**Last Updated:** February 2, 2026
+**Last Updated:** February 6, 2026

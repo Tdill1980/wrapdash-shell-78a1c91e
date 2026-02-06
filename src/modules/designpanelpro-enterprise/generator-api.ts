@@ -1,4 +1,5 @@
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+// ⚠️ LOVABLE CONNECTION - FOR 3D RENDERS ONLY - DO NOT USE FOR DATA
+import { supabase, lovable3DRenders } from "@/integrations/supabase/client";
 
 export interface GeneratePanelParams {
   prompt: string;
@@ -21,7 +22,7 @@ export interface GeneratePrintPackageParams {
 }
 
 export async function generatePanel(params: GeneratePanelParams) {
-  const { data, error } = await lovableFunctions.functions.invoke('generate-panel', {
+  const { data, error } = await lovable3DRenders.functions.invoke('generate-panel', {
     body: params
   });
 
@@ -30,7 +31,7 @@ export async function generatePanel(params: GeneratePanelParams) {
 }
 
 export async function generate3DProof(params: Generate3DProofParams) {
-  const { data, error } = await lovableFunctions.functions.invoke('generate-3dproof', {
+  const { data, error } = await lovable3DRenders.functions.invoke('generate-3dproof', {
     body: params
   });
 
@@ -39,7 +40,7 @@ export async function generate3DProof(params: Generate3DProofParams) {
 }
 
 export async function generatePrintPackage(params: GeneratePrintPackageParams) {
-  const { data, error } = await lovableFunctions.functions.invoke('generate-printpackage', {
+  const { data, error } = await lovable3DRenders.functions.invoke('generate-printpackage', {
     body: params
   });
 

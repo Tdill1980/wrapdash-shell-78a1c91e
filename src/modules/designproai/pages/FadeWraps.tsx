@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+// ⚠️ LOVABLE CONNECTION - FOR 3D RENDERS ONLY - DO NOT USE FOR DATA
+import { supabase, lovable3DRenders } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { VehicleSelector } from "../components/VehicleSelector";
 import { FinishSelector } from "../components/FinishSelector";
@@ -50,7 +51,7 @@ export default function FadeWraps() {
 
     setIsGenerating(true);
     try {
-      const { data, error } = await lovableFunctions.functions.invoke("generate-color-render", {
+      const { data, error } = await lovable3DRenders.functions.invoke("generate-color-render", {
         body: {
           vehicleMake,
           vehicleModel,

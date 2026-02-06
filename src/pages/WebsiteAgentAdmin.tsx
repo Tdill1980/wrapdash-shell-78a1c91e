@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Check, Globe, MessageSquare, Zap, Shield, ExternalLink, FileText, TestTubeDiagonal } from "lucide-react";
 import { toast } from "sonner";
 import { ChatTranscriptViewer } from "@/components/admin/ChatTranscriptViewer";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, callEdgeFunction } from "@/integrations/supabase/production-client";
 import { useNavigate } from "react-router-dom";
 
 export default function WebsiteAgentAdmin() {
@@ -42,19 +42,15 @@ export default function WebsiteAgentAdmin() {
   const runSmokeTest = async () => {
     setIsTesting(true);
     try {
-      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
-        body: {
-          org: "wpw",
-          agent: "wpw_ai_team",
-          mode: "test",
-          session_id: `admin_smoke_${Date.now()}`,
-          message_text: "Quick test: need a quote for a 2020 Ford Transit full wrap. Email: test@example.com",
-          page_url: "https://admin.test/website-agent",
-          referrer: "",
-        },
+      const data = await callEdgeFunction('command-chat', {
+        org: "wpw",
+        agent: "wpw_ai_team",
+        mode: "test",
+        session_id: `admin_smoke_${Date.now()}`,
+        message_text: "Quick test: need a quote for a 2020 Ford Transit full wrap. Email: test@example.com",
+        page_url: "https://admin.test/website-agent",
+        referrer: "",
       });
-
-      if (error) throw error;
 
       const price = data?.auto_quote?.formattedPrice;
       toast.success(price ? `Website chat OK — auto quote: ${price}` : "Website chat OK — reply generated");

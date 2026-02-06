@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send, Paperclip, Image, Film, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, callEdgeFunction } from "@/integrations/supabase/production-client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -177,20 +177,16 @@ export function ChatWithUpload({
     onMessageSent?.(userMessage);
 
     try {
-      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
-        body: {
-          org,
-          agent,
-          mode: "live",
-          session_id: sessionId,
-          message_text: text,
-          attachments: userMessage.attachments,
-          page_url: typeof window !== 'undefined' ? window.location.href : '',
-          referrer: typeof document !== 'undefined' ? document.referrer || '' : '',
-        },
+      const data = await callEdgeFunction('command-chat', {
+        org,
+        agent,
+        mode: "live",
+        session_id: sessionId,
+        message_text: text,
+        attachments: userMessage.attachments,
+        page_url: typeof window !== 'undefined' ? window.location.href : '',
+        referrer: typeof document !== 'undefined' ? document.referrer || '' : '',
       });
-
-      if (error) throw error;
 
       if (data?.reply || data?.message) {
         const fullContent = data.reply || data.message;

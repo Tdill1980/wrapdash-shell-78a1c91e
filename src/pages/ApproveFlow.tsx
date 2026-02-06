@@ -406,7 +406,8 @@ export default function ApproveFlow() {
         description: "Creating 6 photorealistic views... This may take 30-60 seconds.",
       });
 
-      // Generate renders via Lovable's edge function
+      // ⚠️ LOVABLE CONNECTION - FOR 3D RENDERS ONLY - DO NOT USE FOR DATA
+      // Generate renders via Lovable's edge function (this is the one legitimate use)
       const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
       const renderResponse = await fetch(`${lovableFunctionsUrl}/generate-studio-renders`, {
         method: 'POST',

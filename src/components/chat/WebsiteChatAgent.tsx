@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageCircle, Send, X, Loader2, CheckCircle } from "lucide-react";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, callEdgeFunction } from "@/integrations/supabase/production-client";
 
 interface ChatMessage {
   id: string;
@@ -65,18 +65,14 @@ export function WebsiteChatAgent() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
-        body: {
-          org: "wpw",
-          agent: "wpw_ai_team",
-          session_id: sessionId,
-          message_text: content,
-          page_url: window.location.href,
-          organization_id: undefined,
-        },
+      const data = await callEdgeFunction('command-chat', {
+        org: "wpw",
+        agent: "wpw_ai_team",
+        session_id: sessionId,
+        message_text: content,
+        page_url: window.location.href,
+        organization_id: undefined,
       });
-
-      if (error) throw error;
 
       if (data?.reply) {
         const botMsg: ChatMessage = {

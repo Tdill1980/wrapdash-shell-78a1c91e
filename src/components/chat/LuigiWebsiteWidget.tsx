@@ -4,7 +4,7 @@ import {
   Package, HelpCircle, Mail, Truck, Users, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, callEdgeFunction } from "@/integrations/supabase/production-client";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -96,19 +96,15 @@ export function LuigiWebsiteWidget() {
     setShowQuickActions(false);
 
     try {
-      const { data, error } = await lovableFunctions.functions.invoke("website-chat", {
-        body: {
-          org: "wpw",
-          agent: "wpw_ai_team",
-          mode: "live",
-          session_id: sessionId,
-          message_text: text,
-          page_url: window.location.href,
-          referrer: document.referrer || "",
-        },
+      const data = await callEdgeFunction('command-chat', {
+        org: "wpw",
+        agent: "wpw_ai_team",
+        mode: "live",
+        session_id: sessionId,
+        message_text: text,
+        page_url: window.location.href,
+        referrer: document.referrer || "",
       });
-
-      if (error) throw error;
 
       if (data?.reply || data?.message) {
         const fullContent = data.reply || data.message;

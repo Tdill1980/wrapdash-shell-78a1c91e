@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { WPW_FUNCTIONS_URL } from "@/integrations/supabase/client";
 
 interface HybridGenerateParams {
   organizationId: string | null;
@@ -88,16 +89,14 @@ export function useHybridGenerate() {
     setViolations(null);
 
     try {
-      const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
-      const lovableAnonKey = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
-
+      // Use WPW Supabase for content generation (NOT Lovable - that's for 3D only)
       const response = await fetch(
-        `${lovableFunctionsUrl}/hybrid-generate-content`,
+        `${WPW_FUNCTIONS_URL}/hybrid-generate-content`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
+            // No auth header needed for WPW edge functions
           },
           body: JSON.stringify({
             organization_id: params.organizationId,
@@ -150,16 +149,14 @@ export function useHybridGenerate() {
     setViolations(null);
 
     try {
-      const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
-      const lovableAnonKey = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
-
+      // Use WPW Supabase for content generation (NOT Lovable - that's for 3D only)
       const response = await fetch(
-        `${lovableFunctionsUrl}/hybrid-generate-content`,
+        `${WPW_FUNCTIONS_URL}/hybrid-generate-content`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
+            // No auth header needed for WPW edge functions
           },
           body: JSON.stringify({
             organization_id: params.organizationId,

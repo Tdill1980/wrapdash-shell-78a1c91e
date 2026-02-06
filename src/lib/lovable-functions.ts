@@ -1,11 +1,11 @@
-/**
- * Lovable Edge Functions Helper
- * All edge function calls go through Lovable's Supabase
- * Database calls still use our Supabase (qxllysilzonrlyoaomce)
- */
+// =============================================================================
+// ⚠️ WPW EDGE FUNCTIONS HELPER - USES YOUR SUPABASE, NOT LOVABLE ⚠️
+// =============================================================================
+// Despite the filename, this file uses YOUR Supabase (qxllysilzonrlyoaomce)
+// Lovable (wzwqhfbmymrengjqikjl) is ONLY for 3D renders - see lovable3DRenders in client.ts
+// =============================================================================
 
-const LOVABLE_FUNCTIONS_URL = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
-const LOVABLE_ANON_KEY = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
+const WPW_FUNCTIONS_URL = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
 
 interface InvokeOptions {
   body?: Record<string, any>;
@@ -18,19 +18,18 @@ interface InvokeResult<T = any> {
 }
 
 /**
- * Invoke a Lovable edge function
- * Drop-in replacement for lovableFunctions.functions.invoke()
+ * Invoke a WPW edge function
+ * All edge functions run on YOUR Supabase (qxllysilzonrlyoaomce)
  */
 export async function invokeLovableFunction<T = any>(
   functionName: string,
   options: InvokeOptions = {}
 ): Promise<InvokeResult<T>> {
   try {
-    const response = await fetch(`${LOVABLE_FUNCTIONS_URL}/${functionName}`, {
+    const response = await fetch(`${WPW_FUNCTIONS_URL}/${functionName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LOVABLE_ANON_KEY}`,
         ...options.headers,
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
@@ -55,15 +54,8 @@ export async function invokeLovableFunction<T = any>(
 }
 
 /**
- * Get the Lovable functions base URL
+ * Get the WPW functions base URL
  */
 export function getLovableFunctionsUrl(): string {
-  return LOVABLE_FUNCTIONS_URL;
-}
-
-/**
- * Get the Lovable anon key for auth headers
- */
-export function getLovableAnonKey(): string {
-  return LOVABLE_ANON_KEY;
+  return WPW_FUNCTIONS_URL;
 }
