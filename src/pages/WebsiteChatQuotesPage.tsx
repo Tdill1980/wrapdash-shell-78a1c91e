@@ -73,6 +73,7 @@ interface ConvertedOrder {
 type TabValue = 'new' | 'email_sent' | 'callback' | 'completed' | 'converted';
 
 export default function WebsiteChatQuotesPage() {
+  console.log('[WebsiteQuoteManagement] Component mounting...');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -126,20 +127,29 @@ export default function WebsiteChatQuotesPage() {
 
   // Fetch converted orders by matching email/name
   const fetchConvertedOrders = async (quotesData: Quote[]) => {
+    console.log('[WebsiteQuoteManagement] fetchConvertedOrders called with', quotesData.length, 'quotes');
     try {
       const emails = quotesData
         .map(q => q.customer_email?.toLowerCase())
         .filter((e): e is string => Boolean(e));
 
-      if (emails.length === 0) return;
+      if (emails.length === 0) {
+        console.log('[WebsiteQuoteManagement] No emails to match');
+        return;
+      }
 
       const { data: orders, error } = await supabase
         .from('shopflow_orders')
-        .select('id, order_number, customer_email, customer_first_name, customer_last_name, order_total, created_at, line_items')
+        .select('id, order_number, customer_email, customer_name, order_total, created_at, line_items')
         .in('customer_email', emails)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[WebsiteQuoteManagement] Supabase error:', error);
+        throw error;
+      }
+
+      console.log('[WebsiteQuoteManagement] Found', orders?.length || 0, 'matching orders');
 
       // Match orders to quotes
       const converted: ConvertedOrder[] = [];
@@ -153,7 +163,7 @@ export default function WebsiteChatQuotesPage() {
             quote_id: matchedQuote.id,
             quote_number: matchedQuote.quote_number,
             order_date: order.created_at,
-            customer_name: `${order.customer_first_name || ''} ${order.customer_last_name || ''}`.trim(),
+            customer_name: order.customer_name || '',
             customer_email: order.customer_email || '',
             order_total: order.order_total || 0,
             items: formatLineItems(order.line_items),
@@ -163,7 +173,7 @@ export default function WebsiteChatQuotesPage() {
       }
       setConvertedOrders(converted);
     } catch (err) {
-      console.error('[LeadManagement] Error fetching converted orders:', err);
+      console.error('[WebsiteQuoteManagement] Error fetching converted orders:', err);
     }
   };
 
@@ -179,6 +189,7 @@ export default function WebsiteChatQuotesPage() {
   };
 
   useEffect(() => {
+    console.log('[WebsiteQuoteManagement] useEffect running, fetching quotes...');
     fetchQuotes();
   }, []);
 
