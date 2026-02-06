@@ -1968,7 +1968,14 @@ Email: ${chatState.customer_email ? 'Captured' : 'Not captured'}`
       success: true,
       reply: aiReply,
       response: aiReply, // Also include as 'response' for widget compatibility
-      conversation_id: conversationId
+      conversation_id: conversationId,
+      synopsis: chatState.ai_summary || null,
+      customer_state: {
+        name: chatState.customer_name || null,
+        email: chatState.customer_email || null,
+        vehicle: chatState.vehicle || null,
+        sqft: chatState.sqft || null
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
