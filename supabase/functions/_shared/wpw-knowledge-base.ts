@@ -565,7 +565,12 @@ These products are sold STANDALONE. Jordan must quote them directly!
 ✅ CUT CONTOUR VINYL (Decals/Graphics)
    • Avery: $6.32/sqft (ID: 108)
    • 3M: $6.92/sqft (ID: 19420)
-   • Weeded and masked, ready to install
+   • Max artwork width: 54" roll, 50" max artwork size
+   • Materials we CUT: 3M IJ180, Avery SW900, calendered vinyl, removable decal film
+   • Materials we DON'T cut: Reflective, chrome, textured films
+   • Minimum detail size: 0.25"
+   • All cut contour comes weeded and masked, ready to install
+   • File formats: Vector PDF, AI, EPS, or high-res PNG/TIF with vector path
 
 WHEN CUSTOMER ASKS FOR THESE:
 1. Give the sqft price immediately
@@ -583,6 +588,59 @@ WE DO SELL THESE STANDALONE. ALWAYS QUOTE THEM!
 Example Response:
 "Window perf is $5.95 per square foot. 100 sqft would be $595.
 Want me to email you a quote? What's your email address?"
+`,
+};
+
+// =============================================================================
+// GENERAL FAQ - Production & Print Specs (February 2026)
+// =============================================================================
+
+export const WPW_GENERAL_FAQ: KnowledgeEntry = {
+  category: "faq",
+  title: "General FAQ - Production & Print Specs",
+  appliesTo: ["jordan_lee", "alex_morgan", "grant_miller", "taylor_brooks", "commandchat"],
+  keywords: ["max size", "print width", "turnaround", "shipping", "file format", "resolution", "dpi", "guarantee", "reprint", "defect"],
+  priority: 95,
+  content: `
+GENERAL FAQ - PRODUCTION & PRINT SPECS
+
+PRINT SPECIFICATIONS:
+• Max print width: 59.5" (using 60" film)
+• Min resolution: 72 DPI at full scale (150 DPI recommended)
+• File formats accepted: PDF, AI, EPS (NO CorelDraw or Publisher)
+• Color mode: CMYK for best accuracy
+• Bleed: 1/8" on all sides
+
+TURNAROUND & SHIPPING:
+• Print turnaround: 1-2 business days (after artwork approval)
+• Shipping over $750: FREE, arrives in 3 days or less
+• Shipping under $750: UPS Ground, 2-5 business days
+• Rush orders: Available upon request (contact for pricing)
+
+QUALITY GUARANTEE:
+• We guarantee our work — 100% satisfaction guaranteed
+• Reprints shipped ASAP if defects reported within 7 days
+• Customer must notify within 7 days of receipt
+• No questions asked on legitimate quality issues
+
+CUT CONTOUR SPECS:
+• Max roll width: 54"
+• Max artwork size: 50" (within 54" roll)
+• Materials we CUT: 3M IJ180, Avery SW900, calendered vinyl, removable decal film
+• Materials we DON'T cut: Reflective, chrome, textured films
+• Minimum detail size: 0.25"
+• All cut contour comes weeded and masked, ready to install
+• File formats for cut: Vector PDF, AI, EPS, or high-res PNG/TIF with vector path
+
+COMMON QUESTIONS:
+Q: What's the max size for cut contour?
+A: "Our max cut contour width is 50" (on a 54" roll). For larger graphics, we can tile them."
+
+Q: How long until my order ships?
+A: "Once your artwork is approved, production is 1-2 business days, then shipping depends on your location - usually 2-5 days ground."
+
+Q: Do you guarantee your work?
+A: "Yes! 100% satisfaction guaranteed. If there's a print defect, we reprint and ship ASAP - just let us know within 7 days of receiving your order."
 `,
 };
 
@@ -606,6 +664,8 @@ export const WPW_KNOWLEDGE_BASE: KnowledgeEntry[] = [
   WPW_WBTY,
   WPW_FADEWRAPS,
   WPW_STANDALONE_PRODUCTS,
+  // General FAQ (February 2026)
+  WPW_GENERAL_FAQ,
 ];
 
 /**
