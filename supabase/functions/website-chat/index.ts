@@ -786,19 +786,25 @@ serve(async (req) => {
       conversationId = newConv.id;
     }
 
-    // Save inbound message with attachments
+    // Save inbound message with attachments - WITH ERROR HANDLING
     const messageMetadata: Record<string, any> = { session_id };
     if (attachments?.length) {
       messageMetadata.attachments = attachments;
     }
-    
-    await supabase.from('messages').insert({
+
+    const { error: inboundMsgError } = await supabase.from('messages').insert({
       conversation_id: conversationId,
       channel: 'website',
       direction: 'inbound',
       content: message_text,
       metadata: messageMetadata
     });
+
+    if (inboundMsgError) {
+      console.error('[JordanLee] CRITICAL: Failed to save inbound message:', inboundMsgError);
+    } else {
+      console.log('[JordanLee] Inbound message saved for conversation:', conversationId);
+    }
 
     // Extract info from message
     const msg = message_text.toLowerCase();
@@ -1936,7 +1942,8 @@ Email: ${chatState.customer_email ? 'Captured' : 'Not captured'}`
       })
       .eq('id', conversationId);
 
-    await supabase.from('messages').insert({
+    // Save outbound message - WITH ERROR HANDLING
+    const { error: outboundMsgError } = await supabase.from('messages').insert({
       conversation_id: conversationId,
       channel: 'website',
       direction: 'outbound',
@@ -1944,6 +1951,12 @@ Email: ${chatState.customer_email ? 'Captured' : 'Not captured'}`
       sender_name: 'Jordan Lee',
       metadata: { ai_generated: true }
     });
+
+    if (outboundMsgError) {
+      console.error('[JordanLee] CRITICAL: Failed to save outbound message:', outboundMsgError);
+    } else {
+      console.log('[JordanLee] Outbound message saved for conversation:', conversationId);
+    }
 
     return new Response(JSON.stringify({
       success: true,
