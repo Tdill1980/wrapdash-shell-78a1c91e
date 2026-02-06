@@ -28,9 +28,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  MessageSquare, 
-  AlertTriangle, 
+import {
+  MessageSquare,
+  AlertTriangle,
   Mail,
   Phone,
   Car,
@@ -81,61 +81,40 @@ export function WebsiteChatQuotes() {
   const [linkFilter, setLinkFilter] = useState<string>("all");
   const [selectedQuote, setSelectedQuote] = useState<WebsiteChatQuote | null>(null);
 
-  const { data: quotes, isLoading, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["website-chat-quotes", statusFilter],
     queryFn: async () => {
-      // Query quotes that have a source_conversation_id (linked to website chat)
-      let query = supabase
-        .from("quotes")
-        .select("id, quote_number, customer_name, customer_email, customer_phone, vehicle_year, vehicle_make, vehicle_model, sqft, material_cost, status, created_at, email_sent, source_conversation_id")
-        .not('source_conversation_id', 'is', null)
-        .order("created_at", { ascending: false });
-
+      // Use edge function to bypass RLS
+      const params = new URLSearchParams();
       if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
+        params.set("status", statusFilter);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as WebsiteChatQuote[];
-    },
-  });
-
-  const { data: stats } = useQuery({
-    queryKey: ["website-chat-quotes-stats"],
-    queryFn: async () => {
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-
-      // Query quotes linked to website chat conversations
-      const { data: allQuotes, error } = await supabase
-        .from("quotes")
-        .select("id, created_at, material_cost, email_sent")
-        .not('source_conversation_id', 'is', null);
-
-      if (error) throw error;
-
-      const todayQuotes = (allQuotes || []).filter(
-        (q) => new Date(q.created_at) >= today
+      const response = await fetch(
+        `https://qxllysilzonrlyoaomce.supabase.co/functions/v1/get-website-chat-quotes?${params}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+          },
+        }
       );
 
-      // Count quotes not yet emailed as "needs attention"
-      const needsAttention = (allQuotes || []).filter((q) => !q.email_sent);
+      if (!response.ok) {
+        throw new Error('Failed to fetch quotes');
+      }
 
-      return {
-        total: allQuotes?.length || 0,
-        today: todayQuotes.length,
-        needsReview: needsAttention.length,
-        totalValue: (allQuotes || []).reduce((sum, q) => sum + (q.material_cost || 0), 0),
-      };
+      return response.json();
     },
   });
+
+  const quotes = data?.quotes as WebsiteChatQuote[] | undefined;
+  const stats = data?.stats;
 
   const filteredQuotes = quotes?.filter((quote) => {
     // Link filter
     if (linkFilter === "linked" && !quote.source_conversation_id) return false;
     if (linkFilter === "unlinked" && quote.source_conversation_id) return false;
-    
+
     // Search filter
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
@@ -216,7 +195,7 @@ export function WebsiteChatQuotes() {
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
-        
+
         {/* Search and Status Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
@@ -403,7 +382,7 @@ export function WebsiteChatQuotes() {
                     <span>No linked chat – this quote was created outside of Website Chat or before linking was available.</span>
                   </div>
                 )}
-                
+
                 <div className="flex gap-2">
                   {selectedQuote.source_conversation_id ? (
                     <Button variant="outline" className="flex-1" onClick={() => handleViewConversation(selectedQuote.source_conversation_id!)}>
