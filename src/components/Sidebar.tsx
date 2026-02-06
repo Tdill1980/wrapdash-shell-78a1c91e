@@ -166,7 +166,7 @@ const operationsItems: NavigationItem[] = [
     )
   },
   {
-    name: "Website Quote Management",
+    name: "Website Quotes Manager",
     path: "/website-quote-management",
     icon: Users,
     roles: ["admin", "beta_shop"],
@@ -174,7 +174,7 @@ const operationsItems: NavigationItem[] = [
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Website </span>
         <span className="bg-gradient-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent">Quotes</span>
-        <span className="text-[8px] align-super ml-1 text-green-400">NEW</span>
+        <span className="text-white"> Manager</span>
       </span>
     )
 },

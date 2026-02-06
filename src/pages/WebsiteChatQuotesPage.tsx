@@ -55,7 +55,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
     if (this.state.hasError) {
       return (
         <div className="p-6 bg-red-900 min-h-screen text-white">
-          <h1 className="text-2xl font-bold">Website Quote Management - Render Error</h1>
+          <h1 className="text-2xl font-bold">Website Quotes Manager - Render Error</h1>
           <pre className="mt-4 p-4 bg-red-800 rounded overflow-auto">{this.state.error?.message}</pre>
           <pre className="mt-2 p-4 bg-red-800 rounded overflow-auto text-xs">{this.state.error?.stack}</pre>
         </div>
@@ -727,7 +727,7 @@ The WePrintWraps Team`;
   if (hasError) {
     return (
       <div className="p-6 bg-red-900 min-h-screen text-white">
-        <h1 className="text-2xl font-bold">Website Quote Management - Error</h1>
+        <h1 className="text-2xl font-bold">Website Quotes Manager - Error</h1>
         <pre className="mt-4 p-4 bg-red-800 rounded">{hasError}</pre>
       </div>
     );
@@ -746,7 +746,7 @@ The WePrintWraps Team`;
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <h1 className="text-2xl font-bold text-white">Website Quote Management</h1>
+            <h1 className="text-2xl font-bold text-white">Website Quotes Manager</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
