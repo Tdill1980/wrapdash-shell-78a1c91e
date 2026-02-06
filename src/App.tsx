@@ -204,7 +204,9 @@ const App = () => (
             <Route path="/admin/chat-widget-demo" element={<ChatWidgetDemo />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
-            <Route path="/admin/website-quotes" element={<WebsiteChatQuotesPage />} />
+            <Route path="/website-quote-management" element={<WebsiteChatQuotesPage />} />
+            {/* Legacy redirect - keep old route working */}
+            <Route path="/admin/website-quotes" element={<Navigate to="/website-quote-management" replace />} />
             <Route path="/quote-admin" element={<QuoteToolAdmin />} />
             <Route path="/admin/organizations" element={<AdminOrganizations />} />
             <Route path="/admin/add-organization" element={<AddOrganizationWizard />} />

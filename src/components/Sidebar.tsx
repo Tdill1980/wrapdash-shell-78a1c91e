@@ -167,7 +167,7 @@ const operationsItems: NavigationItem[] = [
   },
   {
     name: "Website Quote Management",
-    path: "/admin/website-quotes",
+    path: "/website-quote-management",
     icon: Users,
     roles: ["admin", "beta_shop"],
     customRender: (
