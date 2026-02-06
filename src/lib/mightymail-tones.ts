@@ -133,188 +133,185 @@ export function getTonePresets(offersInstallation: boolean): Record<string, Emai
   return offersInstallation ? emailTones : printOnlyTones;
 }
 
+// Rotating upsell helper - matches edge function
+function getRotatingUpsell(quoteId?: string) {
+  const even = quoteId
+    ? parseInt(quoteId.slice(-2), 16) % 2 === 0
+    : Date.now() % 2 === 0;
+
+  if (even) {
+    return {
+      title: "Need window coverage?",
+      body: "Window Perf is available at $5.95 / sq ft.",
+      link: "https://weprintwraps.com/product/perforated-window-vinyl/",
+    };
+  }
+
+  return {
+    title: "Need logos or decals to match?",
+    body: "Cut Contour graphics start at $6.32 / sq ft.",
+    link: "https://weprintwraps.com/product/avery-cut-contour-vehicle-wrap/",
+  };
+}
+
 export function renderEmailTemplate(
   tone: string,
   design: string,
   data: Record<string, any>
 ): string {
-  const tonePreset = emailTones[tone] || emailTones.installer;
-  
-  // Replace template variables
-  let subject = tonePreset.subjectTemplate;
-  let body = tonePreset.bodyParagraphs.join("<br><br>");
-  
-  Object.keys(data).forEach((key) => {
-    const value = data[key];
-    subject = subject.replace(new RegExp(`{{${key}}}`, "g"), String(value));
-    body = body.replace(new RegExp(`{{${key}}}`, "g"), String(value));
-  });
+  // Use the professional WePrintWraps quote template
+  // Matches the edge function template exactly
+  const vehicleDisplay = [data.vehicle_year, data.vehicle_make, data.vehicle_model]
+    .filter(Boolean)
+    .join(' ') || 'Your Vehicle';
 
-  // Build HTML based on design theme
-  const html = buildEmailHTML(design, tonePreset, subject, body, data);
-  
-  return html;
-}
+  const cartUrl = data.portal_url || 'https://weprintwraps.com/our-products/';
+  const total = Number(data.quote_total) || 0;
+  const sqft = Number(data.sqft) || 0;
+  const rate = sqft > 0 ? total / sqft : 5.27;
+  const quoteNumber = data.quote_number || '';
 
-function buildEmailHTML(
-  design: string,
-  tone: EmailTone,
-  subject: string,
-  body: string,
-  data: Record<string, any>
-): string {
-  const styles = getDesignStyles(design);
-  
+  const upsell = getRotatingUpsell(data.quote_id);
+
+  // Professional WePrintWraps Quote Template
   return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-            background-color: ${styles.backgroundColor}; 
-          }
-          .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background-color: ${styles.containerColor}; 
-          }
-          .header { 
-            background: ${styles.headerGradient}; 
-            padding: 40px 20px; 
-            text-align: center; 
-          }
-          .header h1 { 
-            color: white; 
-            margin: 0; 
-            font-size: 28px; 
-          }
-          .content { 
-            padding: 40px 20px; 
-            color: ${styles.textColor}; 
-          }
-          .content h2 { 
-            color: ${styles.headingColor}; 
-            margin-top: 0; 
-          }
-          .content p { 
-            line-height: 1.6; 
-            color: ${styles.bodyColor}; 
-          }
-          .quote-details {
-            background-color: ${styles.cardColor};
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid ${tone.style.accentColor};
-          }
-          .quote-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid ${styles.borderColor};
-          }
-          .quote-row:last-child {
-            border-bottom: none;
-            font-weight: 600;
-            font-size: 18px;
-            padding-top: 12px;
-          }
-          .button { 
-            display: inline-block; 
-            padding: 12px 32px; 
-            background: ${tone.style.buttonColor}; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            margin: 20px 0; 
-            font-weight: 600; 
-          }
-          .footer { 
-            padding: 20px; 
-            text-align: center; 
-            color: ${styles.footerColor}; 
-            font-size: 12px; 
-            border-top: 1px solid ${styles.borderColor}; 
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            ${data.logo_url ? `<img src="${data.logo_url}" alt="Company Logo" style="max-width: 200px; max-height: 80px; margin-bottom: 10px;" />` : `<h1>WrapCommand™</h1>`}
-          </div>
-          <div class="content">
-            <h2>${subject}</h2>
-            <p>${body}</p>
-            
-            ${data.quote_total ? `
-            <div class="quote-details">
-              <h3 style="margin-top: 0;">Quote Summary</h3>
-              ${data.vehicle_make ? `<div class="quote-row"><span>Vehicle</span><span>${data.vehicle_year || ''} ${data.vehicle_make} ${data.vehicle_model || ''}</span></div>` : ''}
-              ${data.product_name ? `<div class="quote-row"><span>Product</span><span>${data.product_name}</span></div>` : ''}
-              ${data.sqft ? `<div class="quote-row"><span>Coverage</span><span>${data.sqft} sq ft</span></div>` : ''}
-              ${data.material_cost ? `<div class="quote-row"><span>Material Cost</span><span>$${data.material_cost}</span></div>` : ''}
-              ${data.labor_cost ? `<div class="quote-row"><span>Labor Cost</span><span>$${data.labor_cost}</span></div>` : ''}
-              <div class="quote-row"><span>Total</span><span>$${data.quote_total}</span></div>
-            </div>
-            ` : ''}
-            
-            <a href="${data.portal_url || '#'}" class="button">View Full Quote</a>
-            
-            <p style="margin-top: 30px;">${tone.closing}</p>
-          </div>
-          <div class="footer">
-            ${data.logo_url ? `<img src="${data.logo_url}" alt="Company Logo" style="max-width: 150px; max-height: 60px; margin-bottom: 10px; opacity: 0.8;" />` : ''}
-            <p>© ${new Date().getFullYear()} WrapCommand™. Powered by <span style="color: white;">Mighty</span><span style="background: linear-gradient(90deg, #00AFFF, #4EEAFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Mail™</span></p>
-            <p>${data.footer_text || 'Professional vehicle wrap solutions.'}</p>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:Inter,Arial,sans-serif;">
+  <div style="max-width:640px;margin:0 auto;background:#ffffff;">
+
+    <!-- BLACK HEADER - WePrintWraps Branding -->
+    <div style="background:#000000;padding:16px 24px;">
+      <div style="font-size:18px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">
+        WEPRINTWRAPS.COM
+      </div>
+      <div style="font-size:12px;color:#888888;margin-top:4px;">
+        Professional Vehicle Wrap Printing
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div style="background:#ffffff;color:#111827;font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.5;">
+
+      <!-- ADD TO CART CTA -->
+      <div style="padding:24px;">
+        <a href="${cartUrl}"
+           style="display:inline-block;padding:14px 24px;background:#e6007e;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">
+          Add This Quote to Cart
+        </a>
+      </div>
+
+      <!-- PRICE SECTION -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Estimated Total</div>
+        <div style="font-size:32px;font-weight:700;color:#111827;margin:4px 0;">
+          $${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        <div style="font-size:13px;color:#6b7280;">
+          ~${sqft} sq ft × $${rate.toFixed(2)} / sq ft
+        </div>
+      </div>
+
+      <!-- PROJECT DETAILS -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="background:#f9fafb;border-radius:8px;padding:20px;border-left:4px solid #e6007e;">
+          <div style="font-size:14px;color:#111827;font-weight:600;margin-bottom:12px;">Project Details</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            ${vehicleDisplay !== 'Your Vehicle' ? `
+            <tr>
+              <td style="padding:8px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">Vehicle</td>
+              <td style="padding:8px 0;color:#111827;text-align:right;font-weight:500;border-bottom:1px solid #e5e7eb;">${vehicleDisplay}</td>
+            </tr>` : ''}
+            ${sqft > 0 ? `
+            <tr>
+              <td style="padding:8px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">Coverage</td>
+              <td style="padding:8px 0;color:#111827;text-align:right;font-weight:500;border-bottom:1px solid #e5e7eb;">${sqft} sq ft</td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding:8px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">Material</td>
+              <td style="padding:8px 0;color:#111827;text-align:right;font-weight:500;border-bottom:1px solid #e5e7eb;">${data.product_name || 'Premium Cast Vinyl'}</td>
+            </tr>
+            ${data.material_cost ? `
+            <tr>
+              <td style="padding:8px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">Material Cost</td>
+              <td style="padding:8px 0;color:#111827;text-align:right;font-weight:500;border-bottom:1px solid #e5e7eb;">$${Number(data.material_cost).toFixed(2)}</td>
+            </tr>` : ''}
+            ${data.labor_cost && Number(data.labor_cost) > 0 ? `
+            <tr>
+              <td style="padding:8px 0;color:#6b7280;border-bottom:1px solid #e5e7eb;">Labor</td>
+              <td style="padding:8px 0;color:#111827;text-align:right;font-weight:500;border-bottom:1px solid #e5e7eb;">$${Number(data.labor_cost).toFixed(2)}</td>
+            </tr>` : ''}
+            <tr>
+              <td style="padding:12px 0 8px;color:#111827;font-weight:600;font-size:15px;">Total</td>
+              <td style="padding:12px 0 8px;color:#e6007e;text-align:right;font-weight:700;font-size:18px;">$${total.toFixed(2)}</td>
+            </tr>
+          </table>
+          <div style="margin-top:12px;font-size:12px;color:#9ca3af;font-style:italic;">
+            Printed wrap material only. Installation not included.
           </div>
         </div>
-      </body>
-    </html>
-  `;
+      </div>
+
+      <!-- UPSELL SECTION -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="background:#fef3c7;border-radius:8px;padding:16px;">
+          <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:4px;">${upsell.title}</div>
+          <div style="font-size:13px;color:#78350f;margin-bottom:8px;">${upsell.body}</div>
+          <a href="${upsell.link}" style="font-size:13px;color:#e6007e;text-decoration:none;font-weight:500;">Learn more →</a>
+        </div>
+      </div>
+
+      <!-- VOLUME PRICING -->
+      <div style="padding:0 24px 24px 24px;">
+        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:12px;">Volume & Fleet Pricing</div>
+        <table style="width:100%;font-size:13px;color:#6b7280;">
+          <tr><td style="padding:4px 0;">500–999 sq ft</td><td style="text-align:right;color:#059669;font-weight:500;">5% off</td></tr>
+          <tr><td style="padding:4px 0;">1,000–2,499 sq ft</td><td style="text-align:right;color:#059669;font-weight:500;">10% off</td></tr>
+          <tr><td style="padding:4px 0;">2,500–4,999 sq ft</td><td style="text-align:right;color:#059669;font-weight:500;">15% off</td></tr>
+          <tr><td style="padding:4px 0;">5,000+ sq ft</td><td style="text-align:right;color:#059669;font-weight:500;">20% off</td></tr>
+        </table>
+      </div>
+
+      <!-- COMMERCIALPRO CTA -->
+      <div style="padding:0 24px 24px 24px;border-top:1px solid #e5e7eb;">
+        <div style="padding-top:20px;font-size:13px;color:#6b7280;">
+          Are you a wrap professional or managing fleet volume?<br/>
+          <a href="https://weprintwraps.com/commercialpro" style="color:#e6007e;text-decoration:none;font-weight:600;">
+            Learn more about CommercialPro™ →
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="padding:24px;background:#111827;font-size:12px;color:#9ca3af;text-align:center;">
+      Questions? Reply to this email or contact
+      <a href="mailto:hello@weprintwraps.com" style="color:#e6007e;">hello@weprintwraps.com</a><br/><br/>
+      — The WePrintWraps.com Team
+      ${quoteNumber ? `<br/><span style="font-size:11px;color:#6b7280;">Quote #${quoteNumber}</span>` : ''}
+    </div>
+
+  </div>
+</body>
+</html>
+`;
 }
 
+// Legacy functions kept for compatibility
 function getDesignStyles(design: string) {
-  const themes: Record<string, any> = {
-    clean: {
-      backgroundColor: "#F9FAFB",
-      containerColor: "#FFFFFF",
-      headerGradient: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-      textColor: "#111827",
-      headingColor: "#111827",
-      bodyColor: "#6B7280",
-      cardColor: "#F9FAFB",
-      borderColor: "#E5E7EB",
-      footerColor: "#6B7280",
-    },
-    luxury: {
-      backgroundColor: "#0A0A0F",
-      containerColor: "#16161E",
-      headerGradient: "linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)",
-      textColor: "#E7E7EF",
-      headingColor: "#FFFFFF",
-      bodyColor: "#B8B8C7",
-      cardColor: "#1A1A1F",
-      borderColor: "rgba(255,255,255,0.06)",
-      footerColor: "#6B7280",
-    },
-    performance: {
-      backgroundColor: "#0A0A0F",
-      containerColor: "#16161E",
-      headerGradient: "linear-gradient(135deg, #00AFFF 0%, #008CFF 50%, #4EEAFF 100%)",
-      textColor: "#E7E7EF",
-      headingColor: "#FFFFFF",
-      bodyColor: "#B8B8C7",
-      cardColor: "#101016",
-      borderColor: "rgba(255,255,255,0.06)",
-      footerColor: "#6B7280",
-    },
+  return {
+    backgroundColor: "#f6f7f9",
+    containerColor: "#FFFFFF",
+    headerGradient: "#000000",
+    textColor: "#334155",
+    headingColor: "#0f172a",
+    bodyColor: "#64748b",
+    cardColor: "#FFFFFF",
+    borderColor: "#e5e7eb",
+    footerColor: "#64748b",
   };
-  
-  return themes[design] || themes.clean;
 }
