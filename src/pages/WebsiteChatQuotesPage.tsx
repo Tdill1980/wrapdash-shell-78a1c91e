@@ -74,6 +74,10 @@ type TabValue = 'new' | 'email_sent' | 'callback' | 'completed' | 'converted';
 
 export default function WebsiteChatQuotesPage() {
   console.log('[WebsiteQuoteManagement] Component mounting...');
+
+  // Debug: Simple state to track if component renders at all
+  const [hasError, setHasError] = useState<string | null>(null);
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -97,23 +101,31 @@ export default function WebsiteChatQuotesPage() {
 
   // Fetch quotes from database
   const fetchQuotes = async (showRefreshing = false) => {
+    console.log('[WebsiteQuoteManagement] fetchQuotes called');
     if (showRefreshing) setRefreshing(true);
     else setLoading(true);
 
     try {
+      console.log('[WebsiteQuoteManagement] Querying quotes table...');
       const { data, error } = await supabase
         .from('quotes')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(500);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[WebsiteQuoteManagement] Supabase quotes error:', error);
+        setHasError(`Quotes query failed: ${error.message}`);
+        throw error;
+      }
+
+      console.log('[WebsiteQuoteManagement] Got', data?.length || 0, 'quotes');
       setQuotes((data as Quote[]) || []);
 
       // Fetch converted orders
       await fetchConvertedOrders((data as Quote[]) || []);
     } catch (err) {
-      console.error('[LeadManagement] Error fetching quotes:', err);
+      console.error('[WebsiteQuoteManagement] Error fetching quotes:', err);
       toast({
         title: "Error loading quotes",
         description: err instanceof Error ? err.message : "Failed to load quotes",
@@ -681,6 +693,18 @@ The WePrintWraps Team`;
       </tr>
     );
   };
+
+  // DEBUG: Early error display
+  if (hasError) {
+    return (
+      <div className="p-6 bg-red-900 min-h-screen text-white">
+        <h1 className="text-2xl font-bold">Website Quote Management - Error</h1>
+        <pre className="mt-4 p-4 bg-red-800 rounded">{hasError}</pre>
+      </div>
+    );
+  }
+
+  console.log('[WebsiteQuoteManagement] Rendering main UI, loading:', loading, 'quotes:', quotes.length);
 
   return (
     <AppLayout>
