@@ -409,6 +409,7 @@ export default function MightyCustomer() {
             vehicle_year: customerData.vehicleYear || null,
             vehicle_make: customerData.vehicleMake || null,
             vehicle_model: customerData.vehicleModel || null,
+            source: 'mightycustomer',
             vehicle_details: JSON.stringify({
               year: customerData.vehicleYear,
               make: customerData.vehicleMake,

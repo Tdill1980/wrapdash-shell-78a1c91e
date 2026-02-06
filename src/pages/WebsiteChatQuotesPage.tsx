@@ -817,6 +817,7 @@ The WePrintWraps Team`;
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700">
               <SelectItem value="all">All Sources</SelectItem>
+              <SelectItem value="mightycustomer">MightyCustomer</SelectItem>
               <SelectItem value="commandchat">CommandChat</SelectItem>
               <SelectItem value="chat_widget">Chat Widget</SelectItem>
               <SelectItem value="website_chat">Website Chat</SelectItem>
