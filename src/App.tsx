@@ -205,8 +205,8 @@ const App = () => (
             <Route path="/admin/chat-widget-demo" element={<ChatWidgetDemo />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
-            {/* TEST: Using minimal test component to debug blank page */}
-            <Route path="/website-quote-management" element={<WebsiteQuotesTest />} />
+            {/* Website Quote Management - using MainLayout now */}
+            <Route path="/website-quote-management" element={<WebsiteChatQuotesPage />} />
             {/* Legacy redirect - keep old route working */}
             <Route path="/admin/website-quotes" element={<Navigate to="/website-quote-management" replace />} />
             <Route path="/quote-admin" element={<QuoteToolAdmin />} />

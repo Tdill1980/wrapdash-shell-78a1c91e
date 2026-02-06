@@ -1,6 +1,35 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Component, ErrorInfo, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppLayout } from "@/layouts/AppLayout";
+import { MainLayout } from "@/layouts/MainLayout";
+
+// Error Boundary to catch rendering errors
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[WebsiteQuoteManagement] Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 bg-red-900 min-h-screen text-white">
+          <h1 className="text-2xl font-bold">Website Quote Management - Render Error</h1>
+          <pre className="mt-4 p-4 bg-red-800 rounded overflow-auto">{this.state.error?.message}</pre>
+          <pre className="mt-2 p-4 bg-red-800 rounded overflow-auto text-xs">{this.state.error?.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -708,12 +737,13 @@ The WePrintWraps Team`;
   console.log('[WebsiteQuoteManagement] Rendering main UI, loading:', loading, 'quotes:', quotes.length);
 
   return (
-    <AppLayout>
-      {/* DEBUG BANNER - Remove after testing */}
-      <div className="bg-red-600 text-white p-4 text-xl font-bold sticky top-0 z-50">
-        🔴 DEBUG: Page rendering! Quotes loaded: {quotes.length} | Loading: {loading ? 'YES' : 'NO'} | Has Error: {hasError || 'none'}
-      </div>
-      <div className="p-6 space-y-6 bg-gray-900 min-h-screen">
+    <ErrorBoundary>
+      <MainLayout>
+        {/* DEBUG BANNER - Remove after testing */}
+        <div className="bg-red-600 text-white p-4 text-xl font-bold sticky top-0 z-50">
+          🔴 DEBUG: Page rendering! Quotes loaded: {quotes.length} | Loading: {loading ? 'YES' : 'NO'} | Has Error: {hasError || 'none'}
+        </div>
+        <div className="p-6 space-y-6 bg-gray-900 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -1112,7 +1142,8 @@ The WePrintWraps Team`;
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-    </AppLayout>
+        </div>
+      </MainLayout>
+    </ErrorBoundary>
   );
 }
