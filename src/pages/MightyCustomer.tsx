@@ -383,17 +383,15 @@ export default function MightyCustomer() {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
 
-      // Use edge function to bypass RLS - route through Lovable's Supabase
-      const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
-      const lovableAnonKey = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
+      // Use WePrintWraps Supabase edge function for save-quote
+      const wpwFunctionsUrl = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
 
       const response = await fetch(
-        `${lovableFunctionsUrl}/save-quote`,
+        `${wpwFunctionsUrl}/save-quote`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
           },
           body: JSON.stringify({
             quote_number: quoteNumber,

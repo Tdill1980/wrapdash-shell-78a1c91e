@@ -12,9 +12,8 @@ export interface VehicleSQFTOptions {
   };
 }
 
-// Get Lovable functions URL and key for edge functions
-const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
-const lovableAnonKey = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
+// Use WePrintWraps Supabase for vehicle data (NOT Lovable - that's only for 3D rendering)
+const wpwFunctionsUrl = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
 
 export function useVehicleDimensions() {
   const [makes, setMakes] = useState<string[]>([]);
@@ -30,11 +29,10 @@ export function useVehicleDimensions() {
         // Use current year to get makes (most vehicles will cover current year)
         const currentYear = new Date().getFullYear();
         const response = await fetch(
-          `${lovableFunctionsUrl}/vehicle-list?type=makes&year=${currentYear}`,
+          `${wpwFunctionsUrl}/vehicle-list?type=makes&year=${currentYear}`,
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${lovableAnonKey}`,
             },
           }
         );
@@ -66,11 +64,10 @@ export function useVehicleDimensions() {
     try {
       const currentYear = new Date().getFullYear();
       const response = await fetch(
-        `${lovableFunctionsUrl}/vehicle-list?type=models&year=${currentYear}&make=${encodeURIComponent(make)}`,
+        `${wpwFunctionsUrl}/vehicle-list?type=models&year=${currentYear}&make=${encodeURIComponent(make)}`,
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
           },
         }
       );
@@ -99,11 +96,10 @@ export function useVehicleDimensions() {
     setLoading(true);
     try {
       const response = await fetch(
-        `${lovableFunctionsUrl}/vehicle-list?type=years&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`,
+        `${wpwFunctionsUrl}/vehicle-list?type=years&make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`,
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
           },
         }
       );
@@ -132,12 +128,11 @@ export function useVehicleDimensions() {
 
     try {
       const response = await fetch(
-        `${lovableFunctionsUrl}/vehicle-sqft`,
+        `${wpwFunctionsUrl}/vehicle-sqft`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
           },
           body: JSON.stringify({ year, make, model }),
         }
@@ -191,12 +186,11 @@ export function useVehicleDimensions() {
 
     try {
       const response = await fetch(
-        `${lovableFunctionsUrl}/vehicle-sqft`,
+        `${wpwFunctionsUrl}/vehicle-sqft`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
           },
           body: JSON.stringify({ year, make, model }),
         }
