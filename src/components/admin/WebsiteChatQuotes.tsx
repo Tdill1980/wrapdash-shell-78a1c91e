@@ -84,32 +84,43 @@ export function WebsiteChatQuotes() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["website-chat-quotes", statusFilter],
     queryFn: async () => {
-      // Use edge function to bypass RLS
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") {
-        params.set("status", statusFilter);
-      }
-
-      const response = await fetch(
-        `https://qxllysilzonrlyoaomce.supabase.co/functions/v1/get-website-chat-quotes?${params}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({})
+      console.log('[WebsiteChatQuotes] Fetching quotes...');
+      try {
+        // Use edge function to bypass RLS
+        const params = new URLSearchParams();
+        if (statusFilter !== "all") {
+          params.set("status", statusFilter);
         }
-      );
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error('[WebsiteChatQuotes] API error:', response.status, errText);
-        throw new Error(`Failed to fetch quotes: ${response.status}`);
+        const response = await fetch(
+          `https://qxllysilzonrlyoaomce.supabase.co/functions/v1/get-website-chat-quotes?${params}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+          }
+        );
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error('[WebsiteChatQuotes] API error:', response.status, errText);
+          throw new Error(`Failed to fetch quotes: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('[WebsiteChatQuotes] Received:', result?.quotes?.length || 0, 'quotes');
+        return result;
+      } catch (err) {
+        console.error('[WebsiteChatQuotes] Fetch error:', err);
+        throw err;
       }
-
-      return response.json();
     },
   });
+
+  // Debug logging
+  console.log('[WebsiteChatQuotes] Render state:', { isLoading, hasError: !!error, hasData: !!data });
 
   // Show error state
   if (error) {
@@ -121,10 +132,10 @@ export function WebsiteChatQuotes() {
     );
   }
 
-  const quotes = data?.quotes as WebsiteChatQuote[] | undefined;
-  const stats = data?.stats;
+  const quotes = (data?.quotes || []) as WebsiteChatQuote[];
+  const stats = data?.stats || { total: 0, today: 0, needsReview: 0, totalValue: 0 };
 
-  const filteredQuotes = quotes?.filter((quote) => {
+  const filteredQuotes = quotes.filter((quote) => {
     // Link filter
     if (linkFilter === "linked" && !quote.source_conversation_id) return false;
     if (linkFilter === "unlinked" && quote.source_conversation_id) return false;
@@ -142,8 +153,8 @@ export function WebsiteChatQuotes() {
   });
 
   // Count linked vs unlinked for display
-  const linkedCount = quotes?.filter(q => q.source_conversation_id).length || 0;
-  const unlinkedCount = quotes?.filter(q => !q.source_conversation_id).length || 0;
+  const linkedCount = quotes.filter(q => q.source_conversation_id).length;
+  const unlinkedCount = quotes.filter(q => !q.source_conversation_id).length;
 
   const handleViewConversation = (conversationId: string) => {
     window.open(`/website-admin?conversation=${conversationId}`, "_blank");
@@ -158,7 +169,7 @@ export function WebsiteChatQuotes() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Quotes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
@@ -166,7 +177,7 @@ export function WebsiteChatQuotes() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Today</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{stats?.today || 0}</div>
+            <div className="text-2xl font-bold text-primary">{stats.today}</div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
@@ -177,7 +188,7 @@ export function WebsiteChatQuotes() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{stats?.needsReview || 0}</div>
+            <div className="text-2xl font-bold text-yellow-500">{stats.needsReview}</div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
@@ -185,7 +196,7 @@ export function WebsiteChatQuotes() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">${stats?.totalValue?.toLocaleString() || 0}</div>
+            <div className="text-2xl font-bold text-green-500">${stats.totalValue.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -197,7 +208,7 @@ export function WebsiteChatQuotes() {
           <span className="text-sm text-muted-foreground">Show:</span>
           <ToggleGroup type="single" value={linkFilter} onValueChange={(v) => v && setLinkFilter(v)} className="bg-muted/50 p-1 rounded-lg">
             <ToggleGroupItem value="all" className="text-xs px-3 data-[state=on]:bg-background data-[state=on]:shadow-sm">
-              All Quotes ({quotes?.length || 0})
+              All Quotes ({quotes.length})
             </ToggleGroupItem>
             <ToggleGroupItem value="linked" className="text-xs px-3 data-[state=on]:bg-background data-[state=on]:shadow-sm">
               <MessageSquare className="w-3 h-3 mr-1" />
@@ -260,12 +271,12 @@ export function WebsiteChatQuotes() {
                   ))}
                 </TableRow>
               ))
-            ) : filteredQuotes?.length === 0 ? (
+            ) : filteredQuotes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No website chat quotes found</TableCell>
               </TableRow>
             ) : (
-              filteredQuotes?.map((quote) => {
+              filteredQuotes.map((quote) => {
                 const needsAttention = !quote.email_sent;
                 const hasLinkedChat = !!quote.source_conversation_id;
                 return (
