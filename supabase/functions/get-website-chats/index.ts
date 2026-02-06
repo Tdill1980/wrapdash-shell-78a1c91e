@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fetch conversations WITH MESSAGES - optionally filter by channel
+    // Fetch conversations - optionally filter by channel
     let query = supabase
       .from("conversations")
       .select(`
@@ -44,15 +44,7 @@ Deno.serve(async (req) => {
         created_at,
         updated_at,
         last_message_at,
-        contact_id,
-        messages (
-          id,
-          content,
-          direction,
-          sender_name,
-          created_at,
-          metadata
-        )
+        contact_id
       `);
 
     // Only filter by channel if explicitly requested
@@ -73,14 +65,40 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch messages for all conversations
+    const conversationIds = (conversations || []).map(c => c.id);
+    let allMessages: any[] = [];
+
+    if (conversationIds.length > 0) {
+      const { data: msgs, error: msgError } = await supabase
+        .from("messages")
+        .select("id, conversation_id, content, direction, sender_name, created_at, metadata")
+        .in("conversation_id", conversationIds)
+        .order("created_at", { ascending: true });
+
+      if (msgError) {
+        console.error("[get-website-chats] Messages query error:", msgError);
+      } else {
+        allMessages = msgs || [];
+        console.log(`[get-website-chats] Fetched ${allMessages.length} messages for ${conversationIds.length} conversations`);
+      }
+    }
+
+    // Group messages by conversation_id
+    const messagesByConversation: Record<string, any[]> = {};
+    for (const msg of allMessages || []) {
+      if (!messagesByConversation[msg.conversation_id]) {
+        messagesByConversation[msg.conversation_id] = [];
+      }
+      messagesByConversation[msg.conversation_id].push(msg);
+    }
+
     // Enrich with customer info from chat_state
     const enrichedChats = (conversations || []).map((conv: any) => {
       const chatState = conv.chat_state || {};
       const metadata = conv.metadata || {};
-      // Sort messages by created_at ascending
-      const messages = (conv.messages || []).sort((a: any, b: any) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      );
+      // Get messages for this conversation (already sorted)
+      const messages = messagesByConversation[conv.id] || [];
 
       return {
         id: conv.id,
