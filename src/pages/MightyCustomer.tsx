@@ -327,8 +327,12 @@ export default function MightyCustomer() {
         .eq('email', customerData.email)
         .maybeSingle();
 
-      const { data, error } = await lovableFunctions.functions.invoke("send-mightymail-quote", {
-        body: {
+      // Use WePrintWraps Supabase for send-mightymail-quote (NOT Lovable)
+      const wpwFunctionsUrl = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
+      const response = await fetch(`${wpwFunctionsUrl}/send-mightymail-quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           customerEmail: customerData.email,
           customerName: customerData.name,
           quoteData: {
@@ -344,12 +348,15 @@ export default function MightyCustomer() {
           },
           tone: emailTone,
           design: emailDesign,
-          quoteId: null, // Will be set when quote is saved
+          quoteId: null,
           customerId: customer?.id || null,
-        },
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
 
       toast({
         title: "Email Sent!",

@@ -158,8 +158,12 @@ export default function MightyMailQuotes() {
   async function sendOrderConfirmation(quote: Quote) {
     setSendingEmail(quote.id);
     try {
-      const { data, error } = await lovableFunctions.functions.invoke("send-mightymail-quote", {
-        body: {
+      // Use WePrintWraps Supabase for send-mightymail-quote (NOT Lovable)
+      const wpwFunctionsUrl = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
+      const response = await fetch(`${wpwFunctionsUrl}/send-mightymail-quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           customerEmail: quote.customer_email,
           customerName: quote.customer_name,
           quoteData: {
@@ -175,10 +179,13 @@ export default function MightyMailQuotes() {
           },
           tone: quote.email_tone,
           design: quote.email_design,
-        },
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send email');
+      }
 
       // Update follow-up count
       await supabase

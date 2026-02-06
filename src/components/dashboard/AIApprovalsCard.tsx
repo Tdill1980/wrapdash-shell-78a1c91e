@@ -186,19 +186,28 @@ export function AIApprovalsCard() {
         const quoteId = payload?.auto_quote?.quote_id;
         const customerEmail = payload?.auto_quote?.customer_email || payload?.customer_email;
         const customerName = payload?.auto_quote?.customer_name || payload?.customer_name;
-        
-        const { data, error } = await lovableFunctions.functions.invoke('send-approved-quote', {
-          body: {
+
+        // Use WePrintWraps Supabase for send-approved-quote (NOT Lovable)
+        const wpwFunctionsUrl = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
+        const response = await fetch(`${wpwFunctionsUrl}/send-approved-quote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             actionId: action.id,
             quoteId,
             customerEmail,
             customerName,
             tone: tone || 'installer',
             design: design || 'performance',
-          }
+          }),
         });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to send quote');
+        }
+
+        const data = await response.json();
 
         setActions((prev) => prev.filter((a) => a.id !== action.id));
         setDetailModalOpen(false);
