@@ -26,10 +26,11 @@ export function useVehicleDimensions() {
     async function fetchMakes() {
       setLoading(true);
       try {
-        // Use current year to get makes (most vehicles will cover current year)
-        const currentYear = new Date().getFullYear();
+        // Use 2020 to get full make list (database contains 1330 vehicles from PVO 2020 data)
+        // Most vehicles from 2020 are still available today
+        const lookupYear = 2020;
         const response = await fetch(
-          `${wpwFunctionsUrl}/vehicle-list?type=makes&year=${currentYear}`,
+          `${wpwFunctionsUrl}/vehicle-list?type=makes&year=${lookupYear}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -62,9 +63,10 @@ export function useVehicleDimensions() {
 
     setLoading(true);
     try {
-      const currentYear = new Date().getFullYear();
+      // Use 2020 to get full model list (database contains 1330 vehicles from PVO 2020 data)
+      const lookupYear = 2020;
       const response = await fetch(
-        `${wpwFunctionsUrl}/vehicle-list?type=models&year=${currentYear}&make=${encodeURIComponent(make)}`,
+        `${wpwFunctionsUrl}/vehicle-list?type=models&year=${lookupYear}&make=${encodeURIComponent(make)}`,
         {
           headers: {
             'Content-Type': 'application/json',
