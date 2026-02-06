@@ -58,7 +58,7 @@ interface WebsiteChatQuote {
   vehicle_make: string | null;
   vehicle_model: string | null;
   sqft: number | null;
-  material_cost: number | null;
+  total_price: number | null;
   status: string | null;
   created_at: string;
   email_sent: boolean | null;
@@ -286,7 +286,7 @@ export function WebsiteChatQuotes() {
                     </TableCell>
                     <TableCell>{quote.vehicle_year} {quote.vehicle_make} {quote.vehicle_model}</TableCell>
                     <TableCell className="text-right font-mono">{quote.sqft || "-"}</TableCell>
-                    <TableCell className="text-right font-mono font-medium">${quote.material_cost?.toFixed(2) || "-"}</TableCell>
+                    <TableCell className="text-right font-mono font-medium">${quote.total_price?.toFixed(2) || "-"}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusColors[quote.status || "created"]}>{quote.status || "created"}</Badge>
                     </TableCell>
@@ -369,7 +369,7 @@ export function WebsiteChatQuotes() {
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
                     <div className="text-xs text-muted-foreground">Material Cost</div>
-                    <div className="text-lg font-bold text-green-500">${selectedQuote.material_cost?.toFixed(2) || "-"}</div>
+                    <div className="text-lg font-bold text-green-500">${selectedQuote.total_price?.toFixed(2) || "-"}</div>
                   </div>
                 </div>
               </div>
