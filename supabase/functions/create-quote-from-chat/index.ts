@@ -231,6 +231,7 @@ serve(async (req) => {
         total_price: materialCost,
         product_name: productName,
         status: 'pending', // Valid status value
+        source: 'commandchat', // Identifies quotes from CommandChat widget
         source_conversation_id: conversation_id || null,
         email_sent: false
       })

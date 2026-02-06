@@ -738,10 +738,6 @@ The WePrintWraps Team`;
   return (
     <ErrorBoundary>
       <MainLayout>
-        {/* DEBUG BANNER - Remove after testing */}
-        <div className="bg-red-600 text-white p-4 text-xl font-bold sticky top-0 z-50">
-          🔴 DEBUG: Page rendering! Quotes loaded: {quotes.length} | Loading: {loading ? 'YES' : 'NO'} | Has Error: {hasError || 'none'}
-        </div>
         <div className="p-6 space-y-6 bg-gray-900 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
