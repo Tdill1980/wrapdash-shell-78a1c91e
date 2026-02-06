@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fetch conversations - optionally filter by channel
+    // Fetch conversations WITH MESSAGES - optionally filter by channel
     let query = supabase
       .from("conversations")
       .select(`
@@ -44,7 +44,15 @@ Deno.serve(async (req) => {
         created_at,
         updated_at,
         last_message_at,
-        contact_id
+        contact_id,
+        messages (
+          id,
+          content,
+          direction,
+          sender_name,
+          created_at,
+          metadata
+        )
       `);
 
     // Only filter by channel if explicitly requested
@@ -66,9 +74,13 @@ Deno.serve(async (req) => {
     }
 
     // Enrich with customer info from chat_state
-    const enrichedChats = (conversations || []).map((conv) => {
+    const enrichedChats = (conversations || []).map((conv: any) => {
       const chatState = conv.chat_state || {};
       const metadata = conv.metadata || {};
+      // Sort messages by created_at ascending
+      const messages = (conv.messages || []).sort((a: any, b: any) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
 
       return {
         id: conv.id,
@@ -77,6 +89,8 @@ Deno.serve(async (req) => {
         created_at: conv.created_at,
         updated_at: conv.updated_at,
         last_message_at: conv.last_message_at,
+        // MESSAGES - critical for message count display
+        messages: messages,
         // Extract customer info from chat_state
         customer_name: chatState.customer_name || chatState.name || null,
         customer_email: chatState.customer_email || chatState.email || null,
