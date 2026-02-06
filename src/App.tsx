@@ -86,6 +86,7 @@ import MyProducts from "./pages/settings/MyProducts";
 import AdminOrganizations from "./pages/AdminOrganizations";
 import QuoteDrafts from "./pages/QuoteDrafts";
 import WebsiteChatQuotesPage from "./pages/WebsiteChatQuotesPage";
+import WebsiteQuotesTest from "./pages/WebsiteQuotesTest";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
 import AssetTaggingAdmin from "./pages/admin/AssetTaggingAdmin";
 import SavedViewsAdmin from "./pages/admin/SavedViewsAdmin";
@@ -204,7 +205,8 @@ const App = () => (
             <Route path="/admin/chat-widget-demo" element={<ChatWidgetDemo />} />
             <Route path="/admin/vehicles" element={<VehicleAdmin />} />
             <Route path="/admin/ai-corrections" element={<AICorrectionsAdmin />} />
-            <Route path="/website-quote-management" element={<WebsiteChatQuotesPage />} />
+            {/* TEST: Using minimal test component to debug blank page */}
+            <Route path="/website-quote-management" element={<WebsiteQuotesTest />} />
             {/* Legacy redirect - keep old route working */}
             <Route path="/admin/website-quotes" element={<Navigate to="/website-quote-management" replace />} />
             <Route path="/quote-admin" element={<QuoteToolAdmin />} />
