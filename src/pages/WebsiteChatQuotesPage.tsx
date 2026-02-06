@@ -8,10 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase, WPW_FUNCTIONS_URL } from "@/integrations/supabase/production-client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, isToday, parseISO, startOfDay } from "date-fns";
 import {
@@ -23,8 +22,6 @@ import {
   Phone,
   MessageSquare,
   Mail,
-  Bell,
-  Eye,
   CheckCircle,
   ShoppingCart,
   Clock,
@@ -34,8 +31,10 @@ import {
   Copy,
   Send,
   Calendar as CalendarIcon,
-  ExternalLink,
 } from "lucide-react";
+
+// WePrintWraps Edge Functions URL
+const WPW_FUNCTIONS_URL = 'https://qxllysilzonrlyoaomce.supabase.co/functions/v1';
 
 // Types
 interface Quote {
@@ -44,7 +43,7 @@ interface Quote {
   customer_name: string | null;
   customer_email: string | null;
   customer_phone: string | null;
-  vehicle_year: number | null;
+  vehicle_year: string | null;
   vehicle_make: string | null;
   vehicle_model: string | null;
   sqft: number | null;
@@ -52,17 +51,11 @@ interface Quote {
   status: string | null;
   created_at: string;
   email_sent: boolean | null;
-  email_sent_at: string | null;
-  sms_sent_at: string | null;
-  called_at: string | null;
-  callback_date: string | null;
-  contacted_at: string | null;
+  sent_at: string | null;
   source: string | null;
-  city: string | null;
-  state: string | null;
-  timezone: string | null;
   product_name: string | null;
-  notes: string | null;
+  last_activity: string | null;
+  follow_up_count: number | null;
 }
 
 interface ConvertedOrder {
@@ -114,10 +107,10 @@ export default function WebsiteChatQuotesPage() {
         .limit(500);
 
       if (error) throw error;
-      setQuotes(data || []);
+      setQuotes((data as Quote[]) || []);
 
       // Fetch converted orders
-      await fetchConvertedOrders(data || []);
+      await fetchConvertedOrders((data as Quote[]) || []);
     } catch (err) {
       console.error('[LeadManagement] Error fetching quotes:', err);
       toast({
@@ -136,7 +129,7 @@ export default function WebsiteChatQuotesPage() {
     try {
       const emails = quotesData
         .map(q => q.customer_email?.toLowerCase())
-        .filter(Boolean);
+        .filter((e): e is string => Boolean(e));
 
       if (emails.length === 0) return;
 
@@ -189,26 +182,30 @@ export default function WebsiteChatQuotesPage() {
     fetchQuotes();
   }, []);
 
-  // Computed stats
+  // Computed stats - using existing columns
   const stats = useMemo(() => {
-    const now = new Date();
-    const todayStart = startOfDay(now);
-
-    const newLeads = quotes.filter(q => !q.email_sent && !q.contacted_at && !q.callback_date);
-    const emailSent = quotes.filter(q => q.email_sent && !q.contacted_at);
-    const callbacks = quotes.filter(q => q.callback_date);
+    const newLeads = quotes.filter(q => !q.email_sent && q.status !== 'contacted' && !q.status?.startsWith('callback:'));
+    const emailSent = quotes.filter(q => q.email_sent && q.status !== 'contacted');
+    const callbacks = quotes.filter(q => q.status?.startsWith('callback:'));
     const callbacksToday = callbacks.filter(q => {
-      if (!q.callback_date) return false;
-      const cbDate = parseISO(q.callback_date);
-      return isToday(cbDate);
+      if (!q.status?.startsWith('callback:')) return false;
+      try {
+        const cbDateStr = q.status.replace('callback:', '');
+        const cbDate = parseISO(cbDateStr);
+        return isToday(cbDate);
+      } catch { return false; }
     });
+    const todayStart = startOfDay(new Date());
     const overdueCallbacks = callbacks.filter(q => {
-      if (!q.callback_date) return false;
-      const cbDate = parseISO(q.callback_date);
-      return cbDate < todayStart && !isToday(cbDate);
+      if (!q.status?.startsWith('callback:')) return false;
+      try {
+        const cbDateStr = q.status.replace('callback:', '');
+        const cbDate = parseISO(cbDateStr);
+        return cbDate < todayStart && !isToday(cbDate);
+      } catch { return false; }
     });
-    const completed = quotes.filter(q => q.contacted_at);
-    const totalContacted = quotes.filter(q => q.called_at || q.sms_sent_at || q.email_sent_at);
+    const completed = quotes.filter(q => q.status === 'contacted');
+    const totalContacted = quotes.filter(q => q.sent_at || q.status === 'contacted' || (q.follow_up_count && q.follow_up_count > 0));
 
     return {
       newLeads: newLeads.length,
@@ -226,24 +223,22 @@ export default function WebsiteChatQuotesPage() {
   // Filter quotes based on active tab
   const filteredQuotes = useMemo(() => {
     let filtered = quotes;
-    const todayStart = startOfDay(new Date());
 
     // Tab filtering
     switch (activeTab) {
       case 'new':
-        filtered = filtered.filter(q => !q.email_sent && !q.contacted_at && !q.callback_date);
+        filtered = filtered.filter(q => !q.email_sent && q.status !== 'contacted' && !q.status?.startsWith('callback:'));
         break;
       case 'email_sent':
-        filtered = filtered.filter(q => q.email_sent && !q.contacted_at);
+        filtered = filtered.filter(q => q.email_sent && q.status !== 'contacted');
         break;
       case 'callback':
-        filtered = filtered.filter(q => q.callback_date);
+        filtered = filtered.filter(q => q.status?.startsWith('callback:'));
         break;
       case 'completed':
-        filtered = filtered.filter(q => q.contacted_at);
+        filtered = filtered.filter(q => q.status === 'contacted');
         break;
       case 'converted':
-        // Will use convertedOrders instead
         return [];
     }
 
@@ -276,24 +271,36 @@ export default function WebsiteChatQuotesPage() {
 
   // Get callback status
   const getCallbackStatus = (quote: Quote) => {
-    if (!quote.callback_date) return null;
-    const cbDate = parseISO(quote.callback_date);
-    const today = startOfDay(new Date());
+    if (!quote.status?.startsWith('callback:')) return null;
+    try {
+      const cbDateStr = quote.status.replace('callback:', '');
+      const cbDate = parseISO(cbDateStr);
+      const today = startOfDay(new Date());
 
-    if (isToday(cbDate)) {
-      return { label: 'TODAY', variant: 'default' as const, color: 'bg-green-500' };
+      if (isToday(cbDate)) {
+        return { label: 'TODAY', color: 'bg-green-500 text-white' };
+      }
+
+      const daysOverdue = differenceInDays(today, cbDate);
+      if (daysOverdue > 0) {
+        return { label: `OVERDUE (${daysOverdue} days)`, color: 'bg-red-500 text-white' };
+      }
+
+      return { label: format(cbDate, 'MMM d'), color: 'bg-gray-600 text-white' };
+    } catch {
+      return null;
     }
+  };
 
-    const daysOverdue = differenceInDays(today, cbDate);
-    if (daysOverdue > 0) {
-      return {
-        label: `OVERDUE (${daysOverdue} days)`,
-        variant: 'destructive' as const,
-        color: 'bg-red-500'
-      };
+  // Get callback date from status
+  const getCallbackDate = (quote: Quote): string | null => {
+    if (!quote.status?.startsWith('callback:')) return null;
+    try {
+      const cbDateStr = quote.status.replace('callback:', '');
+      return format(parseISO(cbDateStr), 'MMM d, yyyy');
+    } catch {
+      return null;
     }
-
-    return { label: format(cbDate, 'MMM d'), variant: 'secondary' as const, color: 'bg-gray-500' };
   };
 
   // Format vehicle display
@@ -311,41 +318,34 @@ export default function WebsiteChatQuotesPage() {
     return { vehicle, product, sqft };
   };
 
-  // Get local time display
-  const getLocalTime = (quote: Quote) => {
-    if (!quote.city && !quote.state) return null;
-    const location = [quote.city, quote.state].filter(Boolean).join(', ');
-    const tz = quote.timezone || 'EST';
-    const now = new Date();
-    const timeStr = format(now, 'h:mm a');
-    return `${location} · ${timeStr} ${tz}`;
-  };
-
   // Action handlers
   const handleCall = (quote: Quote) => {
     if (quote.customer_phone) {
       window.open(`tel:${quote.customer_phone}`, '_blank');
-      markAsCalled(quote);
+      markActivity(quote);
     }
   };
 
-  const markAsCalled = async (quote: Quote) => {
+  const markActivity = async (quote: Quote) => {
     try {
       await supabase
         .from('quotes')
-        .update({ called_at: new Date().toISOString() })
+        .update({
+          last_activity: new Date().toISOString(),
+          follow_up_count: (quote.follow_up_count || 0) + 1
+        } as any)
         .eq('id', quote.id);
-
       fetchQuotes(true);
     } catch (err) {
-      console.error('Error marking as called:', err);
+      console.error('Error marking activity:', err);
     }
   };
 
   const openSmsModal = (quote: Quote) => {
     setSelectedQuote(quote);
     const request = formatRequest(quote);
-    const message = `Hi ${quote.customer_name?.split(' ')[0] || 'there'}, this is Jackson from WePrintWraps. I tried calling about your wrap quote for your ${request.vehicle}${request.sqft ? ` (${request.sqft})` : ''}. Please call me back at (480) 772-6003 when you get a chance!`;
+    const name = quote.customer_name?.split(' ')[0] || 'there';
+    const message = `Hi ${name}, this is Jackson from WePrintWraps. I tried calling about your wrap quote for your ${request.vehicle}${request.sqft ? ` (${request.sqft})` : ''}. Please call me back at (480) 772-6003 when you get a chance!`;
     setSmsMessage(message);
     setSmsModalOpen(true);
   };
@@ -358,7 +358,16 @@ export default function WebsiteChatQuotesPage() {
 
   const openCallbackModal = (quote: Quote) => {
     setSelectedQuote(quote);
-    setCallbackDate(quote.callback_date ? parseISO(quote.callback_date) : undefined);
+    if (quote.status?.startsWith('callback:')) {
+      try {
+        const cbDateStr = quote.status.replace('callback:', '');
+        setCallbackDate(parseISO(cbDateStr));
+      } catch {
+        setCallbackDate(undefined);
+      }
+    } else {
+      setCallbackDate(undefined);
+    }
     setCallbackModalOpen(true);
   };
 
@@ -379,13 +388,12 @@ export default function WebsiteChatQuotesPage() {
 
       if (!response.ok) throw new Error('Failed to send SMS');
 
-      // Update quote record
       await supabase
         .from('quotes')
         .update({
-          sms_sent_at: new Date().toISOString(),
-          notes: `${selectedQuote.notes || ''}\n[SMS ${format(new Date(), 'MMM d, h:mm a')}]: ${smsMessage}`.trim()
-        })
+          last_activity: new Date().toISOString(),
+          follow_up_count: (selectedQuote.follow_up_count || 0) + 1
+        } as any)
         .eq('id', selectedQuote.id);
 
       toast({ title: "SMS sent successfully" });
@@ -410,7 +418,10 @@ export default function WebsiteChatQuotesPage() {
     try {
       await supabase
         .from('quotes')
-        .update({ callback_date: callbackDate.toISOString() })
+        .update({
+          status: `callback:${callbackDate.toISOString()}`,
+          last_activity: new Date().toISOString()
+        } as any)
         .eq('id', selectedQuote.id);
 
       toast({ title: "Callback scheduled" });
@@ -426,7 +437,10 @@ export default function WebsiteChatQuotesPage() {
     try {
       await supabase
         .from('quotes')
-        .update({ contacted_at: new Date().toISOString() })
+        .update({
+          status: 'contacted',
+          last_activity: new Date().toISOString()
+        } as any)
         .eq('id', quote.id);
 
       toast({ title: "Marked as contacted" });
@@ -470,18 +484,18 @@ The WePrintWraps Team`;
     }
   };
 
-  // Render quote row
+  // Render quote row - DARK MODE
   const renderQuoteRow = (quote: Quote) => {
     const request = formatRequest(quote);
-    const localTime = getLocalTime(quote);
     const callbackStatus = getCallbackStatus(quote);
+    const callbackDateStr = getCallbackDate(quote);
     const needsQuote = !quote.total_price || quote.total_price === 0;
 
     return (
-      <tr key={quote.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+      <tr key={quote.id} className="border-b border-gray-700/50 hover:bg-gray-800/50 transition-colors">
         {/* Quote # */}
         <td className="px-4 py-3">
-          <div className="font-mono text-sm text-cyan-600">
+          <div className="font-mono text-sm text-cyan-400">
             {quote.quote_number?.split('-').slice(0, 2).join('-')}-
             <br />
             {quote.quote_number?.split('-')[2]}
@@ -489,41 +503,35 @@ The WePrintWraps Team`;
         </td>
 
         {/* Date / Contacted */}
-        <td className="px-4 py-3 text-sm text-gray-600">
-          {activeTab === 'email_sent' ? (
-            quote.email_sent_at ? format(new Date(quote.email_sent_at), 'MMM d, h:mm a') : '-'
-          ) : activeTab === 'callback' ? null : (
-            format(new Date(quote.created_at), 'MMM d, h:mm a')
-          )}
-        </td>
+        {activeTab !== 'callback' && (
+          <td className="px-4 py-3 text-sm text-gray-400">
+            {activeTab === 'email_sent' ? (
+              quote.sent_at ? format(new Date(quote.sent_at), 'MMM d, h:mm a') : '-'
+            ) : (
+              format(new Date(quote.created_at), 'MMM d, h:mm a')
+            )}
+          </td>
+        )}
 
         {/* Customer */}
         <td className="px-4 py-3">
-          <div className="font-medium text-gray-900">{quote.customer_name || 'Unknown'}</div>
-          <div className="text-sm text-cyan-600">{quote.customer_email}</div>
+          <div className="font-medium text-white">{quote.customer_name || 'Unknown'}</div>
+          <div className="text-sm text-cyan-400">{quote.customer_email}</div>
           {quote.customer_phone && (
-            <div className="text-sm text-cyan-600 flex items-center gap-1">
+            <a href={`tel:${quote.customer_phone}`} className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
               <Phone className="w-3 h-3" />
               {quote.customer_phone}
-            </div>
-          )}
-          {localTime && (
-            <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-              <Clock className="w-3 h-3" />
-              {localTime}
-            </div>
+            </a>
           )}
           {/* Activity badges for completed tab */}
-          {activeTab === 'completed' && (
+          {activeTab === 'completed' && quote.last_activity && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {quote.sms_sent_at && (
-                <Badge variant="outline" className="text-xs bg-teal-50 text-teal-700 border-teal-200">
-                  SMS: {format(new Date(quote.sms_sent_at), 'MMM d')}
-                </Badge>
-              )}
-              {quote.called_at && (
-                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                  Called: {format(new Date(quote.called_at), 'MMM d, h:mm a')}
+              <Badge variant="outline" className="text-xs bg-teal-500/20 text-teal-400 border-teal-500/30">
+                Activity: {format(new Date(quote.last_activity), 'MMM d, h:mm a')}
+              </Badge>
+              {quote.follow_up_count && quote.follow_up_count > 0 && (
+                <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/30">
+                  {quote.follow_up_count} follow-ups
                 </Badge>
               )}
             </div>
@@ -532,46 +540,35 @@ The WePrintWraps Team`;
 
         {/* Request */}
         <td className="px-4 py-3">
-          <div className="font-medium text-gray-900">{request.vehicle}</div>
-          <div className="text-sm text-gray-500">
+          <div className="font-medium text-white">{request.vehicle}</div>
+          <div className="text-sm text-gray-400">
             {request.product}{request.sqft ? ` · ${request.sqft}` : ''}
           </div>
         </td>
 
-        {/* Price / Callback Date */}
-        {activeTab === 'callback' && (
-          <td className="px-4 py-3 text-right">
-            {needsQuote ? (
-              <span className="text-orange-500 font-medium">Needs Quote</span>
-            ) : (
-              <span className="font-mono font-medium">${quote.total_price?.toFixed(2)}</span>
-            )}
-          </td>
-        )}
-        {activeTab === 'callback' && (
-          <td className="px-4 py-3 text-sm text-gray-600">
-            {quote.callback_date ? format(new Date(quote.callback_date), 'MMM d, yyyy') : '-'}
-          </td>
-        )}
-        {activeTab === 'callback' && (
-          <td className="px-4 py-3">
-            {callbackStatus && (
-              <Badge className={`${callbackStatus.color} text-white text-xs`}>
-                {callbackStatus.label}
-              </Badge>
-            )}
-          </td>
-        )}
+        {/* Price */}
+        <td className="px-4 py-3 text-right">
+          {needsQuote ? (
+            <span className="text-orange-400 font-medium">Needs Quote</span>
+          ) : (
+            <span className="font-mono font-medium text-white">${quote.total_price?.toFixed(2)}</span>
+          )}
+        </td>
 
-        {/* Est. Price (for non-callback tabs) */}
-        {activeTab !== 'callback' && (
-          <td className="px-4 py-3 text-right">
-            {needsQuote ? (
-              <span className="text-orange-500 font-medium">Needs<br/>Quote</span>
-            ) : (
-              <span className="font-mono font-medium">${quote.total_price?.toFixed(2)}</span>
-            )}
-          </td>
+        {/* Callback Date & Status (only for callback tab) */}
+        {activeTab === 'callback' && (
+          <>
+            <td className="px-4 py-3 text-sm text-gray-400">
+              {callbackDateStr || '-'}
+            </td>
+            <td className="px-4 py-3">
+              {callbackStatus && (
+                <Badge className={`${callbackStatus.color} text-xs`}>
+                  {callbackStatus.label}
+                </Badge>
+              )}
+            </td>
+          </>
         )}
 
         {/* Actions */}
@@ -582,7 +579,7 @@ The WePrintWraps Team`;
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
                   onClick={() => handleCall(quote)}
                   disabled={!quote.customer_phone}
                   title="Call"
@@ -592,7 +589,7 @@ The WePrintWraps Team`;
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
                   onClick={() => openSmsModal(quote)}
                   disabled={!quote.customer_phone}
                   title="Send SMS"
@@ -602,7 +599,7 @@ The WePrintWraps Team`;
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
                   onClick={() => openEmailModal(quote)}
                   title="Email"
                 >
@@ -611,7 +608,7 @@ The WePrintWraps Team`;
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
                   onClick={() => openCallbackModal(quote)}
                   title="Set Callback"
                 >
@@ -620,18 +617,16 @@ The WePrintWraps Team`;
               </>
             )}
             {activeTab === 'email_sent' && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => openSmsModal(quote)}
-                  disabled={!quote.customer_phone}
-                  title="Send SMS"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </Button>
-              </>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
+                onClick={() => openSmsModal(quote)}
+                disabled={!quote.customer_phone}
+                title="Send SMS"
+              >
+                <MessageSquare className="w-4 h-4" />
+              </Button>
             )}
             <Button
               variant="default"
@@ -648,28 +643,28 @@ The WePrintWraps Team`;
     );
   };
 
-  // Render converted row
+  // Render converted row - DARK MODE
   const renderConvertedRow = (order: ConvertedOrder) => {
     return (
-      <tr key={order.order_id} className="border-b border-gray-100 hover:bg-gray-50/50">
-        <td className="px-4 py-3 font-mono text-sm">#{order.order_id}</td>
-        <td className="px-4 py-3 font-mono text-sm text-cyan-600">{order.quote_number}</td>
-        <td className="px-4 py-3 text-sm text-gray-600">
+      <tr key={order.order_id} className="border-b border-gray-700/50 hover:bg-gray-800/50 transition-colors">
+        <td className="px-4 py-3 font-mono text-sm text-white">#{order.order_id}</td>
+        <td className="px-4 py-3 font-mono text-sm text-cyan-400">{order.quote_number}</td>
+        <td className="px-4 py-3 text-sm text-gray-400">
           {format(new Date(order.order_date), 'MMM d, yyyy')}
         </td>
         <td className="px-4 py-3">
-          <div className="font-medium text-gray-900">{order.customer_name}</div>
-          <div className="text-sm text-gray-500">{order.customer_email}</div>
+          <div className="font-medium text-white">{order.customer_name}</div>
+          <div className="text-sm text-gray-400">{order.customer_email}</div>
         </td>
         <td className="px-4 py-3">
-          <Badge variant={order.match_type === 'email' ? 'default' : 'secondary'} className={order.match_type === 'email' ? 'bg-blue-500' : 'bg-green-500'}>
+          <Badge className={order.match_type === 'email' ? 'bg-blue-500' : 'bg-green-500'}>
             {order.match_type === 'email' ? 'Email' : 'Name'}
           </Badge>
         </td>
-        <td className="px-4 py-3 text-right font-mono text-green-600 font-medium">
+        <td className="px-4 py-3 text-right font-mono text-green-400 font-medium">
           ${order.order_total.toLocaleString()}
         </td>
-        <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate" title={order.items}>
+        <td className="px-4 py-3 text-sm text-gray-400 max-w-[200px] truncate" title={order.items}>
           {order.items}
         </td>
       </tr>
@@ -678,30 +673,28 @@ The WePrintWraps Team`;
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      <div className="p-6 space-y-6 bg-gray-900 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-gray-400 hover:text-white hover:bg-gray-800">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <h1 className="text-2xl font-bold text-gray-900">Lead Management</h1>
+            <h1 className="text-2xl font-bold text-white">Website Quote Management</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="default"
-              className="bg-cyan-500 hover:bg-cyan-600"
+              className="bg-cyan-500 hover:bg-cyan-600 text-white"
               onClick={() => navigate('/mighty-customer')}
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Quote
             </Button>
             <Button
-              variant="outline"
               onClick={() => fetchQuotes(true)}
               disabled={refreshing}
-              className="bg-cyan-500 text-white hover:bg-cyan-600 border-0"
+              className="bg-cyan-500 text-white hover:bg-cyan-600"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
@@ -709,55 +702,55 @@ The WePrintWraps Team`;
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - DARK MODE */}
         <div className="grid grid-cols-5 gap-4">
-          <Card className="p-4 border-l-4 border-l-blue-500">
-            <div className="text-3xl font-bold text-blue-500">{stats.newLeads}</div>
-            <div className="text-sm text-gray-500">New Leads</div>
+          <Card className="p-4 bg-gray-800 border-gray-700 border-l-4 border-l-blue-500">
+            <div className="text-3xl font-bold text-blue-400">{stats.newLeads}</div>
+            <div className="text-sm text-gray-400">New Leads</div>
           </Card>
-          <Card className="p-4">
-            <div className="text-3xl font-bold text-gray-700">{stats.emailSent}</div>
-            <div className="text-sm text-gray-500">Email Sent</div>
+          <Card className="p-4 bg-gray-800 border-gray-700">
+            <div className="text-3xl font-bold text-white">{stats.emailSent}</div>
+            <div className="text-sm text-gray-400">Email Sent</div>
           </Card>
-          <Card className="p-4 bg-green-50 border border-green-200">
-            <div className="text-3xl font-bold text-green-600">{stats.callbacksToday}</div>
-            <div className="text-sm text-gray-500 flex items-center gap-1">
+          <Card className="p-4 bg-green-900/30 border border-green-700/50">
+            <div className="text-3xl font-bold text-green-400">{stats.callbacksToday}</div>
+            <div className="text-sm text-gray-400 flex items-center gap-1">
               <Clock className="w-3 h-3" />
               Callbacks Today
             </div>
           </Card>
-          <Card className="p-4 bg-red-50 border border-red-200">
-            <div className="text-3xl font-bold text-red-500">{stats.overdue}</div>
-            <div className="text-sm text-gray-500 flex items-center gap-1">
+          <Card className="p-4 bg-red-900/30 border border-red-700/50">
+            <div className="text-3xl font-bold text-red-400">{stats.overdue}</div>
+            <div className="text-sm text-gray-400 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
               Overdue
             </div>
           </Card>
-          <Card className="p-4 border-l-4 border-l-teal-500">
-            <div className="text-3xl font-bold text-teal-500">{stats.totalContacted}</div>
-            <div className="text-sm text-gray-500 flex items-center gap-1">
+          <Card className="p-4 bg-gray-800 border-gray-700 border-l-4 border-l-teal-500">
+            <div className="text-3xl font-bold text-teal-400">{stats.totalContacted}</div>
+            <div className="text-sm text-gray-400 flex items-center gap-1">
               <Users className="w-3 h-3" />
               Total Contacted
             </div>
           </Card>
         </div>
 
-        {/* Filters */}
+        {/* Filters - DARK MODE */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
               placeholder="Search by name, email, vehicle..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
             />
           </div>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
               <SelectValue placeholder="All Sources" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-gray-800 border-gray-700">
               <SelectItem value="all">All Sources</SelectItem>
               <SelectItem value="ai_website_agent">AI Website Agent</SelectItem>
               <SelectItem value="lance">Lance</SelectItem>
@@ -767,27 +760,27 @@ The WePrintWraps Team`;
             </SelectContent>
           </Select>
           <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
               <ArrowUpDown className="w-4 h-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-gray-800 border-gray-700">
               <SelectItem value="newest">Date (Newest)</SelectItem>
               <SelectItem value="oldest">Date (Oldest)</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs - DARK MODE */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-          <TabsList className="bg-white border">
-            <TabsTrigger value="new" className="data-[state=active]:bg-gray-100">
+          <TabsList className="bg-gray-800 border border-gray-700">
+            <TabsTrigger value="new" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400">
               New Leads ({stats.newLeads})
             </TabsTrigger>
-            <TabsTrigger value="email_sent" className="data-[state=active]:bg-gray-100">
+            <TabsTrigger value="email_sent" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400">
               Email Sent ({stats.emailSent})
             </TabsTrigger>
-            <TabsTrigger value="callback" className="relative data-[state=active]:bg-gray-100">
+            <TabsTrigger value="callback" className="relative data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400">
               Call Back Later ({stats.callbacks})
               {stats.overdue > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -795,26 +788,26 @@ The WePrintWraps Team`;
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-gray-100">
+            <TabsTrigger value="completed" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-400">
               Completed ({stats.completed})
             </TabsTrigger>
-            <TabsTrigger value="converted" className="text-green-600 data-[state=active]:bg-green-50">
+            <TabsTrigger value="converted" className="text-green-400 data-[state=active]:bg-green-900/50 data-[state=active]:text-green-400">
               <ShoppingCart className="w-4 h-4 mr-1" />
               Converted ({stats.convertedCount})
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab Content Headers */}
+          {/* Tab Content Headers - DARK MODE */}
           {activeTab === 'callback' && (
             <div className="flex items-center justify-between mt-4">
-              <div className="text-sm">
-                Total Callbacks: <strong>{stats.callbacks}</strong>
-                <span className="mx-2">|</span>
-                <span className="text-red-500 font-medium">{stats.overdue} Overdue</span>
-                <span className="mx-2">|</span>
-                <span className="text-green-500 font-medium">{stats.callbacksToday} Today</span>
+              <div className="text-sm text-gray-300">
+                Total Callbacks: <strong className="text-white">{stats.callbacks}</strong>
+                <span className="mx-2 text-gray-600">|</span>
+                <span className="text-red-400 font-medium">{stats.overdue} Overdue</span>
+                <span className="mx-2 text-gray-600">|</span>
+                <span className="text-green-400 font-medium">{stats.callbacksToday} Today</span>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
                 <Download className="w-4 h-4 mr-2" />
                 Download PDF
               </Button>
@@ -823,17 +816,17 @@ The WePrintWraps Team`;
 
           {activeTab === 'converted' && (
             <div className="flex items-center justify-between mt-4">
-              <div className="text-sm">
-                Total Revenue: <strong className="text-green-600">${stats.convertedRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
-                <span className="mx-2">|</span>
-                Orders: <strong>{stats.convertedCount}</strong>
+              <div className="text-sm text-gray-300">
+                Total Revenue: <strong className="text-green-400">${stats.convertedRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                <span className="mx-2 text-gray-600">|</span>
+                Orders: <strong className="text-white">{stats.convertedCount}</strong>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
                   <Download className="w-4 h-4 mr-2" />
                   Download PDF
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Sync Orders
                 </Button>
@@ -841,43 +834,43 @@ The WePrintWraps Team`;
             </div>
           )}
 
-          {/* Tables */}
+          {/* Tables - DARK MODE */}
           <TabsContent value={activeTab} className="mt-4">
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden bg-gray-800 border-gray-700">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="bg-gray-900 border-b border-gray-700">
                     <tr>
                       {activeTab === 'converted' ? (
                         <>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quote #</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Match Type</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Order Total</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Order #</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Quote #</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Order Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Customer</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Match Type</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Order Total</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Items</th>
                         </>
                       ) : activeTab === 'callback' ? (
                         <>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quote #</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Callback Date</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Quote #</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Customer</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Request</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Callback Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
                         </>
                       ) : (
                         <>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quote #</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Quote #</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">
                             {activeTab === 'email_sent' ? 'Contacted' : 'Date'}
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Est. Price</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Customer</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Request</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Est. Price</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
                         </>
                       )}
                     </tr>
@@ -901,7 +894,7 @@ The WePrintWraps Team`;
                       )
                     ) : filteredQuotes.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                           No quotes found
                         </td>
                       </tr>
@@ -915,52 +908,52 @@ The WePrintWraps Team`;
           </TabsContent>
         </Tabs>
 
-        {/* SMS Modal */}
+        {/* SMS Modal - DARK MODE */}
         <Dialog open={smsModalOpen} onOpenChange={setSmsModalOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md bg-gray-800 border-gray-700 text-white">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5" />
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <MessageSquare className="w-5 h-5 text-cyan-400" />
                 Send SMS Follow-up
               </DialogTitle>
-              <p className="text-sm text-gray-500">Send a text message to follow up on this quote</p>
+              <p className="text-sm text-gray-400">Send a text message to follow up on this quote</p>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-500">To:</label>
+                <label className="text-sm text-gray-400">To:</label>
                 <a
                   href={`tel:${selectedQuote?.customer_phone}`}
-                  className="text-lg font-medium text-cyan-600 block"
+                  className="text-lg font-medium text-cyan-400 block hover:text-cyan-300"
                 >
                   {selectedQuote?.customer_phone}
                 </a>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-300">
                 {selectedQuote?.customer_name} · {formatRequest(selectedQuote || {} as Quote).vehicle}
               </div>
               <Textarea
                 value={smsMessage}
                 onChange={(e) => setSmsMessage(e.target.value)}
                 rows={5}
-                className="resize-none"
+                className="resize-none bg-gray-900 border-gray-700 text-white"
               />
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">
+                <span className="text-gray-400">
                   {smsMessage.length} characters ({Math.ceil(smsMessage.length / 160)} SMS segments)
                 </span>
                 {smsMessage.length > 160 && (
-                  <span className="text-orange-500">Message will be split into multiple texts</span>
+                  <span className="text-orange-400">Message will be split into multiple texts</span>
                 )}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => copyToClipboard(smsMessage)} className="flex-1">
+                <Button variant="outline" onClick={() => copyToClipboard(smsMessage)} className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white">
                   <Copy className="w-4 h-4 mr-2" />
                   Copy Message
                 </Button>
                 <Button
                   onClick={sendSms}
                   disabled={sendingSms}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   <Send className="w-4 h-4 mr-2" />
                   {sendingSms ? 'Sending...' : 'Send SMS'}
@@ -970,24 +963,24 @@ The WePrintWraps Team`;
           </DialogContent>
         </Dialog>
 
-        {/* Email Modal */}
+        {/* Email Modal - DARK MODE */}
         <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg bg-gray-800 border-gray-700 text-white">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5" />
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <Mail className="w-5 h-5 text-cyan-400" />
                 Email Draft for {selectedQuote?.customer_name}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-500">Template:</label>
+                <label className="text-sm text-gray-400">Template:</label>
                 <div className="flex gap-2 mt-1">
                   <Button
                     variant={emailTemplate === 'missed' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setEmailTemplate('missed')}
-                    className={emailTemplate === 'missed' ? 'bg-red-500 hover:bg-red-600' : ''}
+                    className={emailTemplate === 'missed' ? 'bg-red-500 hover:bg-red-600 text-white' : 'border-gray-700 text-gray-300 hover:bg-gray-700'}
                   >
                     <Phone className="w-4 h-4 mr-1" />
                     Missed Call
@@ -996,6 +989,7 @@ The WePrintWraps Team`;
                     variant={emailTemplate === 'connected' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setEmailTemplate('connected')}
+                    className={emailTemplate === 'connected' ? 'bg-green-500 hover:bg-green-600 text-white' : 'border-gray-700 text-gray-300 hover:bg-gray-700'}
                   >
                     <Phone className="w-4 h-4 mr-1" />
                     Connected Call
@@ -1005,37 +999,37 @@ The WePrintWraps Team`;
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm text-gray-500">To:</label>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(selectedQuote?.customer_email || '')}>
+                  <label className="text-sm text-gray-400">To:</label>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(selectedQuote?.customer_email || '')} className="text-gray-400 hover:text-white">
                     <Copy className="w-3 h-3 mr-1" />
                     Copy
                   </Button>
                 </div>
-                <div className="bg-gray-100 p-3 rounded text-sm">{selectedQuote?.customer_email}</div>
+                <div className="bg-gray-900 p-3 rounded text-sm text-white border border-gray-700">{selectedQuote?.customer_email}</div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm text-gray-500">Subject:</label>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(`Following up on your WePrintWraps Quote #${selectedQuote?.quote_number}`)}>
+                  <label className="text-sm text-gray-400">Subject:</label>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(`Following up on your WePrintWraps Quote #${selectedQuote?.quote_number}`)} className="text-gray-400 hover:text-white">
                     <Copy className="w-3 h-3 mr-1" />
                     Copy
                   </Button>
                 </div>
-                <div className="bg-blue-50 p-3 rounded text-sm text-blue-700">
+                <div className="bg-blue-900/30 p-3 rounded text-sm text-blue-300 border border-blue-700/50">
                   Following up on your WePrintWraps Quote #{selectedQuote?.quote_number}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm text-gray-500">Body:</label>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(getEmailBody(selectedQuote || {} as Quote))}>
+                  <label className="text-sm text-gray-400">Body:</label>
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(getEmailBody(selectedQuote || {} as Quote))} className="text-gray-400 hover:text-white">
                     <Copy className="w-3 h-3 mr-1" />
                     Copy
                   </Button>
                 </div>
-                <div className="bg-gray-50 p-3 rounded text-sm whitespace-pre-wrap max-h-64 overflow-y-auto">
+                <div className="bg-gray-900 p-3 rounded text-sm whitespace-pre-wrap max-h-64 overflow-y-auto text-gray-300 border border-gray-700">
                   {getEmailBody(selectedQuote || {} as Quote)}
                 </div>
               </div>
@@ -1043,30 +1037,32 @@ The WePrintWraps Team`;
           </DialogContent>
         </Dialog>
 
-        {/* Callback Modal */}
+        {/* Callback Modal - DARK MODE */}
         <Dialog open={callbackModalOpen} onOpenChange={setCallbackModalOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md bg-gray-800 border-gray-700 text-white">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5" />
+              <DialogTitle className="flex items-center gap-2 text-white">
+                <CalendarIcon className="w-5 h-5 text-cyan-400" />
                 Set Callback Date
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-300">
                 {selectedQuote?.customer_name} - {selectedQuote?.quote_number}
               </div>
-              <Calendar
-                mode="single"
-                selected={callbackDate}
-                onSelect={setCallbackDate}
-                className="rounded-md border mx-auto"
-              />
+              <div className="flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={callbackDate}
+                  onSelect={setCallbackDate}
+                  className="rounded-md border border-gray-700 bg-gray-900"
+                />
+              </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setCallbackModalOpen(false)} className="flex-1">
+                <Button variant="outline" onClick={() => setCallbackModalOpen(false)} className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white">
                   Cancel
                 </Button>
-                <Button onClick={setCallback} disabled={!callbackDate} className="flex-1 bg-cyan-500 hover:bg-cyan-600">
+                <Button onClick={setCallback} disabled={!callbackDate} className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white">
                   Save Callback
                 </Button>
               </div>

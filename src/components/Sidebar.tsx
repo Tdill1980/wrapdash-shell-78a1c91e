@@ -166,15 +166,15 @@ const operationsItems: NavigationItem[] = [
     )
   },
   {
-    name: "Lead Management",
+    name: "Website Quote Management",
     path: "/admin/website-quotes",
     icon: Users,
     roles: ["admin", "beta_shop"],
     customRender: (
       <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="text-white">Lead </span>
-        <span className="bg-gradient-to-r from-[#00AFFF] to-[#0047FF] bg-clip-text text-transparent">Management</span>
-        <span className="text-[8px] align-super ml-1 text-cyan-400">NEW</span>
+        <span className="text-white">Website </span>
+        <span className="bg-gradient-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent">Quotes</span>
+        <span className="text-[8px] align-super ml-1 text-green-400">NEW</span>
       </span>
     )
 },
