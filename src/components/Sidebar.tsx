@@ -354,11 +354,11 @@ export const Sidebar = ({ onMobileClose }: { onMobileClose?: () => void }) => {
 
   return (
     <aside className="flex flex-col w-full h-full bg-sidebar border-r border-sidebar-border">
-      <div className="px-3 py-6 border-b border-sidebar-border">
-        <img 
-          src={logo} 
-          alt="WrapCommand AI" 
-          className="w-full h-20 object-contain" 
+      <div className="px-4 py-6 border-b border-sidebar-border">
+        <img
+          src={logo}
+          alt="WrapCommand AI"
+          className="w-full h-28 object-contain"
         />
       </div>
       
