@@ -794,10 +794,10 @@
       ${showOnboarding ? `
       <div class="wcai-onboarding" id="wcai-onboarding">
         <div class="wcai-onboarding-text">Enter your name and email to start chatting</div>
-        <input type="text" class="wcai-onboarding-input" id="wcai-onboard-name" placeholder="Your Name" />
-        <input type="email" class="wcai-onboarding-input" id="wcai-onboard-email" placeholder="Your Email" />
+        <input type="text" class="wcai-onboarding-input" id="wcai-onboard-name" placeholder="Your Name" required />
+        <input type="email" class="wcai-onboarding-input" id="wcai-onboard-email" placeholder="Your Email" required />
         <button class="wcai-onboarding-start" id="wcai-onboard-start">Start Chat</button>
-        <button class="wcai-onboarding-skip" id="wcai-onboard-skip">skip</button>
+        <div class="wcai-onboarding-note" style="font-size:11px;color:#94a3b8;margin-top:8px;text-align:center;">We'll send your quote to this email</div>
       </div>
       ` : ''}
       <div class="wcai-chat-messages" id="wcai-messages" style="${showOnboarding ? 'display:none;' : 'display:flex;'}">
@@ -1014,13 +1014,33 @@
   bubble.addEventListener('click', toggleChat);
   closeBtn.addEventListener('click', toggleChat);
 
-  // Onboarding events (only if elements exist)
+  // Onboarding events - REQUIRE email before starting
   if (onboardStartBtn) {
-    onboardStartBtn.addEventListener('click', completeOnboarding);
+    onboardStartBtn.addEventListener('click', () => {
+      const email = onboardEmailInput?.value?.trim() || '';
+      const name = onboardNameInput?.value?.trim() || '';
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        onboardEmailInput.style.borderColor = '#ef4444';
+        onboardEmailInput.placeholder = 'Valid email required';
+        onboardEmailInput.focus();
+        return;
+      }
+
+      // Validate name (at least 2 chars)
+      if (!name || name.length < 2) {
+        onboardNameInput.style.borderColor = '#ef4444';
+        onboardNameInput.placeholder = 'Name required';
+        onboardNameInput.focus();
+        return;
+      }
+
+      completeOnboarding();
+    });
   }
-  if (onboardSkipBtn) {
-    onboardSkipBtn.addEventListener('click', completeOnboarding);
-  }
+  // Skip button removed - email is required for lead tracking
   if (onboardNameInput) {
     onboardNameInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {

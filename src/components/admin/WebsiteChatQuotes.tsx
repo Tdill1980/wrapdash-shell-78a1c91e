@@ -81,7 +81,7 @@ export function WebsiteChatQuotes() {
   const [linkFilter, setLinkFilter] = useState<string>("all");
   const [selectedQuote, setSelectedQuote] = useState<WebsiteChatQuote | null>(null);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["website-chat-quotes", statusFilter],
     queryFn: async () => {
       // Use edge function to bypass RLS
@@ -102,12 +102,24 @@ export function WebsiteChatQuotes() {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch quotes');
+        const errText = await response.text();
+        console.error('[WebsiteChatQuotes] API error:', response.status, errText);
+        throw new Error(`Failed to fetch quotes: ${response.status}`);
       }
 
       return response.json();
     },
   });
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-500">Error loading quotes: {(error as Error).message}</p>
+        <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+      </div>
+    );
+  }
 
   const quotes = data?.quotes as WebsiteChatQuote[] | undefined;
   const stats = data?.stats;

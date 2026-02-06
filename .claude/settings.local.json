@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nCONSOLIDATION: Fix Supabase URL, migrate features, remove security risk\n\n- Fixed all Supabase URLs: qxllysilzonrlyoaomce → wzwqhfbmymrengjqikjl\n- Added 3 edge functions from wrong repo: ai-parse-chat, backfill-chat-ai-parse, get-website-chats\n- Removed get-service-key \\(security risk\\)\n- Updated PROTECTED.md with correct Supabase project\n- Removed stale .temp files\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm run dev:*)",
+      "Bash(npx supabase:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git commit:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(git push)",
+      "WebFetch(domain:www.wrapcommandai.com)",
+      "Bash(git push:*)",
+      "Bash(for i in 1 2 3 4 5 6 7 8 9 10)",
+      "Bash(do curl -s -X POST \"https://qxllysilzonrlyoaomce.supabase.co/functions/v1/sync-woo-manual\" -H \"Content-Type: application/json\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bGx5c2lsem9ucmx5b2FvbWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMzQxMjIsImV4cCI6MjA4MzgxMDEyMn0.s1IyOY7QAVyrTtG_XLhugJUvxi2X_nHCvqvchYCvwtM\" -d '{\"\"target\"\": \"\"both\"\", \"\"days\"\": 14}')",
+      "Bash(done)",
+      "Bash(for i in {1..15})",
+      "Bash(do echo \"Batch $i:\")"
+    ]
+  }
+}
