@@ -87,17 +87,15 @@ export function useWebsiteChats() {
   const query = useQuery({
     queryKey: ['website-page-chats'],
     queryFn: async (): Promise<ChatConversation[]> => {
-      // Use edge function to bypass RLS - route through Lovable's Supabase
-      const lovableFunctionsUrl = import.meta.env.VITE_LOVABLE_FUNCTIONS_URL || 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1';
-      const lovableAnonKey = import.meta.env.VITE_LOVABLE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
-
+      // Use WePrintWraps Supabase directly (qxllysilzonrlyoaomce)
       const response = await fetch(
-        `${lovableFunctionsUrl}/get-website-chats`,
+        'https://qxllysilzonrlyoaomce.supabase.co/functions/v1/get-website-chats',
         {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${lovableAnonKey}`,
-          }
+          },
+          body: JSON.stringify({ channel: 'website' })
         }
       );
 
