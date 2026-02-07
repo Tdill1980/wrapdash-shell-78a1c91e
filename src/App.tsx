@@ -106,6 +106,7 @@ import EmbedChat from "./pages/EmbedChat";
 import Systems from "./pages/Systems";
 import Ops from "./pages/Ops";
 import EscalationsPage from "./pages/EscalationsPage";
+import MetaAdFactory from "./pages/MetaAdFactory";
 import { AppLayout } from "./layouts/AppLayout";
 
 const queryClient = new QueryClient();
@@ -220,6 +221,7 @@ const App = () => (
             <Route path="/ops" element={<Ops />} />
             <Route path="/escalations" element={<EscalationsPage />} />
             <Route path="/command-ops" element={<CommandOpsPage />} />
+            <Route path="/meta-ad-factory" element={<MetaAdFactory />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />
