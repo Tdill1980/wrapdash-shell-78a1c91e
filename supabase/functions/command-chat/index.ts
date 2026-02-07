@@ -69,10 +69,51 @@ PACKS (flat): pack_small ($299), pack_medium ($499), pack_large ($699), pack_xla
       },
       required: ["escalation_type"]
     }
+  },
+  {
+    name: "cmd_update_contact",
+    description: "Update customer contact info in CRM. Use when customer provides shop name, company name, or additional contact details.",
+    input_schema: {
+      type: "object",
+      properties: {
+        shop_name: { type: "string", description: "Shop or company name" },
+        additional_phone: { type: "string", description: "Additional phone number" },
+        notes: { type: "string", description: "Any notes about this contact" }
+      },
+      required: []
+    }
   }
 ];
 
-async function execTool(name: string, input: any, baseUrl: string, key: string): Promise<any> {
+async function execTool(name: string, input: any, baseUrl: string, key: string, context?: { email?: string }): Promise<any> {
+  // Handle cmd_update_contact locally (updates command_contacts)
+  if (name === 'cmd_update_contact') {
+    console.log(`[CommandChat] Updating contact:`, JSON.stringify(input));
+    if (context?.email && input.shop_name) {
+      try {
+        const updateRes = await fetch(`${baseUrl}/rest/v1/command_contacts?email=eq.${encodeURIComponent(context.email.toLowerCase())}`, {
+          method: 'PATCH',
+          headers: { 
+            'apikey': key, 
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ 
+            shop_name: input.shop_name,
+            updated_at: new Date().toISOString()
+          })
+        });
+        console.log(`[CommandChat] Contact updated for ${context.email}`);
+        return { success: true, message: `Shop name "${input.shop_name}" saved to your profile!` };
+      } catch (err) {
+        console.error(`[CommandChat] Contact update error:`, err);
+        return { success: false, error: 'Failed to update contact' };
+      }
+    }
+    return { success: true, message: 'Contact info noted' };
+  }
+
   const map: Record<string, string> = { cmd_knowledge: 'cmd-knowledge', cmd_vehicle: 'cmd-vehicle', cmd_pricing: 'cmd-pricing', cmd_quote: 'create-quote-from-chat', cmd_synopsis: 'cmd-synopsis', cmd_order: 'cmd-order', cmd_escalate: 'cmd-escalate' };
   console.log(`[CommandChat] Calling ${name}:`, JSON.stringify(input));
   const res = await fetch(`${baseUrl}/functions/v1/${map[name]}`, {
@@ -289,6 +330,7 @@ CUSTOMER STATE:
 - Name: ${state.customer_name || 'NOT PROVIDED'}
 - Email: ${state.customer_email || 'NOT PROVIDED'}
 - Phone: ${state.customer_phone || 'Not provided'}
+- Shop Name: ${state.shop_name || 'Not provided'}
 - Vehicle: ${state.vehicle || 'Not mentioned'}
 - SQFT: ${state.sqft || 'Unknown'}
 - Quote: ${state.quoted_price ? '$' + state.quoted_price : 'Not given'}
@@ -349,11 +391,13 @@ PRICING FLOW:
 3. Give price + relevant order URL in same message
 4. After name + email + phone + vehicle + price confirmed -> use cmd_quote to save and send email
 
-CONTACT COLLECTION (GET ALL 3):
+CONTACT COLLECTION (GET ALL 4):
 - If name is NOT PROVIDED, ask for it naturally
 - If email is NOT PROVIDED, ask for it
 - If phone is "Not provided", ask: "What's the best number to reach you?"
 - Get all 3 before sending the quote
+- AFTER quote sent, ask: "By the way, what's your shop name?" (if not already known)
+- Shop name helps us serve wrap shops better and offer trade pricing
 
 PRICING RULES:
 - Avery and 3M wraps are BOTH $5.27/sqft (same price)
@@ -409,9 +453,12 @@ Contact: hello@weprintwraps.com`;
           c.input.trigger_message = message_text;
         }
 
-        const r = await execTool(c.name, c.input, url, key);
+        const r = await execTool(c.name, c.input, url, key, { email: state.customer_email });
 
         // Update state from tool results
+        if (c.name === 'cmd_update_contact' && r.success && c.input.shop_name) {
+          state.shop_name = c.input.shop_name;
+        }
         if (c.name === 'cmd_vehicle' && r.sqft) {
           state.vehicle = r.vehicle;
           state.sqft = r.sqft;
