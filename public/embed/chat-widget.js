@@ -109,46 +109,32 @@
 
   // ========================================
   // SMART LOGIN DETECTION
-  // Checks WooCommerce, WordPress, and common cookie patterns
-  // Returns { name, email } or null
+  // ONLY skip onboarding if we have ACTUAL name + email
+  // Session cookies alone are NOT enough
   // ========================================
   function detectLoggedInUser() {
     try {
-      // Method 1: WooCommerce / WordPress body classes
-      const body = document.body;
-      if (body && body.classList.contains('logged-in')) {
-        // User is logged into WordPress/WooCommerce
-        // Try to get their info from common WP patterns
-        const accountLink = document.querySelector('.woocommerce-MyAccount-navigation, .account-link, [data-user-name], [data-user-email]');
-        const userName = accountLink?.getAttribute('data-user-name') || '';
-        const userEmail = accountLink?.getAttribute('data-user-email') || '';
-
-        // Also check if WooCommerce exposes user data
-        if (window.wc_add_to_cart_params?.ajax_url) {
-          // WooCommerce is active
-        }
-
-        if (userName || userEmail) {
-          return { name: userName, email: userEmail };
-        }
-
-        // Logged in but we can't grab details — still skip onboarding
-        // They'll provide details naturally in conversation if needed
-        return { name: '', email: '', loggedIn: true };
-      }
-
-      // Method 2: Check for common login cookies
-      const cookies = document.cookie;
-      if (cookies.includes('wordpress_logged_in') || cookies.includes('woocommerce_logged_in') || cookies.includes('wp_woocommerce_session')) {
-        return { name: '', email: '', loggedIn: true };
-      }
-
-      // Method 3: Check sessionStorage for previously collected info from THIS tab
+      // Method 1: Check sessionStorage for previously collected info from THIS tab
+      // This is the ONLY reliable source - user already provided their info
       const savedName = sessionStorage.getItem('wcai_user_name');
       const savedEmail = sessionStorage.getItem('wcai_user_email');
       if (savedName && savedEmail) {
         return { name: savedName, email: savedEmail };
       }
+
+      // Method 2: Check for WordPress data attributes (rare but useful)
+      const accountLink = document.querySelector('[data-user-name][data-user-email]');
+      if (accountLink) {
+        const userName = accountLink.getAttribute('data-user-name') || '';
+        const userEmail = accountLink.getAttribute('data-user-email') || '';
+        if (userName && userEmail) {
+          return { name: userName, email: userEmail };
+        }
+      }
+
+      // IMPORTANT: We NO LONGER skip onboarding just because of cookies
+      // wp_woocommerce_session is set for ALL visitors, not just logged-in users
+      // We NEED email for lead tracking, so always require onboarding
 
       return null;
     } catch (e) {
@@ -756,10 +742,11 @@
   }
 
   // ========================================
-  // DETECT LOGGED-IN USER (skip onboarding if found)
+  // DETECT LOGGED-IN USER (skip onboarding ONLY if we have email)
   // ========================================
   const detectedUser = detectLoggedInUser();
-  const userIsLoggedIn = !!detectedUser;
+  // ONLY skip onboarding if we have BOTH name AND email
+  const userIsLoggedIn = !!(detectedUser?.name && detectedUser?.email);
 
   // Quick actions HTML
   const quickActionsHTML = quickActions.map(action => {
