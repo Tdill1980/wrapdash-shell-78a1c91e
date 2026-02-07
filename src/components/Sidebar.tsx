@@ -166,6 +166,18 @@ const operationsItems: NavigationItem[] = [
     )
   },
   {
+    name: "Command Ops",
+    path: "/command-ops",
+    icon: Activity,
+    roles: ["admin", "beta_shop"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="text-white">Command </span>
+        <span className="bg-gradient-to-r from-[#10B981] to-[#14B8A6] bg-clip-text text-transparent">Ops</span>
+      </span>
+    )
+  },
+  {
     name: "Website Quotes Manager",
     path: "/website-quote-management",
     icon: Users,
