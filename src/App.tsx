@@ -88,7 +88,6 @@ import QuoteDrafts from "./pages/QuoteDrafts";
 import WebsiteChatQuotesPage from "./pages/WebsiteChatQuotesPage";
 import WebsiteQuotesTest from "./pages/WebsiteQuotesTest";
 import CommandOpsPage from "./pages/CommandOps";
-import WrenActivity from "./pages/WrenActivity";
 import AddOrganizationWizard from "./pages/admin/AddOrganizationWizard";
 import AssetTaggingAdmin from "./pages/admin/AssetTaggingAdmin";
 import SavedViewsAdmin from "./pages/admin/SavedViewsAdmin";
@@ -221,7 +220,6 @@ const App = () => (
             <Route path="/ops" element={<Ops />} />
             <Route path="/escalations" element={<EscalationsPage />} />
             <Route path="/command-ops" element={<CommandOpsPage />} />
-            <Route path="/wren" element={<WrenActivity />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />

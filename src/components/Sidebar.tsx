@@ -179,18 +179,6 @@ const operationsItems: NavigationItem[] = [
     )
   },
   {
-    name: "Wren Activity",
-    path: "/wren",
-    icon: Heart,
-    roles: ["admin"],
-    customRender: (
-      <span className="font-['Poppins',sans-serif] font-semibold">
-        <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Wren</span>
-        <span className="text-white"> Activity</span>
-      </span>
-    )
-  },
-  {
     name: "Website Quotes Manager",
     path: "/website-quote-management",
     icon: Users,
