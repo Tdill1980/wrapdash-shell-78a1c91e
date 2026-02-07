@@ -106,7 +106,7 @@ export async function finalizeRender(params: FinalizeRenderParams): Promise<Fina
         };
       }
     } else if (sourceType === 'video_edit_queue') {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await contentDB
         .from('video_edit_queue')
         .update({
           final_render_url: finalUrl,
@@ -164,7 +164,7 @@ export async function isRenderFinalized(sourceType: 'ai_creative' | 'video_edit_
         downloadUrl: data.output_url || undefined,
       };
     } else if (sourceType === 'video_edit_queue') {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('video_edit_queue')
         .select('final_render_url, render_status')
         .eq('id', sourceId)

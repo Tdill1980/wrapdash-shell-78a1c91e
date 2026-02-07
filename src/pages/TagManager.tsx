@@ -67,7 +67,7 @@ export default function TagManager() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await contentDB
       .from("content_files")
       .select("id, original_filename, file_url, thumbnail_url, file_type, tags, visual_tags, created_at")
       .eq("file_type", "video")

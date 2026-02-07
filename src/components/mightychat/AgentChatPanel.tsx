@@ -87,7 +87,7 @@ async function createCalendarDraftFromPreset(args: {
   const dd = String(today.getDate()).padStart(2, "0");
   const scheduled_date = `${yyyy}-${mm}-${dd}`;
 
-  const { data, error } = await supabase
+  const { data, error } = await contentDB
     .from("content_calendar")
     .insert({
       brand: args.brand ?? "wpw",
@@ -711,7 +711,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                           
                           if (attachedAssets.length > 0) {
                             try {
-                              const { data: asset, error } = await supabase
+                              const { data: asset, error } = await contentDB
                                 .from('contentbox_assets')
                                 .insert({
                                   source: 'agent-chat',

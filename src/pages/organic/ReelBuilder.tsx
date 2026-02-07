@@ -462,7 +462,7 @@ export default function ReelBuilder() {
       ];
 
       // First create content_files entry
-      const { data: contentFile, error: cfError } = await supabase
+      const { data: contentFile, error: cfError } = await contentDB
         .from('content_files')
         .insert({
           file_url: firstClipUrl,
@@ -481,7 +481,7 @@ export default function ReelBuilder() {
       }
 
       // Create queue entry with hardcoded blueprint
-      const { data: queueEntry, error: queueError } = await supabase
+      const { data: queueEntry, error: queueError } = await contentDB
         .from('video_edit_queue')
         .insert({
           content_file_id: contentFile.id,
@@ -531,7 +531,7 @@ export default function ReelBuilder() {
     
     setIsLoadingDiagnostics(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('video_edit_queue')
         .select('*')
         .eq('id', lastQueueId)
@@ -767,7 +767,7 @@ export default function ReelBuilder() {
           const effectiveHashtags = producerJobState?.producerJob?.hashtags ?? [];
 
           // Save to content_files (Media Library)
-          const { data: fileData, error: fileError } = await supabase
+          const { data: fileData, error: fileError } = await contentDB
             .from('content_files')
             .insert({
               file_url: renderProgress.outputUrl,
@@ -789,7 +789,7 @@ export default function ReelBuilder() {
           if (fileError) throw fileError;
 
           // Save to content_queue (for scheduling/review) with metadata
-          const { error: queueError } = await supabase
+          const { error: queueError } = await contentDB
             .from('content_queue')
             .insert({
               content_type: 'reel',
@@ -816,7 +816,7 @@ export default function ReelBuilder() {
           // 🔧 FIX: Update linked content_calendar entry if we have one
           if (contentCalendarId) {
             try {
-              const { error: calError } = await supabase
+              const { error: calError } = await contentDB
                 .from('content_calendar')
                 .update({
                   caption: effectiveCaption,
@@ -961,7 +961,7 @@ export default function ReelBuilder() {
       }
 
       // Create a content_files entry for tracking
-      const { data: contentFile, error: cfError } = await supabase
+      const { data: contentFile, error: cfError } = await contentDB
         .from('content_files')
         .insert({
           file_url: primaryClipUrl,
@@ -980,7 +980,7 @@ export default function ReelBuilder() {
       }
 
       // Create video_edit_queue entry with creative link
-      const { data: queueEntry, error: queueError } = await supabase
+      const { data: queueEntry, error: queueError } = await contentDB
         .from('video_edit_queue')
         .insert({
           content_file_id: contentFile.id,

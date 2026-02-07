@@ -109,7 +109,7 @@ export function CampaignContentCreator({
     setIsSaving(true);
     try {
       // Save to content_drafts table
-      const { error: insertError } = await supabase.from('content_drafts').insert({
+      const { error: insertError } = await contentDB.from('content_drafts').insert({
         organization_id: organizationId,
         content_type: calendarItem.content_type,
         platform: calendarItem.platform,
@@ -121,7 +121,7 @@ export function CampaignContentCreator({
       if (insertError) throw insertError;
 
       // Update calendar item status to in_progress
-      await supabase
+      await contentDB
         .from('content_calendar')
         .update({ status: 'in_progress', in_progress_at: new Date().toISOString() })
         .eq('id', calendarItem.id);

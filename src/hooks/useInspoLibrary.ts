@@ -23,7 +23,7 @@ export function useInspoLibrary() {
   const { data: library, isLoading } = useQuery({
     queryKey: ["inspo-library"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_files")
         .select("id, file_url, thumbnail_url, file_type, original_filename, tags, created_at, duration_seconds, content_category")
         .in("file_type", ["image", "video"])
@@ -71,7 +71,7 @@ export function useInspoLibrary() {
         .getPublicUrl(storagePath);
 
       // Insert record into content_files with proper tags for template recognition
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_files")
         .insert({
           organization_id: organizationId,
@@ -194,7 +194,7 @@ export function useInspoLibrary() {
   // Delete file
   const deleteFile = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from("content_files")
         .delete()
         .eq("id", id);

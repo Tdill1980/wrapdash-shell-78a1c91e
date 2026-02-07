@@ -20,7 +20,7 @@ export function useStaticAds() {
   const { data: staticAds = [], isLoading } = useQuery({
     queryKey: ['static-ads'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_files')
         .select('*')
         .eq('content_category', 'static_ad')
@@ -33,7 +33,7 @@ export function useStaticAds() {
 
   const deleteAdMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from('content_files')
         .delete()
         .eq('id', id);

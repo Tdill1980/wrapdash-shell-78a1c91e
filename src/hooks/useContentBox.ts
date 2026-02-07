@@ -103,7 +103,7 @@ export function useContentBox() {
   const { data: files, isLoading: filesLoading } = useQuery({
     queryKey: ["content-files"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_files")
         .select("*")
         .order("created_at", { ascending: false });
@@ -117,7 +117,7 @@ export function useContentBox() {
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ["content-projects"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_projects")
         .select("*")
         .order("created_at", { ascending: false });
@@ -131,7 +131,7 @@ export function useContentBox() {
   const { data: calendar, isLoading: calendarLoading } = useQuery({
     queryKey: ["content-calendar"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_calendar")
         .select("*")
         .order("scheduled_date", { ascending: true });
@@ -173,7 +173,7 @@ export function useContentBox() {
       if (file.type.startsWith('audio/')) fileType = 'audio';
 
       // Insert into database
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_files")
         .insert({
           source: 'upload',

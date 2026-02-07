@@ -27,7 +27,7 @@ export function RenderInspector() {
   const refresh = async () => {
     setLoading(true);
 
-    const { data: queueData } = await supabase
+    const { data: queueData } = await contentDB
       .from("video_edit_queue")
       .select("id, ai_creative_id, ai_edit_suggestions, final_render_url, created_at")
       .order("created_at", { ascending: false })

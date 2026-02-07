@@ -59,7 +59,7 @@ export default function ContentDrafts() {
 
   const fetchDrafts = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_drafts")
         .select("*")
         .order("created_at", { ascending: false })
@@ -78,7 +78,7 @@ export default function ContentDrafts() {
   const handleApprove = async (draft: ContentDraft) => {
     setActionLoading(draft.id);
     try {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from("content_drafts")
         .update({ 
           status: "approved",
@@ -100,7 +100,7 @@ export default function ContentDrafts() {
   const handleReject = async (draft: ContentDraft, reason?: string) => {
     setActionLoading(draft.id);
     try {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from("content_drafts")
         .update({ 
           status: "rejected",

@@ -50,7 +50,7 @@ export default function ContentStudio() {
       const today = format(new Date(), 'yyyy-MM-dd');
       const twoWeeksOut = format(addDays(new Date(), 14), 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_calendar')
         .select('id, title, scheduled_date, status, content_type, platform, brand, directive, locked_metadata, intent_preset_id')
         .gte('scheduled_date', today)
@@ -67,7 +67,7 @@ export default function ContentStudio() {
   const { data: draftStats } = useQuery({
     queryKey: ['studio-draft-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_drafts')
         .select('status');
 
@@ -85,7 +85,7 @@ export default function ContentStudio() {
   const { data: calendarStats } = useQuery({
     queryKey: ['studio-calendar-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_calendar')
         .select('status');
 

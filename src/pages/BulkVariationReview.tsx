@@ -69,7 +69,7 @@ export default function BulkVariationReview() {
   const { data: items = [], isLoading, refetch } = useQuery({
     queryKey: ["bulk-variations", bulkId],
     queryFn: async () => {
-      let query = supabase
+      let query = contentDB
         .from("content_queue")
         .select("*")
         .eq("mode", "bulk")
@@ -120,13 +120,13 @@ export default function BulkVariationReview() {
 
     try {
       if (action === "approve") {
-        await supabase
+        await contentDB
           .from("content_queue")
           .update({ status: "approved" })
           .in("id", selectedIds);
         toast.success(`Approved ${selectedIds.length} variations`);
       } else if (action === "reject") {
-        await supabase
+        await contentDB
           .from("content_queue")
           .update({ status: "rejected" })
           .in("id", selectedIds);

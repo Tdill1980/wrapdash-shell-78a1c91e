@@ -224,7 +224,7 @@ export function GenerateMonthModal({ open, onOpenChange }: GenerateMonthModalPro
       const batchSize = 10;
       for (let i = 0; i < validEntries.length; i += batchSize) {
         const batch = validEntries.slice(i, i + batchSize);
-        const { error } = await supabase
+        const { error } = await contentDB
           .from('content_calendar')
           .insert(batch);
 

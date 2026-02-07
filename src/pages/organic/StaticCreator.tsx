@@ -109,7 +109,7 @@ export default function StaticCreator() {
         setGeneratedHashtags(data.hashtags || []);
         
         // Save to content_queue
-        await supabase.from("content_queue").insert({
+        await contentDB.from("content_queue").insert({
           content_type: "static",
           status: "draft",
           title: headline,
@@ -133,7 +133,7 @@ export default function StaticCreator() {
         toast.success("Static post created!");
       } else {
         // Fallback: create placeholder in queue
-        await supabase.from("content_queue").insert({
+        await contentDB.from("content_queue").insert({
           content_type: "static",
           status: "draft",
           title: headline,
@@ -159,7 +159,7 @@ export default function StaticCreator() {
       toast.error("Failed to generate. Brief saved as draft.");
       
       // Still save the brief
-      await supabase.from("content_queue").insert({
+      await contentDB.from("content_queue").insert({
         content_type: "static",
         status: "draft",
         title: headline,
@@ -184,7 +184,7 @@ export default function StaticCreator() {
     setGenerating(true);
     try {
       // Save carousel brief to queue
-      await supabase.from("content_queue").insert({
+      await contentDB.from("content_queue").insert({
         content_type: "carousel",
         status: "draft",
         title: headline,

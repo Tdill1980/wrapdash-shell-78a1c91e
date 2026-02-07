@@ -95,7 +95,7 @@ export function ContentExecutionList() {
   const { data: dueContent = [], isLoading } = useQuery({
     queryKey: ['content-execution-due'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_calendar')
         .select('*')
         .lte('scheduled_date', today)
@@ -133,7 +133,7 @@ export function ContentExecutionList() {
   // Mark as published mutation
   const markPublishedMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from('content_calendar')
         .update({ status: 'published', published_at: new Date().toISOString() })
         .eq('id', id);
@@ -175,7 +175,7 @@ export function ContentExecutionList() {
     const resolution = resolveExecutionTarget(item.brand, item.content_type, item.platform);
 
     // Update status to in_progress immediately with timestamp
-    const { error: updateError } = await supabase
+    const { error: updateError } = await contentDB
       .from('content_calendar')
       .update({ 
         status: 'in_progress',

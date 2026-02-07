@@ -43,7 +43,7 @@ export function useContentAtomizer(organizationId?: string) {
   const { data: atoms = [], isLoading: loadingAtoms, refetch: refetchAtoms } = useQuery({
     queryKey: ["content-atoms", organizationId],
     queryFn: async () => {
-      const query = supabase
+      const query = contentDB
         .from("content_atoms")
         .select("*")
         .order("created_at", { ascending: false });
@@ -99,7 +99,7 @@ export function useContentAtomizer(organizationId?: string) {
           suggested_formats: atom.suggested_formats || [],
         }));
 
-        const { error } = await supabase.from("content_atoms").insert(atomsToInsert);
+        const { error } = await contentDB.from("content_atoms").insert(atomsToInsert);
         if (error) {
           console.error("Failed to save atoms:", error);
         }
@@ -153,7 +153,7 @@ export function useContentAtomizer(organizationId?: string) {
 
   // Mark atom as used
   const markAsUsed = useCallback(async (atomId: string) => {
-    const { error } = await supabase
+    const { error } = await contentDB
       .from("content_atoms")
       .update({ 
         is_used: true, 
@@ -169,7 +169,7 @@ export function useContentAtomizer(organizationId?: string) {
   // Delete atom
   const deleteAtom = useMutation({
     mutationFn: async (atomId: string) => {
-      const { error } = await supabase.from("content_atoms").delete().eq("id", atomId);
+      const { error } = await contentDB.from("content_atoms").delete().eq("id", atomId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -180,7 +180,7 @@ export function useContentAtomizer(organizationId?: string) {
 
   // Add to content queue
   const addToQueue = useCallback(async (content: MicroContent, title: string) => {
-    const { error } = await supabase.from("content_queue").insert({
+    const { error } = await contentDB.from("content_queue").insert({
       organization_id: organizationId,
       title,
       content_type: content.format,

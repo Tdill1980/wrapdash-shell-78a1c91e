@@ -154,7 +154,7 @@ function AIVideoEditorContent({ selectedFile, onProcess, processing }: AIVideoEd
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       
-      const { error } = await supabase.from("content_queue").insert({
+      const { error } = await contentDB.from("content_queue").insert({
         organization_id: organizationId,
         content_type: contentType,
         mode: contentMode,

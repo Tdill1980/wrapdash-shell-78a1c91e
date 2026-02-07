@@ -52,7 +52,7 @@ export function useCalendarTaskSync() {
   const { data: calendarItems = [] } = useQuery({
     queryKey: ['calendar-items-for-sync'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_calendar')
         .select('id, title, brand, content_type, platform, scheduled_date, status')
         .order('scheduled_date', { ascending: true });

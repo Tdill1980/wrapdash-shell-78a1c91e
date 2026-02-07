@@ -35,7 +35,7 @@ export function useContentQueue(organizationId?: string) {
   const query = useQuery({
     queryKey: ["content-queue", organizationId],
     queryFn: async () => {
-      let queryBuilder = supabase
+      let queryBuilder = contentDB
         .from("content_queue")
         .select("*")
         .order("created_at", { ascending: false });
@@ -66,7 +66,7 @@ export function useContentQueue(organizationId?: string) {
         updateData.scheduled_for = scheduled_for;
       }
 
-      const { error } = await supabase
+      const { error } = await contentDB
         .from("content_queue")
         .update(updateData)
         .eq("id", id);
@@ -83,7 +83,7 @@ export function useContentQueue(organizationId?: string) {
 
   const deleteItem = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from("content_queue")
         .delete()
         .eq("id", id);
@@ -100,7 +100,7 @@ export function useContentQueue(organizationId?: string) {
 
   const addItem = useMutation({
     mutationFn: async (item: Record<string, unknown>) => {
-      const { error } = await supabase.from("content_queue").insert([item as any]);
+      const { error } = await contentDB.from("content_queue").insert([item as any]);
 
       if (error) throw error;
     },

@@ -270,7 +270,7 @@ export function useMetaVideoAdGenerator() {
           insertData.organization_id = organizationId;
         }
 
-        const { error: insertError } = await supabase.from("content_queue").insert(insertData);
+        const { error: insertError } = await contentDB.from("content_queue").insert(insertData);
 
         if (insertError) throw insertError;
         toast.success("Added to Content Scheduler!");

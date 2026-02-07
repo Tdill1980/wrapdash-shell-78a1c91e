@@ -126,7 +126,7 @@ export function ContentCalendarEditModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from('content_calendar')
         .update({
           title,

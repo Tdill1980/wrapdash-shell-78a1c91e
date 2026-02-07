@@ -92,7 +92,7 @@ export function WorkflowOrchestratorPanel() {
       }
 
       // P1.25: Pending Content Drafts
-      const { count: draftsCount } = await supabase
+      const { count: draftsCount } = await contentDB
         .from("content_drafts")
         .select("*", { count: 'exact', head: true })
         .eq("status", "pending_review");
@@ -135,7 +135,7 @@ export function WorkflowOrchestratorPanel() {
       }
 
       // P1.5: Pending Content (scheduled for today or overdue)
-      const { count: dueContentCount } = await supabase
+      const { count: dueContentCount } = await contentDB
         .from("content_calendar")
         .select("*", { count: 'exact', head: true })
         .lte("scheduled_date", today)
@@ -203,7 +203,7 @@ export function WorkflowOrchestratorPanel() {
       const weekStart = new Date();
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       
-      const { count: weeklyContentCount } = await supabase
+      const { count: weeklyContentCount } = await contentDB
         .from("content_calendar")
         .select("*", { count: 'exact', head: true })
         .gte("created_at", weekStart.toISOString())

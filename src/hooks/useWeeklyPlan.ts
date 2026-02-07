@@ -56,7 +56,7 @@ export function useWeeklyPlan() {
 
   const addToQueue = async (suggestion: ContentSuggestion) => {
     try {
-      const { error } = await supabase.from("content_queue").insert({
+      const { error } = await contentDB.from("content_queue").insert({
         content_type: suggestion.type,
         title: suggestion.title,
         script: suggestion.script,

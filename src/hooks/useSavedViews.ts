@@ -125,7 +125,7 @@ export function useSavedViews() {
     try {
       // Simple count query - just count assets matching file type
       // More advanced filtering can be added later via RPC
-      let query = supabase
+      let query = contentDB
         .from("content_files")
         .select("id", { count: "exact", head: true })
         .neq("content_category", "inspo_reference");

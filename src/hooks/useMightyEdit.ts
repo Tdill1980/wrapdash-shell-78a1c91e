@@ -76,7 +76,7 @@ export function useMightyEdit() {
   }, []);
 
   const fetchEditQueue = useCallback(async () => {
-    const { data, error } = await supabase
+    const { data, error } = await contentDB
       .from("video_edit_queue")
       .select("*")
       .order("created_at", { ascending: false });
@@ -242,7 +242,7 @@ export function useMightyEdit() {
       });
       
       // Link the creative to the video_edit_queue
-      const { error: linkError } = await supabase
+      const { error: linkError } = await contentDB
         .from('video_edit_queue')
         .update({ 
           ai_creative_id: creative.id,
@@ -328,7 +328,7 @@ export function useMightyEdit() {
       }
 
       try {
-        const { data, error } = await supabase
+        const { data, error } = await contentDB
           .from("video_edit_queue")
           .select("render_status, status, final_render_url, shorts_extracted, error_message, debug_payload")
           .eq("id", videoEditId)
@@ -465,7 +465,7 @@ export function useMightyEdit() {
   const updateEditItem = useCallback(async (id: string, updates: Partial<VideoEditItem>) => {
     console.log("[useMightyEdit] Updating edit item:", id, updates);
     
-    const { error } = await supabase
+    const { error } = await contentDB
       .from("video_edit_queue")
       .update(updates)
       .eq("id", id);

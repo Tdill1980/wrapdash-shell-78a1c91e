@@ -139,7 +139,7 @@ export default function ContentCalendar30Day() {
   const { data: scheduledContent = [], isLoading } = useQuery({
     queryKey: ['content-calendar-30day'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_calendar')
         .select('*')
         .order('scheduled_date', { ascending: true })

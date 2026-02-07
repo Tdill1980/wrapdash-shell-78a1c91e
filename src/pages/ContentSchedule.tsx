@@ -29,7 +29,7 @@ export default function ContentSchedule() {
   const { data: scheduledContent = [], isLoading } = useQuery({
     queryKey: ['content-schedule'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from('content_calendar')
         .select('*')
         .order('scheduled_date', { ascending: true })
@@ -43,7 +43,7 @@ export default function ContentSchedule() {
   // Update status mutation
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from('content_calendar')
         .update({ status })
         .eq('id', id);
@@ -58,7 +58,7 @@ export default function ContentSchedule() {
   // Delete mutation
   const deleteContent = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await contentDB
         .from('content_calendar')
         .delete()
         .eq('id', id);

@@ -318,7 +318,7 @@ export default function AutoSplit() {
     }
 
     try {
-      await supabase.from("content_queue").insert({
+      await contentDB.from("content_queue").insert({
         content_type: "reel",
         status: "draft",
         title: reel.title,

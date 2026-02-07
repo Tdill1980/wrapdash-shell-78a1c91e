@@ -48,7 +48,7 @@ export function useEditorBrain() {
   const loadInspoStyle = useCallback(async (): Promise<InspoStyle | null> => {
     try {
       // Fetch user's inspiration uploads from content_files
-      const { data: inspoFiles, error } = await supabase
+      const { data: inspoFiles, error } = await contentDB
         .from('content_files')
         .select('*')
         .or('content_category.eq.inspiration,content_category.eq.raw,tags.cs.{inspo}')

@@ -81,7 +81,7 @@ export default function MightyEdit() {
   // Helper: Ensure video exists in video_edit_queue before executing edits
   const ensureVideoInQueue = async (video: VideoEditItem): Promise<string | null> => {
     // First check if it already exists in queue by source_url (more reliable than ID)
-    const { data: existingByUrl } = await supabase
+    const { data: existingByUrl } = await contentDB
       .from('video_edit_queue')
       .select('id')
       .eq('source_url', video.source_url)
@@ -93,7 +93,7 @@ export default function MightyEdit() {
     }
 
     // Also check by ID in case it's a real DB record
-    const { data: existingById } = await supabase
+    const { data: existingById } = await contentDB
       .from('video_edit_queue')
       .select('id')
       .eq('id', video.id)
@@ -146,7 +146,7 @@ export default function MightyEdit() {
     }
 
     // Insert the video into the queue with the real (or null) content_file_id
-    const { data: inserted, error } = await supabase
+    const { data: inserted, error } = await contentDB
       .from('video_edit_queue')
       .insert({
         organization_id: video.organization_id,
@@ -245,7 +245,7 @@ export default function MightyEdit() {
       // If this was from a calendar/campaign preset, mark calendar complete and task done
       if (calendarPreset?.calendar_id) {
         console.log('[MightyEdit] Updating calendar item:', calendarPreset.calendar_id);
-        await supabase
+        await contentDB
           .from('content_calendar')
           .update({ 
             status: 'completed',
@@ -287,7 +287,7 @@ export default function MightyEdit() {
           
           // Load recent videos for selection
           (async () => {
-            const { data: videos, error } = await supabase
+            const { data: videos, error } = await contentDB
               .from('contentbox_assets')
               .select('*')
               .eq('asset_type', 'video')
@@ -366,7 +366,7 @@ export default function MightyEdit() {
       if (storedPreset) return; // Let the preset handler above take care of it
       
       // Fallback: load most recent video from contentbox_assets
-      const { data: latestAsset, error } = await supabase
+      const { data: latestAsset, error } = await contentDB
         .from('contentbox_assets')
         .select('*')
         .eq('asset_type', 'video')
