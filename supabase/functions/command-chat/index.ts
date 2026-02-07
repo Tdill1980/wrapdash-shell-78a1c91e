@@ -144,12 +144,36 @@ serve(async (req) => {
       if (customer_email) state.customer_email = customer_email;
       if (customer_phone) state.customer_phone = customer_phone;
 
-      // Update geo in metadata if provided and not already set
-      if (geo && !state.geo_captured) {
+      // Get existing metadata to merge with
+      const existingConv = await dbQuery(url, key, 'conversations', `select=metadata,created_at&id=eq.${convId}`);
+      const existingMetadata = existingConv?.[0]?.metadata || {};
+      const sessionStart = existingConv?.[0]?.created_at;
+
+      // Calculate session duration
+      let duration_seconds = 0;
+      if (sessionStart) {
+        duration_seconds = Math.floor((Date.now() - new Date(sessionStart).getTime()) / 1000);
+      }
+
+      // Merge geo into existing metadata (don't replace)
+      if (geo && !existingMetadata.geo) {
+        const mergedMetadata = {
+          ...existingMetadata,
+          session_id,
+          page_url: page_url || existingMetadata.page_url,
+          geo,
+          duration_seconds
+        };
         await dbUpdate(url, key, 'conversations', `id=eq.${convId}`, {
-          metadata: { session_id, page_url, geo }
+          metadata: mergedMetadata
         });
         state.geo_captured = true;
+        console.log('[CommandChat] Updated geo:', geo?.city, geo?.region);
+      } else {
+        // Just update duration
+        await dbUpdate(url, key, 'conversations', `id=eq.${convId}`, {
+          metadata: { ...existingMetadata, duration_seconds }
+        });
       }
     } else {
       // Initialize state with all provided customer data
@@ -158,15 +182,22 @@ serve(async (req) => {
       if (customer_email) state.customer_email = customer_email;
       if (customer_phone) state.customer_phone = customer_phone;
 
-      // Build metadata with geo and page_url
-      const metadata: any = { session_id };
+      // Build metadata with geo, page_url, and session start
+      const metadata: any = { 
+        session_id,
+        session_started_at: new Date().toISOString(),
+        duration_seconds: 0
+      };
       if (geo) {
         metadata.geo = geo;
+        metadata.geo_city = geo.city || null;
+        metadata.geo_region = geo.region || null;
+        metadata.geo_country = geo.country_name || geo.country || null;
         state.geo_captured = true;
       }
       if (page_url) metadata.page_url = page_url;
 
-      console.log('[CommandChat] Creating new conversation with state:', JSON.stringify(state), 'geo:', geo?.city);
+      console.log('[CommandChat] Creating new conversation with state:', JSON.stringify(state), 'geo:', geo?.city, geo?.region);
 
       const newConv = await dbInsert(url, key, 'conversations', {
         channel: 'website', status: 'active',
