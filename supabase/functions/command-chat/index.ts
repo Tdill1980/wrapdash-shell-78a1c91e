@@ -307,6 +307,13 @@ PRICING RULES:
 - Free shipping on orders $750+
 - Ships in 1-2 business days
 
+FLEET/BULK DISCOUNTS (mention when multiple vehicles or high sqft):
+- 500-999 sqft: 5% off
+- 1000-1499 sqft: 10% off
+- 1500-2499 sqft: 15% off
+- 2500+ sqft: 20% off
+If customer mentions fleet, multiple vehicles, or total sqft hits these tiers, calculate and show the discount. Upsell: "Add another vehicle and you'd hit the 10% tier"
+
 WE PRINT AND SHIP ONLY - NO INSTALLATION EVER.
 Contact: hello@weprintwraps.com`;
 
