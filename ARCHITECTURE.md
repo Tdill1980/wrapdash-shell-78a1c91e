@@ -1,8 +1,40 @@
-# ARCHITECTURE - Supabase Configuration
+# ARCHITECTURE - Infrastructure Configuration
 
 ## ⚠️ WARNING: DO NOT CHANGE WITHOUT APPROVAL ⚠️
 
-This document defines the critical Supabase architecture. Any changes require explicit approval from @jackson or @trish.
+This document defines the critical infrastructure. Any changes require explicit approval from @jackson or @trish.
+
+**For the complete architecture guide, see `ARCHITECTURE-BIBLE.md`**
+
+---
+
+## GitHub Repository
+
+| Setting | Value |
+|---------|-------|
+| **Repo** | https://github.com/Tdill1980/wrapdash-shell-78a1c91e |
+| **Status** | Active (main branch) |
+| **Note** | Old `wrapdash-shell` is ARCHIVED — do not use |
+
+---
+
+## Vercel (Frontend Deployment)
+
+| Setting | Value |
+|---------|-------|
+| **Project** | wrapdash-shell-78a1c91e |
+| **Preview URL** | https://wrapdash-shell-78a1c91e.vercel.app |
+| **Production** | https://wrapcommandai.com |
+| **Deploy Trigger** | Auto-deploy on push to main |
+
+---
+
+## Websites
+
+| Site | URL | Purpose |
+|------|-----|---------|
+| WePrintWraps | https://weprintwraps.com | Main store with chat widget |
+| WrapCommandAI | https://wrapcommandai.com | Dashboard |
 
 ---
 

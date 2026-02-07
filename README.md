@@ -1,73 +1,112 @@
-# Welcome to your Lovable project
+# WrapCommandAI
 
-## Project info
+Dashboard and AI command center for WePrintWraps.
 
-**URL**: https://lovable.dev/projects/640b0e4b-2e7a-4a19-af95-ed83b7645265
+## 🚨 READ FIRST
 
-## How can I edit this code?
+**Before making ANY changes, read `ARCHITECTURE-BIBLE.md`**
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## Infrastructure
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/640b0e4b-2e7a-4a19-af95-ed83b7645265) and start prompting.
+### GitHub
+- **Repo:** https://github.com/Tdill1980/wrapdash-shell-78a1c91e
+- **Old `wrapdash-shell` is ARCHIVED** — do not use
 
-Changes made via Lovable will be committed automatically to this repo.
+### Vercel (Frontend)
+- **Project:** wrapdash-shell-78a1c91e
+- **Preview URL:** https://wrapdash-shell-78a1c91e.vercel.app
+- **Production:** https://wrapcommandai.com
+- **Auto-deploys from:** GitHub main branch
 
-**Use your preferred IDE**
+### Supabase — ALL Data & Edge Functions
+- **Project ID:** `qxllysilzonrlyoaomce`
+- **URL:** https://qxllysilzonrlyoaomce.supabase.co
+- **Edge Functions:** https://qxllysilzonrlyoaomce.supabase.co/functions/v1/
+- **Contains:**
+  - 160+ edge functions
+  - command-chat (AI kernel)
+  - All database tables (quotes, contacts, conversations, orders, vehicles)
+  - Storage (media-library, shopflow-files)
+  - Authentication
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Lovable — 3D RENDERS ONLY
+- **Project ID:** `wzwqhfbmymrengjqikjl`
+- **URL:** https://wzwqhfbmymrengjqikjl.supabase.co
+- **Used ONLY for:** ApproveFlow renders, DesignPanelPro renders
+- **NOT used for:** Chat, quotes, data, edge functions, anything else
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## Websites
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+| Site | URL | Purpose |
+|------|-----|---------|
+| WePrintWraps | https://weprintwraps.com | Main store with chat widget |
+| WrapCommandAI | https://wrapcommandai.com | Dashboard |
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Deployment Flow
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+Code Changes
+     ↓
+Push to GitHub (wrapdash-shell-78a1c91e)
+     ↓
+Vercel auto-deploys frontend
+     ↓
+https://wrapcommandai.com
+
+Edge Functions
+     ↓
+Supabase CLI or Dashboard
+     ↓
+https://qxllysilzonrlyoaomce.supabase.co/functions/v1/
 ```
 
-**Edit a file directly in GitHub**
+**Lovable has NO role in deployment.**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Local Development
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+# Install dependencies
+npm install
 
-## What technologies are used for this project?
+# Start dev server
+npm run dev
 
-This project is built with:
+# Build for production
+npm run build
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## Tech Stack
 
-Simply open [Lovable](https://lovable.dev/projects/640b0e4b-2e7a-4a19-af95-ed83b7645265) and click on Share -> Publish.
+- **Frontend:** React + TypeScript + Vite
+- **UI:** Tailwind CSS + shadcn/ui
+- **Backend:** Supabase Edge Functions (Deno)
+- **AI:** Anthropic Claude (tool_use)
+- **Database:** PostgreSQL (Supabase)
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## Key Documentation
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+| File | Purpose |
+|------|---------|
+| `ARCHITECTURE-BIBLE.md` | Complete architecture guide — READ THIS |
+| `ARCHITECTURE.md` | Supabase configuration details |
+| `PROTECTED.md` | Critical settings quick reference |
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+
+## Owner
+
+**Trish Dill** — WrapCommandAI / WePrintWraps
+
+*Last Updated: February 2026*

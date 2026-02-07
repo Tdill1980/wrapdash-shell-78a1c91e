@@ -1,0 +1,65 @@
+{
+  "project": {
+    "name": "WrapCommandAI",
+    "owner": "Trish Dill",
+    "description": "Dashboard and AI command center for WePrintWraps"
+  },
+  "architecture": {
+    "CRITICAL_READ_FIRST": "ARCHITECTURE-BIBLE.md",
+    "github": {
+      "repo": "https://github.com/Tdill1980/wrapdash-shell-78a1c91e",
+      "note": "Old wrapdash-shell is ARCHIVED - do not use"
+    },
+    "vercel": {
+      "project": "wrapdash-shell-78a1c91e",
+      "preview": "https://wrapdash-shell-78a1c91e.vercel.app",
+      "production": "https://wrapcommandai.com",
+      "trigger": "Auto-deploys from GitHub main branch"
+    },
+    "supabase_production": {
+      "project_id": "qxllysilzonrlyoaomce",
+      "url": "https://qxllysilzonrlyoaomce.supabase.co",
+      "functions_url": "https://qxllysilzonrlyoaomce.supabase.co/functions/v1/",
+      "purpose": "ALL edge functions (160+), ALL database tables, ALL business data"
+    },
+    "supabase_lovable": {
+      "project_id": "wzwqhfbmymrengjqikjl",
+      "url": "https://wzwqhfbmymrengjqikjl.supabase.co",
+      "purpose": "3D image generation ONLY (ApproveFlow renders, DesignPanelPro renders)",
+      "NOT_FOR": ["chat", "quotes", "data", "edge functions", "anything else"]
+    },
+    "websites": {
+      "weprintwraps": "https://weprintwraps.com",
+      "wrapcommandai": "https://wrapcommandai.com"
+    }
+  },
+  "rules": {
+    "lovable": [
+      "Lovable does NOT host code",
+      "Lovable does NOT deploy frontend",
+      "Lovable does NOT sync with GitHub",
+      "Lovable is ONLY for 3D render API calls",
+      "DO NOT suggest 'syncing with Lovable'",
+      "DO NOT point URLs to Lovable (except render-client.ts)"
+    ],
+    "deployment": [
+      "Frontend: GitHub → Vercel (auto-deploy)",
+      "Edge functions: Supabase CLI or Dashboard",
+      "There is NO Lovable in the deployment flow"
+    ],
+    "before_changes": [
+      "Read ARCHITECTURE-BIBLE.md",
+      "Verify using qxllysilzonrlyoaomce for data/functions",
+      "Only use wzwqhfbmymrengjqikjl for 3D renders",
+      "DO NOT 'clean up' or 'fix' things not requested"
+    ]
+  },
+  "protected_files": [
+    "src/integrations/supabase/production-client.ts",
+    "src/integrations/supabase/render-client.ts",
+    "public/embed/chat-widget.js",
+    "public/embed/chat-bubble.js",
+    "supabase/functions/command-chat/index.ts",
+    "supabase/functions/cmd-quote/index.ts"
+  ]
+}

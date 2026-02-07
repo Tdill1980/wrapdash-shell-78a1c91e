@@ -1,5 +1,33 @@
 # PROTECTED CONFIGURATION - READ BEFORE EVERY SESSION
 
+**For the complete architecture guide, see `ARCHITECTURE-BIBLE.md`**
+
+---
+
+## GITHUB REPOSITORY
+
+| Setting | Value |
+|---------|-------|
+| **Repo** | https://github.com/Tdill1980/wrapdash-shell-78a1c91e |
+| **Old wrapdash-shell** | ARCHIVED — do not use |
+
+## VERCEL (FRONTEND)
+
+| Setting | Value |
+|---------|-------|
+| **Project** | wrapdash-shell-78a1c91e |
+| **Preview** | https://wrapdash-shell-78a1c91e.vercel.app |
+| **Production** | https://wrapcommandai.com |
+
+## WEBSITES
+
+| Site | URL |
+|------|-----|
+| WePrintWraps | https://weprintwraps.com |
+| WrapCommandAI | https://wrapcommandai.com |
+
+---
+
 ## CORRECT SUPABASE - YOUR PRODUCTION DATABASE
 
 | Setting | Value |
