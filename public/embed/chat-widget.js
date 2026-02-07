@@ -793,9 +793,10 @@
       </div>
       ${showOnboarding ? `
       <div class="wcai-onboarding" id="wcai-onboarding">
-        <div class="wcai-onboarding-text">Enter your name and email to start chatting</div>
+        <div class="wcai-onboarding-text">Enter your info to start chatting</div>
         <input type="text" class="wcai-onboarding-input" id="wcai-onboard-name" placeholder="Your Name" required />
         <input type="email" class="wcai-onboarding-input" id="wcai-onboard-email" placeholder="Your Email" required />
+        <input type="tel" class="wcai-onboarding-input" id="wcai-onboard-phone" placeholder="Your Phone (optional)" />
         <button class="wcai-onboarding-start" id="wcai-onboard-start">Start Chat</button>
         <div class="wcai-onboarding-note" style="font-size:11px;color:#94a3b8;margin-top:8px;text-align:center;">We'll send your quote to this email</div>
       </div>
@@ -863,6 +864,7 @@
   const onboardingPanel = document.getElementById('wcai-onboarding');
   const onboardNameInput = document.getElementById('wcai-onboard-name');
   const onboardEmailInput = document.getElementById('wcai-onboard-email');
+  const onboardPhoneInput = document.getElementById('wcai-onboard-phone');
   const onboardStartBtn = document.getElementById('wcai-onboard-start');
   const onboardSkipBtn = document.getElementById('wcai-onboard-skip');
 
@@ -871,6 +873,7 @@
   let hasOnboarded = userIsLoggedIn; // Skip onboarding if already logged in
   let collectedName = detectedUser?.name || '';
   let collectedEmail = detectedUser?.email || '';
+  let collectedPhone = '';
   let collectedOrderNumber = '';
   let isCheckMyFileFlow = false;
 
@@ -951,10 +954,14 @@
     if (onboardEmailInput) {
       collectedEmail = onboardEmailInput.value?.trim() || collectedEmail;
     }
+    if (onboardPhoneInput) {
+      collectedPhone = onboardPhoneInput.value?.trim() || collectedPhone;
+    }
 
     // Save to sessionStorage so we don't re-ask within this tab
     if (collectedName) sessionStorage.setItem('wcai_user_name', collectedName);
     if (collectedEmail) sessionStorage.setItem('wcai_user_email', collectedEmail);
+    if (collectedPhone) sessionStorage.setItem('wcai_user_phone', collectedPhone);
 
     // Hide onboarding, show chat
     if (onboardingPanel) onboardingPanel.style.display = 'none';
@@ -1344,6 +1351,7 @@
       // Include collected contact info
       if (collectedName) payload.customer_name = collectedName;
       if (collectedEmail) payload.customer_email = collectedEmail;
+      if (collectedPhone) payload.customer_phone = collectedPhone;
       if (collectedOrderNumber) payload.order_number = collectedOrderNumber;
 
       const response = await fetch(config.apiUrl, {
