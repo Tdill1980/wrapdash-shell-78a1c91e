@@ -1,10 +1,11 @@
 // =====================================================
-// CREATE VIRAL CLIP — Riverside + CapCut Automation
+// CREATE VIRAL CLIP — Meta Ads with Creatomate
 // Style: Dara Denney, Sabri Suby, Gary Vee
-// Output: 30-60 sec hooks with captions
+// Uses existing render-reel function
 // =====================================================
 
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,242 +16,276 @@ const corsHeaders = {
 const HOOK_TEMPLATES = [
   "Stop scrolling if you {action}",
   "The #1 mistake {audience} make",
-  "Nobody talks about this but...",
+  "Nobody talks about this...",
   "Here's why your {thing} isn't working",
   "I wish someone told me this sooner",
-  "This changed everything for my {business}",
+  "This changed everything",
   "Most {audience} get this wrong",
-  "The secret to {result} that nobody shares",
   "Watch this before you {action}",
   "If you're a {audience}, save this",
-  "{Number} things I learned about {topic}",
-  "POV: You finally understand {topic}",
-  "Hot take: {opinion}",
-  "Unpopular opinion about {topic}",
-  "Here's the truth about {topic}",
+  "POV: You finally get it",
+  "Hot take on {topic}",
+  "The truth about {topic}",
 ];
 
-interface ClipRequest {
-  video_url?: string;           // Direct video URL
-  riverside_recording_id?: string; // Or fetch from Riverside
-  hook_text?: string;           // Custom hook or auto-generate
-  start_time?: number;          // Clip start (seconds)
-  duration?: number;            // Clip duration (30-60 sec)
+interface ViralClipRequest {
+  video_url: string;              // Source video URL
+  hook_text?: string;             // Custom hook or auto-generate
+  start_time?: number;            // Clip start (seconds)
+  duration?: number;              // Total duration (30-60 sec)
   style?: 'dara' | 'sabri' | 'gary'; // Visual style
-  topic?: string;               // For auto-generating hooks
-  audience?: string;            // Target audience
+  topic?: string;                 // For auto-generating hooks
+  audience?: string;              // Target audience
+  cta_text?: string;              // End card CTA
+  cta_url?: string;               // CTA link
+  captions?: boolean;             // Add auto-captions
+  aspect_ratio?: '9:16' | '1:1' | '16:9';
 }
 
-Deno.serve(async (req) => {
+// Style presets
+const STYLE_PRESETS = {
+  dara: {
+    font: 'Montserrat',
+    hook_animation: 'pop',
+    hook_position: 'center',
+    text_style: 'bold',
+    colors: { text: '#FFFFFF', stroke: '#000000' }
+  },
+  sabri: {
+    font: 'Impact',
+    hook_animation: 'punch',
+    hook_position: 'center',
+    text_style: 'bold',
+    colors: { text: '#FFFFFF', stroke: '#FF0000' }
+  },
+  gary: {
+    font: 'Bebas Neue',
+    hook_animation: 'typewriter',
+    hook_position: 'top',
+    text_style: 'bold',
+    colors: { text: '#FFFF00', stroke: '#000000' }
+  }
+};
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  let browser;
-  
   try {
-    const request: ClipRequest = await req.json();
+    const request: ViralClipRequest = await req.json();
     const {
       video_url,
-      riverside_recording_id,
       hook_text,
       start_time = 0,
       duration = 45,
-      style = 'dara',
+      style = 'sabri',
       topic = 'vehicle wraps',
-      audience = 'wrap shop owners'
+      audience = 'wrap shop owners',
+      cta_text = 'Learn More',
+      cta_url = 'weprintwraps.com',
+      captions = true,
+      aspect_ratio = '9:16'
     } = request;
 
-    const browserlessToken = Deno.env.get('BROWSERLESS_TOKEN');
-    const riversideEmail = Deno.env.get('RIVERSIDE_EMAIL');
-    const riversidePassword = Deno.env.get('RIVERSIDE_PASSWORD');
-    const capcutEmail = Deno.env.get('CAPCUT_EMAIL');
-    const capcutPassword = Deno.env.get('CAPCUT_PASSWORD');
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!video_url) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'video_url is required' 
+      }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
 
-    if (!browserlessToken) throw new Error('BROWSERLESS_TOKEN not configured');
+    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    console.log('[ViralClip] Creating viral clip from:', video_url);
+    console.log('[ViralClip] Style:', style, '| Duration:', duration, '| Aspect:', aspect_ratio);
 
     // Generate hook if not provided
     let finalHook = hook_text;
     if (!finalHook && anthropicKey) {
       console.log('[ViralClip] Generating hook with AI...');
-      const hookRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': anthropicKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 100,
-          messages: [{
-            role: 'user',
-            content: `Generate ONE viral hook for a ${duration} second video about "${topic}" targeting "${audience}". 
+      try {
+        const hookRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 100,
+            messages: [{
+              role: 'user',
+              content: `Generate ONE viral META AD hook for a ${duration} second video about "${topic}" targeting "${audience}". 
 
-Style: Like Dara Denney, Sabri Suby, Gary Vee - bold, punchy, pattern interrupt.
+Style: ${style === 'sabri' ? 'Sabri Suby - bold, confrontational, pattern interrupt' : 
+         style === 'dara' ? 'Dara Denney - educational, punchy, value-first' :
+         'Gary Vee - raw, authentic, no BS'}
 
-Examples:
-- "Stop scrolling if you own a wrap shop"
-- "The #1 mistake wrap installers make"
-- "Nobody talks about this but..."
-- "Here's why your wraps aren't selling"
-
-Return ONLY the hook text, nothing else. Max 8 words.`
-          }]
-        })
-      });
-      const hookData = await hookRes.json();
-      finalHook = hookData.content?.[0]?.text?.trim() || "Watch this if you want better results";
-      console.log('[ViralClip] Generated hook:', finalHook);
+Return ONLY the hook text. Max 8 words. No quotes.`
+            }]
+          })
+        });
+        const hookData = await hookRes.json();
+        finalHook = hookData.content?.[0]?.text?.trim().replace(/^["']|["']$/g, '');
+        console.log('[ViralClip] Generated hook:', finalHook);
+      } catch (e) {
+        console.log('[ViralClip] AI hook generation failed:', e);
+      }
     }
 
+    // Fallback to template
     if (!finalHook) {
-      // Fallback to template
       const template = HOOK_TEMPLATES[Math.floor(Math.random() * HOOK_TEMPLATES.length)];
       finalHook = template
         .replace('{action}', 'want better results')
         .replace('{audience}', audience)
         .replace('{thing}', topic)
-        .replace('{business}', 'business')
-        .replace('{result}', 'success')
-        .replace('{topic}', topic)
-        .replace('{opinion}', `${topic} is overrated`)
-        .replace('{Number}', '3');
+        .replace('{topic}', topic);
     }
 
-    // Connect to browser
-    console.log('[ViralClip] Connecting to Browserless...');
-    browser = await puppeteer.connect({
-      browserWSEndpoint: `wss://chrome.browserless.io?token=${browserlessToken}`
-    });
-    
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1920, height: 1080 });
+    const stylePreset = STYLE_PRESETS[style];
+    const hookDuration = 3; // Hook text visible for 3 seconds
+    const contentDuration = duration - hookDuration - 3; // Reserve 3 sec for end card
+    const endCardDuration = 3;
 
-    const result: any = {
+    // Build blueprint for render-reel
+    const blueprint = {
+      id: `viral_${Date.now()}`,
+      platform: 'meta_ads',
+      format: 'reel',
+      aspectRatio: aspect_ratio,
+      font: stylePreset.font,
+      textStyle: stylePreset.text_style,
+      totalDuration: duration,
+      scenes: [
+        // Scene 1: Hook text overlay
+        {
+          sceneId: 'hook',
+          clipId: 'hook_clip',
+          clipUrl: video_url,
+          start: start_time,
+          end: start_time + hookDuration,
+          purpose: 'hook',
+          text: finalHook.toUpperCase(),
+          textPosition: stylePreset.hook_position,
+          animation: stylePreset.hook_animation
+        },
+        // Scene 2: Main content
+        {
+          sceneId: 'content',
+          clipId: 'content_clip',
+          clipUrl: video_url,
+          start: start_time + hookDuration,
+          end: start_time + hookDuration + contentDuration,
+          purpose: 'content'
+        }
+      ],
+      endCard: {
+        duration: endCardDuration,
+        text: cta_text.toUpperCase(),
+        cta: cta_url
+      }
+    };
+
+    // Create job in video_edit_queue
+    const { data: job, error: jobError } = await supabase
+      .from('video_edit_queue')
+      .insert({
+        organization_id: '51aa96db-c06d-41ae-b3cb-25b045c75caf',
+        source_type: 'viral_clip',
+        source_url: video_url,
+        render_status: 'pending',
+        scene_blueprint: blueprint,
+        debug_payload: {
+          style,
+          hook: finalHook,
+          topic,
+          audience,
+          created_at: new Date().toISOString()
+        }
+      })
+      .select()
+      .single();
+
+    if (jobError || !job) {
+      throw new Error('Failed to create render job: ' + (jobError?.message || 'Unknown error'));
+    }
+
+    console.log('[ViralClip] Created job:', job.id);
+
+    // Call render-reel to start the render
+    const renderPayload = {
+      job_id: job.id,
+      blueprint,
+      captions: captions ? [
+        // Add hook as caption too for accessibility
+        {
+          text: finalHook,
+          time: 0,
+          duration: hookDuration,
+          style: style,
+          animation: 'pop',
+          position: 'bottom',
+          fontSize: 'large'
+        }
+      ] : []
+    };
+
+    console.log('[ViralClip] Calling render-reel...');
+    
+    const renderRes = await fetch(`${supabaseUrl}/functions/v1/render-reel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`
+      },
+      body: JSON.stringify(renderPayload)
+    });
+
+    const renderResult = await renderRes.json();
+
+    if (!renderResult.ok) {
+      console.error('[ViralClip] Render failed:', renderResult.error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: renderResult.error,
+        job_id: job.id,
+        hook: finalHook,
+        blueprint
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('[ViralClip] Render complete:', renderResult.final_url);
+
+    return new Response(JSON.stringify({
       success: true,
+      job_id: job.id,
+      render_id: renderResult.render_id,
+      video_url: renderResult.final_url,
       hook: finalHook,
       style,
       duration,
-      steps_completed: []
-    };
-
-    // Step 1: Get video from Riverside (if recording ID provided)
-    if (riverside_recording_id && riversideEmail && riversidePassword) {
-      console.log('[ViralClip] Fetching from Riverside...');
-      
-      await page.goto('https://riverside.fm/login', { waitUntil: 'networkidle2', timeout: 30000 });
-      await page.waitForTimeout(2000);
-      
-      // Try to login
-      try {
-        const emailInput = await page.$('input[type="email"], input[name="email"]');
-        if (emailInput) {
-          await emailInput.type(riversideEmail, { delay: 50 });
-          await page.keyboard.press('Tab');
-          await page.waitForTimeout(500);
-          
-          const passwordInput = await page.$('input[type="password"]');
-          if (passwordInput) {
-            await passwordInput.type(riversidePassword, { delay: 50 });
-            await page.keyboard.press('Enter');
-            await page.waitForTimeout(5000);
-          }
-        }
-        result.riverside_login = !page.url().includes('/login');
-        result.steps_completed.push('riverside_login');
-      } catch (e) {
-        result.riverside_error = e.message;
-      }
-    }
-
-    // Step 2: Go to CapCut and create project
-    if (capcutEmail && capcutPassword) {
-      console.log('[ViralClip] Opening CapCut...');
-      
-      await page.goto('https://www.capcut.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
-      await page.waitForTimeout(3000);
-      
-      result.capcut_screenshot = await page.screenshot({ encoding: 'base64' });
-      result.steps_completed.push('capcut_opened');
-      
-      // CapCut login attempt
-      try {
-        // Look for email login option
-        const emailBtns = await page.$$('button, a, [role="button"]');
-        for (const btn of emailBtns) {
-          const text = await page.evaluate(el => el.textContent?.toLowerCase() || '', btn);
-          if (text.includes('email') || text.includes('log in') || text.includes('sign in')) {
-            await btn.click();
-            await page.waitForTimeout(2000);
-            break;
-          }
-        }
-        
-        const emailInput = await page.$('input[type="email"], input[type="text"][name*="email"], input[placeholder*="email" i]');
-        if (emailInput) {
-          await emailInput.type(capcutEmail, { delay: 50 });
-          result.steps_completed.push('capcut_email_entered');
-        }
-      } catch (e) {
-        result.capcut_login_error = e.message;
-      }
-    }
-
-    // Generate style config for the clip
-    const styleConfigs = {
-      dara: {
-        font: 'Montserrat Bold',
-        hook_position: 'center',
-        hook_animation: 'pop',
-        caption_style: 'highlight_word',
-        colors: { hook: '#FFFFFF', caption: '#FFFF00', bg: '#000000' }
-      },
-      sabri: {
-        font: 'Impact',
-        hook_position: 'top_center',
-        hook_animation: 'shake',
-        caption_style: 'word_by_word',
-        colors: { hook: '#FF0000', caption: '#FFFFFF', bg: '#000000' }
-      },
-      gary: {
-        font: 'Bebas Neue',
-        hook_position: 'center',
-        hook_animation: 'typewriter',
-        caption_style: 'full_sentence',
-        colors: { hook: '#FFFFFF', caption: '#00FF00', bg: 'transparent' }
-      }
-    };
-
-    result.style_config = styleConfigs[style];
-    result.clip_specs = {
-      hook_text: finalHook,
-      hook_duration: 3, // seconds
-      clip_start: start_time,
-      clip_duration: duration,
-      aspect_ratio: '9:16',
-      resolution: '1080x1920',
-      captions: true,
-      caption_style: styleConfigs[style].caption_style
-    };
-
-    await browser.close();
-
-    console.log('[ViralClip] Complete');
-    
-    return new Response(JSON.stringify(result), {
+      aspect_ratio,
+      blueprint
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (err) {
     console.error('[ViralClip] Error:', err);
-    if (browser) try { await browser.close(); } catch (e) {}
-    
     return new Response(JSON.stringify({ 
       success: false, 
-      error: err.message 
+      error: err instanceof Error ? err.message : String(err)
     }), { 
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
