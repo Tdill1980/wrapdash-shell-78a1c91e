@@ -66,6 +66,16 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 }
 
 // Types
+interface ContactHistoryItem {
+  type: 'email' | 'sms' | 'call' | 'note';
+  method?: string; // 'missed_call', 'connected_call', etc.
+  recipient?: string;
+  subject?: string;
+  body?: string;
+  sent_by?: string;
+  timestamp: string;
+}
+
 interface Quote {
   id: string;
   quote_number: string;
@@ -85,6 +95,10 @@ interface Quote {
   product_name: string | null;
   last_activity: string | null;
   follow_up_count: number | null;
+  metadata?: {
+    contact_history?: ContactHistoryItem[];
+    [key: string]: any;
+  } | null;
 }
 
 interface ConvertedOrder {
@@ -429,6 +443,24 @@ export default function WebsiteChatQuotesPage() {
     setQuoteDetailModalOpen(true);
   };
 
+  // Helper to add contact to history
+  const addContactToHistory = async (quote: Quote, contact: ContactHistoryItem) => {
+    const existingHistory = quote.metadata?.contact_history || [];
+    const newHistory = [...existingHistory, contact];
+    
+    await supabase
+      .from('quotes')
+      .update({
+        metadata: {
+          ...(quote.metadata || {}),
+          contact_history: newHistory
+        },
+        last_activity: new Date().toISOString(),
+        follow_up_count: (quote.follow_up_count || 0) + 1
+      } as any)
+      .eq('id', quote.id);
+  };
+
   const sendSms = async () => {
     if (!selectedQuote?.customer_phone || !smsMessage) return;
     setSendingSms(true);
@@ -446,13 +478,14 @@ export default function WebsiteChatQuotesPage() {
 
       if (!response.ok) throw new Error('Failed to send SMS');
 
-      await supabase
-        .from('quotes')
-        .update({
-          last_activity: new Date().toISOString(),
-          follow_up_count: (selectedQuote.follow_up_count || 0) + 1
-        } as any)
-        .eq('id', selectedQuote.id);
+      // Log contact to history
+      await addContactToHistory(selectedQuote, {
+        type: 'sms',
+        recipient: selectedQuote.customer_phone,
+        body: smsMessage,
+        sent_by: 'jackson',
+        timestamp: new Date().toISOString()
+      });
 
       toast({ title: "SMS sent successfully" });
       setSmsModalOpen(false);
@@ -1225,6 +1258,47 @@ The WePrintWraps Team`;
                     <div className="text-white mt-1">{selectedQuote.source || 'Website Chat'}</div>
                   </div>
                 </div>
+
+                {/* Contact History */}
+                {selectedQuote.metadata?.contact_history && selectedQuote.metadata.contact_history.length > 0 && (
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <div className="text-xs text-gray-500 uppercase mb-3 flex items-center gap-2">
+                      <Clock className="w-3 h-3" />
+                      Contact History ({selectedQuote.metadata.contact_history.length})
+                    </div>
+                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                      {selectedQuote.metadata.contact_history.slice().reverse().map((contact, idx) => (
+                        <div key={idx} className="border-l-2 border-cyan-500 pl-3 py-1">
+                          <div className="flex items-center gap-2 text-sm">
+                            {contact.type === 'email' && <Mail className="w-3 h-3 text-blue-400" />}
+                            {contact.type === 'sms' && <MessageSquare className="w-3 h-3 text-green-400" />}
+                            {contact.type === 'call' && <Phone className="w-3 h-3 text-orange-400" />}
+                            <span className="text-white font-medium capitalize">{contact.type}</span>
+                            {contact.method && <span className="text-gray-500">({contact.method})</span>}
+                            <span className="text-gray-500 text-xs ml-auto">
+                              {format(new Date(contact.timestamp), 'MMM d, h:mm a')}
+                            </span>
+                          </div>
+                          {contact.subject && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              <strong>Subject:</strong> {contact.subject}
+                            </div>
+                          )}
+                          {contact.body && (
+                            <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                              {contact.body}
+                            </div>
+                          )}
+                          {contact.sent_by && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Sent by: {contact.sent_by}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-4 border-t border-gray-700">
