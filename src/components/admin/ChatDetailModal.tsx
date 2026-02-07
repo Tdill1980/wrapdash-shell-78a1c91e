@@ -49,27 +49,10 @@ export function ChatDetailModal({ conversation, open, onOpenChange }: ChatDetail
   const { data: quotes, isLoading: quotesLoading } = useConversationQuotes(conversation?.id || null);
   const escalationStatus = useEscalationStatus(events);
 
-  // Fetch messages for this conversation (fixes "0 messages" issue)
-  const { data: fetchedMessages, isLoading: messagesLoading } = useQuery({
-    queryKey: ['conversation-messages', conversation?.id],
-    queryFn: async () => {
-      if (!conversation?.id) return [];
-      const { data, error } = await supabase
-        .from('messages')
-        .select('id, content, direction, sender_name, created_at, metadata')
-        .eq('conversation_id', conversation.id)
-        .order('created_at', { ascending: true })
-        .limit(500);
-
-      if (error) {
-        console.error('Failed to fetch messages:', error);
-        return [];
-      }
-      return data || [];
-    },
-    enabled: !!conversation?.id && open,
-    refetchInterval: 10000, // Refresh every 10 seconds while open
-  });
+  // Use messages from conversation object (comes from edge function with service role)
+  // This avoids RLS issues with direct table queries
+  const messagesLoading = false;
+  const fetchedMessages = conversation?.messages || [];
 
   if (!conversation) return null;
 
