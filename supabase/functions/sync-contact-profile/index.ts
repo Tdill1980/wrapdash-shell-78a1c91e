@@ -6,17 +6,18 @@ const corsHeaders = {
 };
 
 /**
- * VoiceCommandAI CMS - Contact Profile Sync
+ * CommandContacts - Contact Profile Sync
  * 
+ * Part of the VoiceCommandAI nervous system.
  * Extracts customer data from chat conversations and builds/updates
- * unified contact profiles in mighty_contacts table.
+ * unified contact profiles in command_contacts table.
  * 
  * Progressive enrichment: If customer provides phone in one chat and
  * address in another, both get merged into their profile.
  * 
  * Call this:
- * - After each chat ends
- * - Or run as batch to sync all conversations
+ * - After each chat ends (real-time)
+ * - Or run as batch to sync all conversations (backfill)
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
     if (create_table) {
       const { error: createError } = await supabase.rpc('exec_sql', {
         sql: `
-          CREATE TABLE IF NOT EXISTS mighty_contacts (
+          CREATE TABLE IF NOT EXISTS command_contacts (
             id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
             email TEXT NOT NULL UNIQUE,
             name TEXT,
@@ -142,7 +143,7 @@ Deno.serve(async (req) => {
 
       // Check if contact exists
       const { data: existing, error: lookupError } = await supabase
-        .from("mighty_contacts")
+        .from("command_contacts")
         .select("*")
         .eq("email", email)
         .single();
@@ -175,7 +176,7 @@ Deno.serve(async (req) => {
         if (extractedData.last_quote_id) updates.last_quote_id = extractedData.last_quote_id;
 
         const { error: updateError } = await supabase
-          .from("mighty_contacts")
+          .from("command_contacts")
           .update(updates)
           .eq("id", existing.id);
 
@@ -188,7 +189,7 @@ Deno.serve(async (req) => {
       } else {
         // Create new contact
         const { error: insertError } = await supabase
-          .from("mighty_contacts")
+          .from("command_contacts")
           .insert({
             email,
             name: extractedData.name,
