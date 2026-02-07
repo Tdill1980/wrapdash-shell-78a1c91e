@@ -258,6 +258,10 @@ export default function CommandOpsPage() {
               <BookOpen className="w-4 h-4 mr-2" />
               Diary
             </TabsTrigger>
+            <TabsTrigger value="devstatus" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-teal-600 data-[state=active]:text-white px-6">
+              <Bot className="w-4 h-4 mr-2" />
+              Dev Status
+            </TabsTrigger>
           </TabsList>
 
           {/* TO DO Tab */}
@@ -544,8 +548,207 @@ export default function CommandOpsPage() {
               </div>
             </Card>
           </TabsContent>
+
+          {/* Dev Status Tab */}
+          <TabsContent value="devstatus" className="space-y-4">
+            <DevStatusTab />
+          </TabsContent>
         </Tabs>
       </div>
     </MainLayout>
+  );
+}
+
+// Dev Status Tab Component
+function DevStatusTab() {
+  const [monitor, setMonitor] = useState<any>(null);
+  const [commits, setCommits] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [lastCheck, setLastCheck] = useState<Date | null>(null);
+
+  // Fetch GitHub commits on mount
+  useEffect(() => {
+    async function fetchCommits() {
+      try {
+        const res = await fetch('https://api.github.com/repos/Tdill1980/wrapdash-shell-78a1c91e/commits?per_page=10');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setCommits(data.map((c: any) => ({
+            sha: c.sha?.substring(0, 7),
+            message: c.commit?.message?.split('\n')[0],
+            author: c.commit?.author?.name,
+            date: c.commit?.author?.date,
+            url: c.html_url
+          })));
+        }
+      } catch (err) {
+        console.error('Failed to fetch commits:', err);
+      }
+    }
+    fetchCommits();
+  }, []);
+
+  const runHealthCheck = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('https://qxllysilzonrlyoaomce.supabase.co/functions/v1/wren-monitor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bGx5c2lsem9ucmx5b2FvbWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY3MTcxMjUsImV4cCI6MjA1MjI5MzEyNX0.s1IyOY7QAVyrTtG_XLhugJUvxi2X_nHCvqvchYCvwtM'
+        }
+      });
+      const data = await res.json();
+      setMonitor(data);
+      setLastCheck(new Date());
+    } catch (err) {
+      setMonitor({ overall_status: 'critical', alerts: ['Health check failed: ' + (err as Error).message], checks: [] });
+    }
+    setLoading(false);
+  };
+
+  const statusColors: Record<string, string> = {
+    healthy: 'bg-green-500',
+    degraded: 'bg-yellow-500',
+    critical: 'bg-red-500',
+    ok: 'text-green-400 bg-green-500/20',
+    warning: 'text-yellow-400 bg-yellow-500/20'
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Health Check Section */}
+      <Card className="bg-gray-800/50 border-cyan-500/30 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
+            <Bot className="w-6 h-6" /> System Health Check
+          </h3>
+          <div className="flex items-center gap-3">
+            {lastCheck && (
+              <span className="text-xs text-gray-500">Last: {lastCheck.toLocaleTimeString()}</span>
+            )}
+            <Button onClick={runHealthCheck} disabled={loading} size="sm" className="bg-cyan-600 hover:bg-cyan-700">
+              {loading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />}
+              Run Check
+            </Button>
+          </div>
+        </div>
+
+        {!monitor ? (
+          <div className="text-center py-8 text-gray-400">
+            <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>Click "Run Check" to test all systems</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Overall Status */}
+            <div className="flex items-center gap-4 p-4 bg-gray-900/50 rounded-lg">
+              <div className={`w-4 h-4 rounded-full ${statusColors[monitor.overall_status]} animate-pulse`} />
+              <div>
+                <span className="text-xl font-bold text-white capitalize">System {monitor.overall_status}</span>
+                <span className="text-gray-400 ml-3 text-sm">
+                  {monitor.checks?.filter((c: any) => c.status === 'ok').length}/{monitor.checks?.length} passing
+                </span>
+              </div>
+              {monitor.metrics && (
+                <div className="ml-auto flex gap-4 text-sm">
+                  <span className="text-gray-400">Chats: <span className="text-white font-bold">{monitor.metrics.chats_today}</span></span>
+                  <span className="text-gray-400">Emails: <span className="text-white font-bold">{monitor.metrics.emails_captured_today}</span></span>
+                  <span className="text-gray-400">Rate: <span className="text-white font-bold">{monitor.metrics.email_capture_rate}%</span></span>
+                </div>
+              )}
+            </div>
+
+            {/* Alerts */}
+            {monitor.alerts?.length > 0 && (
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <div className="text-red-400 font-semibold mb-2 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" /> Alerts
+                </div>
+                {monitor.alerts.map((alert: string, i: number) => (
+                  <div key={i} className="text-red-300 text-sm">{alert}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Individual Checks */}
+            <div className="grid grid-cols-2 gap-2">
+              {monitor.checks?.map((check: any, i: number) => (
+                <div key={i} className={`flex items-center justify-between p-3 rounded-lg border ${
+                  check.status === 'ok' ? 'bg-green-500/5 border-green-500/20' :
+                  check.status === 'warning' ? 'bg-yellow-500/5 border-yellow-500/20' :
+                  'bg-red-500/5 border-red-500/20'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {check.status === 'ok' ? <CheckCircle className="w-4 h-4 text-green-400" /> :
+                     check.status === 'warning' ? <AlertTriangle className="w-4 h-4 text-yellow-400" /> :
+                     <AlertTriangle className="w-4 h-4 text-red-400" />}
+                    <span className="text-white text-sm">{check.name}</span>
+                  </div>
+                  <span className="text-xs text-gray-500">{check.latency_ms}ms</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Recent Commits */}
+      <Card className="bg-gray-800/50 border-purple-500/30 p-6">
+        <h3 className="text-xl font-bold text-purple-400 flex items-center gap-2 mb-4">
+          <Code className="w-6 h-6" /> Recent Code Changes
+        </h3>
+        <div className="space-y-2">
+          {commits.length === 0 ? (
+            <div className="text-gray-400 text-center py-4">Loading commits...</div>
+          ) : (
+            commits.map((commit) => (
+              <a
+                key={commit.sha}
+                href={commit.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg hover:bg-gray-900 transition-colors"
+              >
+                <span className="font-mono text-purple-400 text-xs">{commit.sha}</span>
+                <span className="text-white text-sm flex-1 truncate">{commit.message}</span>
+                <span className="text-gray-500 text-xs">{new Date(commit.date).toLocaleDateString()}</span>
+              </a>
+            ))
+          )}
+        </div>
+      </Card>
+
+      {/* Key Files */}
+      <Card className="bg-gray-800/50 border-teal-500/30 p-6">
+        <h3 className="text-xl font-bold text-teal-400 flex items-center gap-2 mb-4">
+          <FileText className="w-6 h-6" /> Key System Files
+        </h3>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { path: 'public/embed/chat-widget.js', desc: 'Chat widget' },
+            { path: 'supabase/functions/command-chat/index.ts', desc: 'AI Chat Kernel' },
+            { path: 'supabase/functions/wren-monitor/index.ts', desc: 'Health monitor' },
+            { path: 'supabase/functions/cmd-vehicle/index.ts', desc: 'Vehicle lookup' },
+            { path: 'supabase/functions/cmd-pricing/index.ts', desc: 'Pricing calc' },
+            { path: 'supabase/functions/create-quote-from-chat/index.ts', desc: 'Quote + email' },
+          ].map((file) => (
+            <a
+              key={file.path}
+              href={`https://github.com/Tdill1980/wrapdash-shell-78a1c91e/blob/main/${file.path}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2 bg-gray-900/50 rounded hover:bg-gray-900 transition-colors"
+            >
+              <FileText className="w-4 h-4 text-teal-400 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs text-teal-300 font-mono truncate">{file.path.split('/').pop()}</div>
+                <div className="text-xs text-gray-500">{file.desc}</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </Card>
+    </div>
   );
 }
