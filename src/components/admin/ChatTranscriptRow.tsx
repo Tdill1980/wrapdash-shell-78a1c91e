@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow, format, differenceInMinutes, differenceInSeconds } from "date-fns";
-import { MapPin, Mail, Clock, AlertCircle, Download, MessageSquare, Globe, Instagram, Phone } from "lucide-react";
+import { formatDistanceToNow, format, differenceInMinutes, differenceInSeconds, isToday, differenceInHours } from "date-fns";
+import { MapPin, Mail, Clock, AlertCircle, Download, MessageSquare, Globe, Instagram, Phone, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ChatConversation } from "@/hooks/useWebsiteChats";
 
@@ -36,6 +36,11 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
   const contact = conversation.contact;
   const sessionId = conversation.metadata?.session_id || conversation.id.slice(0, 12);
   const messageCount = conversation.messages?.length || 0;
+  
+  // Check if conversation is recent (today or within 24 hours)
+  const createdAt = conversation.created_at ? new Date(conversation.created_at) : null;
+  const isRecent = createdAt && (isToday(createdAt) || differenceInHours(new Date(), createdAt) < 24);
+  const isVeryRecent = createdAt && differenceInHours(new Date(), createdAt) < 6;
   
   // Calculate duration from first to last message
   const firstMsg = conversation.messages?.[0];
@@ -85,7 +90,11 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
       className={`p-4 border rounded-lg mb-3 cursor-pointer transition-all duration-200 ${
         isSelected 
           ? 'bg-primary/10 border-primary ring-1 ring-primary/30' 
-          : 'bg-card hover:bg-muted/50 border-border'
+          : isVeryRecent
+            ? 'bg-gradient-to-r from-fuchsia-500/20 via-purple-500/15 to-blue-500/20 border-fuchsia-500/40 hover:from-fuchsia-500/30 hover:via-purple-500/25 hover:to-blue-500/30 ring-1 ring-fuchsia-500/20'
+            : isRecent
+              ? 'bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/30 hover:from-purple-500/20 hover:to-blue-500/20'
+              : 'bg-card hover:bg-muted/50 border-border'
       }`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -93,6 +102,14 @@ export function ChatTranscriptRow({ conversation, onClick, isSelected }: ChatTra
         <div className="flex-1 min-w-0 space-y-2">
           {/* Customer name & Session ID header */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Channel badge */}
+            {/* NEW badge for very recent */}
+            {isVeryRecent && (
+              <Badge className="text-xs bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white border-0 animate-pulse">
+                <Sparkles className="h-3 w-3 mr-1" />
+                NEW
+              </Badge>
+            )}
             {/* Channel badge */}
             {conversation.channel === 'instagram' ? (
               <Badge variant="outline" className="text-xs bg-pink-500/10 text-pink-600 border-pink-500/30">
