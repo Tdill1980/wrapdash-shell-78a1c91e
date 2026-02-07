@@ -334,7 +334,8 @@ INFO PAGES:
 
 PRODUCT KNOWLEDGE:
 - Window perf: NOT tint. Perforated vinyl for ads on glass. See-through from inside, graphics outside. 12-24 month durability. Always laminate.
-- Cut contour: We print, laminate, cut to shape, weed, and mask. Install-ready out of the box. No hand-trimming needed.
+- Cut contour / Labels / Decals / Stickers: We print, laminate, cut to shape, weed, and mask. Install-ready out of the box. No hand-trimming needed. MAX SIZE: 50" x any length (54" roll, minus bleed). If customer says "labels" or "decals" or "stickers", they mean CUT CONTOUR.
+- Full wraps (Avery/3M): Max roll width 54" (4.5 feet). Most vehicles fit without seams.
 - All wraps printed on 3M or Avery with UV inks, made in USA, ship in 1-2 business days.
 
 VEHICLE RULE (CRITICAL):
