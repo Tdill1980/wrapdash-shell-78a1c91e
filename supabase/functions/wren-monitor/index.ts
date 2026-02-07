@@ -303,7 +303,7 @@ async function checkMightyCustomerProducts(baseUrl: string, key: string): Promis
   const start = Date.now();
   try {
     // Check if products table has data
-    const res = await fetch(`${baseUrl}/rest/v1/wpw_products?select=id,name&limit=5`, {
+    const res = await fetch(`${baseUrl}/rest/v1/products?select=id,product_name&limit=5`, {
       headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
     });
     const data = await res.json();

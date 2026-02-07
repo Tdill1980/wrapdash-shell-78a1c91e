@@ -255,7 +255,7 @@ serve(async (req) => {
         organization_id,
         customer_name: customer_name || `Website Lead (${customer_email})`,
         customer_email,
-        customer_phone: customer_phone || null,
+        // customer_phone column doesn't exist in quotes table - store in metadata instead
         vehicle_year: vehicle_year ? parseInt(vehicle_year) : null,
         vehicle_make,
         vehicle_model,
@@ -268,7 +268,8 @@ serve(async (req) => {
         status: 'pending', // Valid status value
         source: 'wren', // Quotes sent by Wren 🐦
         source_conversation_id: conversation_id || null,
-        email_sent: false
+        email_sent: false,
+        metadata: customer_phone ? { customer_phone } : null
       })
       .select()
       .single();
