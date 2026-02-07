@@ -185,11 +185,12 @@ serve(async (req) => {
       });
     }
 
-    // Use EXTERNAL database (user's Supabase) - this function runs on Lovable but queries external DB
-    const supabaseUrl = Deno.env.get('EXTERNAL_SUPABASE_URL') || Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Use WPW Supabase - this function runs on WPW and queries WPW DB
+    // Using anon key instead of service role key for public API access
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://qxllysilzonrlyoaomce.supabase.co';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bGx5c2lsem9ucmx5b2FvbWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyMzQxMjIsImV4cCI6MjA4MzgxMDEyMn0.s1IyOY7QAVyrTtG_XLhugJUvxi2X_nHCvqvchYCvwtM';
     const resendKey = Deno.env.get('RESEND_API_KEY');
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Calculate SQFT and pricing - NEVER BLOCK, always create quote
     const sqftResult = getVehicleSqft(vehicle_make || '', vehicle_model || '');
@@ -229,7 +230,9 @@ serve(async (req) => {
         sqft,
         material_cost: materialCost,
         total_price: materialCost,
-        product_name: productName,
+        price_per_sqft: pricePerSqft,
+        ai_message: `${productName} at $${pricePerSqft}/sqft`,
+        ai_generated: true,
         status: 'pending', // Valid status value
         source: 'commandchat', // Identifies quotes from CommandChat widget
         source_conversation_id: conversation_id || null,
