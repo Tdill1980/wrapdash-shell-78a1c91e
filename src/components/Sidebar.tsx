@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   Clock,
   Zap,
+  Heart,
 } from "lucide-react";
 import logo from "@/assets/wrapcommand-logo-new.png";
 import { useUserRole, OrganizationRole } from "@/hooks/useUserRole";
@@ -174,6 +175,18 @@ const operationsItems: NavigationItem[] = [
       <span className="font-['Poppins',sans-serif] font-semibold">
         <span className="text-white">Command </span>
         <span className="bg-gradient-to-r from-[#10B981] to-[#14B8A6] bg-clip-text text-transparent">Ops</span>
+      </span>
+    )
+  },
+  {
+    name: "Wren Activity",
+    path: "/wren",
+    icon: Heart,
+    roles: ["admin"],
+    customRender: (
+      <span className="font-['Poppins',sans-serif] font-semibold">
+        <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Wren</span>
+        <span className="text-white"> Activity</span>
       </span>
     )
   },
