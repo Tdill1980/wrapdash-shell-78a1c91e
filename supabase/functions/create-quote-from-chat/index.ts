@@ -178,6 +178,10 @@ serve(async (req) => {
 
     console.log('[CreateQuoteFromChat] Starting:', { conversation_id, customer_email, vehicle_make, vehicle_model });
 
+    // Lovable 3D Renders API (for vehicle renders)
+    const LOVABLE_RENDER_URL = 'https://wzwqhfbmymrengjqikjl.supabase.co/functions/v1/generate-color-render';
+    const LOVABLE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3FoZmJteW1yZW5nanFpa2psIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDM3OTgsImV4cCI6MjA3ODgxOTc5OH0.-LtBxqJ7gNmImakDRGQyr1e7FXrJCQQXF5zE5Fre_1I';
+
     // Fetch conversation context for personalization
     let chatContext = '';
     let aiSummary = '';
@@ -376,6 +380,7 @@ serve(async (req) => {
       quoteId,
       customerName,
       chatSummary,
+      renderImageUrl,
     }: {
       quoteNumber: string;
       vehicleLabel: string;
@@ -386,6 +391,7 @@ serve(async (req) => {
       quoteId?: string;
       customerName?: string;
       chatSummary?: string;
+      renderImageUrl?: string;
     }) {
       const upsell = getRotatingUpsell(quoteId);
       const firstName = customerName?.split(' ')[0] || '';
@@ -431,6 +437,14 @@ serve(async (req) => {
       <p style="margin:0 0 20px 0;">
         ${greeting} ${openingLine}
       </p>
+
+      ${renderImageUrl ? `
+      <!-- VEHICLE RENDER -->
+      <div style="margin:0 0 24px 0;text-align:center;">
+        <img src="${renderImageUrl}" alt="${vehicleLabel} Wrap Preview" style="max-width:100%;height:auto;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);" />
+        <div style="font-size:12px;color:#737373;margin-top:8px;">Here's what your ${vehicleLabel} could look like 🔥</div>
+      </div>
+      ` : ''}
 
       <!-- THE QUOTE - BOLD AND CLEAR -->
       <div style="background:#1a1a1a;border-radius:12px;padding:28px;margin:0 0 24px 0;text-align:center;">
@@ -506,6 +520,43 @@ serve(async (req) => {
       // Cart URL - link to products page (can be enhanced with WooCommerce cart URL later)
       const cartUrl = 'https://weprintwraps.com/our-products/';
 
+      // Generate vehicle render (WPW Pink, async but don't block email if it fails)
+      let renderImageUrl = '';
+      try {
+        console.log('[CreateQuoteFromChat] Generating vehicle render for:', vehicle_make, vehicle_model);
+        const renderResponse = await fetch(LOVABLE_RENDER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${LOVABLE_ANON_KEY}`,
+            'apikey': LOVABLE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            vehicleMake: vehicle_make || 'Ford',
+            vehicleModel: vehicle_model || 'F-150',
+            vehicleYear: vehicle_year || 2024,
+            vehicleType: 'Auto', // Auto-detect
+            colorHex: '#E6007E', // WPW Signature Pink
+            colorName: 'WPW Pink',
+            finishType: 'gloss',
+            hasMetallicFlakes: false,
+            angle: 'hero',
+            mode: 'full', // Full wrap, not panel
+          }),
+        });
+        
+        if (renderResponse.ok) {
+          const renderData = await renderResponse.json();
+          renderImageUrl = renderData.imageUrl || '';
+          console.log('[CreateQuoteFromChat] Render generated:', renderImageUrl);
+        } else {
+          console.log('[CreateQuoteFromChat] Render API returned:', renderResponse.status);
+        }
+      } catch (renderError) {
+        console.log('[CreateQuoteFromChat] Render generation failed (non-blocking):', renderError);
+        // Don't block email sending if render fails
+      }
+
       const emailHtml = buildQuoteEmailHTML({
         quoteNumber,
         vehicleLabel: vehicleDisplay,
@@ -516,6 +567,7 @@ serve(async (req) => {
         quoteId: quote.id,
         customerName: customer_name,
         chatSummary: aiSummary,
+        renderImageUrl,
       });
 
       try {
