@@ -23,6 +23,8 @@ import {
   MessageSquare,
   Mail,
   CheckCircle,
+  CheckSquare,
+  Square,
   ShoppingCart,
   Clock,
   AlertTriangle,
@@ -95,6 +97,7 @@ interface Quote {
   product_name: string | null;
   last_activity: string | null;
   follow_up_count: number | null;
+  wren_completed: boolean | null;
   metadata?: {
     contact_history?: ContactHistoryItem[];
     [key: string]: any;
@@ -541,6 +544,26 @@ export default function WebsiteChatQuotesPage() {
     }
   };
 
+  const toggleWrenCompleted = async (quote: Quote, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const newValue = !quote.wren_completed;
+      await supabase
+        .from('quotes')
+        .update({
+          wren_completed: newValue,
+          last_activity: new Date().toISOString()
+        } as any)
+        .eq('id', quote.id);
+
+      toast({ title: newValue ? "Marked as Wren Completed" : "Unmarked Wren Completed" });
+      fetchQuotes(true);
+    } catch (err) {
+      console.error('Error toggling wren_completed:', err);
+      toast({ title: "Failed to update", variant: "destructive" });
+    }
+  };
+
   const getEmailBody = (quote: Quote) => {
     const name = quote.customer_name?.split(' ')[0] || 'there';
     const request = formatRequest(quote);
@@ -644,6 +667,19 @@ The WePrintWraps Team`;
           ) : (
             <span className="font-mono font-medium text-white">${quote.total_price?.toFixed(2)}</span>
           )}
+        </td>
+
+        {/* Wren Completed */}
+        <td className="px-4 py-3 text-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 ${quote.wren_completed ? 'text-green-400 hover:text-green-300' : 'text-gray-500 hover:text-gray-300'}`}
+            onClick={(e) => toggleWrenCompleted(quote, e)}
+            title={quote.wren_completed ? "Wren Completed - Click to unmark" : "Mark as Wren Completed"}
+          >
+            {quote.wren_completed ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+          </Button>
         </td>
 
         {/* Callback Date & Status (only for callback tab) */}
@@ -979,6 +1015,7 @@ The WePrintWraps Team`;
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Customer</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Request</th>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Est. Price</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-green-400 uppercase">Wren</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Actions</th>
                         </>
                       )}
