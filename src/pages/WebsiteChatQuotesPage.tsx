@@ -1192,63 +1192,86 @@ The WePrintWraps Team`;
               </DialogTitle>
             </DialogHeader>
             {selectedQuote && (
-              <div className="space-y-6">
-                {/* Price Header */}
-                <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-6 text-center border border-gray-700">
-                  <div className="text-sm text-gray-400 mb-1">Estimated Total</div>
-                  <div className="text-4xl font-bold text-white">
-                    {selectedQuote.total_price ? `$${selectedQuote.total_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : 'Needs Quote'}
-                  </div>
-                  {selectedQuote.sqft && (
-                    <div className="text-sm text-gray-400 mt-2">
-                      {selectedQuote.sqft} sq ft × $5.27/sq ft
+              <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+                {/* QUOTE HEADER - ShopVox Style */}
+                <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-4 border border-gray-700">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-xs text-gray-500 uppercase">Quote For</div>
+                      <div className="font-bold text-white text-xl">{selectedQuote.customer_name || 'Customer'}</div>
+                      <div className="text-cyan-400 text-sm">{selectedQuote.customer_email}</div>
+                      {selectedQuote.customer_phone && (
+                        <div className="text-gray-400 text-sm">{selectedQuote.customer_phone}</div>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* Customer Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
-                    <div className="text-xs text-gray-500 uppercase mb-2">Customer</div>
-                    <div className="font-medium text-white text-lg">{selectedQuote.customer_name || 'Unknown'}</div>
-                    <div className="text-cyan-400 text-sm mt-1">{selectedQuote.customer_email}</div>
-                    {selectedQuote.customer_phone && (
-                      <a href={`tel:${selectedQuote.customer_phone}`} className="text-cyan-400 text-sm flex items-center gap-1 mt-1 hover:text-cyan-300">
-                        <Phone className="w-3 h-3" />
-                        {selectedQuote.customer_phone}
-                      </a>
-                    )}
-                  </div>
-
-                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
-                    <div className="text-xs text-gray-500 uppercase mb-2">Vehicle</div>
-                    <div className="font-medium text-white text-lg">
-                      {[selectedQuote.vehicle_year, selectedQuote.vehicle_make, selectedQuote.vehicle_model].filter(Boolean).join(' ') || 'Not specified'}
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500 uppercase">Quote Date</div>
+                      <div className="text-white">{format(new Date(selectedQuote.created_at), 'MMM d, yyyy')}</div>
+                      <div className="text-xs text-gray-500 mt-2">Valid for 30 days</div>
                     </div>
-                    {selectedQuote.sqft && (
-                      <div className="text-gray-400 text-sm mt-1">{selectedQuote.sqft} sq ft coverage</div>
-                    )}
-                    {selectedQuote.product_name && (
-                      <div className="text-gray-400 text-sm mt-1">{selectedQuote.product_name}</div>
-                    )}
                   </div>
                 </div>
 
-                {/* Quote Metadata */}
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="bg-gray-900 rounded p-3 border border-gray-700">
-                    <div className="text-gray-500 text-xs uppercase">Created</div>
-                    <div className="text-white mt-1">{format(new Date(selectedQuote.created_at), 'MMM d, yyyy h:mm a')}</div>
+                {/* LINE ITEMS - ShopVox Style */}
+                <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+                  <div className="bg-gray-800 px-4 py-2 border-b border-gray-700">
+                    <div className="text-xs text-gray-400 uppercase font-semibold">Quote Details</div>
                   </div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-700 text-gray-400 text-xs uppercase">
+                        <th className="text-left px-4 py-2">Description</th>
+                        <th className="text-right px-4 py-2">Qty</th>
+                        <th className="text-right px-4 py-2">Rate</th>
+                        <th className="text-right px-4 py-2">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-700/50">
+                        <td className="px-4 py-3">
+                          <div className="text-white font-medium">
+                            {[selectedQuote.vehicle_year, selectedQuote.vehicle_make, selectedQuote.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'} Full Wrap
+                          </div>
+                          <div className="text-gray-400 text-xs mt-1">
+                            Material: {selectedQuote.product_name || '3M IJ180Cv3 with 8518 Laminate'}
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            Printed wrap material only. Installation not included.
+                          </div>
+                        </td>
+                        <td className="text-right px-4 py-3 text-gray-300">{selectedQuote.sqft || 250} sqft</td>
+                        <td className="text-right px-4 py-3 text-gray-300">${(5.27).toFixed(2)}/sqft</td>
+                        <td className="text-right px-4 py-3 text-white font-medium">
+                          ${selectedQuote.total_price?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+                        </td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-800/50">
+                        <td colSpan={3} className="text-right px-4 py-3 text-gray-400 font-medium">Subtotal</td>
+                        <td className="text-right px-4 py-3 text-white font-medium">
+                          ${selectedQuote.total_price?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+                        </td>
+                      </tr>
+                      <tr className="bg-cyan-900/20">
+                        <td colSpan={3} className="text-right px-4 py-3 text-cyan-400 font-bold text-lg">TOTAL</td>
+                        <td className="text-right px-4 py-3 text-cyan-400 font-bold text-lg">
+                          ${selectedQuote.total_price?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* STATUS ROW */}
+                <div className="grid grid-cols-3 gap-3 text-sm">
                   <div className="bg-gray-900 rounded p-3 border border-gray-700">
                     <div className="text-gray-500 text-xs uppercase">Status</div>
-                    <div className="text-white mt-1">
+                    <div className="mt-1">
                       {selectedQuote.email_sent ? (
                         <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Email Sent</Badge>
                       ) : selectedQuote.status === 'contacted' ? (
                         <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30">Contacted</Badge>
-                      ) : selectedQuote.status?.startsWith('callback:') ? (
-                        <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Callback Set</Badge>
                       ) : (
                         <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">New</Badge>
                       )}
@@ -1258,7 +1281,42 @@ The WePrintWraps Team`;
                     <div className="text-gray-500 text-xs uppercase">Source</div>
                     <div className="text-white mt-1">{selectedQuote.source || 'Website Chat'}</div>
                   </div>
+                  <div className="bg-gray-900 rounded p-3 border border-gray-700">
+                    <div className="text-gray-500 text-xs uppercase">Shipping</div>
+                    <div className="text-green-400 mt-1">{(selectedQuote.total_price || 0) >= 750 ? 'FREE' : 'Calculated at checkout'}</div>
+                  </div>
                 </div>
+
+                {/* EMAIL SENT - Show the actual email */}
+                {selectedQuote.email_sent && (
+                  <div className="bg-gray-900 rounded-lg border border-gray-700">
+                    <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-green-400" />
+                      <span className="text-xs text-gray-400 uppercase font-semibold">Email Sent to Customer</span>
+                    </div>
+                    <div className="p-4 text-sm text-gray-300 space-y-2">
+                      <div><strong className="text-gray-500">To:</strong> {selectedQuote.customer_email}</div>
+                      <div><strong className="text-gray-500">Subject:</strong> Your Wrap Quote: {[selectedQuote.vehicle_year, selectedQuote.vehicle_make, selectedQuote.vehicle_model].filter(Boolean).join(' ')} - ${selectedQuote.total_price?.toFixed(2)}</div>
+                      <div className="border-t border-gray-700 pt-3 mt-3">
+                        <div className="bg-gray-800 rounded p-3 text-xs text-gray-400 whitespace-pre-wrap">
+{`Hey${selectedQuote.customer_name ? ' ' + selectedQuote.customer_name.split(' ')[0] : ''}! Here's your quote for the ${[selectedQuote.vehicle_year, selectedQuote.vehicle_make, selectedQuote.vehicle_model].filter(Boolean).join(' ') || 'vehicle'} wrap.
+
+$${selectedQuote.total_price?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+${selectedQuote.sqft || 250} sq ft × $5.27/sq ft
+
+That's ${selectedQuote.sqft || 250} sq ft of premium wrap film, laminated and trimmed — ready to install.
+
+We'll have it printed in 1-2 business days and shipped out fast.${(selectedQuote.total_price || 0) >= 750 ? ' Free shipping since you\'re over $750.' : ''} And if anything's off, we make it right — that's our Premium Wrap Guarantee.
+
+Questions? Just hit reply — I'm real and I'll get back to you.
+
+— Wren
+WePrintWraps.com`}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Contact History */}
                 {selectedQuote.metadata?.contact_history && selectedQuote.metadata.contact_history.length > 0 && (
@@ -1267,7 +1325,7 @@ The WePrintWraps Team`;
                       <Clock className="w-3 h-3" />
                       Contact History ({selectedQuote.metadata.contact_history.length})
                     </div>
-                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                    <div className="space-y-3 max-h-32 overflow-y-auto">
                       {selectedQuote.metadata.contact_history.slice().reverse().map((contact, idx) => (
                         <div key={idx} className="border-l-2 border-cyan-500 pl-3 py-1">
                           <div className="flex items-center gap-2 text-sm">
@@ -1275,25 +1333,12 @@ The WePrintWraps Team`;
                             {contact.type === 'sms' && <MessageSquare className="w-3 h-3 text-green-400" />}
                             {contact.type === 'call' && <Phone className="w-3 h-3 text-orange-400" />}
                             <span className="text-white font-medium capitalize">{contact.type}</span>
-                            {contact.method && <span className="text-gray-500">({contact.method})</span>}
                             <span className="text-gray-500 text-xs ml-auto">
                               {format(new Date(contact.timestamp), 'MMM d, h:mm a')}
                             </span>
                           </div>
-                          {contact.subject && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              <strong>Subject:</strong> {contact.subject}
-                            </div>
-                          )}
                           {contact.body && (
-                            <div className="text-xs text-gray-400 mt-1 line-clamp-2">
-                              {contact.body}
-                            </div>
-                          )}
-                          {contact.sent_by && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Sent by: {contact.sent_by}
-                            </div>
+                            <div className="text-xs text-gray-400 mt-1 line-clamp-2">{contact.body}</div>
                           )}
                         </div>
                       ))}
