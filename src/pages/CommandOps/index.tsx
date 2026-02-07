@@ -180,11 +180,11 @@ export default function CommandOpsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
               <Bot className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Command Ops</h1>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">Command Ops</h1>
               <p className="text-gray-400">Wren's Task Dashboard</p>
             </div>
           </div>
@@ -241,20 +241,20 @@ export default function CommandOpsPage() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-gray-800/50 border border-gray-700 p-1">
-            <TabsTrigger value="todo" className="data-[state=active]:bg-green-600 data-[state=active]:text-white px-6">
+          <TabsList className="bg-gray-800/50 border border-purple-500/30 p-1">
+            <TabsTrigger value="todo" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-600 data-[state=active]:to-purple-600 data-[state=active]:text-white px-6">
               <ListTodo className="w-4 h-4 mr-2" />
               TO DO ({pendingTasks.length})
             </TabsTrigger>
-            <TabsTrigger value="activity" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white px-6">
+            <TabsTrigger value="activity" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white px-6">
               <Activity className="w-4 h-4 mr-2" />
               Activity ({todayActivities.length} today)
             </TabsTrigger>
-            <TabsTrigger value="completed" className="data-[state=active]:bg-teal-600 data-[state=active]:text-white px-6">
+            <TabsTrigger value="completed" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-cyan-600 data-[state=active]:text-white px-6">
               <CheckCircle className="w-4 h-4 mr-2" />
               Completed ({completedTasks.length})
             </TabsTrigger>
-            <TabsTrigger value="diary" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white px-6">
+            <TabsTrigger value="diary" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-600 data-[state=active]:via-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white px-6">
               <BookOpen className="w-4 h-4 mr-2" />
               Diary
             </TabsTrigger>
