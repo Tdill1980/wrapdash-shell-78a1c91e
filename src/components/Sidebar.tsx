@@ -72,6 +72,7 @@ const coreItems: NavigationItem[] = [
     )
   },
   { name: "MightyCustomer", path: "/mighty-customer", icon: Users, roles: ["beta_shop", "admin"] },
+  { name: "CommandContacts", path: "/command-contacts", icon: Users, roles: ["admin"] },
   { 
     name: "MightyPortfolio", 
     path: "/portfolio", 

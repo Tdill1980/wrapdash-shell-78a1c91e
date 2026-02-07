@@ -18,6 +18,7 @@ const routeLabels: Record<string, string> = {
   "my-shopflow": "MyShopFlow",
   "shopflow-bulk-admin": "ShopFlow Bulk",
   "mighty-customer": "MightyCustomer",
+  "command-contacts": "CommandContacts",
   "portfolio": "MightyPortfolio",
   "organic": "Organic",
   "reel-builder": "Reel Builder",

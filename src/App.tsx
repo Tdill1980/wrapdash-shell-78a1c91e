@@ -24,6 +24,7 @@ import { TrackJob } from "./modules/shopflow";
 import MyShopFlow from "./pages/MyShopFlow";
 import MyApproveFlow from "./pages/MyApproveFlow";
 import MightyCustomer from "./pages/MightyCustomer";
+import CommandContacts from "./pages/CommandContacts";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
 import ApproveFlowProof from "./pages/ApproveFlowProof";
@@ -148,6 +149,7 @@ const App = () => (
             <Route path="/track/:orderNumber" element={<TrackJob />} />
             <Route path="/my-shopflow" element={<MyShopFlow />} />
             <Route path="/mighty-customer" element={<MightyCustomer />} />
+            <Route path="/command-contacts" element={<CommandContacts />} />
             <Route path="/approveflow" element={<ApproveFlowList />} />
             <Route path="/approveflow/:projectId" element={<ApproveFlow />} />
             <Route path="/approveflow/:projectId/proof" element={<ApproveFlowProof />} />
