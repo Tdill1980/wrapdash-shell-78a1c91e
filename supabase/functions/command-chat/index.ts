@@ -46,8 +46,8 @@ PACKS (flat): pack_small ($299), pack_medium ($499), pack_large ($699), pack_xla
   },
   {
     name: "cmd_quote",
-    description: "Create quote and send email. Use ONLY after: name + email + vehicle/product + price are ALL confirmed.",
-    input_schema: { type: "object", properties: { customer_name: { type: "string" }, customer_email: { type: "string" }, vehicle: { type: "string" }, sqft: { type: "number" }, price: { type: "number" }, product_name: { type: "string" } }, required: ["customer_name", "customer_email", "vehicle", "sqft", "price"] }
+    description: "Create quote and send email. Use ONLY after: name + email + phone + vehicle/product + price are ALL confirmed.",
+    input_schema: { type: "object", properties: { customer_name: { type: "string" }, customer_email: { type: "string" }, customer_phone: { type: "string" }, vehicle: { type: "string" }, sqft: { type: "number" }, price: { type: "number" }, product_name: { type: "string" } }, required: ["customer_name", "customer_email", "vehicle", "sqft", "price"] }
   },
   {
     name: "cmd_order",
@@ -73,7 +73,7 @@ PACKS (flat): pack_small ($299), pack_medium ($499), pack_large ($699), pack_xla
 ];
 
 async function execTool(name: string, input: any, baseUrl: string, key: string): Promise<any> {
-  const map: Record<string, string> = { cmd_knowledge: 'cmd-knowledge', cmd_vehicle: 'cmd-vehicle', cmd_pricing: 'cmd-pricing', cmd_quote: 'cmd-quote', cmd_synopsis: 'cmd-synopsis', cmd_order: 'cmd-order', cmd_escalate: 'cmd-escalate' };
+  const map: Record<string, string> = { cmd_knowledge: 'cmd-knowledge', cmd_vehicle: 'cmd-vehicle', cmd_pricing: 'cmd-pricing', cmd_quote: 'create-quote-from-chat', cmd_synopsis: 'cmd-synopsis', cmd_order: 'cmd-order', cmd_escalate: 'cmd-escalate' };
   console.log(`[CommandChat] Calling ${name}:`, JSON.stringify(input));
   const res = await fetch(`${baseUrl}/functions/v1/${map[name]}`, {
     method: 'POST',
@@ -271,10 +271,12 @@ PRICING FLOW:
 3. When giving price, ALWAYS include: "Order here: https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/"
 4. After name + email + vehicle + price confirmed -> use cmd_quote to save and send email
 
-CONTACT COLLECTION:
+CONTACT COLLECTION (GET ALL 3):
 - If name is NOT PROVIDED, ask for it
-- If email is NOT PROVIDED, ask for it before giving final price
-- Once you have both, proceed with pricing
+- If email is NOT PROVIDED, ask for it
+- If phone is "Not provided", ask for it — say "What's the best number to reach you?"
+- Get all 3 (name, email, phone) before sending the quote
+- Once you have all three, proceed with cmd_quote
 
 PRICING RULES:
 - Avery and 3M wraps are BOTH $5.27/sqft (same price)
@@ -304,6 +306,7 @@ WE PRINT AND SHIP ONLY - NO INSTALLATION EVER.`;
           // Ensure we pass stored customer info if not in the call
           if (!c.input.customer_name && state.customer_name) c.input.customer_name = state.customer_name;
           if (!c.input.customer_email && state.customer_email) c.input.customer_email = state.customer_email;
+          if (!c.input.customer_phone && state.customer_phone) c.input.customer_phone = state.customer_phone;
           if (!c.input.vehicle && state.vehicle) c.input.vehicle = state.vehicle;
           if (!c.input.sqft && state.sqft) c.input.sqft = state.sqft;
         }
