@@ -178,6 +178,32 @@ serve(async (req) => {
 
     console.log('[CreateQuoteFromChat] Starting:', { conversation_id, customer_email, vehicle_make, vehicle_model });
 
+    // Fetch conversation context for personalization
+    let chatContext = '';
+    let aiSummary = '';
+    if (conversation_id) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://qxllysilzonrlyoaomce.supabase.co';
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        if (serviceKey) {
+          const contextClient = createClient(supabaseUrl, serviceKey);
+          const { data: convo } = await contextClient
+            .from('conversations')
+            .select('chat_state')
+            .eq('id', conversation_id)
+            .single();
+          
+          if (convo?.chat_state) {
+            aiSummary = convo.chat_state.ai_summary || '';
+            // Clean up the ai_summary (remove quotes if present)
+            aiSummary = aiSummary.replace(/^["']|["']$/g, '').trim();
+          }
+        }
+      } catch (e) {
+        console.log('[CreateQuoteFromChat] Could not fetch conversation context:', e);
+      }
+    }
+
     if (!customer_email) {
       return new Response(JSON.stringify({ error: 'Customer email required' }), {
         status: 400,
@@ -339,7 +365,7 @@ serve(async (req) => {
       };
     }
 
-    // Build CONVERSION-OPTIMIZED email HTML
+    // Build CONVERSATIONAL email HTML - references their actual chat
     function buildQuoteEmailHTML({
       quoteNumber,
       vehicleLabel,
@@ -349,6 +375,7 @@ serve(async (req) => {
       cartUrl,
       quoteId,
       customerName,
+      chatSummary,
     }: {
       quoteNumber: string;
       vehicleLabel: string;
@@ -358,10 +385,27 @@ serve(async (req) => {
       cartUrl: string;
       quoteId?: string;
       customerName?: string;
+      chatSummary?: string;
     }) {
       const upsell = getRotatingUpsell(quoteId);
-      const firstName = customerName?.split(' ')[0] || 'Hey';
+      const firstName = customerName?.split(' ')[0] || '';
+      const greeting = firstName ? `Hey ${firstName}!` : 'Hey!';
       const freeShipping = total >= 750;
+      
+      // Build the opening line based on what they asked about
+      let openingLine = `Here's your quote for the ${vehicleLabel} wrap.`;
+      if (chatSummary) {
+        // Use the AI summary to make it personal
+        if (chatSummary.toLowerCase().includes('color')) {
+          openingLine = `You asked about wrapping your ${vehicleLabel} — here's what that looks like:`;
+        } else if (chatSummary.toLowerCase().includes('fleet') || chatSummary.toLowerCase().includes('multiple')) {
+          openingLine = `You mentioned a fleet project — here's the quote for the ${vehicleLabel}. Hit me up for volume pricing on the rest.`;
+        } else if (chatSummary.toLowerCase().includes('price') || chatSummary.toLowerCase().includes('cost') || chatSummary.toLowerCase().includes('quote')) {
+          openingLine = `You wanted pricing on your ${vehicleLabel} — here it is:`;
+        } else {
+          openingLine = `Following up on your ${vehicleLabel} wrap inquiry — here's your quote:`;
+        }
+      }
 
       return `
 <!DOCTYPE html>
@@ -370,106 +414,84 @@ serve(async (req) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin:0;padding:0;background:#f6f7f9;font-family:Inter,Arial,sans-serif;">
-  <div style="max-width:640px;margin:0 auto;background:#ffffff;">
+<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;">
 
-    <!-- BLACK HEADER -->
-    <div style="background:#000000;padding:16px 24px;">
-      <div style="font-size:16px;font-weight:600;color:#ffffff;">
-        Your ${vehicleLabel} Wrap Quote
+    <!-- HEADER -->
+    <div style="background:#000000;padding:20px 24px;">
+      <div style="font-size:15px;font-weight:600;color:#ffffff;">
+        WePrintWraps.com
       </div>
     </div>
 
     <!-- BODY -->
-    <div style="background:#ffffff;color:#111827;font-family:Inter,Arial,sans-serif;font-size:14px;line-height:1.6;">
+    <div style="padding:32px 24px;color:#1a1a1a;font-size:15px;line-height:1.7;">
 
-      <!-- PERSONAL GREETING -->
-      <div style="padding:24px 24px 16px 24px;">
-        <div style="font-size:15px;color:#111827;">
-          ${firstName}! Here's your quote for the <strong>${vehicleLabel}</strong> wrap you asked about.
-        </div>
-      </div>
+      <!-- PERSONAL OPENING -->
+      <p style="margin:0 0 20px 0;">
+        ${greeting} ${openingLine}
+      </p>
 
-      <!-- PRICE BOX -->
-      <div style="margin:0 24px 24px 24px;background:linear-gradient(135deg,#1e1e1e 0%,#2d2d2d 100%);border-radius:12px;padding:24px;color:#ffffff;">
-        <div style="font-size:13px;color:#a1a1aa;margin-bottom:4px;">Your Quote</div>
-        <div style="font-size:32px;font-weight:700;color:#ffffff;">
+      <!-- THE QUOTE - BOLD AND CLEAR -->
+      <div style="background:#1a1a1a;border-radius:12px;padding:28px;margin:0 0 24px 0;text-align:center;">
+        <div style="color:#ffffff;font-size:36px;font-weight:700;margin-bottom:8px;">
           $${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
-        <div style="font-size:13px;color:#a1a1aa;margin-bottom:16px;">
-          ${sqft} sq ft × $${rate.toFixed(2)}/sq ft ${freeShipping ? '• FREE SHIPPING' : ''}
+        <div style="color:#a3a3a3;font-size:14px;margin-bottom:20px;">
+          ${vehicleLabel} • ${sqft} sq ft • $${rate.toFixed(2)}/sq ft
         </div>
-        <a href="${cartUrl}"
-           style="display:inline-block;padding:14px 28px;background:#e6007e;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">
-          Add to Cart →
+        <a href="${cartUrl}" style="display:inline-block;background:#e6007e;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+          Add to Cart
         </a>
+        ${freeShipping ? '<div style="color:#22c55e;font-size:13px;margin-top:12px;">✓ FREE SHIPPING</div>' : ''}
       </div>
 
-      <!-- WHY WPW - TRUST SIGNALS -->
-      <div style="padding:0 24px 24px 24px;">
-        <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:12px;">Why WePrintWraps?</div>
-        <table style="width:100%;font-size:13px;color:#4b5563;">
-          <tr>
-            <td style="padding:6px 0;vertical-align:top;">✓</td>
-            <td style="padding:6px 0 6px 8px;"><strong>Premium Wrap Guarantee</strong> — Perfect prints or we make it right</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;vertical-align:top;">✓</td>
-            <td style="padding:6px 0 6px 8px;"><strong>Fast Turnaround</strong> — 1-2 day production, ships within 72hrs</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;vertical-align:top;">✓</td>
-            <td style="padding:6px 0 6px 8px;"><strong>ClubWPW Rewards</strong> — Earn points, get free gear & materials</td>
-          </tr>
-          <tr>
-            <td style="padding:6px 0;vertical-align:top;">✓</td>
-            <td style="padding:6px 0 6px 8px;"><strong>Made in USA</strong> — Avery & 3M films, UV inks, quality guaranteed</td>
-          </tr>
-        </table>
+      <!-- DETAILS - CONVERSATIONAL -->
+      <p style="margin:0 0 16px 0;">
+        That's ${sqft} sq ft of premium Avery wrap film, laminated and trimmed — ready to install.
+      </p>
+      
+      <p style="margin:0 0 16px 0;">
+        We'll have it printed in <strong>1-2 business days</strong> and shipped out fast. 
+        ${freeShipping ? "Free shipping since you're over $750." : 'Shipping calculated at checkout.'}
+        And if anything's off, we make it right — that's our <strong>Premium Wrap Guarantee</strong>.
+      </p>
+
+      <!-- UPSELL - CASUAL -->
+      <div style="background:#f5f3ff;border-radius:8px;padding:16px;margin:0 0 24px 0;">
+        <div style="font-size:14px;color:#6d28d9;font-weight:600;margin-bottom:4px;">${upsell.title}</div>
+        <div style="font-size:14px;color:#4b5563;">${upsell.body} <a href="${upsell.link}" style="color:#6d28d9;">Check it out →</a></div>
       </div>
 
-      <!-- UPSELL BOX -->
-      <div style="padding:0 24px 24px 24px;">
-        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:16px;">
-          <div style="font-size:13px;font-weight:600;color:#7c3aed;margin-bottom:4px;">${upsell.title}</div>
-          <div style="font-size:13px;color:#6b7280;margin-bottom:8px;">${upsell.body}</div>
-          <a href="${upsell.link}" style="font-size:13px;color:#7c3aed;text-decoration:none;font-weight:500;">Check it out →</a>
-        </div>
-      </div>
+      <!-- VOLUME TEASE -->
+      <p style="margin:0 0 24px 0;font-size:14px;color:#525252;">
+        <strong>Got more vehicles?</strong> 5+ gets you 5-20% off. Just reply and let me know.
+      </p>
 
-      <!-- VOLUME PRICING -->
-      <div style="padding:0 24px 24px 24px;">
-        <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:8px;">Fleet or Volume?</div>
-        <div style="font-size:13px;color:#6b7280;line-height:1.8;">
-          5+ vehicles? We'll hook you up:<br/>
-          • 500–999 sq ft → 5% off<br/>
-          • 1,000–2,499 sq ft → 10% off<br/>
-          • 2,500+ sq ft → 15-20% off
-        </div>
-      </div>
-
-      <!-- QUESTIONS CTA -->
-      <div style="padding:0 24px 24px 24px;border-top:1px solid #e5e7eb;">
-        <div style="padding-top:16px;font-size:13px;color:#6b7280;">
-          <strong style="color:#111827;">Questions?</strong> Just reply to this email or chat with us at 
-          <a href="https://weprintwraps.com" style="color:#2563eb;text-decoration:none;">weprintwraps.com</a>
-        </div>
-      </div>
-
-      <!-- FOOTER -->
-      <div style="padding:24px;background:#111827;font-size:12px;color:#9ca3af;text-align:center;">
-        <div style="margin-bottom:12px;">
-          <a href="https://weprintwraps.com/reward-landing/" style="color:#e6007e;text-decoration:none;font-weight:500;">Join ClubWPW →</a>
-          <span style="color:#4b5563;margin:0 8px;">|</span>
-          <a href="https://weprintwraps.com/faqs/" style="color:#9ca3af;text-decoration:none;">FAQs</a>
-          <span style="color:#4b5563;margin:0 8px;">|</span>
-          <a href="https://weprintwraps.com/how-to-order/" style="color:#9ca3af;text-decoration:none;">How to Order</a>
-        </div>
-        — Jordan @ WePrintWraps<br/>
-        <span style="font-size:11px;color:#6b7280;">Quote #${quoteNumber} • We print. You install. Let's go.</span>
-      </div>
+      <!-- CTA TO REPLY -->
+      <p style="margin:0 0 8px 0;">
+        Questions? Just hit reply — I'm real and I'll get back to you.
+      </p>
+      
+      <p style="margin:0;color:#525252;font-size:14px;">
+        — Jordan<br/>
+        WePrintWraps.com
+      </p>
 
     </div>
+
+    <!-- FOOTER -->
+    <div style="background:#fafafa;padding:20px 24px;text-align:center;border-top:1px solid #e5e5e5;">
+      <div style="margin-bottom:12px;">
+        <a href="https://weprintwraps.com/reward-landing/" style="color:#e6007e;text-decoration:none;font-size:13px;font-weight:500;">Join ClubWPW</a>
+        <span style="color:#d4d4d4;margin:0 10px;">|</span>
+        <a href="https://weprintwraps.com" style="color:#737373;text-decoration:none;font-size:13px;">Chat with us</a>
+        <span style="color:#d4d4d4;margin:0 10px;">|</span>
+        <a href="https://weprintwraps.com/faqs/" style="color:#737373;text-decoration:none;font-size:13px;">FAQs</a>
+      </div>
+      <div style="font-size:11px;color:#a3a3a3;">
+        Quote #${quoteNumber} • We print. You install. Let's go.
+      </div>
   </div>
 </body>
 </html>
@@ -493,6 +515,7 @@ serve(async (req) => {
         cartUrl,
         quoteId: quote.id,
         customerName: customer_name,
+        chatSummary: aiSummary,
       });
 
       try {
