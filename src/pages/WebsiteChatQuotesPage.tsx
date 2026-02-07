@@ -122,6 +122,7 @@ export default function WebsiteChatQuotesPage() {
   const [smsModalOpen, setSmsModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [callbackModalOpen, setCallbackModalOpen] = useState(false);
+  const [quoteDetailModalOpen, setQuoteDetailModalOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [emailTemplate, setEmailTemplate] = useState<'missed' | 'connected'>('missed');
   const [smsMessage, setSmsMessage] = useState('');
@@ -423,6 +424,11 @@ export default function WebsiteChatQuotesPage() {
     setCallbackModalOpen(true);
   };
 
+  const openQuoteDetailModal = (quote: Quote) => {
+    setSelectedQuote(quote);
+    setQuoteDetailModalOpen(true);
+  };
+
   const sendSms = async () => {
     if (!selectedQuote?.customer_phone || !smsMessage) return;
     setSendingSms(true);
@@ -544,7 +550,7 @@ The WePrintWraps Team`;
     const needsQuote = !quote.total_price || quote.total_price === 0;
 
     return (
-      <tr key={quote.id} className="border-b border-gray-700/50 hover:bg-gray-800/50 transition-colors">
+      <tr key={quote.id} className="border-b border-gray-700/50 hover:bg-gray-800/50 transition-colors cursor-pointer" onClick={() => openQuoteDetailModal(quote)}>
         {/* Quote # */}
         <td className="px-4 py-3">
           <div className="font-mono text-sm text-cyan-400">
@@ -624,7 +630,7 @@ The WePrintWraps Team`;
         )}
 
         {/* Actions */}
-        <td className="px-4 py-3">
+        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-1">
             {activeTab !== 'email_sent' && (
               <>
@@ -1136,6 +1142,140 @@ The WePrintWraps Team`;
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Quote Detail Modal - DARK MODE */}
+        <Dialog open={quoteDetailModalOpen} onOpenChange={setQuoteDetailModalOpen}>
+          <DialogContent className="sm:max-w-2xl bg-gray-800 border-gray-700 text-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between text-white">
+                <span className="flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-cyan-400" />
+                  Quote Details
+                </span>
+                <span className="font-mono text-cyan-400">{selectedQuote?.quote_number}</span>
+              </DialogTitle>
+            </DialogHeader>
+            {selectedQuote && (
+              <div className="space-y-6">
+                {/* Price Header */}
+                <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-6 text-center border border-gray-700">
+                  <div className="text-sm text-gray-400 mb-1">Estimated Total</div>
+                  <div className="text-4xl font-bold text-white">
+                    {selectedQuote.total_price ? `$${selectedQuote.total_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : 'Needs Quote'}
+                  </div>
+                  {selectedQuote.sqft && (
+                    <div className="text-sm text-gray-400 mt-2">
+                      {selectedQuote.sqft} sq ft × $5.27/sq ft
+                    </div>
+                  )}
+                </div>
+
+                {/* Customer Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <div className="text-xs text-gray-500 uppercase mb-2">Customer</div>
+                    <div className="font-medium text-white text-lg">{selectedQuote.customer_name || 'Unknown'}</div>
+                    <div className="text-cyan-400 text-sm mt-1">{selectedQuote.customer_email}</div>
+                    {selectedQuote.customer_phone && (
+                      <a href={`tel:${selectedQuote.customer_phone}`} className="text-cyan-400 text-sm flex items-center gap-1 mt-1 hover:text-cyan-300">
+                        <Phone className="w-3 h-3" />
+                        {selectedQuote.customer_phone}
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                    <div className="text-xs text-gray-500 uppercase mb-2">Vehicle</div>
+                    <div className="font-medium text-white text-lg">
+                      {[selectedQuote.vehicle_year, selectedQuote.vehicle_make, selectedQuote.vehicle_model].filter(Boolean).join(' ') || 'Not specified'}
+                    </div>
+                    {selectedQuote.sqft && (
+                      <div className="text-gray-400 text-sm mt-1">{selectedQuote.sqft} sq ft coverage</div>
+                    )}
+                    {selectedQuote.product_name && (
+                      <div className="text-gray-400 text-sm mt-1">{selectedQuote.product_name}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quote Metadata */}
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="bg-gray-900 rounded p-3 border border-gray-700">
+                    <div className="text-gray-500 text-xs uppercase">Created</div>
+                    <div className="text-white mt-1">{format(new Date(selectedQuote.created_at), 'MMM d, yyyy h:mm a')}</div>
+                  </div>
+                  <div className="bg-gray-900 rounded p-3 border border-gray-700">
+                    <div className="text-gray-500 text-xs uppercase">Status</div>
+                    <div className="text-white mt-1">
+                      {selectedQuote.email_sent ? (
+                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Email Sent</Badge>
+                      ) : selectedQuote.status === 'contacted' ? (
+                        <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30">Contacted</Badge>
+                      ) : selectedQuote.status?.startsWith('callback:') ? (
+                        <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Callback Set</Badge>
+                      ) : (
+                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">New</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-gray-900 rounded p-3 border border-gray-700">
+                    <div className="text-gray-500 text-xs uppercase">Source</div>
+                    <div className="text-white mt-1">{selectedQuote.source || 'Website Chat'}</div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-4 border-t border-gray-700">
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    onClick={() => {
+                      setQuoteDetailModalOpen(false);
+                      handleCall(selectedQuote);
+                    }}
+                    disabled={!selectedQuote.customer_phone}
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Call
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    onClick={() => {
+                      setQuoteDetailModalOpen(false);
+                      openSmsModal(selectedQuote);
+                    }}
+                    disabled={!selectedQuote.customer_phone}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    SMS
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    onClick={() => {
+                      setQuoteDetailModalOpen(false);
+                      openEmailModal(selectedQuote);
+                    }}
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Email
+                  </Button>
+                  <Button
+                    className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white"
+                    onClick={() => {
+                      setQuoteDetailModalOpen(false);
+                      markAsContacted(selectedQuote);
+                    }}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Mark Contacted
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
         </div>
