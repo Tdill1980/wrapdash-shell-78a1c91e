@@ -490,7 +490,7 @@ serve(async (req) => {
       </p>
       
       <p style="margin:0;color:#525252;font-size:14px;">
-        — Wren 🐦<br/>
+        — Wren<br/>
         WePrintWraps.com
       </p>
 
