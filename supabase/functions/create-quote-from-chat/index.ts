@@ -266,7 +266,7 @@ serve(async (req) => {
         ai_message: `${productName} at $${pricePerSqft}/sqft`,
         ai_generated: true,
         status: 'pending', // Valid status value
-        source: 'commandchat', // Identifies quotes from CommandChat widget
+        source: 'wren', // Quotes sent by Wren 🐦
         source_conversation_id: conversation_id || null,
         email_sent: false
       })
@@ -490,7 +490,7 @@ serve(async (req) => {
       </p>
       
       <p style="margin:0;color:#525252;font-size:14px;">
-        — Jordan<br/>
+        — Wren 🐦<br/>
         WePrintWraps.com
       </p>
 

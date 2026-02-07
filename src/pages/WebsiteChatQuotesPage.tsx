@@ -865,6 +865,7 @@ The WePrintWraps Team`;
               <SelectItem value="trish">Trish</SelectItem>
               <SelectItem value="jackson">Jackson</SelectItem>
               <SelectItem value="troy">Troy</SelectItem>
+              <SelectItem value="wren">Wren 🐦</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'newest' | 'oldest')}>
