@@ -783,9 +783,9 @@
         <div class="wcai-onboarding-text">Enter your info to start chatting</div>
         <input type="text" class="wcai-onboarding-input" id="wcai-onboard-name" placeholder="Your Name" required />
         <input type="email" class="wcai-onboarding-input" id="wcai-onboard-email" placeholder="Your Email" required />
-        <input type="tel" class="wcai-onboarding-input" id="wcai-onboard-phone" placeholder="Your Phone (optional)" />
+        <input type="tel" class="wcai-onboarding-input" id="wcai-onboard-phone" placeholder="Your Phone" required />
         <button class="wcai-onboarding-start" id="wcai-onboard-start">Start Chat</button>
-        <div class="wcai-onboarding-note" style="font-size:11px;color:#94a3b8;margin-top:8px;text-align:center;">We'll send your quote to this email</div>
+        <div class="wcai-onboarding-note" style="font-size:11px;color:#94a3b8;margin-top:8px;text-align:center;">Required to receive your quote</div>
       </div>
       ` : ''}
       <div class="wcai-chat-messages" id="wcai-messages" style="${showOnboarding ? 'display:none;' : 'display:flex;'}">
@@ -1013,6 +1013,15 @@
     onboardStartBtn.addEventListener('click', () => {
       const email = onboardEmailInput?.value?.trim() || '';
       const name = onboardNameInput?.value?.trim() || '';
+      const phone = onboardPhoneInput?.value?.trim() || '';
+
+      // Validate name (at least 2 chars)
+      if (!name || name.length < 2) {
+        onboardNameInput.style.borderColor = '#ef4444';
+        onboardNameInput.placeholder = 'Name required';
+        onboardNameInput.focus();
+        return;
+      }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1023,11 +1032,12 @@
         return;
       }
 
-      // Validate name (at least 2 chars)
-      if (!name || name.length < 2) {
-        onboardNameInput.style.borderColor = '#ef4444';
-        onboardNameInput.placeholder = 'Name required';
-        onboardNameInput.focus();
+      // Validate phone (at least 10 digits)
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (!phone || phoneDigits.length < 10) {
+        onboardPhoneInput.style.borderColor = '#ef4444';
+        onboardPhoneInput.placeholder = 'Phone required';
+        onboardPhoneInput.focus();
         return;
       }
 
