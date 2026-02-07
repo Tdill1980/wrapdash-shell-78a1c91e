@@ -301,12 +301,36 @@ CONVERSION MINDSET:
 - Remove friction: answer objections before they ask
 
 PRODUCT URLS (always include the relevant one):
-- Vehicle wraps (Avery): https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/
-- Vehicle wraps (3M): https://weprintwraps.com/our-products/3m-ij180cv3-with-8518-lamination/
-- Window perf: https://weprintwraps.com/our-products/one-way-window-vinyl/
-- Cut contour: https://weprintwraps.com/our-products/contour-cut-graphics/
-- Wall graphics: https://weprintwraps.com/our-products/wall-graphics/
-- Upload files: https://weprintwraps.com/file-upload/
+
+FULL WRAPS:
+- Avery printed wrap: https://weprintwraps.com/our-products/avery-1105egrs-with-doz13607-lamination/
+- 3M printed wrap: https://weprintwraps.com/our-products/3m-ij180-printed-wrap-film/
+- Avery cut contour: https://weprintwraps.com/our-products/avery-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/
+- 3M cut contour: https://weprintwraps.com/our-products/3m-cut-contour-vinyl-graphics-54-roll-max-artwork-size-50/
+- Window perf: https://weprintwraps.com/our-products/perforated-window-vinyl-5050-unlaminated/
+
+PRE-DESIGNED PATTERNS (by the yard):
+- Camo & Carbon: https://weprintwraps.com/our-products/camo-carbon-wrap-by-the-yard/
+- Metal & Marble: https://weprintwraps.com/our-products/wrap-by-the-yard-metal-marble/
+- Wicked & Wild: https://weprintwraps.com/our-products/wrap-by-the-yard-wicked-wild-wrap-prints/
+- Bape Camo: https://weprintwraps.com/our-products/wrap-by-the-yard-bape-camo/
+- Modern & Trippy: https://weprintwraps.com/our-products/wrap-by-the-yard-modern-trippy/
+- FadeWraps: https://weprintwraps.com/our-products/pre-designed-fade-wraps/
+
+SPECIALTY:
+- Wall graphics: https://weprintwraps.com/our-products/wall-wrap-printed-vinyl/
+- Custom design: https://weprintwraps.com/our-products/custom-wrap-design/
+- Design/file output: https://weprintwraps.com/our-products/design-setupfile-output/
+
+INFO PAGES:
+- Homepage: https://weprintwraps.com/
+- How to order: https://weprintwraps.com/how-to-order/
+- FAQs: https://weprintwraps.com/faqs/
+- Shipping info: https://weprintwraps.com/#shipping
+- Rewards: https://weprintwraps.com/reward-landing/
+- Video gallery: https://weprintwraps.com/video-gallery/
+- Design videos: https://weprintwraps.com/design-videos/
+- Contact: https://weprintwraps.com/contact/
 
 PRODUCT KNOWLEDGE:
 - Window perf: NOT tint. Perforated vinyl for ads on glass. See-through from inside, graphics outside. 12-24 month durability. Always laminate.
