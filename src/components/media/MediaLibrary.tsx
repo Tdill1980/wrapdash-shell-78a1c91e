@@ -10,7 +10,16 @@ import {
   Wand2, Loader2, AlertTriangle, Scan
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions, lovable3DRenders } from "@/integrations/supabase/client";
+
+// =============================================================================
+// ⚠️ CONTENT DATA LOCATION NOTE
+// =============================================================================
+// content_files data currently lives in Lovable's Supabase (wzwqhfbmymrengjqikjl)
+// NOT in WPW production (qxllysilzonrlyoaomce). This is a legacy data situation.
+// Using lovable3DRenders client to access content_files until data is migrated.
+// TODO: Migrate content_files to WPW production and update this to use `supabase`
+// =============================================================================
 import { MediaUploader } from "./MediaUploader";
 import { MediaCard, MediaSelectMode } from "./MediaCard";
 import { TagEditorModal } from "./TagEditorModal";
@@ -107,7 +116,8 @@ export function MediaLibrary({
   const { data: files = [], isLoading, refetch } = useQuery({
     queryKey: ["media-library", filterType, category],
     queryFn: async () => {
-      let query = supabase
+      // Query Lovable Supabase where content_files data actually lives
+      let query = lovable3DRenders
         .from("content_files")
         .select("*")
         .order("created_at", { ascending: false });

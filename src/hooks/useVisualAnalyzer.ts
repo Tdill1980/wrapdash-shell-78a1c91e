@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { lovable3DRenders, lovableFunctions } from "@/integrations/supabase/client";
+
+// content_files lives in Lovable's Supabase - see MediaLibrary.tsx for details
 
 export function useVisualAnalyzer() {
   const [analyzing, setAnalyzing] = useState(false);
@@ -30,14 +32,14 @@ export function useVisualAnalyzer() {
 
   const getStatus = async () => {
     // Only count raw source footage for analysis status
-    const { count: analyzedCount } = await supabase
+    const { count: analyzedCount } = await lovable3DRenders
       .from("content_files")
       .select("id", { count: "exact", head: true })
       .eq("file_type", "video")
       .eq("content_category", "raw")
       .not("visual_analyzed_at", "is", null);
 
-    const { count: unanalyzedCount } = await supabase
+    const { count: unanalyzedCount } = await lovable3DRenders
       .from("content_files")
       .select("id", { count: "exact", head: true })
       .eq("file_type", "video")

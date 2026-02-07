@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useVideoRender, InspoStyle } from "@/hooks/useVideoRender";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, contentDB } from "@/integrations/supabase/client";
 
 interface VideoContentPlan {
   hook: string;
@@ -83,7 +83,7 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
         
         // Direct asset ID lookup
         if (assetId) {
-          const { data, error } = await supabase
+          const { data, error } = await contentDB
             .from("content_files")
             .select("file_url, original_filename")
             .eq("id", assetId)
@@ -101,7 +101,7 @@ export function ReelRenderPanel({ videoContent, onClose, organizationId, initial
           const params = parseAssetQuery(assetQuery);
           console.log("[ReelRenderPanel] Parsed asset query:", params);
           
-          let query = supabase
+          let query = contentDB
             .from("content_files")
             .select("id, file_url, original_filename, tags, file_type");
           

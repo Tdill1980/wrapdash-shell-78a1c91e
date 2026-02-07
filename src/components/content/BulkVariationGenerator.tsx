@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useBulkVariations, BulkVariationConfig } from "@/hooks/useBulkVariations";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, contentDB } from "@/integrations/supabase/client";
 
 interface BulkVariationGeneratorProps {
   open: boolean;
@@ -87,7 +87,7 @@ export function BulkVariationGenerator({
   const { data: rawMedia = [] } = useQuery({
     queryKey: ["media-library", "raw"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await contentDB
         .from("content_files")
         .select("*")
         .in("content_category", ["raw", "finished"])
@@ -101,7 +101,7 @@ export function BulkVariationGenerator({
   const { data: inspirationMedia = [] } = useQuery({
     queryKey: ["media-library", "inspiration"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await contentDB
         .from("content_files")
         .select("*")
         .eq("content_category", "inspiration")

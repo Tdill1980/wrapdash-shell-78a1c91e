@@ -5,10 +5,14 @@
 // ARCHITECTURE:
 // - supabase: Database client → YOUR Supabase (qxllysilzonrlyoaomce)
 // - lovableFunctions: Edge functions → YOUR Supabase (qxllysilzonrlyoaomce)
-// - lovable3DRenders: ONLY for 3D renders → Lovable (wzwqhfbmymrengjqikjl)
+// - lovable3DRenders: Lovable Supabase (wzwqhfbmymrengjqikjl)
+// - contentDB: Alias for lovable3DRenders - use for content_files queries
+//
+// ⚠️ CONTENT DATA LIVES IN LOVABLE SUPABASE (legacy data location)
+// Tables in Lovable: content_files, content_projects, content_calendar, etc.
+// Use contentDB (or lovable3DRenders) for all content/media library operations!
 //
 // ⚠️ DO NOT change lovableFunctions to point to Lovable's Supabase
-// ⚠️ ONLY use lovable3DRenders for DesignPanelPro/ApproveFlow 3D renders
 // =============================================================================
 
 import { createClient } from '@supabase/supabase-js';
@@ -50,14 +54,22 @@ export const supabase = createClient<Database>(WPW_SUPABASE_URL, WPW_ANON_KEY, {
 export const lovableFunctions = createClient(WPW_SUPABASE_URL, WPW_ANON_KEY);
 
 // =============================================================================
-// 3D RENDER CLIENT - LOVABLE ONLY
+// LOVABLE CLIENT - 3D RENDERS + CONTENT DATA
 // =============================================================================
-// ⚠️ ONLY use this for:
+// Used for:
 // - DesignPanelPro color renders
 // - ApproveFlow 3D studio renders
 // - generate-color-render, generate-studio-renders, generate-3d, generate-3dproof
-// ⚠️ DO NOT use for any other edge functions!
+// - content_files, content_projects, content_calendar, etc. (legacy data location)
+// - Media Library uploads/queries
 export const lovable3DRenders = createClient(LOVABLE_SUPABASE_URL, LOVABLE_ANON_KEY);
+
+// =============================================================================
+// CONTENT DATABASE CLIENT (alias for clarity)
+// =============================================================================
+// Use this for content_files, content_projects, content_calendar, media-library storage
+// This is where all the content/video data actually lives!
+export const contentDB = lovable3DRenders;
 
 // =============================================================================
 // HELPER FUNCTION - Call edge functions on YOUR Supabase

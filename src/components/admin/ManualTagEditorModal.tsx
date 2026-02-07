@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, contentDB } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -172,7 +172,7 @@ export function ManualTagEditorModal({
         updatePayload.analysis_confidence = 1.0;
       }
 
-      const { error } = await supabase
+      const { error } = await contentDB
         .from("content_files")
         .update(updatePayload)
         .eq("id", contentFile.id);

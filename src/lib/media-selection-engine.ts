@@ -5,7 +5,7 @@
  * This is the core of reliable content creation.
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, contentDB } from "@/integrations/supabase/client";
 
 // ============================================
 // TYPES
@@ -251,7 +251,7 @@ export async function selectMediaForIntent(
   // Step 1: Get all video assets for the organization
   // CRITICAL: Only select from 'raw' source footage
   // Never select from ai_output or inspo_reference
-  const { data: allAssets, error: assetError } = await supabase
+  const { data: allAssets, error: assetError } = await contentDB
     .from('content_files')
     .select('id, file_url, mux_playback_id, duration_seconds, brand, content_category')
     .eq('organization_id', organizationId)
@@ -272,7 +272,7 @@ export async function selectMediaForIntent(
   
   if (!allAssets || allAssets.length === 0) {
     // Check if there are videos but in wrong category
-    const { count: totalVideos } = await supabase
+    const { count: totalVideos } = await contentDB
       .from('content_files')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)

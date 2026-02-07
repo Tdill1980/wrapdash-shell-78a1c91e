@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, contentDB } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -111,7 +111,7 @@ export default function MightyEdit() {
 
     // If we were given a content_file_id, verify it exists in content_files before using it.
     if (video.content_file_id && !video.content_file_id.startsWith('preset-')) {
-      const { data: existingContentFile, error: existingCfErr } = await supabase
+      const { data: existingContentFile, error: existingCfErr } = await contentDB
         .from('content_files')
         .select('id')
         .eq('id', video.content_file_id)
@@ -124,7 +124,7 @@ export default function MightyEdit() {
 
     // If we still don't have a valid content file id, create one (common for Agent Chat uploads)
     if (!contentFileId && video.source_url) {
-      const { data: contentFile, error: cfError } = await supabase
+      const { data: contentFile, error: cfError } = await contentDB
         .from('content_files')
         .insert({
           file_url: video.source_url,

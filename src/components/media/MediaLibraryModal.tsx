@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, contentDB } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MediaFile } from "./MediaLibrary";
 
@@ -55,7 +55,7 @@ export function MediaLibraryModal({
   const { data: files = [], isLoading } = useQuery({
     queryKey: ["media-library-modal", filterType],
     queryFn: async () => {
-      let query = supabase
+      let query = contentDB
         .from("content_files")
         .select("*")
         .order("created_at", { ascending: false });

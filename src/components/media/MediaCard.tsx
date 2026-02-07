@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable3DRenders } from "@/integrations/supabase/client";
+
+// content_files lives in Lovable's Supabase - see MediaLibrary.tsx for details
 import { toast } from "sonner";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { TAG_LABELS } from "@/lib/style-tag-rules";
@@ -73,7 +75,7 @@ export function MediaCard({
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const { error } = await supabase
+      const { error } = await lovable3DRenders
         .from("content_files")
         .delete()
         .eq("id", file.id);
@@ -89,7 +91,7 @@ export function MediaCard({
 
   const handleCategoryChange = async (newCategory: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await lovable3DRenders
         .from("content_files")
         .update({ content_category: newCategory })
         .eq("id", file.id);

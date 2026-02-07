@@ -18,7 +18,7 @@ import { AVAILABLE_AGENTS } from "./AgentSelector";
 import { AgentChatFileUpload, type Attachment } from "./AgentChatFileUpload";
 import { RecentAgentChats } from "./RecentAgentChats";
 import { useNavigate } from "react-router-dom";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions, contentDB } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { ProducerJob, ProducerJobClip, ProducerJobOverlay } from "@/types/ProducerJob";
 import { 
@@ -577,7 +577,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                             const query = contentFactoryPreset.asset_query;
                             console.log('[AgentChatPanel] Querying contentbox with:', query);
                             
-                            let dbQuery = supabase
+                            let dbQuery = contentDB
                               .from('content_files')
                               .select('id, file_url, thumbnail_url, duration_seconds, original_filename, tags')
                               .eq('file_type', 'video')
@@ -612,7 +612,7 @@ export function AgentChatPanel({ open, onOpenChange, agentId, context, initialCh
                           // 3. If still no clips, try to get the most recent videos
                           if (clips.length === 0) {
                             console.log('[AgentChatPanel] No clips found, loading recent videos...');
-                            const { data: recentVideos } = await supabase
+                            const { data: recentVideos } = await contentDB
                               .from('content_files')
                               .select('id, file_url, thumbnail_url, duration_seconds, original_filename')
                               .eq('file_type', 'video')

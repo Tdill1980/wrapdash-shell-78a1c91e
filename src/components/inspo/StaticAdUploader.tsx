@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions, contentDB } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface StaticAdUploaderProps {
@@ -79,7 +79,7 @@ export function StaticAdUploader({ onUploadComplete }: StaticAdUploaderProps) {
           .getPublicUrl(filePath);
 
         // Insert into content_files with static_ad category
-        const { error: dbError } = await supabase
+        const { error: dbError } = await contentDB
           .from('content_files')
           .insert({
             file_url: publicUrl,
@@ -148,7 +148,7 @@ export function StaticAdUploader({ onUploadComplete }: StaticAdUploaderProps) {
           .getPublicUrl(filePath);
 
         // Insert into content_files
-        const { data: insertedFile, error: dbError } = await supabase
+        const { data: insertedFile, error: dbError } = await contentDB
           .from('content_files')
           .insert({
             file_url: publicUrl,

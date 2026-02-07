@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase, lovableFunctions } from "@/integrations/supabase/client";
+import { supabase, lovableFunctions, contentDB } from "@/integrations/supabase/client";
 import { MainLayout } from "@/layouts/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,7 @@ const AssetTaggingAdmin = () => {
   const { data: assets, isLoading } = useQuery({
     queryKey: ["asset-tagging-admin"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await contentDB
         .from("content_files")
         .select("id, file_type, file_url, thumbnail_url, original_filename, visual_tags, visual_analyzed_at, content_category, created_at")
         .neq("content_category", "inspo_reference")

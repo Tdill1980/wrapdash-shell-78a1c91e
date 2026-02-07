@@ -7,7 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Upload, X, File, Image, Video, Music, CheckCircle, Camera, FolderOpen } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { lovable3DRenders } from "@/integrations/supabase/client";
+
+// =============================================================================
+// ⚠️ CONTENT DATA LOCATION NOTE
+// =============================================================================
+// content_files data currently lives in Lovable's Supabase (wzwqhfbmymrengjqikjl)
+// NOT in WPW production (qxllysilzonrlyoaomce). This is a legacy data situation.
+// Using lovable3DRenders client to access storage + content_files.
+// TODO: Migrate content_files to WPW production and update this
+// =============================================================================
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -197,12 +206,12 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
           const thumbnailBlob = await generateVideoThumbnail(uploadFile.file);
           if (thumbnailBlob) {
             const thumbnailPath = `thumbnails/${Date.now()}-${uploadFile.file.name.replace(/\.[^/.]+$/, "")}.jpg`;
-            const { error: thumbUploadError } = await supabase.storage
+            const { error: thumbUploadError } = await lovable3DRenders.storage
               .from("media-library")
               .upload(thumbnailPath, thumbnailBlob, { contentType: "image/jpeg" });
 
             if (!thumbUploadError) {
-              const { data: thumbUrlData } = supabase.storage
+              const { data: thumbUrlData } = lovable3DRenders.storage
                 .from("media-library")
                 .getPublicUrl(thumbnailPath);
               thumbnailUrl = thumbUrlData.publicUrl;
@@ -210,7 +219,7 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
           }
         }
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await lovable3DRenders.storage
           .from("media-library")
           .upload(filePath, uploadFile.file);
 
@@ -222,11 +231,11 @@ export function MediaUploader({ onClose, onUploadComplete }: MediaUploaderProps)
           )
         );
 
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = lovable3DRenders.storage
           .from("media-library")
           .getPublicUrl(filePath);
 
-        const { error: insertError } = await supabase
+        const { error: insertError } = await lovable3DRenders
           .from("content_files")
           .insert({
             file_url: urlData.publicUrl,
