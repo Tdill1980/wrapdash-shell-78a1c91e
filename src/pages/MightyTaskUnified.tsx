@@ -31,6 +31,8 @@ import {
   Video,
   Newspaper,
   Wand2,
+  Home,
+  ChevronRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -534,6 +536,19 @@ export default function MightyTaskUnified() {
   return (
     <MainLayout>
       <div className="space-y-6 w-full p-6">
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <button 
+            onClick={() => navigate("/")} 
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            <Home className="w-4 h-4" />
+            <span>Dashboard</span>
+          </button>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-foreground font-medium">MightyTask</span>
+        </nav>
+
         {/* Unified Content Tools Navigation */}
         <ContentToolsNav />
 

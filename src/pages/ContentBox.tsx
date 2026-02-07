@@ -27,7 +27,9 @@ import {
   Link2,
   Zap,
   Lightbulb,
-  FolderOpen
+  FolderOpen,
+  Home,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { SINGLE_PATH_MODE } from "@/lib/featureFlags";
@@ -480,6 +482,19 @@ export default function ContentBox() {
 
       {/* Content Request Panel - Ask the right agent */}
       <ContentRequestPanel />
+
+      {/* Breadcrumb Navigation */}
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+        <button 
+          onClick={() => navigate("/")} 
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <Home className="w-4 h-4" />
+          <span>Dashboard</span>
+        </button>
+        <ChevronRight className="w-4 h-4" />
+        <span className="text-foreground font-medium">ContentBox</span>
+      </nav>
 
       {/* Unified Content Tools Navigation */}
       <div className="mb-4">

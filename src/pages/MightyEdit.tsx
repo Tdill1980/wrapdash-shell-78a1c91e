@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,9 @@ import {
   Wand2,
   RefreshCw,
   Scissors,
-  Type
+  Type,
+  Home,
+  ChevronRight
 } from "lucide-react";
 import { useMightyEdit, VideoEditItem } from "@/hooks/useMightyEdit";
 import { VideoEditCard } from "@/components/mighty-edit/VideoEditCard";
@@ -51,6 +53,7 @@ interface ContentFactoryPreset {
 
 export default function MightyEdit() {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     isScanning,
     isMatching,
@@ -429,6 +432,19 @@ export default function MightyEdit() {
           />
         )}
         
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <button 
+            onClick={() => navigate("/")} 
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            <Home className="w-4 h-4" />
+            <span>Dashboard</span>
+          </button>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-foreground font-medium">MightyEdit</span>
+        </nav>
+
         {/* Unified Content Tools Navigation */}
         <ContentToolsNav />
 
