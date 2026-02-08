@@ -10,6 +10,11 @@ const CUSTOMER_STEPS = [
   { label: "Completed/Shipped", icon: Truck },
 ];
 
+// ShopFlow 2.0 gradient: Magenta → Purple → Blue
+const NEON_GRADIENT = "from-[#FF00FF] via-[#9D4EDD] to-[#2F81F7]";
+const NEON_GRADIENT_COMPLETED = "bg-gradient-to-r from-[#FF00FF] via-[#9D4EDD] to-[#2F81F7]";
+const NEON_GLOW = "shadow-[0_0_15px_rgba(157,78,221,0.5)]";
+
 interface CustomerProgressBarProps {
   currentStatus: string;
   hasApproveFlowProject?: boolean;
@@ -75,11 +80,11 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
       {/* Progress icons with labels and connecting line */}
       <div className="relative flex items-center justify-between gap-1 sm:gap-2 px-2 sm:px-4 overflow-x-auto pb-2 custom-scrollbar">
         {/* Base gray line connecting all steps - hidden on mobile */}
-        <div className="hidden sm:block absolute top-5 left-12 right-12 h-0.5 bg-gray-700/50 z-0" />
+        <div className="hidden sm:block absolute top-5 left-12 right-12 h-1 bg-gray-700/50 z-0 rounded-full" />
         
-        {/* Animated blue progress line - hidden on mobile */}
+        {/* Animated neon progress line - Magenta → Purple → Blue */}
         <div 
-          className="hidden sm:block absolute top-5 left-12 h-0.5 bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] z-0 transition-all duration-700 ease-out"
+          className={`hidden sm:block absolute top-5 left-12 h-1 ${NEON_GRADIENT_COMPLETED} z-0 transition-all duration-700 ease-out rounded-full ${NEON_GLOW}`}
           style={{ 
             width: currentIndex >= 0 
               ? `calc(${(currentIndex / (steps.length - 1)) * 100}% - 48px)` 
@@ -98,9 +103,9 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
               <div 
                 className={`h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center rounded-full transition-all duration-500 ${
                   completed
-                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-2 sm:ring-4 ring-blue-400/20" 
+                    ? `${NEON_GRADIENT_COMPLETED} ${NEON_GLOW} ring-2 sm:ring-4 ring-purple-400/30` 
                     : active
-                    ? "bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] shadow-lg ring-2 sm:ring-4 ring-blue-400/40 animate-pulse"
+                    ? `${NEON_GRADIENT_COMPLETED} ${NEON_GLOW} ring-2 sm:ring-4 ring-fuchsia-400/50 animate-pulse`
                     : "bg-gray-700"
                 }`}
               >
@@ -113,7 +118,7 @@ export const CustomerProgressBar = ({ currentStatus, hasApproveFlowProject = fal
                 )}
               </div>
               <p className={`text-[10px] sm:text-xs mt-1.5 sm:mt-2 text-center transition-colors duration-300 leading-tight ${
-                completed || active ? 'text-[#15D1FF] font-semibold' : 'text-white/40'
+                completed || active ? 'text-fuchsia-300 font-semibold' : 'text-white/40'
               }`}>
                 {step.label}
               </p>

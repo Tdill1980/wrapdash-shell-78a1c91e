@@ -36,9 +36,9 @@ export const UploadedFilesCard = ({
     }
   };
   return (
-    <div className="bg-[#111317] border border-white/10 rounded-xl p-4">
+    <div className="bg-gradient-to-br from-[#111317] to-fuchsia-950/10 border border-fuchsia-500/20 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Upload className="w-4 h-4 text-[#2F81F7]" />
+        <Upload className="w-4 h-4 text-fuchsia-400" />
         <h3 className="text-sm font-semibold text-white">
           {internalMode ? "Uploaded Files (Technical)" : "Files You Uploaded"}
         </h3>
@@ -53,10 +53,10 @@ export const UploadedFilesCard = ({
               href={file.url} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 rounded-lg transition-colors"
             >
               <FileThumbnail file={file} orderId={orderId} />
-              <span className="text-xs text-[#15D1FF] hover:underline truncate max-w-[150px]">
+              <span className="text-xs text-fuchsia-300 hover:underline truncate max-w-[150px]">
                 {file.name || `File ${index + 1}`}
               </span>
             </a>

@@ -4,7 +4,7 @@ interface ShopFlowBrandHeaderProps {
 
 export const ShopFlowBrandHeader = ({ syncButton }: ShopFlowBrandHeaderProps) => {
   return (
-    <div className="w-full mb-6 bg-[#1a1a24] rounded-xl border border-white/5 overflow-hidden relative">
+    <div className="w-full mb-6 bg-gradient-to-br from-[#1a1a24] via-[#1a1a24] to-fuchsia-950/20 rounded-xl border border-fuchsia-500/20 overflow-hidden relative shadow-[0_0_30px_rgba(255,0,255,0.1)]">
       {/* Admin Sync Button - Top Right Corner */}
       {syncButton && (
         <div className="absolute top-4 right-4 z-10">
@@ -12,11 +12,11 @@ export const ShopFlowBrandHeader = ({ syncButton }: ShopFlowBrandHeaderProps) =>
         </div>
       )}
 
-      {/* ShopFlow Title with Two-Tone */}
+      {/* ShopFlow Title with Neon Gradient: Magenta → Purple → Blue */}
       <h1 className="text-4xl font-extrabold tracking-wide px-4 pt-4 font-['Poppins']">
         <span className="text-white">Shop</span>
-        <span className="bg-gradient-to-r from-[#2F81F7] to-[#15D1FF] bg-clip-text text-transparent">Flow</span>
-        <span className="text-[10px] align-super opacity-70 text-white">™</span>
+        <span className="bg-gradient-to-r from-[#FF00FF] via-[#9D4EDD] to-[#2F81F7] bg-clip-text text-transparent">Flow</span>
+        <span className="text-[10px] align-super opacity-70 text-fuchsia-300">™</span>
       </h1>
 
       {/* Description */}

@@ -12,6 +12,7 @@ import { CurrentStageCard } from "@/components/tracker/CurrentStageCard";
 import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
+import { OrderItemsCard } from "@/components/tracker/OrderItemsCard";
 import { ManualSyncButton } from "@/modules/shopflow/components/ManualSyncButton";
 import { TrackingCard } from "@/modules/shopflow/components/TrackingCard";
 import { toast } from "@/hooks/use-toast";
@@ -90,9 +91,26 @@ export default function TrackJob() {
       
       if (updateError) throw updateError;
       
+      // 🔔 ShopFlow 2.0: Trigger SMS + Email notification
+      try {
+        const phone = (order as any).customer_phone || (order as any).billing_phone || null;
+        await supabase.functions.invoke('notify-art-upload', {
+          body: {
+            order_number: order.order_number,
+            customer_name: order.customer_name,
+            customer_email: order.customer_email,
+            customer_phone: phone,
+            file_count: uploadedFiles.length,
+            file_names: uploadedFiles.map((f: any) => f.name),
+          }
+        });
+      } catch (notifyErr) {
+        console.error('Notification error (non-blocking):', notifyErr);
+      }
+      
       toast({
-        title: "Files uploaded successfully",
-        description: `${uploadedFiles.length} file(s) uploaded`,
+        title: "Files uploaded successfully! 🎉",
+        description: `${uploadedFiles.length} file(s) uploaded. You'll receive a confirmation shortly.`,
       });
       
       await fetchOrder();
@@ -148,10 +166,16 @@ export default function TrackJob() {
         {/* Order Info - Responsive */}
         <OrderInfoCard order={order} />
         
-        {/* Progress Bar - Icon-Based Timeline */}
+        {/* Progress Bar - Icon-Based Timeline (Neon Gradient) */}
         <CustomerProgressBar 
           currentStatus={order.status}
           hasApproveFlowProject={!!order.approveflow_project_id}
+        />
+        
+        {/* Order Items - All Products with Thumbnails + Art Uploads */}
+        <OrderItemsCard 
+          orderNumber={order.order_number} 
+          orderTotal={(order as any).order_total}
         />
         
         {/* Primary Status Cards - Full Width */}
