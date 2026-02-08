@@ -27,6 +27,8 @@ import MyShopFlowPreview from "./pages/MyShopFlowPreview";
 import MightyCustomer from "./pages/MightyCustomer";
 import CommandContacts from "./pages/CommandContacts";
 import WrapOfTheWeek from "./pages/WrapOfTheWeek";
+import DesignShop from "./pages/DesignShop";
+import ClubWPWAdmin from "./pages/ClubWPWAdmin";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
 import ApproveFlowProof from "./pages/ApproveFlowProof";
@@ -229,6 +231,11 @@ const App = () => (
             <Route path="/meta-ad-factory" element={<MetaAdFactory />} />
             <Route path="/wrap-of-the-week" element={<WrapOfTheWeek />} />
             <Route path="/wotw" element={<WrapOfTheWeek />} />
+            <Route path="/designs" element={<DesignShop />} />
+            <Route path="/design-shop" element={<DesignShop />} />
+            <Route path="/shop-designs" element={<DesignShop />} />
+            <Route path="/admin/clubwpw" element={<ClubWPWAdmin />} />
+            <Route path="/clubwpw-admin" element={<ClubWPWAdmin />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />
