@@ -13,6 +13,7 @@ import { NextStepCard } from "@/components/tracker/NextStepCard";
 import { ActionRequiredCard } from "@/components/tracker/ActionRequiredCard";
 import { OrderSummaryCard } from "@/components/tracker/OrderSummaryCard";
 import { OrderItemsCard } from "@/components/tracker/OrderItemsCard";
+import { ClubWPWVault } from "@/components/clubwpw/ClubWPWVault";
 import { ManualSyncButton } from "@/modules/shopflow/components/ManualSyncButton";
 import { TrackingCard } from "@/modules/shopflow/components/TrackingCard";
 import { toast } from "@/hooks/use-toast";
@@ -231,6 +232,11 @@ export default function TrackJob() {
               </Card>
             </div>
           )}
+        </div>
+        
+        {/* ClubWPW Vault - Member Perks */}
+        <div className="mt-6 pt-6 border-t border-fuchsia-500/20">
+          <ClubWPWVault />
         </div>
         
         <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm px-4">
