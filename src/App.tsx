@@ -23,6 +23,7 @@ import ShopFlowBulkAdmin from "./pages/ShopFlowBulkAdmin";
 import { TrackJob } from "./modules/shopflow";
 import MyShopFlow from "./pages/MyShopFlow";
 import MyApproveFlow from "./pages/MyApproveFlow";
+import MyShopFlowPreview from "./pages/MyShopFlowPreview";
 import MightyCustomer from "./pages/MightyCustomer";
 import CommandContacts from "./pages/CommandContacts";
 import ApproveFlow from "./pages/ApproveFlow";
@@ -148,6 +149,7 @@ const App = () => (
             <Route path="/shopflow-bulk-admin" element={<ShopFlowBulkAdmin />} />
             <Route path="/track/:orderNumber" element={<TrackJob />} />
             <Route path="/my-shopflow" element={<MyShopFlow />} />
+            <Route path="/my-shopflow-preview" element={<MyShopFlowPreview />} />
             <Route path="/mighty-customer" element={<MightyCustomer />} />
             <Route path="/command-contacts" element={<CommandContacts />} />
             <Route path="/approveflow" element={<ApproveFlowList />} />

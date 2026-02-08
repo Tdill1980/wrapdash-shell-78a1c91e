@@ -406,3 +406,9 @@ verify_jwt = false
 verify_jwt = false
 [functions.debug-messages]
 verify_jwt = false
+
+[functions.check-inbox]
+verify_jwt = false
+
+[functions.bulk-sync-orders]
+verify_jwt = false

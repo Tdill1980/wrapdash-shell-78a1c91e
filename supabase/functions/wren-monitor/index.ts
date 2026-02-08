@@ -334,6 +334,69 @@ async function checkMightyCustomerProducts(baseUrl: string, key: string): Promis
   }
 }
 
+async function checkShopFlowSync(baseUrl: string, key: string): Promise<HealthCheck> {
+  const start = Date.now();
+  try {
+    // Get latest ShopFlow order
+    const res = await fetch(
+      `${baseUrl}/rest/v1/shopflow_orders?select=order_number,created_at&order=created_at.desc&limit=1`,
+      { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
+    );
+    const orders = await res.json();
+    const latency = Date.now() - start;
+    
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return {
+        name: 'ShopFlow Sync',
+        status: 'critical',
+        latency_ms: latency,
+        message: 'No orders in ShopFlow database!'
+      };
+    }
+    
+    const lastOrder = orders[0];
+    const lastSyncDate = new Date(lastOrder.created_at);
+    const now = new Date();
+    const hoursSinceSync = (now.getTime() - lastSyncDate.getTime()) / (1000 * 60 * 60);
+    
+    // Alert if no sync in 24 hours (orders come in daily)
+    if (hoursSinceSync > 24) {
+      return {
+        name: 'ShopFlow Sync',
+        status: 'critical',
+        latency_ms: latency,
+        message: `No orders synced in ${Math.round(hoursSinceSync)} hours! Last: #${lastOrder.order_number}`,
+        details: { lastOrder: lastOrder.order_number, lastSyncDate: lastOrder.created_at, hoursSinceSync: Math.round(hoursSinceSync) }
+      };
+    }
+    
+    // Warning if no sync in 12 hours during business hours
+    if (hoursSinceSync > 12) {
+      return {
+        name: 'ShopFlow Sync',
+        status: 'warning',
+        latency_ms: latency,
+        message: `${Math.round(hoursSinceSync)}h since last sync. Last: #${lastOrder.order_number}`,
+        details: { lastOrder: lastOrder.order_number, lastSyncDate: lastOrder.created_at }
+      };
+    }
+    
+    return {
+      name: 'ShopFlow Sync',
+      status: 'ok',
+      latency_ms: latency,
+      message: `OK - Last order #${lastOrder.order_number} (${Math.round(hoursSinceSync)}h ago)`
+    };
+  } catch (err) {
+    return {
+      name: 'ShopFlow Sync',
+      status: 'critical',
+      latency_ms: Date.now() - start,
+      message: `Error: ${err.message}`
+    };
+  }
+}
+
 async function checkWidgetLoads(): Promise<HealthCheck> {
   const start = Date.now();
   try {
@@ -448,7 +511,8 @@ serve(async (req) => {
       quoteCheck,
       escalationCheck,
       chatCheck,
-      productsCheck
+      productsCheck,
+      shopflowCheck
     ] = await Promise.all([
       checkWidgetLoads(),
       checkVehicleDatabase(url, key),
@@ -457,7 +521,8 @@ serve(async (req) => {
       checkQuoteCreation(url, key),
       checkEscalation(url, key),
       checkCommandChat(url, key),
-      checkMightyCustomerProducts(url, key)
+      checkMightyCustomerProducts(url, key),
+      checkShopFlowSync(url, key)
     ]);
     
     const checks = [
@@ -468,7 +533,8 @@ serve(async (req) => {
       quoteCheck,
       escalationCheck,
       chatCheck,
-      productsCheck
+      productsCheck,
+      shopflowCheck
     ];
     
     // Get metrics

@@ -117,7 +117,9 @@ Deno.serve(async (req) => {
       try {
         console.log(`Fetching order ${orderNumber} from WooCommerce...`);
         
-        const wooUrl = `https://weprintwraps.com/wp-json/wc/v3/orders?number=${orderNumber}`;
+        // Use search parameter which works better for order numbers
+        // Also include the order number in include[] in case the ID matches
+        const wooUrl = `https://weprintwraps.com/wp-json/wc/v3/orders?search=${orderNumber}&per_page=50`;
         const wooResponse = await fetch(wooUrl, {
           headers: { 
             'Authorization': authHeader,
@@ -131,11 +133,15 @@ Deno.serve(async (req) => {
 
         const orders = await wooResponse.json();
         
-        if (!orders || orders.length === 0) {
-          throw new Error('Order not found in WooCommerce');
+        // Find the order with matching number (WooCommerce search returns multiple results)
+        const order = orders.find((o: any) => 
+          o.number?.toString() === orderNumber.toString() || 
+          o.id?.toString() === orderNumber.toString()
+        );
+        
+        if (!order) {
+          throw new Error(`Order ${orderNumber} not found in WooCommerce (searched ${orders.length} results)`);
         }
-
-        const order = orders[0];
         const customerName = `${order.billing.first_name} ${order.billing.last_name}`.trim() || 'Unknown Customer';
         const productType = order.line_items?.[0]?.name || 'Unknown Product';
         const productId = order.line_items?.[0]?.product_id || null;
