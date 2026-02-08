@@ -26,6 +26,7 @@ import MyApproveFlow from "./pages/MyApproveFlow";
 import MyShopFlowPreview from "./pages/MyShopFlowPreview";
 import MightyCustomer from "./pages/MightyCustomer";
 import CommandContacts from "./pages/CommandContacts";
+import WrapOfTheWeek from "./pages/WrapOfTheWeek";
 import ApproveFlow from "./pages/ApproveFlow";
 import ApproveFlowList from "./pages/ApproveFlowList";
 import ApproveFlowProof from "./pages/ApproveFlowProof";
@@ -226,6 +227,8 @@ const App = () => (
             <Route path="/escalations" element={<EscalationsPage />} />
             <Route path="/command-ops" element={<CommandOpsPage />} />
             <Route path="/meta-ad-factory" element={<MetaAdFactory />} />
+            <Route path="/wrap-of-the-week" element={<WrapOfTheWeek />} />
+            <Route path="/wotw" element={<WrapOfTheWeek />} />
           <Route path="/design-generator" element={
             <AppLayout>
               <DesignGenerator />
