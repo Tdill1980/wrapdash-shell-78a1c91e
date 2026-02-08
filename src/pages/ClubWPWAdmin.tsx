@@ -259,6 +259,28 @@ export default function ClubWPWAdmin() {
     }
   };
 
+  const announceWinner = async (nominee: WOTWNominee, winnerType: 'weekly' | 'monthly' = 'weekly') => {
+    if (!confirm(`Send winner announcement email for @${nominee.artist_instagram}?`)) return;
+    
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-wotw-winner', {
+        body: { nominee_id: nominee.id, winner_type: winnerType }
+      });
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: "Winner announced! 🏆", 
+        description: `Email sent for @${nominee.artist_instagram}` 
+      });
+      fetchData();
+    } catch (err) {
+      toast({ title: "Announcement failed", description: String(err), variant: "destructive" });
+    }
+    setSaving(false);
+  };
+
   const toggleFinalist = async (nominee: WOTWNominee) => {
     const { error } = await supabase
       .from('wotw_nominees')
@@ -533,6 +555,17 @@ export default function ClubWPWAdmin() {
                             <Crown className="w-3 h-3 mr-1" />
                             {nominee.is_winner ? 'Winner ✓' : 'Make Winner'}
                           </Button>
+                          {nominee.is_winner && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/10"
+                              onClick={() => announceWinner(nominee, 'weekly')}
+                              disabled={saving}
+                            >
+                              📧 Announce
+                            </Button>
+                          )}
                           <Button 
                             size="sm" 
                             variant="outline" 
